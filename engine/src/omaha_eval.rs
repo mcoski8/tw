@@ -70,7 +70,7 @@ mod tests {
     use super::*;
     use crate::card::parse_hand;
     use crate::hand_eval::{
-        category, CAT_FLUSH, CAT_PAIR, CAT_STRAIGHT, CAT_STRAIGHT_FLUSH, CAT_TRIPS,
+        category, CAT_FLUSH, CAT_HIGH, CAT_PAIR, CAT_STRAIGHT, CAT_STRAIGHT_FLUSH, CAT_TRIPS,
     };
 
     fn b5(s: &str) -> [Card; 5] {
@@ -231,6 +231,36 @@ mod tests {
             CAT_TWO_PAIR,
             "cannot use 4 aces from hole — two pair is the best"
         );
+    }
+
+    #[test]
+    fn cannot_play_the_board_in_omaha_even_if_board_is_royal_flush() {
+        // Royal flush on the board. In Hold'em a player can "play the board"
+        // for a royal flush chop. In Omaha the 2+3 rule FORBIDS this — you
+        // MUST use exactly 2 hole cards. See modules/game-rules.md §1.3.
+        //
+        // Hole = junk rainbow non-spades. No way to make a flush (need 2 hole
+        // spades) and no way to just return the board. Best available is
+        // some straight/pair formed by 2 hole + 3 board.
+        let ev = Evaluator::build();
+        let hole = h4("2c 3d 4h 6c");
+        let board = b5("As Ks Qs Js Ts");
+        let r = eval_omaha(&ev, hole, board);
+        // NOT a straight flush (would require 5 suited, we have max 3 board
+        // spades + 0 hole spades = 3, can't make 5-card flush).
+        assert!(
+            category(r) != CAT_STRAIGHT_FLUSH && category(r) != CAT_FLUSH,
+            "Omaha 2+3 must block the royal-flush-on-board shortcut"
+        );
+        // The ranks on the board are T,J,Q,K,A. With hole {2,3,4,6}, the best
+        // we can make is a straight using T,J,Q (board) + any 2 hole... no
+        // wait, T-J-Q needs 9 and K for a 5-card straight. Board has K but
+        // no 9. So J-Q-K + 2 hole connectors... hole has no T nor A (those
+        // are on the board). Best is T-J-Q-K + hole A? no, A is on board.
+        // Actually with hole {2,3,4,6} and board {T,J,Q,K,A}: 2 hole + 3
+        // board. Best: 3,4 hole + A,K,Q board → high card A. Or any combo.
+        // Probably ends up high-card A. The point is — NOT a flush.
+        assert_eq!(category(r), CAT_HIGH);
     }
 
     #[test]

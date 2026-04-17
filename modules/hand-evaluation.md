@@ -1,5 +1,12 @@
 # Module: Hand Evaluation
 
+> **Rules authority:** this module documents the *implementation*. The
+> *rules* — which hole cards may/must be used per tier, full tiebreaker
+> hierarchy, all invariants — live in [`modules/game-rules.md`][rules].
+> If this doc disagrees with game-rules.md, game-rules.md wins.
+>
+> [rules]: ./game-rules.md
+
 ## Overview
 The hand evaluator is the innermost loop of the entire solver. It must be extremely fast (<50ns for a 5-card eval) because it runs billions of times during Monte Carlo and CFR computation.
 

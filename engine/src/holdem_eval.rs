@@ -143,4 +143,48 @@ mod tests {
         let r = eval_middle(&ev, [c("2c"), c("3d")], board);
         assert_eq!(r, board_rank);
     }
+
+    // Play-the-board tests — locks down the Hold'em rule that a player "may
+    // use both of their hole cards, only one, or none at all". See
+    // modules/game-rules.md §1.1 and §1.2.
+
+    #[test]
+    fn top_plays_the_board_when_board_is_royal_flush() {
+        // Board = royal flush in spades. Hole = 2c (dead). Best 5 of 6 is the
+        // board itself (A-K-Q-J-T spades). Hole card "plays zero cards".
+        let ev = Evaluator::build();
+        let board = b5("As Ks Qs Js Ts");
+        let board_rank = ev.eval_5(board);
+        let r = eval_top(&ev, c("2c"), board);
+        assert_eq!(r, board_rank, "top tier must allow playing the board");
+        assert_eq!(crate::hand_eval::category(r), crate::hand_eval::CAT_STRAIGHT_FLUSH);
+    }
+
+    #[test]
+    fn middle_plays_the_board_when_board_is_royal_flush() {
+        // Same board, junk hole. Best 5 of 7 is the royal flush on the board;
+        // both hole cards unused.
+        let ev = Evaluator::build();
+        let board = b5("As Ks Qs Js Ts");
+        let board_rank = ev.eval_5(board);
+        let r = eval_middle(&ev, [c("2c"), c("3d")], board);
+        assert_eq!(r, board_rank, "middle tier must allow playing the board");
+    }
+
+    #[test]
+    fn middle_one_hole_card_completes_flush() {
+        // 4-to-a-flush board (4 spades + 1 diamond). Hole = 1 spade + 1 junk.
+        // Hold'em rules let us combine 1 hole spade + 4 board spades = flush.
+        let ev = Evaluator::build();
+        let r = eval_middle(&ev, [c("2s"), c("3c")], b5("Ks Qs Js 9s 5d"));
+        assert_eq!(crate::hand_eval::category(r), CAT_FLUSH);
+    }
+
+    #[test]
+    fn middle_one_hole_card_completes_straight() {
+        // 4-to-a-straight board + 1 hole connector → straight under Hold'em.
+        let ev = Evaluator::build();
+        let r = eval_middle(&ev, [c("Tc"), c("2d")], b5("6s 7d 8h 9s Kc"));
+        assert_eq!(crate::hand_eval::category(r), CAT_STRAIGHT);
+    }
 }
