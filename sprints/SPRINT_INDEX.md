@@ -11,7 +11,7 @@
 | S0 | Foundation + Lookup Tables | Phase 1: Engine Core | **Completed** | 2026-04-16 | 2026-04-16 |
 | S1 | Hand Evaluator (Holdem + Omaha) | Phase 1: Engine Core | **Completed** | 2026-04-16 | 2026-04-16 |
 | S2 | Monte Carlo Engine | Phase 1: Engine Core | **Completed** | 2026-04-17 | 2026-04-17 |
-| S3 | Best Response Computation | Phase 2: Solving | Not Started | — | — |
+| S3 | Best Response Computation | Phase 2: Solving | **In Progress** | 2026-04-17 | — |
 | S4 | Hand Bucketing + CFR | Phase 2: Solving | Not Started | — | — |
 | S5 | Trainer Application | Phase 3: Trainer | Not Started | — | — |
 | S6 | Validation + Comparison | Phase 3: Trainer | Not Started | — | — |

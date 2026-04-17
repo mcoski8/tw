@@ -47,14 +47,14 @@
 ## Phase 2: Solving
 
 ### Sprint 3: Best Response Computation
-- [ ] Enumerate all canonical 7-card hands
-- [ ] Suit canonicalization (~5-10x reduction)
-- [ ] Compute best setting for each hand via Monte Carlo
-- [ ] Checkpoint/resume system for long runs
-- [ ] Progress reporting with ETA
-- [ ] Binary output format
-- [ ] N=100 quick run (hours) — verify pipeline works
-- [ ] N=1,000 production run (days)
+- [x] Enumerate all canonical 7-card hands — 6,009,159 (Burnside-verified)
+- [x] Suit canonicalization (~5-10x reduction) — 22.26× actual
+- [x] Compute best setting for each hand via Monte Carlo — `solve_one` / `solve_range`
+- [x] Checkpoint/resume system for long runs — append-only `BrWriter`
+- [x] Progress reporting with ETA — per-block log lines
+- [x] Binary output format — 9-byte fixed records, "TWBR" magic
+- [x] N=100 quick run (hours) — verify pipeline works (3.8 s for 1K hands)
+- [ ] N=1,000 production run (days) — pipeline ready, launch is user-gated (~2.6 days)
 - [ ] N=10,000 high-precision run (weeks, optional)
 - [ ] Summary statistics and analysis
 

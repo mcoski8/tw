@@ -21,6 +21,7 @@ clap = { version = "4.5", features = ["derive"] }
 
 [dev-dependencies]
 criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
+tempfile = "3"
 
 [[bench]]
 name = "eval_bench"

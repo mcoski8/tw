@@ -122,6 +122,37 @@
 **Choice:** Net-points encoding. `p1_points + p2_points == 0` is a hard invariant.
 **Why:** Best-response computation (Sprint 3) averages EV *against* an opponent across millions of samples. With net-points, the EV is just `mean(p1_points)` — a single averaging pass. With gross-points, callers would need to subtract in the hot loop, and the invariant is weaker (p1_gross and p2_gross would each range over 0..=20, hiding sign). Net form also makes the scoop case unambiguous: (+20, -20) and (-20, +20) are the only scoop outcomes, vs gross form where you'd see (20, 0) and have to reason about whether the opponent got zero because they lost or because they chopped. The invariant `p1 + p2 == 0` is test-friendly — `net_points_always_sum_to_zero` in scoring_tests.rs verifies it across a handful of contrived matchups.
 
+## Decision 017 — Sprint 3 Solve: Single-Pass at N=1000 (no pre-screening, no adaptive multi-pass)
+**Date:** 2026-04-17 (Sprint 3, Session 04)
+**Question:** Sprint 3's plan in `sprints/s3-best-response.md` was an adaptive 3-pass solver — quick scan (top-25 settings × M=50 × N=50), precision refinement (top-5 × M=500), final resolution (top-3 × M=2000) — gated by per-hand EV gap. Should the actual implementation follow that plan, or use a single pass at full N=1000 across all 105 settings?
+**Options:**
+  - (a) Adaptive 3-pass with 25-of-105 setting pre-screening (`quick_score = mid×4 + top×2 + bot×1.5`).
+  - (b) Single pass at N=1000 across all 105 settings, no pre-screening.
+**Choice:** (b) — single pass.
+**Why:**
+  1. The user's resume prompt explicitly simplified Sprint 3 to single-pass at N=1000. The adaptive plan in s3-best-response.md was a worst-case design from before we knew the actual canonical hand count.
+  2. Suit canonicalization came in at **6,009,159 canonical hands**, not the 15-25M ballpark the adaptive plan was sized against. At our measured 37.3 ms/hand (N=1000, 9× rayon speedup), full single-pass projects to ~62 hours / 2.6 days — comfortably under the 1-week target in CLAUDE.md.
+  3. Pre-screening is not free: it requires a heuristic that's PROVABLY non-eliminating of the true optimum (CRITICAL validation step), and the validation itself costs roughly as much as one full single-pass at lower N. Skipping it removes a correctness risk (heuristic that drops the optimum on adversarial hands) and a complexity risk (Sprint 4's CFR baseline now consumes a uniform-quality solve instead of a heterogeneously-confident one).
+  4. CRN (Decision 015) means the marginal cost of evaluating one extra setting per sample is ~1/105 of one sample's cost — pre-screening's 25/105 reduction yields at most ~75% saving on the inner loop, which is dwarfed by the savings from canonicalization being 22× (not 5×).
+  5. Single-pass output is simpler for Sprint 4 to consume: every hand has exactly one `(best_setting, best_ev)` record at the same N, so any cross-hand pattern mining has uniform confidence intervals.
+  Adaptive multi-pass remains available behind a Sprint 3.5 if Sprint 4 reveals decision boundaries that need higher per-hand precision than N=1000 supports.
+
+## Decision 018 — Best-Response Output File Format: Fixed-Width Records, Not Bincode
+**Date:** 2026-04-17 (Sprint 3, Session 04)
+**Question:** How should the per-hand best-response output be serialized — bincode'd `Vec<(u32, u8, f32)>`, length-prefixed framed records, or fixed-width records with a small leading header?
+**Options:**
+  - (a) `bincode::serialize(&Vec<Record>)` — one big blob.
+  - (b) Length-prefixed framed records — `bincode::serialize_into(writer, &Record)` per hand.
+  - (c) Custom fixed-width: 32-byte "TWBR" header + N × 9-byte records `(u32 LE id, u8 idx, f32 LE ev)`.
+**Choice:** (c) — fixed-width.
+**Why:**
+  1. **Crash-safe resume.** Writer crashes are non-negotiable for a 2.6-day run. `(filesize − 32) / 9 = records_written` lets the writer compute the exact resume offset with one `metadata().len()` call, no parsing of prior state. Bincode would either need a length prefix (option b) or full re-deserialization (option a) to know where to resume — both fragile under partial writes.
+  2. **Index-by-position.** With fixed-width records, `canonical_id = position` invariantly. Sprint 5's trainer can mmap the file and `seek(32 + 9 * id)` for O(1) lookups without an in-memory index.
+  3. **Header-as-fingerprint.** The header carries `(samples, base_seed, canonical_total, opp_model_tag)`. `BrWriter::open_or_create` refuses to append to a file produced under different parameters, eliminating an entire class of "I resumed against the wrong file" foot-guns.
+  4. **Predictable on-disk size.** 32 + 9 × 6,009,159 = 54,082,463 bytes ≈ 51.6 MB. No surprises, easy to back up, easy to validate file integrity with a single arithmetic check.
+  5. **No bincode framing overhead.** Bincode's per-record framing (length prefix + variant tag) would add bytes without any benefit at this granularity.
+  Trade-off: extending the record schema later (e.g. adding `second_best_ev` for adaptive refinement in Sprint 3.5) requires a version bump and a new magic-tag suffix. We accept this — it's a once-per-sprint cost and forces explicit migration paths.
+
 ---
 
 ## Decision 011 — Dual Compute Backend (CPU + CUDA)

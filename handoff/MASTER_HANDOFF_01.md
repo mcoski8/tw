@@ -182,3 +182,42 @@ All three top picks put the Jack on top — consistent with the research finding
 - `mc_evaluate_all_settings_par(..., OpponentModel::Random, ...)` is the per-hand primitive for best-response computation over all 133M hands.
 - Per-hand cost at N=1000 parallel ≈ **46 ms** on this machine → naive 133M × 46 ms ≈ 70 days. Decision 006 suit canonicalization (~8× reduction) should bring that inside the "<1 week single machine" target from CLAUDE.md.
 - `SmallRng::seed_from_u64(canonical_hand_id)` is a natural per-hand seed in Sprint 3 — reproducibility keyed to the canonical index, so checkpoint/resume is straightforward.
+
+---
+
+### Session 04 — 2026-04-17 — Sprint 3 pipeline built and validated end-to-end (production run pending)
+
+**Scope:** Implement the full Sprint 3 pipeline: suit canonicalization, per-hand best-response computation, checkpointed binary file format, CLI driver, end-to-end validation. Stop short of the 2.6-day production launch (user-gated).
+
+**Result:** Pipeline complete. Test count 90 → 105 (+15). Pilot at production cadence (N=1000 × 10K hands) clocked 37.3 ms/hand at 9× rayon speedup. All six named-hand spot-checks agree with research findings.
+
+**Engine code delivered:**
+- `engine/src/bucketing.rs` (NEW) — `canonicalize`, `is_canonical`, `enumerate_canonical_hands` (rayon-parallel over first card), `count_canonical_hands`. File I/O: `write_canonical_hands` / `read_canonical_hands` ("TWCH" magic + version + count + 7-byte sorted card-index records).
+- `engine/src/best_response.rs` (NEW) — `BestResponseRecord` (u32 + u8 + f32 = 9 bytes), `BrHeader` (32 bytes "TWBR" + version + samples + base_seed + canonical_total + opp_model_tag), `BrWriter::open_or_create` (append-only, crash-safe resume = (filesize − 32) / 9, header-mismatch refusal), `solve_one`, `solve_range` (outer-rayon over canonical hands, serial `mc_evaluate_all_settings` inside).
+- `engine/src/lib.rs` — module registration + re-exports.
+- `engine/src/main.rs` — three new CLI subcommands: `enumerate-canonical [--count-only]`, `solve --canonical PATH --out PATH --samples N --seed S [--block-size B] [--limit L]`, `spot-check --canonical PATH --out PATH [--show N]`.
+- `engine/Cargo.toml` — `tempfile = "3"` dev-dep for writer tests.
+
+**Tests:** 105 passing (Sprint 2: 90 → +15). New tests cover canonicalization round-trip across all 24 suit permutations, idempotency, suit-closed-subset enumeration check, file format round-trip, writer create / resume / mismatch / truncated handling, and end-to-end `solve_one`.
+
+**Empirical:**
+- **Canonical hand count = 6,009,159.** Cross-verified against Burnside's lemma over S₄: identity 133,784,560 + 6 transpositions × 1,723,176 + 3 double-transpositions × 0 + 8 three-cycles × 12,025 + 6 four-cycles × 0 = 144,219,816; ÷24 = 6,009,159 ✓. (Double-transpositions and 4-cycles vanish by parity: 7 cards can't split as 2k+2k or 4k.)
+- Throughput at N=1000: 37.3 ms/hand, 57 MB peak RSS, 9.0× parallel speedup.
+- Six spot-checks (quad aces, royal-hole + connectors, wheel + T9, AAKK, rainbow gappers, trip-K + 88) all match research findings: top card J+ where possible, premium pair → bot for 3pt scoring weight, suited pair → mid for flush draws.
+- Pilot files (gitignored): `data/best_response_pilot.bin` (N=100 × 1K), `data/best_response_extpilot.bin` (N=1000 × 10K).
+- `data/canonical_hands.bin` (42 MB, gitignored) — full canonical-hand enumeration on disk.
+
+**Decisions logged this session:** Decision 017 (single-pass solve, skip pre-screening + adaptive multi-pass), Decision 018 (fixed-width 9-byte record file format).
+
+**Gotcha 1 (test fix):** First version of `enumerate_canonical_subset_round_trips_for_tiny_deck` used the first 9 cards of the deck as the test universe. That subset is NOT closed under suit permutation — card 8 (4c) has no suit-siblings in the subset, so canonicalization can produce a representative outside the universe. Fixed by using the first 12 cards (ranks {2,3,4} × all 4 suits = closed under S₄).
+
+**Gotcha 2 (CLI ergonomic):** Clap's `default_value_t = 0xC0FFEE_u64` accepts hex literals for the default value but the `value_parser` for `--seed` only takes decimal. Pass `--seed 12648430` (hex 0xC0FFEE in decimal) when overriding from the CLI.
+
+**Carry-forward for Sprint 3 production launch (user-gated):**
+- Production run command + monitoring recipe is in `CURRENT_PHASE.md → "Launch the production run"`. Total wall ~2.6 days, ~9 cores, 57 MB RSS. Resumable via the same command.
+- Output file `data/best_response.bin` will be exactly 32 + 9 × 6,009,159 = 54,082,463 bytes ≈ 51.6 MB.
+- After production: sample 100 random hands, re-solve each at N=10K via `mc`, confirm best-setting agreement ≥ 95% (validation gate).
+
+**Carry-forward for Sprint 4:**
+- `data/best_response.bin` + `data/canonical_hands.bin` are the inputs. `read_best_response_file()` returns `(BrHeader, Vec<BestResponseRecord>)`; `read_canonical_hands()` returns `Vec<[u8; 7]>` indexed by `canonical_id`. Together they give `(canonical_hand, best_setting_index, best_ev)` triples.
+- Pattern mining queries that don't need EV (e.g. "what setting shape does each hand category prefer?") can mmap `best_response.bin` and seek to records directly; `bytes_to_hand` converts back to typed `[Card; 7]`.
