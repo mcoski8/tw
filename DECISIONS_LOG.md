@@ -55,6 +55,32 @@
 **Choice:** Multi-model consensus — Claude + Gemini independently analyze, then debate, with pure statistics as ground truth referee
 **Why:** A single model can have blind spots or biases. Pure statistics can find frequencies but struggles to synthesize rules from complex interactions. The multi-model approach gets independent analysis from two different AI architectures, then forces them to challenge each other's conclusions with the statistical baseline as the arbiter of factual disputes. This mirrors academic peer review — independent analysis + adversarial challenge produces more reliable conclusions. Full debate transcripts are saved for auditability so any rule can be traced back to the data and reasoning that produced it.
 
+## Decision 014 — Sprint 2 Opponent Model Scope
+**Date:** 2026-04-17
+**Question:** Which `OpponentModel` variants should Sprint 2 ship?
+**Options:** (a) Random only | (b) Random + MiddleFirst | (c) Random + MiddleFirst + BestResponse (peek-the-board)
+**Choice:** (a) — Random only. `MiddleFirst` and `BestResponse` left as TODOs behind the same enum.
+**Why:**
+  1. The Sprint 2 prompt explicitly said "start random, add MiddleFirst later."
+  2. `BestResponse` requires 105 `matchup_breakdown` calls per sample (one per candidate opp setting), blowing the <500 ms headline target (projected ~23 s/hand).
+  3. `MiddleFirst` is a cleaner design once we have a reference policy from Sprint 3's best-response tables anyway — doing it now risks baking in a heuristic that the solver will quickly supersede.
+  4. Sprint 3's Tier 1 objective (best response to *uniform random* opponent; CLAUDE.md) only needs the Random model. Shipping it alone keeps Sprint 2 scope tight.
+  Enum dispatch means adding variants later is a 5-line change with no caller impact.
+
+## Decision 015 — Common Random Numbers in `mc_evaluate_all_settings`
+**Date:** 2026-04-17
+**Question:** For Monte Carlo over all 105 p1 settings of one hand, should each setting draw its own independent samples, or should all 105 share the same `(opp_hand, boards, opp_setting)` per sample?
+**Options:** (a) Independent samples per setting | (b) Common random numbers (CRN) — shared samples
+**Choice:** (b) CRN — shared samples across the 105 settings per draw.
+**Why:** Ranking-not-EV is what the solver cares about. CRN makes the *pairwise differences* of EVs across settings much less noisy than independent sampling, at the cost of coupling individual EVs — a trade-off that's a net win because (i) ranking is the downstream consumer, (ii) sampling work is shared across all 105 so throughput is 1/105-th per sample, (iii) the parallelization strategy (split the sample budget across workers, each worker does the full 105 inside its chunk) composes cleanly with CRN. The independent-samples design would have triaged sample budget badly: per-setting SE would be identical, but rank-gaps would be noisier.
+
+## Decision 016 — `rand` crate feature policy: enable `small_rng`
+**Date:** 2026-04-17
+**Question:** Which RNG to use in the Monte Carlo inner loop?
+**Options:** (a) `rand::thread_rng()` (OsRng-backed, ChaCha) | (b) `SmallRng` (Xoshiro256++, feature-gated in rand 0.8) | (c) Hand-rolled xorshift
+**Choice:** (b) `SmallRng`, enabled via `rand = { features = ["small_rng"] }` in Cargo.toml.
+**Why:** `thread_rng()` is cryptographically strong but ~5× slower than SmallRng — unnecessary for MC sampling where statistical quality, not unpredictability, is what matters. SmallRng passes BigCrush and is the standard MC choice in the `rand` ecosystem. A hand-rolled PRNG is unjustified — SmallRng has a 256-bit state that we can seed per worker for reproducibility, and the feature flag is the whole cost.
+
 ---
 
 *Append only. Never edit past entries.*

@@ -33,14 +33,14 @@
 - [x] Comprehensive test suite for all evaluators — 76 tests, 0 failures
 - [x] Benchmark all evaluators meet performance targets — 3 of 4 on target, full matchup 7% over (see sprint log)
 
-### Sprint 2: Monte Carlo Engine
-- [ ] Single-setting evaluation (N samples)
-- [ ] All-105-settings evaluation for one hand
-- [ ] Opponent modeling (MiddleFirst, Random)
-- [ ] Parallelization with rayon
-- [ ] Convergence testing (N=100 to N=10000)
-- [ ] CLI: evaluate a hand with sample count
-- [ ] Performance: <500ms for 1 hand, 105 settings, 1000 samples
+### Sprint 2: Monte Carlo Engine — COMPLETED 2026-04-17
+- [x] Single-setting evaluation (N samples) — `mc_evaluate_setting`
+- [x] All-105-settings evaluation for one hand — `mc_evaluate_all_settings` with common random numbers
+- [x] Opponent modeling (Random shipped; MiddleFirst / BestResponse deferred — same enum slot)
+- [x] Parallelization with rayon — `mc_evaluate_all_settings_par`, per-worker seeded SmallRng, split/reduce
+- [x] Convergence testing (N=1000 vs N=10000 top-1 stable; documented in sprint log)
+- [x] CLI: evaluate a hand with sample count — `tw-engine mc --hand ... --samples ... --parallel --show-top ...`
+- [x] Performance: <500ms for 1 hand, 105 settings, 1000 samples — **270.77 ms serial, 46.18 ms parallel**
 
 ---
 
