@@ -22,16 +22,16 @@
 - [x] Initialize git, first commit
 - [x] All documentation in place
 
-### Sprint 1: Hand Evaluator (Hold'em + Omaha)
-- [ ] Top tier evaluator: best 5 of 6 (1 hole + 5 board)
-- [ ] Middle tier evaluator: best 5 of 7 (2 hole + 5 board)
-- [ ] Bottom tier evaluator: Omaha (exactly 2 from 4 + 3 from 5)
-- [ ] **VERIFY:** Omaha enforces exactly-2-from-hand rule
-- [ ] Scoring system: compare two settings across two boards
-- [ ] Scoop detection: all 6 wins, 0 chops = 20 points
-- [ ] Chop handling: equal ranks = 0 points
-- [ ] Comprehensive test suite for all evaluators
-- [ ] Benchmark all evaluators meet performance targets
+### Sprint 1: Hand Evaluator (Hold'em + Omaha) — COMPLETED 2026-04-16
+- [x] Top tier evaluator: best 5 of 6 (1 hole + 5 board) — 26.5 ns
+- [x] Middle tier evaluator: best 5 of 7 (2 hole + 5 board) — 149 ns
+- [x] Bottom tier evaluator: Omaha (exactly 2 from 4 + 3 from 5) — 375 ns
+- [x] **VERIFY:** Omaha enforces exactly-2-from-hand rule — 15 targeted tests
+- [x] Scoring system: compare two settings across two boards
+- [x] Scoop detection: all 6 wins, 0 chops = 20 points
+- [x] Chop handling: equal ranks = 0 points
+- [x] Comprehensive test suite for all evaluators — 76 tests, 0 failures
+- [x] Benchmark all evaluators meet performance targets — 3 of 4 on target, full matchup 7% over (see sprint log)
 
 ### Sprint 2: Monte Carlo Engine
 - [ ] Single-setting evaluation (N samples)

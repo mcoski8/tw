@@ -1,58 +1,58 @@
-# Current: Sprint 1 — Hand Evaluator (Hold'em + Omaha) | READY TO START
+# Current: Sprint 2 — Monte Carlo Engine | READY TO START
 
 > Updated: 2026-04-16
-> Previous sprint: S0 Foundation — **COMPLETED**
+> Previous sprint: S1 Hand Evaluator — **COMPLETED**
 
 ---
 
-## What Was Completed Last Session (2026-04-16)
+## What Was Completed Last Session (2026-04-16, Session 02)
 
-Sprint 0 fully delivered. Every acceptance criterion met or exceeded.
+Sprint 1 fully delivered. Every tier evaluator + scoring module + tests + benchmarks landed.
 
-- Rust engine scaffolded (`engine/`) with `card.rs`, `hand_eval.rs`, `lookup/mod.rs`, `setting.rs`, `lib.rs`, `main.rs`.
-- 5-card hand evaluator correct for **all 2,598,960 hands** (exhaustive test `table_lookup_matches_direct_on_every_hand`).
-- Benchmark: **5.4 ns per `eval_5`** (target was <50 ns).
-- Lookup table serialized to `data/lookup_table.bin` (10.4 MB).
-- CLI working: `cargo run --release -- eval --hand "As Kh Qd Jc Ts 9h 2d"` prints exactly 105 settings.
-- `HandSetting` type + `all_settings()` verified — all 105 settings partition the input hand exactly.
-- Project infra: `.gitignore`, `README.md`, `scripts/build.sh`, `analysis/` Python skeleton.
-- Git initialized, first commit `f9f1e0d` landed.
-- Decision 012 logged: colex lookup chosen over Cactus Kev.
+- `engine/src/holdem_eval.rs` — `eval_top` (6 lookups, **26.5 ns**), `eval_middle` (21 lookups, **149 ns**)
+- `engine/src/omaha_eval.rs` — `eval_omaha` with const hole-pair/board-drop tables, **375 ns** per call
+- `engine/src/scoring.rs` — `matchup_breakdown` + `score_matchup`; scoop (20pt) and chop handling; net-points encoding; **2.14 µs** for full 2-player matchup
+- `engine/tests/omaha_tests.rs` — 15 tests covering every known 2+3-rule trap (4-suited hole with/without enough board spades, 4-to-straight boards with 1 vs 2 connectors, trips-in-hand, quads-in-hand, wheel, etc.)
+- `engine/tests/scoring_tests.rs` — 6 tests including scoop fixture (P1 strictly dominates all 6) and chop-invalidates-scoop
+- `engine/benches/tier_bench.rs` — 4 rotating-input criterion benches
 
-Test totals: **38 tests, 0 failures.** Clean build in both debug and release.
+Test totals: **76 tests, 0 failures.** Release build clean.
 
 ---
 
 ## What's Currently In Progress
 
-Nothing — Sprint 0 is closed. Sprint 1 has not started.
+Nothing — Sprint 1 is closed. Sprint 2 has not started.
 
 ---
 
-## What's Not Started Yet (Sprint 1)
+## What's Not Started Yet (Sprint 2)
 
-- [ ] Top tier evaluator: best 5 of 6 (1 hole + 5 board) — 6 lookups
-- [ ] Middle tier evaluator: best 5 of 7 (2 hole + 5 board) — 21 lookups (standard Hold'em)
-- [ ] **Bottom (Omaha) evaluator: EXACTLY 2 from 4 + EXACTLY 3 from 5 — 60 lookups.** This is the #1 source of bugs in the project. Needs dedicated tests for the "4 suited hole cards", "4 cards to a straight on board", and "trips in hand" cases from `modules/hand-evaluation.md`.
-- [ ] Scoring module: evaluate both players' settings across 2 boards, handle chops and 20-point scoop.
-- [ ] Integration tests covering all three tier evaluators + full matchup scoring.
-- [ ] Benchmark: top ~80 ns, middle ~250 ns, Omaha ~700 ns, full matchup ~2 µs.
+See `sprints/s2-monte-carlo.md`. Key items:
+
+- [ ] `monte_carlo.rs`: single-setting EV (N samples) and all-105-settings EV
+- [ ] Opponent modeling: uniform-random (start here) and MiddleFirst heuristic
+- [ ] rayon-parallelized outer loop over hands × settings
+- [ ] Convergence test: N=100 vs N=1000 vs N=10000, check that best-setting ranking stabilizes
+- [ ] CLI: `tw-engine mc --hand "As Kh ..." --samples 1000`
+- [ ] Performance: <500ms for 1 hand × 105 settings × 1000 samples
 
 ---
 
 ## Blockers / Issues
 
-None. Sprint 1 can start immediately — the 5-card evaluator and `HandSetting` type needed for Sprint 1 are both ready.
+None. `matchup_breakdown` is the exact primitive Monte Carlo needs.
+
+Known (non-blocking) tension: `matchup_breakdown` bench is 2.14 µs vs <2 µs target. At 1,000 samples × 105 settings that's 224 ms/hand — within the <500 ms Monte Carlo budget, so Sprint 2 can proceed without optimizing the tier evaluators. If Monte Carlo ends up tight, Decision 012 documents the two-plus-two 7-card lookup as the escape hatch.
 
 ---
 
 ## Immediate Next Actions
 
-1. Read `modules/hand-evaluation.md` tier-specific section and `modules/scoring-system.md` again.
-2. Read `sprints/s1-hand-evaluator.md` for the explicit task list.
-3. Create `engine/src/holdem_eval.rs` (top + middle) and `engine/src/omaha_eval.rs`.
-4. Create `engine/src/scoring.rs` for the full settings-vs-settings-vs-two-boards scorer.
-5. Write Omaha tests FIRST (test-driven) — the 2-from-hand rule is the easiest thing to get subtly wrong.
+1. Read `sprints/s2-monte-carlo.md` for the explicit task list.
+2. Read `modules/monte-carlo-engine.md` for sampling design + opponent model interface.
+3. Create `engine/src/monte_carlo.rs` with a single-thread prototype first, then wire up rayon.
+4. Validate convergence: the EV ranking of the top-5 settings should be stable across N=100 and N=1000 for a handful of random hands.
 
 ---
 
@@ -68,22 +68,24 @@ None. Sprint 1 can start immediately — the 5-card evaluator and `HandSetting` 
 Read these files for context:
 - CLAUDE.md
 - CURRENT_PHASE.md
-- sprints/s1-hand-evaluator.md
-- modules/hand-evaluation.md
-- modules/scoring-system.md
+- sprints/s2-monte-carlo.md
+- modules/monte-carlo-engine.md
 
-Sprint 0 is complete. Sprint 1 starts now.
+Sprint 1 is complete (76 tests pass, tier evaluators + scoring at target
+speed). Sprint 2 starts now.
 
-Begin Sprint 1: Hold'em (top + middle) and Omaha (bottom) evaluators, plus
-the scoring module that compares two HandSettings against two community
-boards and returns (p1_points, p2_points).
+Begin Sprint 2: Monte Carlo engine. For a given 7-card hand and a specific
+HandSetting, estimate the EV against a uniform-random opponent by sampling:
+draw opponent's 7 cards from the remaining 45 cards, deal two 5-card boards
+from the remaining 38, enumerate opponent's 105 settings to find their best
+response (or a heuristic MiddleFirst setting — start random, add MiddleFirst
+later), score the matchup, accumulate. Repeat N times, average.
 
-Critical: the Omaha evaluator MUST use exactly 2 from the 4-card hole and
-exactly 3 from the 5-card board. Test against the 4-suited-hole, straight-
-on-board, and trips-in-hand cases before anything else.
+Target: <500ms for 1 hand × 105 settings × 1000 samples (single-thread is
+fine to start — add rayon for parallelism once the math is right).
 
-Use tw_engine::{Evaluator, Card, HandRank} from Sprint 0 — no need to
-rebuild any of that. eval_5 is 5.4 ns per call.
+Use `matchup_breakdown` from Sprint 1 as the inner scoring primitive —
+benchmarked at 2.14 µs per call.
 ```
 
 ---

@@ -87,6 +87,17 @@
 **Choice:** Colex-indexed LUT of all 2,598,960 hands. Direct `compute_rank_5` function used at build time AND as the reference implementation for tests.
 **Why:** Correctness > cleverness for Sprint 0. Cactus Kev requires deriving a perfect hash from prime products for the paired-hand table — an extra code path that's easy to get subtly wrong and harder to test exhaustively. Colex indexing is a closed-form bijection: sort 5 bytes, sum 5 binomial coefficients from a precomputed 52×6 table, index the array. The test `table_lookup_matches_direct_on_every_hand` then trivially verifies correctness against a direct-compute reference for EVERY possible hand (runs in 0.12s). Measured bench: 5.4 ns per eval — ~10× faster than the <50 ns target. Two-plus-two's 130 MB table is overkill for Sprint 0 and is still available as a future optimization for the 7-card tier evaluators if needed.
 
+## Decision 013 — Net-Points Encoding for Matchup Scoring
+**Date:** 2026-04-16 (Sprint 1)
+**Question:** How should `matchup_breakdown` report per-player points? Gross points won (always ≥ 0 per player) or net points (positive for the winner, negative for the loser, summing to zero)?
+**Options:**
+  - Gross: `(p1_won_points, p2_won_points)`, each player sees only what they earned (0..=20). Callers subtract if they want net.
+  - Net: `(p1_net, p2_net)` where `p1_net = p1_gross - p2_gross`, always summing to zero. Scoops produce (+20, -20).
+**Choice:** Net-points encoding. `p1_points + p2_points == 0` is a hard invariant.
+**Why:** Best-response computation (Sprint 3) averages EV *against* an opponent across millions of samples. With net-points, the EV is just `mean(p1_points)` — a single averaging pass. With gross-points, callers would need to subtract in the hot loop, and the invariant is weaker (p1_gross and p2_gross would each range over 0..=20, hiding sign). Net form also makes the scoop case unambiguous: (+20, -20) and (-20, +20) are the only scoop outcomes, vs gross form where you'd see (20, 0) and have to reason about whether the opponent got zero because they lost or because they chopped. The invariant `p1 + p2 == 0` is test-friendly — `net_points_always_sum_to_zero` in scoring_tests.rs verifies it across a handful of contrived matchups.
+
+---
+
 ## Decision 011 — Dual Compute Backend (CPU + CUDA)
 **Date:** April 2026 (pre-build)
 **Question:** Should we build CPU-only or also support GPU acceleration?

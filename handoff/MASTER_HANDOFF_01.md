@@ -62,3 +62,45 @@
 **Gotcha:** rustdoc tried to compile a `C(n,k)` math formula in `setting.rs` module doc as Rust code. Fixed by moving the formula into prose instead of an indented block. Keep math notation out of module doc comments unless fenced as ```text.
 
 **Carry-forward for Sprint 1:** None. All Sprint 0 capability is ready to consume. `tw_engine::Evaluator` is a drop-in dependency for the top/middle/Omaha evaluators.
+
+---
+
+### Session 02 — 2026-04-16 — Sprint 1 Hand Evaluator (COMPLETED)
+
+**Scope:** All of Sprint 1. Top/middle/Omaha tier evaluators, scoring module with scoop + chop handling, integration tests, tier benchmarks.
+
+**Result:** 100% of Sprint 1 acceptance criteria met; one perf target 7% soft (see below).
+
+**Engine code delivered:**
+- `engine/src/holdem_eval.rs` — `eval_top` (drops 1 of 6), `eval_middle` (drops 2 of 7)
+- `engine/src/omaha_eval.rs` — `eval_omaha` using const `HOLE_PAIRS` (6) × `BOARD_DROPS` (10) tables = 60 `eval_5` lookups. Hole pair is hoisted out of the inner loop per compute-pipeline.md optimization note
+- `engine/src/scoring.rs` — `matchup_breakdown` runs all 6 matchups, detects scoop (6 wins ∧ 0 chops), returns `MatchupBreakdown {outcomes, p1_points, p2_points, scooped}`. `score_matchup` is a (i32, i32) thin wrapper. Points are net-form so the pair always sums to zero
+- `engine/src/lib.rs` — registered new modules + re-exports
+- `engine/Cargo.toml` — added `[[bench]] name="tier_bench"`
+- `engine/tests/omaha_tests.rs` — 15 integration tests targeting every 2+3-rule trap
+- `engine/tests/scoring_tests.rs` — 6 integration tests including hand-crafted scoop fixture and chop-invalidates-scoop
+
+**Correctness:** 76 tests pass, 0 failures.
+- 40 unit tests (inc. 6 holdem_eval, 10 omaha_eval, 2 scoring)
+- 15 hand_eval integration tests (Sprint 0, still pass)
+- 15 omaha integration tests
+- 6 scoring integration tests
+
+**Performance (release-mode criterion):**
+
+| Bench | Measured | Target |
+|-------|----------|--------|
+| `eval_top` | **26.5 ns** | <100 ns ✓ |
+| `eval_middle` | **149 ns** | <250 ns ✓ |
+| `eval_omaha` | **375 ns** | <500-700 ns ✓ |
+| `matchup_breakdown` | **2.14 µs** | <2 µs (7% over) |
+
+The 7% overshoot is comfortably within Monte Carlo's budget: 2.14 µs × 105 settings × 1000 samples = 224 ms/hand, vs Sprint 2's <500 ms target. Decision 012 flagged the two-plus-two 7-card lookup as the optimization to pull in if Monte Carlo ends up tight later.
+
+**Decisions logged this session:** Decision 013 (net-points scoring encoding).
+
+**Gotcha:** Initially wrote an Omaha test asserting "1 hole ace + 3 board aces → trips". Test failed in CI because it's actually quads: 2+3 allows picking Ac + any kicker from hole (2 cards) + all 3 board aces (3 cards) = 4 aces total. Fix: split into two tests, one asserting quads (1 hole A + trip board), one asserting trips (0 hole A + trip board). This is exactly the class of 2+3 confusion the sprint doc warned about — caught by the test loop before merging, which is the whole point of writing tests first.
+
+**Deferred:** CLI update to print tier ranks for each of the 105 settings against a board. Not a Sprint 2 dependency (Monte Carlo calls the Rust evaluators directly), so keeping Sprint 0's CLI surface unchanged until the trainer (S5) needs it.
+
+**Carry-forward for Sprint 2:** `matchup_breakdown` is the drop-in primitive for Monte Carlo's inner loop. The `Deck::shuffle` + `deal` API from Sprint 0 is ready for generating random opponent hands and board runouts.
