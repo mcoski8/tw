@@ -34,6 +34,9 @@
 
 ## Game Rules (Critical — Read Carefully)
 
+> **Authoritative rules doc:** [`modules/game-rules.md`](modules/game-rules.md) is the single source of truth for tier-specific card-usage rules, the 9-category hand-ranking hierarchy, all per-category tiebreakers, play-the-board / Omaha-2+3 edge cases, and the invariants the evaluator must never violate. The summary below is intentionally brief. **If this summary disagrees with `modules/game-rules.md`, `game-rules.md` wins.** All rule claims have been cross-referenced against Wikipedia (Texas hold 'em, Omaha hold 'em, List of poker hands) as of 2026-04-17.
+
+
 ### Setup
 - Standard 52-card deck
 - 2-5 players (solver focuses on 2-player equilibrium, extends to multiplayer)
@@ -387,11 +390,15 @@ cd analysis && jupyter notebook notebooks/results.ipynb
 ## After Reading This File
 
 **Read these next, in order:**
-1. `docs/CURRENT_PHASE.md` — what's happening right now
+1. `CURRENT_PHASE.md` — what's happening right now
 2. The active sprint file referenced in CURRENT_PHASE.md
-3. `docs/modules/hand-evaluation.md` — the core algorithm
-4. `docs/modules/scoring-system.md` — how scoring works
+3. **`modules/game-rules.md` — MANDATORY. Canonical tier rules + hand rankings + tiebreakers. Do not skip.**
+4. `modules/hand-evaluation.md` — the implementation of those rules
+5. `modules/scoring-system.md` — how scoring works
+6. `DECISIONS_LOG.md` — settled decisions; don't re-debate
+
+(Note: docs live at the project root, not in a `docs/` subfolder. Some legacy references say `docs/...` — treat that as shorthand for the root.)
 
 ---
 
-*Last updated: April 2026 (pre-build)*
+*Last updated: 2026-04-17 (rules authority pointer added; game-rules.md is canonical)*

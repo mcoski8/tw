@@ -86,8 +86,8 @@ scoop + chop handling, comprehensive tests, benchmarks.
 - `engine/benches/tier_bench.rs` — 4 criterion benches with rotating inputs
 - `engine/src/lib.rs` + `engine/Cargo.toml` — module registration + bench declaration
 
-**Correctness:** 76 tests pass, 0 failures.
-- 40 unit tests (card, hand_eval, holdem_eval, lookup, omaha_eval, scoring, setting)
+**Correctness:** 81 tests pass, 0 failures.
+- 45 unit tests (card, hand_eval, holdem_eval, lookup, omaha_eval, scoring, setting) — includes 5 play-the-board / Omaha-2+3-enforcement tests added during the mid-session rules-verification pass
 - 15 hand_eval integration tests (carried from Sprint 0, all still pass)
 - 15 omaha integration tests
 - 6 scoring integration tests
@@ -127,5 +127,15 @@ Not needed for Sprint 2 (Monte Carlo takes settings + boards directly, not via
 the CLI), so keeping the current Sprint 0 CLI surface untouched. Will revisit
 when the trainer UI (S5) needs it.
 
+**Mid-session rules-verification pass (2026-04-17).** The user flagged that accuracy is a hard requirement. I cross-referenced every rule against Wikipedia (Texas hold 'em, Omaha hold 'em, List of poker hands) and produced `modules/game-rules.md` as the canonical source. Pinned 5 new unit tests to enforce the rules:
+- `top_plays_the_board_when_board_is_royal_flush` — Hold'em top may use 0 hole cards
+- `middle_plays_the_board_when_board_is_royal_flush` — Hold'em middle may use 0 hole cards
+- `middle_one_hole_card_completes_flush` — Hold'em allows 1 suited hole + 4 suited board = flush
+- `middle_one_hole_card_completes_straight` — Hold'em allows 1 hole connector completing 4-to-straight board
+- `cannot_play_the_board_in_omaha_even_if_board_is_royal_flush` — Omaha 2+3 forbids the royal-flush-on-board shortcut
+Also wired `modules/game-rules.md` into `CLAUDE.md`'s session-start reading path as MANDATORY so future sessions can't miss it.
+
 **Carry-forward for Sprint 2:** None blocking. `matchup_breakdown` is the
-drop-in primitive Monte Carlo will call once per sample.
+drop-in primitive Monte Carlo will call once per sample. Before any Sprint 2
+work begins, `modules/game-rules.md` must be loaded — it is the only valid
+reference for correctness questions.

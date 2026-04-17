@@ -80,8 +80,8 @@
 - `engine/tests/omaha_tests.rs` — 15 integration tests targeting every 2+3-rule trap
 - `engine/tests/scoring_tests.rs` — 6 integration tests including hand-crafted scoop fixture and chop-invalidates-scoop
 
-**Correctness:** 76 tests pass, 0 failures.
-- 40 unit tests (inc. 6 holdem_eval, 10 omaha_eval, 2 scoring)
+**Correctness:** 81 tests pass, 0 failures (ended at 81 after the mid-session rules-verification pass added 5 play-the-board / Omaha-2+3-enforcement tests).
+- 45 unit tests (inc. 10 holdem_eval, 11 omaha_eval, 2 scoring)
 - 15 hand_eval integration tests (Sprint 0, still pass)
 - 15 omaha integration tests
 - 6 scoring integration tests
@@ -103,4 +103,8 @@ The 7% overshoot is comfortably within Monte Carlo's budget: 2.14 µs × 105 set
 
 **Deferred:** CLI update to print tier ranks for each of the 105 settings against a board. Not a Sprint 2 dependency (Monte Carlo calls the Rust evaluators directly), so keeping Sprint 0's CLI surface unchanged until the trainer (S5) needs it.
 
-**Carry-forward for Sprint 2:** `matchup_breakdown` is the drop-in primitive for Monte Carlo's inner loop. The `Deck::shuffle` + `deal` API from Sprint 0 is ready for generating random opponent hands and board runouts.
+**Mid-session rules-verification pass (2026-04-17).** User flagged accuracy as a hard requirement and asked for a rigorous rules audit. I cross-referenced against Wikipedia's Texas hold 'em, Omaha hold 'em, and List of poker hands articles and produced `modules/game-rules.md` — now the canonical rules authority. Added 5 unit tests that pin down the rule assertions (Hold'em play-the-board allowed for top + middle, Hold'em 1-hole-card completes flush/straight, Omaha 2+3 forbids royal-flush-on-board shortcut). Updated `CLAUDE.md`'s session-start reading path to load `modules/game-rules.md` as MANDATORY before any sprint work. Also updated my auto-memory `project_taiwanese.md` to flag game-rules.md as the single source of truth. Commit: `262f1fd`.
+
+On the two-plus-two 7-card LUT question: we agreed NOT to pursue it. The current 5-card LUT + enumeration is already provably correct (exhaustively verified against a direct-compute reference on all 2,598,960 hands). A 7-card LUT wouldn't help Omaha (2+3 rule forces per-hole-pair enumeration anyway), would require a ~130 MB table that doesn't fit in L2/L3 cache, and adds verification surface area. If middle-tier speed ever becomes a bottleneck, the right move is a suit-isomorphism table (~200 KB, L1-resident, ~10 ns per eval), not two-plus-two. For now, performance is well within Sprint 2's MC budget.
+
+**Carry-forward for Sprint 2:** `matchup_breakdown` is the drop-in primitive for Monte Carlo's inner loop. The `Deck::shuffle` + `deal` API from Sprint 0 is ready for generating random opponent hands and board runouts. Session-start reading order has been tightened — `modules/game-rules.md` MUST be loaded before any Sprint 2 implementation work.

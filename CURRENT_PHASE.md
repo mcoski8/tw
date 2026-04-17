@@ -5,9 +5,9 @@
 
 ---
 
-## What Was Completed Last Session (2026-04-16, Session 02)
+## What Was Completed Last Session (2026-04-16 → 2026-04-17, Session 02)
 
-Sprint 1 fully delivered. Every tier evaluator + scoring module + tests + benchmarks landed.
+Sprint 1 fully delivered, plus a mid-session rules-verification pass that produced the new authoritative rules doc.
 
 - `engine/src/holdem_eval.rs` — `eval_top` (6 lookups, **26.5 ns**), `eval_middle` (21 lookups, **149 ns**)
 - `engine/src/omaha_eval.rs` — `eval_omaha` with const hole-pair/board-drop tables, **375 ns** per call
@@ -15,8 +15,10 @@ Sprint 1 fully delivered. Every tier evaluator + scoring module + tests + benchm
 - `engine/tests/omaha_tests.rs` — 15 tests covering every known 2+3-rule trap (4-suited hole with/without enough board spades, 4-to-straight boards with 1 vs 2 connectors, trips-in-hand, quads-in-hand, wheel, etc.)
 - `engine/tests/scoring_tests.rs` — 6 tests including scoop fixture (P1 strictly dominates all 6) and chop-invalidates-scoop
 - `engine/benches/tier_bench.rs` — 4 rotating-input criterion benches
+- **`modules/game-rules.md` (NEW)** — canonical, citation-backed rules authority. Cross-referenced from `CLAUDE.md` (now mandatory in the session-start reading order) and `modules/hand-evaluation.md`. Covers tier card-usage rules, 9-category hand ranking + every tiebreaker, invariants, non-negotiable correctness requirements. Rules verified against Wikipedia on 2026-04-17.
+- 5 additional play-the-board / Omaha-forbidden-shortcut tests added to pin down the rule assertions in game-rules.md.
 
-Test totals: **76 tests, 0 failures.** Release build clean.
+Test totals: **81 tests, 0 failures.** Release build clean.
 
 ---
 
@@ -68,11 +70,13 @@ Known (non-blocking) tension: `matchup_breakdown` bench is 2.14 µs vs <2 µs ta
 Read these files for context:
 - CLAUDE.md
 - CURRENT_PHASE.md
+- modules/game-rules.md   (MANDATORY — canonical rules, rankings, tiebreakers)
 - sprints/s2-monte-carlo.md
 - modules/monte-carlo-engine.md
 
-Sprint 1 is complete (76 tests pass, tier evaluators + scoring at target
-speed). Sprint 2 starts now.
+Sprint 1 is complete (81 tests pass, tier evaluators + scoring at target
+speed; modules/game-rules.md is the authoritative rules doc). Sprint 2
+starts now.
 
 Begin Sprint 2: Monte Carlo engine. For a given 7-card hand and a specific
 HandSetting, estimate the EV against a uniform-random opponent by sampling:
