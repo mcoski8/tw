@@ -1,0 +1,30 @@
+# Rust build artifacts
+target/
+**/target/
+Cargo.lock.bak
+
+# Generated lookup / solver data (large binary blobs)
+data/*.bin
+data/best_response/
+data/cfr/
+data/results/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Environment / secrets
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~

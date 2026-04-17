@@ -1,0 +1,15 @@
+[project]
+name = "tw-analysis"
+version = "0.1.0"
+description = "Analysis and pattern mining over Taiwanese Poker solver results"
+requires-python = ">=3.11"
+dependencies = [
+    # Populated as sprints land. Sprint 0 is only a skeleton.
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
