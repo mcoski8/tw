@@ -8,7 +8,7 @@
 
 | Sprint | Name | Phase | Status | Started | Completed |
 |--------|------|-------|--------|---------|-----------|
-| S0 | Foundation + Lookup Tables | Phase 1: Engine Core | Not Started | — | — |
+| S0 | Foundation + Lookup Tables | Phase 1: Engine Core | **Completed** | 2026-04-16 | 2026-04-16 |
 | S1 | Hand Evaluator (Holdem + Omaha) | Phase 1: Engine Core | Not Started | — | — |
 | S2 | Monte Carlo Engine | Phase 1: Engine Core | Not Started | — | — |
 | S3 | Best Response Computation | Phase 2: Solving | Not Started | — | — |

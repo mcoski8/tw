@@ -6,21 +6,21 @@
 
 ## Phase 1: Engine Core
 
-### Sprint 0: Foundation + Lookup Tables
-- [ ] Initialize Rust project (Cargo.toml, dependencies)
-- [ ] Define Card, Rank, Suit types
-- [ ] Implement Deck with shuffle and deal
-- [ ] Build 5-card hand evaluator
-- [ ] Generate lookup table for all 2,598,960 five-card hands
-- [ ] Serialize/deserialize lookup table to binary
-- [ ] Verify hand rankings with comprehensive tests
-- [ ] Benchmark: <50ns per 5-card evaluation
-- [ ] Define HandSetting struct (top=1, mid=2, bot=4)
-- [ ] Enumerate all 105 possible settings for a 7-card hand
-- [ ] CLI: parse hand string and display settings
-- [ ] Initialize Python analysis project
-- [ ] Initialize git, first commit
-- [ ] All documentation in place
+### Sprint 0: Foundation + Lookup Tables — COMPLETED 2026-04-16
+- [x] Initialize Rust project (Cargo.toml, dependencies)
+- [x] Define Card, Rank, Suit types
+- [x] Implement Deck with shuffle and deal
+- [x] Build 5-card hand evaluator
+- [x] Generate lookup table for all 2,598,960 five-card hands
+- [x] Serialize/deserialize lookup table to binary
+- [x] Verify hand rankings with comprehensive tests
+- [x] Benchmark: <50ns per 5-card evaluation — **5.4 ns achieved**
+- [x] Define HandSetting struct (top=1, mid=2, bot=4)
+- [x] Enumerate all 105 possible settings for a 7-card hand
+- [x] CLI: parse hand string and display settings
+- [x] Initialize Python analysis project
+- [x] Initialize git, first commit
+- [x] All documentation in place
 
 ### Sprint 1: Hand Evaluator (Hold'em + Omaha)
 - [ ] Top tier evaluator: best 5 of 6 (1 hole + 5 board)
