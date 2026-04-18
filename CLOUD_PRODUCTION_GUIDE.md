@@ -10,22 +10,22 @@
 
 ## TL;DR — Pick one of these 3
 
-| | **#1 DigitalOcean** | **#2 RunPod** | **#3 Google Cloud (GCP)** |
+> **Pricing update 2026-04-18**: After verifying RunPod's actual live pricing (32-vCPU CAP at $0.96/hr, not the cheaper 64-vCPU pods I initially quoted), **DigitalOcean is now the clear #1 pick** for this job. RunPod is demoted to #3 — its lack of signup credit makes it strictly worse than DO for our compute size.
+
+| | **#1 DigitalOcean** ⭐ | **#2 Google Cloud (GCP)** | **#3 RunPod** |
 |---|---|---|---|
-| Best for | Non-technical user who wants the simplest UI and a major-brand reputation | User who wants to start *tonight* with zero waiting for quota approval, at the lowest cost | User who wants $0 out-of-pocket (if quota approved) and the fastest machine available |
-| Machine | 48 vCPU CPU-Optimized Premium AMD Droplet | 64 vCPU CPU pod ("Community Cloud") | `c2d-highcpu-112` (112 vCPU on AMD EPYC) |
-| Wall-clock (all 4 models) | ~3 days | ~2.5 days | ~1.7 days |
-| Signup credit | $200 for new accounts (covers job) | None — prepaid (add ~$25 via credit card) | $300 for new accounts (covers job) |
-| Out-of-pocket cost (with credit) | **$0** | **~$17** | **$0** |
-| Quota hassle on signup | Must open a support ticket to unlock 48 vCPU (same-day approval with the copy-paste ticket below) | **None** — prepaid model skips enterprise fraud filters | New accounts hard-capped at 8–12 vCPU; **must upgrade past free trial and request a quota increase**; manual fraud review is likely |
-| First-time friendliness | ★★★★★ (cleanest UI of any cloud provider) | ★★★★ (prepaid is boring; browser terminal works out-of-the-box) | ★★★ (polished but dense; account creation can hit friction) |
-| How to start | Option 1 steps below | Option 2 steps below | Option 3 steps below |
+| Best for | **Default choice for nearly everyone.** $0 out of pocket, simplest UI. | Fastest wall-clock, $0 out of pocket, IF you tolerate GCP quota bureaucracy. | Small pilot jobs where "start in 10 minutes" matters more than cost/speed. |
+| Machine | 48 vCPU CPU-Optimized Premium AMD Droplet | `c2d-highcpu-112` (112 vCPU on AMD EPYC) | 32 vCPU CPU pod (this is RunPod's CPU ceiling, not a choice) |
+| Wall-clock (all 4 models) | ~3 days | ~1.7 days | ~4.9 days |
+| Signup credit | **$200** for new accounts (covers job) | **$300** for new accounts (covers job) | None — prepaid |
+| Out-of-pocket cost | **$0** | **$0** | **~$112** |
+| Setup friction | 6-hour support-ticket approval for 48-vCPU unlock | 4-24 hr quota review + account upgrade | 10 min, but you pay full price |
+| First-time friendliness | ★★★★★ | ★★★ | ★★★★ |
+| Jump to section | [DigitalOcean →](#digitalocean--ranked-1) | [GCP →](#google-cloud-gcp--ranked-2) | [RunPod →](#runpod--ranked-3) |
 
-**My single recommendation**, if you don't want to read further: start with **RunPod (Option 2)**. You'll be running in 10 minutes, no bureaucracy, total bill under $20. The only reason to pick DO or GCP is if you already have a relationship/habit with them.
+**My single recommendation: DigitalOcean.** It's now strictly better than RunPod (cheaper, faster, still simple UI). The only reason to pick GCP is if you want the absolute fastest wall-clock and have 24 hours to spare for their quota review.
 
-**If you'd rather pay $0 and have a big-brand UI**, go DigitalOcean (#1). You'll burn a couple hours on the quota ticket, but it's free after the signup credit.
-
-**If you want the absolute fastest wall-clock and don't mind jumping through GCP's fraud-review hoop**, go GCP (#3). Note: realistically this option can take a day just to get approved.
+**Do NOT pick RunPod** unless you specifically want to run only a small pilot (e.g., 10K hands for smoke-testing) where speed-to-deploy trumps cost — for the full 4-model production, RunPod is the worst of the three.
 
 ---
 
@@ -42,7 +42,7 @@ Verify at <https://github.com/mcoski8/tw> that you see a recent commit from toda
 
 ---
 
-# Option 1: DigitalOcean (★ Simplest UI)
+# DigitalOcean — ranked #1
 
 **Why DigitalOcean**: Of every major cloud provider, DO has the cleanest, most developer-friendly UI. Their "Droplets" are simple VMs with one-click launch and in-browser terminal access. No VPC, no security groups, no IAM — you click CREATE and you're in a shell.
 
@@ -196,14 +196,20 @@ Row disappears. You are no longer being billed.
 
 ---
 
-# Option 2: RunPod (★ Cheapest, Fastest to Start)
+# RunPod — ranked #3
 
-> ⚠️ **DO NOT PICK A GPU POD.** RunPod's homepage and deploy flow default to showing **GPU** pods (H100, H200, A100, RTX, B200, L40, MI300X — any of these names = GPU). Those cost $3-15/hour and **we don't need a GPU** — our solver is pure CPU. Click the **CPU tab** on the deploy page. If the price tag shows a GPU model name, it's the wrong pod. CPU pods cost $0.05-0.70/hour depending on vCPU count.
+> ⚠️ **This has been demoted to #3** after verifying RunPod's actual live CPU pricing. As of 2026-04-18:
+> - RunPod's CPU pod ceiling is **32 vCPU at $0.96/hour**. No 64+ vCPU CPU pods exist.
+> - Full 4-model production on 32 vCPU: ~4.9 days wall-clock, ~$112 out-of-pocket (no signup credit).
+> - Compared to DigitalOcean: DO is $0 out of pocket (with signup credit), 3-day wall-clock, same UI complexity.
+> - **Use this guide only if you're running a small smoke-test** (e.g., `--limit 10000 --samples 200`) where "start in 10 minutes" beats cost.
 
-**Why RunPod**: RunPod is designed for ML workloads (mostly GPU) but they have "Community Cloud" CPU pods that are the cheapest credible option for this job. Their billing model is **prepaid** — you load $25, run your pod, and it stops when the balance is depleted. This prepaid model means RunPod doesn't have the enterprise fraud filters that gate big VMs at GCP/DO, so **there's no quota ticket and no multi-hour wait**. You can be running within 10 minutes of account creation.
+> ⚠️ **If you're on the RunPod deploy page:** DO NOT PICK A GPU POD. RunPod's homepage and deploy flow default to showing **GPU** pods (H100, H200, A100, RTX, B200, L40, MI300X — any of these names = GPU). Those cost $3-15/hour and **we don't need a GPU** — our solver is pure CPU. Click the **CPU tab** on the deploy page. If the price tag shows a GPU model name, it's the wrong pod.
 
-**Estimated wall-clock**: ~2.5 days (64 vCPU pod).
-**Estimated out-of-pocket**: ~$17-20 total.
+**What RunPod is good at**: The prepaid billing skips every fraud-review hurdle — you load credit, you deploy, you're running. No quota ticket. For a quick smoke-test run (~$2-5, a few hours) this is the fastest path to data. For a multi-day production, the pricing premium + lack of signup credit makes it strictly worse than DigitalOcean.
+
+**Estimated wall-clock**: ~4.9 days (32 vCPU pod — RunPod's CPU ceiling).
+**Estimated out-of-pocket**: ~$110 total (no signup credit).
 
 ## Step 1 — Sign up
 
@@ -224,7 +230,7 @@ Row disappears. You are no longer being billed.
 1. Left sidebar: **Pods** → **Deploy**.
 2. **CRITICAL**: at the top of the Deploy page you'll see tabs. Click the **CPU** tab. If you stay on the GPU tab you'll see expensive 360+ GB VRAM machines — those are all wrong for our job and cost $3-15/hr.
 3. Sanity check you're on CPU: prices should be well under $1/hr. If prices are above $3/hr, you're still on GPU tab.
-4. Filter for a pod with **64 vCPUs**. Select it. Price will show ~$0.25-0.35/hr. (A 128-vCPU pod for ~$0.60/hr is even better — grab that if offered — this is the "sub-24-hour" path.)
+4. Select the **32 vCPU / 64 GB RAM** pod. Price: ~$0.96/hr. This is RunPod's CPU ceiling — no 64+ vCPU CPU pods exist. (There's also a "5 GHz" tab with higher-clock CPUs at a premium, but it gives you FEWER cores and doesn't help for this workload.)
 5. Template: select **RunPod Base** (Ubuntu 22.04, no extras). This is the default; don't pick a Docker image from the list — you don't need one.
 6. Container Disk: **50 GB** (default).
 7. Volume Disk: **0 GB** — the 216 MB of output is small; container disk is fine.
@@ -298,7 +304,7 @@ Whatever balance is left on your RunPod account stays there (or refund via suppo
 
 ---
 
-# Option 3: Google Cloud (GCP) — Biggest Machine, $0 if Quota Approved
+# Google Cloud (GCP) — ranked #2
 
 **Why GCP**: $300 free credit for new accounts covers the entire job; the `c2d-highcpu-112` machine (56 physical AMD EPYC cores) finishes the job in ~1.7 days, the fastest of the three options.
 
@@ -307,7 +313,7 @@ Whatever balance is left on your RunPod account stays there (or refund via suppo
 2. Submit a quota increase for 128 CPUs.
 3. Wait for GCP's manual fraud review (same-day to 24 hours).
 
-If that's too much bureaucracy, skip to Option 1 or 2.
+If that's too much bureaucracy, skip back up to the DigitalOcean section.
 
 **Estimated wall-clock**: ~1.7 days total.
 **Estimated out-of-pocket**: $0 (covered by $300 signup credit).
@@ -458,63 +464,19 @@ Briefly, so you don't wonder "should I have considered X":
 
 The default guide targets ~2.5-3 days wall-clock. If you want sub-24-hour completion, the workload is embarrassingly parallel across 4 models AND across the 6M hands, so either a **bigger machine** or **multiple machines in parallel** works. A GPU does NOT help — the solver is branchy integer code and lookup-table-memory-bound, exactly the pattern GPUs are worst at. Commercial poker solvers (PioSolver etc.) are CPU-only for the same reason.
 
-## Sub-24-hour approach A — RunPod with a bigger CPU pod (RECOMMENDED)
+> 📝 **Pricing correction 2026-04-18**: Earlier versions of this guide listed a sub-24-hour "RunPod bigger pod" approach. After verifying actual RunPod CPU pricing, that plan is NOT viable — RunPod caps CPU pods at 32 vCPUs. The only remaining sub-24-hour option is GCP's largest machines below.
 
-**Wall-clock: ~17-19 hours. Cost: ~$15-25. Complexity: same as the single-pod guide.**
-
-RunPod's Community Cloud rotates through available CPU pods based on which GPU host machines aren't currently rented for ML work. **Pods with 128-192 vCPUs show up regularly at $0.60-1.20/hr.** When you reach the pod selection screen (Option 2, Step 3), filter for CPU pods and pick the largest one you see under $1.50/hr.
-
-If a 128-vCPU pod is available: follow Option 2 exactly as written. Wall-clock becomes ~19 hours instead of 2.5 days. Total bill ~$15.
-
-If a 192-vCPU pod is available: ~15-17 hours. Total bill ~$20-25.
-
-## Sub-24-hour approach B — RunPod with 4 pods in parallel (EXPERIENCED USER)
-
-**Wall-clock: ~17 hours. Cost: ~$20. Complexity: HIGH — only try this if you're OK with managing 4 browser tabs.**
-
-> ⚠️ **Gemini 3 Pro explicitly pushed back on this approach for non-technical users.** Managing 4 separate web terminals, 4 separate progress logs, 4 separate downloads, and 4 separate teardowns multiplies the surface area for human error. Forgetting to terminate even one pod drains your prepaid balance. **If you forget you have 4 pods and close your laptop, one may keep running for days.** Use this only if you're comfortable with command-line process management.
-
-If you accept that risk:
-
-1. Launch 4 separate RunPod CPU pods, each with 64 vCPU, following Option 2 Steps 1-4 four times (you can name them `tw-1`, `tw-2`, `tw-3`, `tw-4`).
-2. On each pod, do the same Rust install + git clone + build from Option 2 Step 5.
-3. On each pod, run ONE model instead of all four. Inside each pod's terminal, paste ONE of these (different on each pod):
-
-   **Pod 1 (`tw-1`):**
-   ```bash
-   mkdir -p data/best_response
-   nohup /workspace/tw/engine/target/release/tw-engine solve \
-       --canonical /workspace/tw/data/canonical_hands.bin \
-       --lookup /workspace/tw/data/lookup_table.bin \
-       --out /workspace/tw/data/best_response/mfsuitaware_mixed90.bin \
-       --samples 1000 --seed 12648430 --block-size 2000 \
-       --opponent mixed --mix-base mfsuitaware --mix-p 0.9 \
-       > /workspace/tw/data/prod_mfsuitaware.log 2>&1 &
-   echo "Launched PID: $!"
-   ```
-
-   **Pod 2 (`tw-2`):** same command but `--mix-base omaha` and `--out /workspace/tw/data/best_response/omahafirst_mixed90.bin`, log `prod_omahafirst.log`.
-
-   **Pod 3 (`tw-3`):** `--mix-base topdef` → `topdefensive_mixed90.bin`, log `prod_topdefensive.log`.
-
-   **Pod 4 (`tw-4`):** `--opponent weighted` (no mix flags) → `randomweighted.bin`, log `prod_randomweighted.log`.
-
-4. Monitor each pod independently. When all 4 are done, download each pod's single `.bin` file, then **terminate all 4 pods**.
-
-## Sub-24-hour approach C — GCP bigger VM
+## Sub-24-hour approach — GCP bigger VM (the only realistic path)
 
 **Wall-clock: ~15-19 hours. Cost: $0 out of pocket if you already cleared the quota review.**
 
-Follow Option 3 (GCP) exactly, but in Step 5 request quota for `200` CPUs instead of `128`, and in Step 6 pick machine type `c2d-highcpu-224` (224 vCPU = 112 physical AMD EPYC cores) or `c3-highcpu-176` (176 vCPU Intel Sapphire Rapids). Cost on-demand: ~$6.80-9.50/hr; $120-180 on-demand, $0 after the $300 free trial credit. Wall-clock all 4 models sequentially: ~15-19 hours.
+Follow the GCP section exactly, but in Step 5 request quota for `200` CPUs instead of `128`, and in Step 6 pick machine type `c2d-highcpu-224` (224 vCPU = 112 physical AMD EPYC cores) or `c3-highcpu-176` (176 vCPU Intel Sapphire Rapids). Cost on-demand: ~$6.80-9.50/hr; $120-180 on-demand, $0 after the $300 free trial credit. Wall-clock all 4 models sequentially: ~15-19 hours.
 
 This is the absolute fastest option, but only viable if you've already sunk the time into GCP's account upgrade + quota review (typically 4-24 hours of bureaucracy).
 
-## Which sub-24 approach should YOU pick?
+## If you can't do sub-24 hours
 
-- **First-time cloud user, want simplicity**: Approach A. Same simplicity as default RunPod guide, just pick a bigger pod at deployment time.
-- **Willing to juggle 4 tabs + comfortable with the terminate-everything discipline**: Approach B. Cheapest at $20 total.
-- **Already have GCP account + already cleared quota**: Approach C. Fastest absolute.
-- **Want to maximize simplicity and don't mind 2.5 days**: just use the default Option 2 guide (64-vCPU, sequential). Still 4× faster than your Mac Mini.
+The default DigitalOcean path (~3 days, $0 out of pocket) is still 3-4× faster than your Mac Mini and the simplest experience. For almost every user this is the right call.
 
 ---
 
