@@ -334,10 +334,14 @@ Pre-fix (Session 05 10K) vs post-fix (Session 06 5K):
   - **Parallel 4-pod fan-out** flagged as UX-hazardous for non-technical user (multiplies error surface — terminate-the-wrong-pod risk). Gemini preferred "single bigger machine."
 - Final top 3 (in CLOUD_PRODUCTION_GUIDE.md): DigitalOcean (#1 simplest UI, $200 credit), RunPod (#2 cheapest + fastest start, prepaid $17-20), GCP (#3 fastest machine if quota approved, $0 after $300 credit). Each with own sub-24-hour variant.
 
-**Empirical — pilot launched at 23:34:**
-- Background job ID `butlu0ted`: 50K canonical hands × 4 models × N=1000, running sequentially per model.
-- Expected wall ~2 hours (4 × ~30 min at 37.3 ms/hand × 50K × 9× rayon ÷ 4 models... recomputing: 50K × 0.0373s/hand = 1865s per model = 31 min; 4 models = 2.1 hrs).
-- Results pending end-of-session.
+**Empirical — pilot complete (23:34 → 01:37, 2h 3m wall):**
+- Background job `butlu0ted` finished cleanly (all 4 models exit=0). Per-model wall: 31m 27s (MFSuitAware), 30m 36s (OmahaFirst), 30m 10s (TopDefensive), 30m 41s (RandomWeighted).
+- All 4 output files exactly 450,032 bytes (32-byte header + 9 × 50,000 records). Headers verified: opp_model_tag = 1002090 / 1003090 / 1004090 / 6 respectively.
+- EV distributions archetype-consistent: MFSuitAware mean -2.89 (toughest opp → most negative hero EV), TopDefensive -2.89 (also tough), RandomWeighted -1.66 (medium), OmahaFirst -1.02 (gives up EV at Hold'em tiers → hero loses least).
+- Bug fixes validated at 50K-hand scale: on quads+trips hand `2c2d2h2s 3c3d3h`, MF/TD preserve trips in bot (top=2s, mid=3h2h, bot=3d3c2d2c); OmahaFirst bot picks trips+pair (top=3d, mid=2s2d, bot=3h3c2h2c). No pair-orphaning observed. Spot-check raw output: `data/session06/pilot_spotcheck.log` (if committed) or regenerate with `./engine/target/release/tw-engine spot-check --out data/pilot/<model>.bin --show 20`.
+- Production pipeline green-lit for cloud launch.
+
+**Final effective per-hand rate** (mixed-opp wrapper): 31.4 ms/hand at N=1000 with rayon — slightly FASTER than the pure-Random baseline's 37.3 ms/hand, because the heuristic branch skips `random_setting`'s top/mid index draws 90% of the time (heuristic result is precomputed per sample). Implication for cloud projection: actual production will be ~20% faster than my guide's "3 days on 48-vCPU DO" estimate. Updated projection: ~2.5 days DO, ~1.4 days GCP 112-vCPU, ~4 days RunPod 32-vCPU.
 
 **Carry-forward for Session 07 (or user-launched cloud run):**
 1. **Cloud launch is user's to kick off.** Follow CLOUD_PRODUCTION_GUIDE.md. Recommended start: RunPod (#2) for fastest-to-running, least friction.

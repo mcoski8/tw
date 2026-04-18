@@ -1,0 +1,73 @@
+Loading 5-card lookup table from /Users/michaelchang/Documents/claudecode/taiwanese/data/lookup_table.bin ...
+Loading canonical hands from /Users/michaelchang/Documents/claudecode/taiwanese/data/canonical_hands.bin ...
+  6009159 canonical hands.
+Solving 50000 hands (ids 0..50000) at samples=1000 opp=HeuristicMixed { base: TopDefensive, p_heuristic: 0.9 } block_size=1000 ...
+  id=      1000  wrote=1000/50000  block= 35.48s  ETA= 1738.6s
+  id=      2000  wrote=2000/50000  block= 35.57s  ETA= 1705.2s
+  id=      3000  wrote=3000/50000  block= 35.40s  ETA= 1667.7s
+  id=      4000  wrote=4000/50000  block= 35.78s  ETA= 1635.6s
+  id=      5000  wrote=5000/50000  block= 35.76s  ETA= 1602.0s
+  id=      6000  wrote=6000/50000  block= 35.94s  ETA= 1568.8s
+  id=      7000  wrote=7000/50000  block= 35.99s  ETA= 1535.3s
+  id=      8000  wrote=8000/50000  block= 36.33s  ETA= 1502.9s
+  id=      9000  wrote=9000/50000  block= 36.21s  ETA= 1469.0s
+  id=     10000  wrote=10000/50000  block= 36.18s  ETA= 1434.6s
+  id=     11000  wrote=11000/50000  block= 35.59s  ETA= 1397.8s
+  id=     12000  wrote=12000/50000  block= 36.18s  ETA= 1363.0s
+  id=     13000  wrote=13000/50000  block= 36.39s  ETA= 1328.6s
+  id=     14000  wrote=14000/50000  block= 35.84s  ETA= 1292.5s
+  id=     15000  wrote=15000/50000  block= 35.62s  ETA= 1256.0s
+  id=     16000  wrote=16000/50000  block= 36.29s  ETA= 1220.9s
+  id=     17000  wrote=17000/50000  block= 36.22s  ETA= 1185.6s
+  id=     18000  wrote=18000/50000  block= 36.36s  ETA= 1150.5s
+  id=     19000  wrote=19000/50000  block= 36.51s  ETA= 1115.4s
+  id=     20000  wrote=20000/50000  block= 36.40s  ETA= 1080.1s
+  id=     21000  wrote=21000/50000  block= 36.08s  ETA= 1044.2s
+  id=     22000  wrote=22000/50000  block= 36.50s  ETA= 1008.8s
+  id=     23000  wrote=23000/50000  block= 36.02s  ETA=  972.8s
+  id=     24000  wrote=24000/50000  block= 36.57s  ETA=  937.3s
+  id=     25000  wrote=25000/50000  block= 36.44s  ETA=  901.7s
+  id=     26000  wrote=26000/50000  block= 36.67s  ETA=  866.1s
+  id=     27000  wrote=27000/50000  block= 37.03s  ETA=  830.9s
+  id=     28000  wrote=28000/50000  block= 36.39s  ETA=  794.9s
+  id=     29000  wrote=29000/50000  block= 36.68s  ETA=  759.2s
+  id=     30000  wrote=30000/50000  block= 36.33s  ETA=  723.2s
+  id=     31000  wrote=31000/50000  block= 36.54s  ETA=  687.2s
+  id=     32000  wrote=32000/50000  block= 36.73s  ETA=  651.4s
+  id=     33000  wrote=33000/50000  block= 36.42s  ETA=  615.3s
+  id=     34000  wrote=34000/50000  block= 36.58s  ETA=  579.3s
+  id=     35000  wrote=35000/50000  block= 36.61s  ETA=  543.3s
+  id=     36000  wrote=36000/50000  block= 36.90s  ETA=  507.3s
+  id=     37000  wrote=37000/50000  block= 36.71s  ETA=  471.2s
+  id=     38000  wrote=38000/50000  block= 37.10s  ETA=  435.3s
+  id=     39000  wrote=39000/50000  block= 36.80s  ETA=  399.1s
+  id=     40000  wrote=40000/50000  block= 36.85s  ETA=  363.0s
+  id=     41000  wrote=41000/50000  block= 36.72s  ETA=  326.8s
+  id=     42000  wrote=42000/50000  block= 35.21s  ETA=  290.3s
+  id=     43000  wrote=43000/50000  block= 35.65s  ETA=  253.9s
+  id=     44000  wrote=44000/50000  block= 35.94s  ETA=  217.6s
+  id=     45000  wrote=45000/50000  block= 36.18s  ETA=  181.3s
+  id=     46000  wrote=46000/50000  block= 36.26s  ETA=  145.0s
+  id=     47000  wrote=47000/50000  block= 35.59s  ETA=  108.7s
+  id=     48000  wrote=48000/50000  block= 35.94s  ETA=   72.5s
+  id=     49000  wrote=49000/50000  block= 35.57s  ETA=   36.2s
+  id=     50000  wrote=50000/50000  block= 35.55s  ETA=    0.0s
+Done in 1810.61s. Wrote 50000 records to /Users/michaelchang/Documents/claudecode/taiwanese/data/pilot/topdefensive_mixed90.bin.
+     1810.69 real     16708.00 user        92.40 sys
+            57606144  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+                3758  page reclaims
+                  36  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                 329  voluntary context switches
+            12065044  involuntary context switches
+     233448730927428  instructions retired
+      49762217332706  cycles elapsed
+            56607080  peak memory footprint

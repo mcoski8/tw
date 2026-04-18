@@ -1,0 +1,116 @@
+Best-response file: data/pilot/mfsuitaware_mixed90.bin
+  header: samples=1000 base_seed=0xc0ffee canonical_total=6009159 opp=1002090
+  records: 50000 of 6009159
+
+First 10 records:
+  id=         0  hand=[2c 2d 2h 2s 3c 3d 3h]  best=[top 2s  mid 3h 2h  bot 3d 3c 2d 2c]  EV=-9.611
+  id=         1  hand=[2c 2d 2h 2s 3c 3d 4c]  best=[top 4c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-7.201
+  id=         2  hand=[2c 2d 2h 2s 3c 3d 4h]  best=[top 4h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-7.337
+  id=         3  hand=[2c 2d 2h 2s 3c 3d 5c]  best=[top 5c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-7.526
+  id=         4  hand=[2c 2d 2h 2s 3c 3d 5h]  best=[top 5h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-7.465
+  id=         5  hand=[2c 2d 2h 2s 3c 3d 6c]  best=[top 6c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-7.178
+  id=         6  hand=[2c 2d 2h 2s 3c 3d 6h]  best=[top 6h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-7.204
+  id=         7  hand=[2c 2d 2h 2s 3c 3d 7c]  best=[top 7c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-7.011
+  id=         8  hand=[2c 2d 2h 2s 3c 3d 7h]  best=[top 7h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-6.721
+  id=         9  hand=[2c 2d 2h 2s 3c 3d 8c]  best=[top 8c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-6.895
+
+Best-EV distribution: min=-9.839  mean=-2.889  max=+3.130
+
+Top-10 most-chosen setting indices:
+   1. setting_idx= 95  count=  10496  (21.0%)
+   2. setting_idx= 91  count=   6178  (12.4%)
+   3. setting_idx=104  count=   4380  (8.8%)
+   4. setting_idx=101  count=   2590  (5.2%)
+   5. setting_idx= 74  count=   2419  (4.8%)
+   6. setting_idx= 92  count=   2414  (4.8%)
+   7. setting_idx= 44  count=   2379  (4.8%)
+   8. setting_idx= 50  count=   2073  (4.1%)
+   9. setting_idx= 99  count=   2040  (4.1%)
+  10. setting_idx= 46  count=   1794  (3.6%)
+Best-response file: data/pilot/omahafirst_mixed90.bin
+  header: samples=1000 base_seed=0xc0ffee canonical_total=6009159 opp=1003090
+  records: 50000 of 6009159
+
+First 10 records:
+  id=         0  hand=[2c 2d 2h 2s 3c 3d 3h]  best=[top 3d  mid 2s 2d  bot 3h 3c 2h 2c]  EV=-7.183
+  id=         1  hand=[2c 2d 2h 2s 3c 3d 4c]  best=[top 4c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-4.909
+  id=         2  hand=[2c 2d 2h 2s 3c 3d 4h]  best=[top 4h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-5.302
+  id=         3  hand=[2c 2d 2h 2s 3c 3d 5c]  best=[top 5c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-5.283
+  id=         4  hand=[2c 2d 2h 2s 3c 3d 5h]  best=[top 5h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-5.377
+  id=         5  hand=[2c 2d 2h 2s 3c 3d 6c]  best=[top 6c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-4.844
+  id=         6  hand=[2c 2d 2h 2s 3c 3d 6h]  best=[top 6h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-4.713
+  id=         7  hand=[2c 2d 2h 2s 3c 3d 7c]  best=[top 7c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-4.770
+  id=         8  hand=[2c 2d 2h 2s 3c 3d 7h]  best=[top 7h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-4.561
+  id=         9  hand=[2c 2d 2h 2s 3c 3d 8c]  best=[top 8c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-4.176
+
+Best-EV distribution: min=-7.183  mean=-1.023  max=+3.750
+
+Top-10 most-chosen setting indices:
+   1. setting_idx= 95  count=  12382  (24.8%)
+   2. setting_idx= 91  count=   7076  (14.2%)
+   3. setting_idx=104  count=   6313  (12.6%)
+   4. setting_idx=101  count=   4286  (8.6%)
+   5. setting_idx= 98  count=   2064  (4.1%)
+   6. setting_idx= 99  count=   1924  (3.8%)
+   7. setting_idx= 90  count=   1662  (3.3%)
+   8. setting_idx= 44  count=   1528  (3.1%)
+   9. setting_idx= 74  count=   1466  (2.9%)
+  10. setting_idx= 80  count=   1369  (2.7%)
+Best-response file: data/pilot/topdefensive_mixed90.bin
+  header: samples=1000 base_seed=0xc0ffee canonical_total=6009159 opp=1004090
+  records: 50000 of 6009159
+
+First 10 records:
+  id=         0  hand=[2c 2d 2h 2s 3c 3d 3h]  best=[top 2s  mid 3h 2h  bot 3d 3c 2d 2c]  EV=-9.597
+  id=         1  hand=[2c 2d 2h 2s 3c 3d 4c]  best=[top 4c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-7.346
+  id=         2  hand=[2c 2d 2h 2s 3c 3d 4h]  best=[top 4h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-7.201
+  id=         3  hand=[2c 2d 2h 2s 3c 3d 5c]  best=[top 5c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-7.527
+  id=         4  hand=[2c 2d 2h 2s 3c 3d 5h]  best=[top 5h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-7.397
+  id=         5  hand=[2c 2d 2h 2s 3c 3d 6c]  best=[top 6c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-7.048
+  id=         6  hand=[2c 2d 2h 2s 3c 3d 6h]  best=[top 6h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-6.923
+  id=         7  hand=[2c 2d 2h 2s 3c 3d 7c]  best=[top 7c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-7.072
+  id=         8  hand=[2c 2d 2h 2s 3c 3d 7h]  best=[top 7h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-6.659
+  id=         9  hand=[2c 2d 2h 2s 3c 3d 8c]  best=[top 8c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-6.869
+
+Best-EV distribution: min=-9.716  mean=-2.888  max=+3.095
+
+Top-10 most-chosen setting indices:
+   1. setting_idx= 95  count=   9365  (18.7%)
+   2. setting_idx= 91  count=   5370  (10.7%)
+   3. setting_idx=104  count=   3447  (6.9%)
+   4. setting_idx= 74  count=   2764  (5.5%)
+   5. setting_idx= 50  count=   2619  (5.2%)
+   6. setting_idx= 44  count=   2564  (5.1%)
+   7. setting_idx= 46  count=   2389  (4.8%)
+   8. setting_idx=101  count=   2316  (4.6%)
+   9. setting_idx= 92  count=   2061  (4.1%)
+  10. setting_idx= 99  count=   1641  (3.3%)
+Best-response file: data/pilot/randomweighted.bin
+  header: samples=1000 base_seed=0xc0ffee canonical_total=6009159 opp=6
+  records: 50000 of 6009159
+
+First 10 records:
+  id=         0  hand=[2c 2d 2h 2s 3c 3d 3h]  best=[top 3d  mid 2s 2d  bot 3h 3c 2h 2c]  EV=-7.529
+  id=         1  hand=[2c 2d 2h 2s 3c 3d 4c]  best=[top 4c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-5.772
+  id=         2  hand=[2c 2d 2h 2s 3c 3d 4h]  best=[top 4h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-5.643
+  id=         3  hand=[2c 2d 2h 2s 3c 3d 5c]  best=[top 5c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-5.765
+  id=         4  hand=[2c 2d 2h 2s 3c 3d 5h]  best=[top 5h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-5.964
+  id=         5  hand=[2c 2d 2h 2s 3c 3d 6c]  best=[top 6c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-5.652
+  id=         6  hand=[2c 2d 2h 2s 3c 3d 6h]  best=[top 6h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-5.807
+  id=         7  hand=[2c 2d 2h 2s 3c 3d 7c]  best=[top 7c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-5.388
+  id=         8  hand=[2c 2d 2h 2s 3c 3d 7h]  best=[top 7h  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-5.228
+  id=         9  hand=[2c 2d 2h 2s 3c 3d 8c]  best=[top 8c  mid 2s 2h  bot 3d 3c 2d 2c]  EV=-5.443
+
+Best-EV distribution: min=-7.840  mean=-1.660  max=+3.680
+
+Top-10 most-chosen setting indices:
+   1. setting_idx= 95  count=  14252  (28.5%)
+   2. setting_idx= 91  count=  10593  (21.2%)
+   3. setting_idx=104  count=   3545  (7.1%)
+   4. setting_idx= 90  count=   2541  (5.1%)
+   5. setting_idx= 99  count=   1986  (4.0%)
+   6. setting_idx= 46  count=   1393  (2.8%)
+   7. setting_idx= 44  count=   1330  (2.7%)
+   8. setting_idx= 61  count=   1329  (2.7%)
+   9. setting_idx= 74  count=   1290  (2.6%)
+  10. setting_idx= 50  count=   1239  (2.5%)

@@ -1,0 +1,16 @@
+[23:34:50] === Pilot: mfsuitaware_mixed90 ===
+[00:06:17] mfsuitaware_mixed90 exit=0
+[00:06:17] === Pilot: omahafirst_mixed90 ===
+[00:36:53] omahafirst_mixed90 exit=0
+[00:36:53] === Pilot: topdefensive_mixed90 ===
+[01:07:03] topdefensive_mixed90 exit=0
+[01:07:03] === Pilot: randomweighted ===
+[01:37:44] randomweighted exit=0
+[01:37:44] Pilot complete — all 4 models written to /Users/michaelchang/Documents/claudecode/taiwanese/data/pilot/
+total 3616
+drwxr-xr-x@  6 michaelchang  staff     192 Apr 18 01:07 .
+drwxr-xr-x@ 11 michaelchang  staff     352 Apr 17 23:10 ..
+-rw-r--r--@  1 michaelchang  staff  450032 Apr 18 00:06 mfsuitaware_mixed90.bin
+-rw-r--r--@  1 michaelchang  staff  450032 Apr 18 00:36 omahafirst_mixed90.bin
+-rw-r--r--@  1 michaelchang  staff  450032 Apr 18 01:37 randomweighted.bin
+-rw-r--r--@  1 michaelchang  staff  450032 Apr 18 01:07 topdefensive_mixed90.bin
