@@ -1,0 +1,72 @@
+Loading 5-card lookup table from /Users/michaelchang/Documents/claudecode/taiwanese/data/lookup_table.bin ...
+Loading canonical hands from /Users/michaelchang/Documents/claudecode/taiwanese/data/canonical_hands.bin ...
+  6009159 canonical hands on disk.
+Sampling 5000 hands at stride 1201.8 (first id=0, last id=6007957).
+Running all 7 pure models at samples=1000 seed=0xc0ffee. Est. wall ≈ 22 min at 37 ms/hand/model.
+Done in 1389.27s.
+
+All-7 models agree: 721/5000 (14.4%)
+
+Pairwise agreement matrix (%):
+                      Random   MFNaive MFSuitAwa OmahaFirs TopDefens RandomWei BalancedH
+            Random    100.0%     40.2%     41.2%     53.5%     34.4%     53.6%     50.7%
+           MFNaive     40.2%    100.0%     89.0%     34.0%     77.8%     65.3%     37.4%
+       MFSuitAware     41.2%     89.0%    100.0%     35.6%     77.5%     65.6%     38.2%
+        OmahaFirst     53.5%     34.0%     35.6%    100.0%     29.2%     41.9%     44.8%
+      TopDefensive     34.4%     77.8%     77.5%     29.2%    100.0%     53.7%     33.6%
+    RandomWeighted     53.6%     65.3%     65.6%     41.9%     53.7%    100.0%     43.2%
+ BalancedHeuristic     50.7%     37.4%     38.2%     44.8%     33.6%     43.2%    100.0%
+
+Per-hand EV spread (max_model_EV − min_model_EV):
+  mean   2.269
+  p50    2.281
+  p90    2.991
+  p95    3.170
+  p99    3.585
+  max    4.274
+
+Top 15 hands by max EV spread across models:
+          id  canonical hand                  spread       Random   MFNaive MFSuitAwa OmahaFirs TopDefens RandomWei BalancedH
+       10816  2c 2d 2h 3s 4s 8c Tc             4.274       -1.671    -5.745    -5.945    -2.650    -5.744    -3.603    -4.214
+      716292  2c 3c 6c 6d 6h 7c Js             4.263       -0.519    -3.826    -3.907    +0.218    -4.045    -2.145    -2.412
+     4892657  4c 6d 7c 7h 7s 8d Jd             4.196       +1.364    -2.203    -2.236    +1.699    -2.497    +0.165    -0.747
+       14422  2c 2d 2h 4c 5c 6d 9c             4.020       -1.544    -5.521    -5.564    -2.411    -5.482    -3.817    -4.054
+     5276042  5c 6c 6d 6h 7s 8s Qd             4.018       +2.014    -1.538    -1.694    +1.817    -2.004    +0.490    -0.835
+     3088708  3c 4c 5d 6c 6h 6s Qc             3.974       -0.130    -3.650    -3.614    +0.156    -3.818    -1.348    -2.644
+     3586266  3c 5c 5d 5h 6d 6s Jh             3.972       +0.813    -2.773    -2.841    +0.303    -3.159    -0.805    -1.394
+     4288136  4c 4d 4h 7c Js Ac Ad             3.948       +3.757    +0.382    +0.239    +4.187    +0.276    +2.021    +1.296
+           0  2c 2d 2h 2s 3c 3d 3h             3.929       -5.737    -9.611    -9.666    -7.170    -9.590    -7.529    -8.637
+     4274916  4c 4d 4h 5c 5d 9s Kc             3.910       +1.136    -2.396    -2.448    +0.395    -2.774    -0.403    -1.588
+     1265529  2c 3d 6d 7c 7h 7s Td             3.873       +0.162    -2.907    -2.690    +0.929    -2.944    -1.319    -1.373
+     2693305  3c 3d 3h 4c 5s 6d Jc             3.845       -0.917    -4.536    -4.650    -1.068    -4.762    -3.256    -3.253
+     1444602  2c 4c 4d 5h 5s 7d Kc             3.838       +1.525    -2.059    -2.144    +0.460    -2.313    +0.282    -1.296
+      670622  2c 3c 5c 6d 7h 7s Kc             3.827       +1.063    -2.201    -2.288    +1.392    -2.435    -0.433    -1.237
+       20431  2c 2d 2h 4s 5s 7c 9d             3.820       -0.982    -4.754    -4.802    -2.039    -4.702    -3.440    -3.625
+
+High-agreement pairs (≥95%): candidate collapses for production:
+  (none — all 7 models are meaningfully distinct)
+
+JSON sidecar written to /Users/michaelchang/Documents/claudecode/taiwanese/data/session06/diagnostic_5k_postfix.json.
+
+Interpretation guide:
+  All-7 agree > 95%  →  opp model barely matters; use the cheapest.
+  70-95%             →  partial clustering; pick one representative per cluster.
+  < 70%              →  models meaningfully diverge; may need the full panel in production.
+     1389.49 real     12162.95 user        75.79 sys
+            57982976  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+                6349  page reclaims
+                  46  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                  12  voluntary context switches
+            14109857  involuntary context switches
+     166828817876290  instructions retired
+      36258917498615  cycles elapsed
+            57000320  peak memory footprint

@@ -201,6 +201,35 @@
 **Choice:** (c) p=0.9 for the three deterministic members (MFSuitAware, OmahaFirst, TopDefensive). RandomWeighted stays pure (already stochastic; wrapping it with more Random has no meaningful effect).
 **Why:** Gemini's original p=0.8 recommendation was calibrated against a Random-only baseline assumption. The 7-model diagnostic revealed the opp space is much richer than that — all-7-agree is only 11.9%, so opp-model signal matters a lot. A 20% Random tail dilutes archetype integrity more than necessary. 10% Random is sufficient to prevent brittle exploits on any single deterministic line while preserving ≥90% archetype fidelity. Gemini independently recommended p=0.9 on the 7-model data.
 
+## Decision 025 — Bug 1 Fix: Pair-Preserving Top-Selection in MFNaive + MFSuitAware
+**Date:** 2026-04-18 (Sprint 2b, Session 06)
+**Question:** The MFNaive and MFSuitAware top-card rule ("highest-rank card remaining after the mid is chosen") breaks a pair on AAKK-style hands — e.g. `As Ah Kd Kh 7s 4c 2d` produces top=Kh, orphaning the other K into the bot. What's the minimal fix that (a) preserves pairs when possible and (b) doesn't regress any archetype's existing behaviour on plain hands?
+**Options:**
+  - (a) Keep the bug; accept that MF-family models break pairs when one pair is in mid.
+  - (b) Prefer highest-rank SINGLETON in rem5 (card whose rank appears exactly once among the 5 non-mid cards); fall back to highest-rank overall when every card is a pair member.
+  - (c) Prefer highest-rank NON-PAIR-MEMBER in the full 7-card hand (TopDefensive's rule) — but applied post-mid.
+**Choice:** (b) — singleton-in-rem5 preference, fallback to highest-rank-overall.
+**Why:**
+  1. **Correct on AAKK:** mid=AA picked first; rem5=KKQQ+7 or KK+7,4,2 etc. Singleton ranks in rem5 are {7}, {4}, {2} on the audit hand → top=7. KK intact in bot.
+  2. **No regression on plain broadway hands:** on `As Kh Qd Jc Ts 9h 2d` (no pairs) all of rem5 are singletons; the rule collapses to "highest rank" — same as pre-fix behaviour (top=Kh via MFSuitAware's ATs-over-AKo path; top=Qd via MFNaive).
+  3. **Choice (c) would orphan AAs too:** on `As Ah Kd Qc Js 9h 3d`, MFNaive picks mid=AA, then rem5 = [Kd, Qc, Js, 9h, 3d]. Rule (c) would need the full-hand context rather than rem5 — but rem5 has no pair members here, so both (b) and (c) agree (top=Kd). Rule (b) is the simpler "local" rule; applies correctly to the rem5 context. This matches TopDefensive's own pair-preserving spec (which looks at the full hand because it picks top FIRST), so the three pair-preserving models (MFNaive, MFSuitAware, TopDefensive) all encode the same principle now, each in its own scoping.
+  4. **Fallback case (all rem5 are pair members):** e.g. after mid=AA on AAKKQQ+J, rem5=KKQQ+J. J is a singleton in rem5 → top=J (fine). Only when NO singleton exists — e.g. AAKK-QQ-77 with mid=AA, rem5=KKQQ77 — does the fallback fire, and then highest-rank is picked (top=K). This still breaks a pair but is unavoidable; the model can't keep all three pairs intact when only 5 slots are available for 3 pairs.
+  Implemented as a new `pick_top_from_rem5(&[Card; 5]) -> usize` helper. `build_setting_mid_then_top` and `candidate_bot_after_top` now both route through it. Verified by two new unit tests (`mfnaive_preserves_kk_on_aakk_hands`, `mfsuitaware_preserves_kk_on_aakk_hands`) and visual audit on 7 stress hands — behaviour on no-pair hands is bit-identical to pre-fix.
+
+## Decision 026 — Bug 3 Fix: OmahaFirst Top = Highest of Remaining 3
+**Date:** 2026-04-18 (Sprint 2b, Session 06)
+**Question:** OmahaFirst selects the 4-card bot first, then picks "the best 2-card Hold'em mid from the remaining 3, leaving the leftover card as top." This produces absurd tops (top=2d on a broadway-heavy hand). Fix?
+**Options:**
+  - (a) Keep as-is (absurd tops are archetype-eccentric).
+  - (b) Top = highest-rank card of the remaining 3; mid = the other 2.
+  - (c) Top = highest-rank SINGLETON of rem3 with fallback (full pair-preserving rule).
+**Choice:** (b) — simple "highest of 3" rule, index tie-break.
+**Why:**
+  1. **Archetype match:** An "Omaha-priority player" obsesses about the bot, not about the top. Once the bot is locked, they throw the highest remaining card on top without further optimisation. This matches real-world Omaha-specialist play.
+  2. **Pair-preservation is not relevant here** because the 4-card Omaha bot selection already pulls pocket pairs into the bot when valuable (pairs score +15..+30 in `omaha_bot_score`). By the time we're at rem3, any remaining pair is usually unwanted junk the Omaha scorer rejected. Option (c) would over-engineer a rule for a case that rarely arises.
+  3. **No regression on the existing tests** — `omahafirst_favors_double_suited_bot` and `omahafirst_wheel_hand_uses_wheel_in_bot` only check the bot contents; they pass unchanged. The new test `omahafirst_picks_highest_remaining_for_top` on the broadway hand locks in the fix (top=Ts ≥ 9, not the pre-fix 2d).
+  4. Index tie-break keeps behaviour deterministic when two rem3 cards have equal rank (rare but not impossible — e.g. rem3 = [7h, 7s, X]). Higher-index card wins by convention (same as `pick_top_from_rem5`).
+
 ---
 
 ## Decision 011 — Dual Compute Backend (CPU + CUDA)

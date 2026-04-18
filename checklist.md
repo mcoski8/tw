@@ -70,11 +70,13 @@
 - [x] Behavioural audit on 7 stress-test hands — 4 bugs identified
 - [x] Gemini 2.5 Pro adversarial review via pal MCP
 - [x] PRODUCTION COMMITMENT RECOMMENDATION document drafted for Claude Desktop
-- [ ] Claude Desktop approval of P2-alt panel (NEXT SESSION)
-- [ ] Apply Bug 1 + Bug 3 fixes to opp_models.rs
-- [ ] Add 2 unit tests for the fixes
-- [ ] Re-run 5K diagnostic to verify bug-fix impact
-- [ ] Run mini-pilot: 50K hands × 4 models × N=1000 (~4 hours)
+- [x] Claude Desktop approval of P2-alt panel — 2026-04-18 Session 06
+- [x] Apply Bug 1 + Bug 3 fixes to opp_models.rs — Decisions 025, 026
+- [x] Add 4 unit tests for the fixes (mfnaive/mfsuitaware KK preservation, topdef AAKK redux, omahafirst highest-of-rem3) — 124 tests green
+- [x] Stress-test audit on 7 hands (show-opp-picks) — all 4 production models archetype-correct
+- [ ] Re-run 5K diagnostic to verify bug-fix impact — IN PROGRESS
+- [ ] Run mini-pilot: 50K hands × 4 models × N=1000 (~2 hours)
+- [ ] Launch full production: 6,009,159 × 4 × N=1000 (~10.4 days)
 
 ### Sprint 4: Hand Bucketing + CFR
 - [ ] Hand feature extraction

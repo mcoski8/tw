@@ -51,7 +51,7 @@ See `docs/modules/compute-pipeline.md` for full technical spec including time es
 | Progress reporting with ETA | DONE | One log line per block |
 | Pilot run N=100 × 1K hands | DONE | 3.81 s, all settings sane (low-rank-cluster region) |
 | Extended pilot N=1000 × 10K hands | DONE | 373 s = 37.3 ms/hand → 2.6-day projection for full run |
-| Production run on all 6.01M canonical hands | **PENDING** | Recipe in CURRENT_PHASE.md; user-gated launch |
+| Production run on all 6.01M canonical hands | **CLOUD-GATED** | User vetoed Mac Mini run in Session 06; CLOUD_PRODUCTION_GUIDE.md written for user-launched cloud execution (RunPod / DO / GCP). 4-model P2-alt panel (Decision 023), Bug 1 + 3 fixes applied (Decisions 025/026) |
 | Analyze: EV distribution + setting-frequency histogram | PENDING | After production completes |
 
 ### Output & Validation

@@ -282,3 +282,70 @@ All three top picks put the Jack on top — consistent with the research finding
 4. Re-run 7-model diagnostic on 5K hands (~25 min) to confirm the cluster structure shifts (MFNaive↔MFSuitAware should drop below 88.4%).
 5. Run mini-pilot: 50K hands × 4-model P2-alt panel × N=1000 (~4 hours).
 6. If pilot OK, launch full production: 6,009,159 × 4 × N=1000 ≈ 10.4 days Mac Mini or ~2 days cloud.
+
+---
+
+### Session 06 — 2026-04-18 — Bug fixes applied, diagnostic re-run, pilot launched, cloud plan written
+
+**Scope:** Apply Claude Desktop's approved plan (P2-alt production with Bug 1 + Bug 3 fixes). Stress audit. Re-diagnostic. Pilot on Mac Mini. Write cloud production guide (user pivoted from Mac-Mini production to cloud mid-session). Docs + commit.
+
+**Decisions (new):** 025 (Bug 1 fix — pair-preserving top in MFNaive + MFSuitAware via `pick_top_from_rem5` helper), 026 (Bug 3 fix — OmahaFirst top = highest of rem3, not leftover of mid-selection).
+
+**Engine code delivered:**
+- `engine/src/opp_models.rs` — added `pick_top_from_rem5` (pair-preservation for MF-family), rewrote `candidate_bot_after_top` and `build_setting_mid_then_top` to route through it. Rewrote `opp_omaha_first`'s top-selection to use rem3-highest-rank rule. Added 5 new tests: `mfnaive_preserves_kk_on_aakk_hands`, `mfsuitaware_preserves_kk_on_aakk_hands`, `topdefensive_preserves_pairs_on_aakk_redux`, `omahafirst_picks_highest_remaining_for_top`, `omahafirst_top_is_highest_of_remaining_three_stress`.
+- Test count: 119 → **124** (+5). All passing.
+
+**Scripts + docs delivered:**
+- `scripts/pilot_all_models.sh` — 4-model pilot sequential runner (50K hands × N=1000, ~2 hrs on Mac Mini).
+- `scripts/production_all_models.sh` — 4-model production sequential runner (6.01M hands × N=1000). Built for Mac but applicable to cloud.
+- `CLOUD_PRODUCTION_GUIDE.md` — full first-time-cloud-user guide with 3 options (DigitalOcean, RunPod, GCP) chosen after Socratic pressure-test with Gemini 3 Pro via PAL MCP. Includes sub-24-hour variants for each option. Explicitly rejects AWS, Hetzner, Azure, Oracle, container-first services, and GPU-based approaches with justifications.
+- `DECISIONS_LOG.md` — Decisions 025, 026 appended.
+- `checklist.md` — Sprint 2b items checked off; pilot + production marked in progress / cloud-pending.
+
+**Empirical — stress-test audit (pure function, instant):**
+- Ran `show-opp-picks` on 7 stress hands (AAKK, broadway, TT+junk, JJJ+junk, 9876-straight-draw, 55+KJ9, A55+junk). All 4 production models (MFSuitAware-mixed-0.9, OmahaFirst-mixed-0.9, TopDefensive-mixed-0.9, RandomWeighted-pure) behave per archetype spec:
+  - MFSuitAware on AAKK: top=7s, mid=AA, bot=KK-preserved. **Bug 1 fix confirmed.**
+  - OmahaFirst on broadway AKQJT9-2: top=Ts (highest of rem3={Ts,9h,2d}), NOT 2d. **Bug 3 fix confirmed.**
+  - MFSuitAware's "ATs-over-AKo" trait retained (picks As+Ts over As+Kh on broadway hand) — accepted archetype feature.
+  - TopDefensive's JJJ trip-split retained (puts Jc in bot, two Js in mid) — Bug 4 deferred per Claude Desktop + Gemini.
+
+**Empirical — 5K-hand re-diagnostic (23:10→23:33, 1389 s wall):**
+Pre-fix (Session 05 10K) vs post-fix (Session 06 5K):
+- All-7 agree: 11.9% → **14.4%** (+2.5pp, as expected — Bug 3 fix makes OmahaFirst less pathologically isolated, so more agreements land)
+- Mean EV spread: 2.225 → **2.269** (essentially unchanged)
+- MFNaive↔MFSuitAware: 88.4% → **89.0%** (~same; both got identical pair-preservation fix → relative agreement preserved, as logically expected)
+- OmahaFirst vs Hold'em-centric models: 17-19% → **29-36%** (roughly 2× increase — Bug 3 fix empirically validated; no more deuce-on-top absurdity)
+- TopDefensive↔MFSuitAware: 79.0% → **77.5%** (~same)
+- OmahaFirst vs Random: ~29% → **53.5%** (notable; OmahaFirst's post-fix setting sometimes matches what Random happens to pick because highest-of-rem3 is a natural Hold'em-ish choice)
+- No pair ≥ 95% agreement → 4-model P2-alt panel remains fully justified; no cluster collapse post-fix.
+- Worst-disagreement examples (top EV spread 4.274 on `2c 2d 2h 3s 4s 8c Tc`): still concentrated on low-card / trip-heavy hands where opponent modeling has widest leverage.
+
+**Process correction (self-flag):** My pre-run prediction that MFNaive↔MFSuitAware agreement would "drop below 88.4%" after Bug 1 fix was wrong reasoning. Both models received the identical pair-preservation fix, so their pairwise agreement is NATURALLY preserved — the fix shifts their absolute behaviour in parallel on AAKK hands, not their relative behaviour. Noting this as a miscalibrated prediction so future sessions don't repeat it.
+
+**Course correction this session (user pivot, 23:20-ish):**
+- User interrupted mid-session to veto the 10-day Mac Mini production run. Requested cloud alternative with click-by-click instructions for a non-technical first-time cloud user.
+- Follow-up: user asked about GPU acceleration at nominal fee for sub-24-hour completion.
+- Response: consulted Gemini 3 Pro via PAL MCP in two Socratic rounds. Gemini dismantled several of my initial recommendations:
+  - **Hetzner dropped** (KYC friction for US users; no signup credit = actually *more* expensive out-of-pocket than DO/GCP credits).
+  - **GCP quota reality-check**: new-account hard cap at 8-12 vCPU per region; 112-vCPU requests from personal Gmail trigger manual fraud review (likely delayed). Must upgrade past free trial first.
+  - **Spot pricing rejected** for non-technical user — resume-safe code doesn't help if the human panics on preemption.
+  - **RunPod added as #2** — prepaid model bypasses enterprise fraud gates; 64+ vCPU CPU pods available instantly.
+  - **GPU rejected** for the workload — branchy integer code + 10 MB lookup table = worst-case GPU pattern; multi-month CUDA rewrite for ≤5× speedup is not rational.
+  - **Parallel 4-pod fan-out** flagged as UX-hazardous for non-technical user (multiplies error surface — terminate-the-wrong-pod risk). Gemini preferred "single bigger machine."
+- Final top 3 (in CLOUD_PRODUCTION_GUIDE.md): DigitalOcean (#1 simplest UI, $200 credit), RunPod (#2 cheapest + fastest start, prepaid $17-20), GCP (#3 fastest machine if quota approved, $0 after $300 credit). Each with own sub-24-hour variant.
+
+**Empirical — pilot launched at 23:34:**
+- Background job ID `butlu0ted`: 50K canonical hands × 4 models × N=1000, running sequentially per model.
+- Expected wall ~2 hours (4 × ~30 min at 37.3 ms/hand × 50K × 9× rayon ÷ 4 models... recomputing: 50K × 0.0373s/hand = 1865s per model = 31 min; 4 models = 2.1 hrs).
+- Results pending end-of-session.
+
+**Carry-forward for Session 07 (or user-launched cloud run):**
+1. **Cloud launch is user's to kick off.** Follow CLOUD_PRODUCTION_GUIDE.md. Recommended start: RunPod (#2) for fastest-to-running, least friction.
+2. **Once all 4 production files are back on the Mac** (`data/best_response/*.bin`), Sprint 7 analysis can begin. Sprint 7 turns raw solver data into a human-usable GTO strategy via multi-model AI consensus (Claude + Gemini debate) + pattern mining + decision-tree extraction. Not compute-heavy — mostly API calls + notebooks.
+3. **Pilot outputs in `data/pilot/`** are for spot-checking only; the production run overwrites nothing (different output directory).
+4. **If the user wants CFR refinement (Sprint 4)** to approach true Nash, that's a separate effort after Sprint 3 best-response tables are in hand. Optional.
+
+**Gotchas this session:**
+- Pre-run prediction about MFNaive↔MFSuitAware agreement change was wrong (flagged above). Both models got the identical fix → relative agreement preserved.
+- CLI flag mismatch between Claude Desktop's recipe and actual implementation (`--num-hands` vs `--limit`, no `--parallel` flag on `solve` since rayon is always on, no `--checkpoint-dir` since append-only writer handles it in `--out`). Translated to actual CLI in scripts.
+- `data/session06/*.json` needed a new gitignore rule to match session 05's convention — added.

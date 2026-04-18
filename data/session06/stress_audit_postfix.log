@@ -1,0 +1,147 @@
+============================================================
+STRESS HAND: As Ah Kd Kh 7s 4c 2d
+============================================================
+Hand: As Ah Kd Kh 7s 4c 2d
+
+Random(fixed)       top [Kh]  mid [As 4c]  bot [Ah Kd 7s 2d]
+MFNaive             top [7s]  mid [As Ah]  bot [Kh Kd 4c 2d]
+MFSuitAware         top [7s]  mid [As Ah]  bot [Kh Kd 4c 2d]
+OmahaFirst          top [7s]  mid [4c 2d]  bot [As Ah Kh Kd]
+TopDefensive        top [7s]  mid [As Ah]  bot [Kh Kd 4c 2d]
+RandomWeighted      top [7s]  mid [Ah Kd]  bot [As Kh 4c 2d]
+BalancedHeuristic   top [4c]  mid [Kh Kd]  bot [As Ah 7s 2d]
+
+Bot suit layout (spades=♠ hearts=♥ diamonds=♦ clubs=♣):
+  Random(fixed)      ♣0 ♦2 ♥1 ♠1  →  2+1+1 SS
+  MFNaive            ♣1 ♦2 ♥1 ♠0  →  2+1+1 SS
+  MFSuitAware        ♣1 ♦2 ♥1 ♠0  →  2+1+1 SS
+  OmahaFirst         ♣0 ♦1 ♥2 ♠1  →  2+1+1 SS
+  TopDefensive       ♣1 ♦2 ♥1 ♠0  →  2+1+1 SS
+  RandomWeighted     ♣1 ♦1 ♥1 ♠1  →  1+1+1+1 rainbow
+  BalancedHeuristic  ♣0 ♦1 ♥1 ♠2  →  2+1+1 SS
+============================================================
+STRESS HAND: As Kh Qd Jc Ts 9h 2d
+============================================================
+Hand: As Kh Qd Jc Ts 9h 2d
+
+Random(fixed)       top [Jc]  mid [As 9h]  bot [Kh Qd Ts 2d]
+MFNaive             top [Qd]  mid [As Kh]  bot [Jc Ts 9h 2d]
+MFSuitAware         top [Kh]  mid [As Ts]  bot [Qd Jc 9h 2d]
+OmahaFirst          top [Ts]  mid [9h 2d]  bot [As Kh Qd Jc]
+TopDefensive        top [As]  mid [Kh Qd]  bot [Jc Ts 9h 2d]
+RandomWeighted      top [Qd]  mid [Kh Jc]  bot [As Ts 9h 2d]
+BalancedHeuristic   top [9h]  mid [As Kh]  bot [Qd Jc Ts 2d]
+
+Bot suit layout (spades=♠ hearts=♥ diamonds=♦ clubs=♣):
+  Random(fixed)      ♣0 ♦2 ♥1 ♠1  →  2+1+1 SS
+  MFNaive            ♣1 ♦1 ♥1 ♠1  →  1+1+1+1 rainbow
+  MFSuitAware        ♣1 ♦2 ♥1 ♠0  →  2+1+1 SS
+  OmahaFirst         ♣1 ♦1 ♥1 ♠1  →  1+1+1+1 rainbow
+  TopDefensive       ♣1 ♦1 ♥1 ♠1  →  1+1+1+1 rainbow
+  RandomWeighted     ♣0 ♦1 ♥1 ♠2  →  2+1+1 SS
+  BalancedHeuristic  ♣1 ♦2 ♥0 ♠1  →  2+1+1 SS
+============================================================
+STRESS HAND: Ts Td 6s 9h 5c 3d 2h
+============================================================
+Hand: Ts Td 6s 9h 5c 3d 2h
+
+Random(fixed)       top [9h]  mid [Ts 3d]  bot [Td 6s 5c 2h]
+MFNaive             top [9h]  mid [Ts Td]  bot [6s 5c 3d 2h]
+MFSuitAware         top [9h]  mid [Ts Td]  bot [6s 5c 3d 2h]
+OmahaFirst          top [9h]  mid [6s 5c]  bot [Ts Td 3d 2h]
+TopDefensive        top [9h]  mid [Ts Td]  bot [6s 5c 3d 2h]
+RandomWeighted      top [9h]  mid [Td 5c]  bot [Ts 6s 3d 2h]
+BalancedHeuristic   top [6s]  mid [Ts Td]  bot [9h 5c 3d 2h]
+
+Bot suit layout (spades=♠ hearts=♥ diamonds=♦ clubs=♣):
+  Random(fixed)      ♣1 ♦1 ♥1 ♠1  →  1+1+1+1 rainbow
+  MFNaive            ♣1 ♦1 ♥1 ♠1  →  1+1+1+1 rainbow
+  MFSuitAware        ♣1 ♦1 ♥1 ♠1  →  1+1+1+1 rainbow
+  OmahaFirst         ♣0 ♦2 ♥1 ♠1  →  2+1+1 SS
+  TopDefensive       ♣1 ♦1 ♥1 ♠1  →  1+1+1+1 rainbow
+  RandomWeighted     ♣0 ♦1 ♥1 ♠2  →  2+1+1 SS
+  BalancedHeuristic  ♣1 ♦1 ♥2 ♠0  →  2+1+1 SS
+============================================================
+STRESS HAND: Jd Jh Jc 9s 7h 5d 3c
+============================================================
+Hand: Jd Jh Jc 9s 7h 5d 3c
+
+Random(fixed)       top [9s]  mid [Jd 5d]  bot [Jh Jc 7h 3c]
+MFNaive             top [Jc]  mid [Jh Jd]  bot [9s 7h 5d 3c]
+MFSuitAware         top [Jh]  mid [Jd Jc]  bot [9s 7h 5d 3c]
+OmahaFirst          top [9s]  mid [5d 3c]  bot [Jh Jd Jc 7h]
+TopDefensive        top [9s]  mid [Jh Jd]  bot [Jc 7h 5d 3c]
+RandomWeighted      top [Jh]  mid [Jd Jc]  bot [9s 7h 5d 3c]
+BalancedHeuristic   top [7h]  mid [Jh Jd]  bot [Jc 9s 5d 3c]
+
+Bot suit layout (spades=♠ hearts=♥ diamonds=♦ clubs=♣):
+  Random(fixed)      ♣2 ♦0 ♥2 ♠0  →  2+2 DS
+  MFNaive            ♣1 ♦1 ♥1 ♠1  →  1+1+1+1 rainbow
+  MFSuitAware        ♣1 ♦1 ♥1 ♠1  →  1+1+1+1 rainbow
+  OmahaFirst         ♣1 ♦1 ♥2 ♠0  →  2+1+1 SS
+  TopDefensive       ♣2 ♦1 ♥1 ♠0  →  2+1+1 SS
+  RandomWeighted     ♣1 ♦1 ♥1 ♠1  →  1+1+1+1 rainbow
+  BalancedHeuristic  ♣2 ♦1 ♥0 ♠1  →  2+1+1 SS
+============================================================
+STRESS HAND: 9s 8s 7h 6h 4d 3c 2s
+============================================================
+Hand: 9s 8s 7h 6h 4d 3c 2s
+
+Random(fixed)       top [6h]  mid [9s 3c]  bot [8s 7h 4d 2s]
+MFNaive             top [7h]  mid [9s 8s]  bot [6h 4d 3c 2s]
+MFSuitAware         top [9s]  mid [7h 6h]  bot [8s 4d 3c 2s]
+OmahaFirst          top [4d]  mid [3c 2s]  bot [9s 8s 7h 6h]
+TopDefensive        top [9s]  mid [7h 6h]  bot [8s 4d 3c 2s]
+RandomWeighted      top [9s]  mid [7h 3c]  bot [8s 6h 4d 2s]
+BalancedHeuristic   top [8s]  mid [7h 6h]  bot [9s 4d 3c 2s]
+
+Bot suit layout (spades=♠ hearts=♥ diamonds=♦ clubs=♣):
+  Random(fixed)      ♣0 ♦1 ♥1 ♠2  →  2+1+1 SS
+  MFNaive            ♣1 ♦1 ♥1 ♠1  →  1+1+1+1 rainbow
+  MFSuitAware        ♣1 ♦1 ♥0 ♠2  →  2+1+1 SS
+  OmahaFirst         ♣0 ♦0 ♥2 ♠2  →  2+2 DS
+  TopDefensive       ♣1 ♦1 ♥0 ♠2  →  2+1+1 SS
+  RandomWeighted     ♣0 ♦1 ♥1 ♠2  →  2+1+1 SS
+  BalancedHeuristic  ♣1 ♦1 ♥0 ♠2  →  2+1+1 SS
+============================================================
+STRESS HAND: Ks Js 9s 5h 5d 4c 3c
+============================================================
+Hand: Ks Js 9s 5h 5d 4c 3c
+
+Random(fixed)       top [5h]  mid [Ks 4c]  bot [Js 9s 5d 3c]
+MFNaive             top [Ks]  mid [5h 5d]  bot [Js 9s 4c 3c]
+MFSuitAware         top [Ks]  mid [5h 5d]  bot [Js 9s 4c 3c]
+OmahaFirst          top [Ks]  mid [Js 9s]  bot [5h 5d 4c 3c]
+TopDefensive        top [Ks]  mid [5h 5d]  bot [Js 9s 4c 3c]
+RandomWeighted      top [9s]  mid [5h 5d]  bot [Ks Js 4c 3c]
+BalancedHeuristic   top [9s]  mid [5h 5d]  bot [Ks Js 4c 3c]
+
+Bot suit layout (spades=♠ hearts=♥ diamonds=♦ clubs=♣):
+  Random(fixed)      ♣1 ♦1 ♥0 ♠2  →  2+1+1 SS
+  MFNaive            ♣2 ♦0 ♥0 ♠2  →  2+2 DS
+  MFSuitAware        ♣2 ♦0 ♥0 ♠2  →  2+2 DS
+  OmahaFirst         ♣2 ♦1 ♥1 ♠0  →  2+1+1 SS
+  TopDefensive       ♣2 ♦0 ♥0 ♠2  →  2+2 DS
+  RandomWeighted     ♣2 ♦0 ♥0 ♠2  →  2+2 DS
+  BalancedHeuristic  ♣2 ♦0 ♥0 ♠2  →  2+2 DS
+============================================================
+STRESS HAND: As 5s 5d Th 9c 7d 3h
+============================================================
+Hand: As 5s 5d Th 9c 7d 3h
+
+Random(fixed)       top [Th]  mid [As 7d]  bot [9c 5s 5d 3h]
+MFNaive             top [As]  mid [5s 5d]  bot [Th 9c 7d 3h]
+MFSuitAware         top [As]  mid [5s 5d]  bot [Th 9c 7d 3h]
+OmahaFirst          top [Th]  mid [9c 3h]  bot [As 7d 5s 5d]
+TopDefensive        top [As]  mid [5s 5d]  bot [Th 9c 7d 3h]
+RandomWeighted      top [9c]  mid [5s 5d]  bot [As Th 7d 3h]
+BalancedHeuristic   top [7d]  mid [5s 5d]  bot [As Th 9c 3h]
+
+Bot suit layout (spades=♠ hearts=♥ diamonds=♦ clubs=♣):
+  Random(fixed)      ♣1 ♦1 ♥1 ♠1  →  1+1+1+1 rainbow
+  MFNaive            ♣1 ♦1 ♥2 ♠0  →  2+1+1 SS
+  MFSuitAware        ♣1 ♦1 ♥2 ♠0  →  2+1+1 SS
+  OmahaFirst         ♣0 ♦2 ♥0 ♠2  →  2+2 DS
+  TopDefensive       ♣1 ♦1 ♥2 ♠0  →  2+1+1 SS
+  RandomWeighted     ♣0 ♦1 ♥2 ♠1  →  2+1+1 SS
+  BalancedHeuristic  ♣1 ♦0 ♥2 ♠1  →  2+1+1 SS

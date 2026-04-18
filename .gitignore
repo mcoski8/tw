@@ -8,6 +8,9 @@ data/*.bin
 data/best_response/
 data/cfr/
 data/results/
+data/pilot/
+data/*.json
+data/session*/*.json
 
 # Python
 __pycache__/

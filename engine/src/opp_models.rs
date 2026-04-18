@@ -103,9 +103,63 @@ pub fn bot_suit_score(bot: &[Card; 4]) -> u8 {
     }
 }
 
+/// Pick the top-card index from 5 remaining cards with pair preservation
+/// (Bug 1 fix, Decision 025). Prefers the highest-rank SINGLETON — a card
+/// whose rank appears exactly once in `rem5`. Falls back to highest-rank
+/// overall when every card is a pair member. Index tie-break on equal ranks.
+///
+/// Why: MFNaive and MFSuitAware compose as "pick best mid first, top =
+/// highest remaining". Without this rule, on hands like AAKK-x-y-z the top
+/// takes one K and orphans the other K into the bot, destroying the pair
+/// that was the strongest feature of the rem5. By preferring singletons the
+/// model keeps KK intact in the bot.
+fn pick_top_from_rem5(rem5: &[Card; 5]) -> usize {
+    let mut rank_counts = [0u8; 15];
+    for c in rem5 {
+        rank_counts[c.rank() as usize] += 1;
+    }
+    // Preferred: highest-rank singleton.
+    let mut best_single: Option<usize> = None;
+    for i in 0..5 {
+        if rank_counts[rem5[i].rank() as usize] != 1 {
+            continue;
+        }
+        match best_single {
+            None => best_single = Some(i),
+            Some(bi) => {
+                let cur = rem5[i];
+                let bc = rem5[bi];
+                if cur.rank() > bc.rank()
+                    || (cur.rank() == bc.rank() && cur.index() > bc.index())
+                {
+                    best_single = Some(i);
+                }
+            }
+        }
+    }
+    if let Some(i) = best_single {
+        return i;
+    }
+    // Fallback: every card is a pair member (e.g. AAKKQQ+J with J already in
+    // mid). Pick highest-rank overall with index tie-break — same behaviour
+    // as the pre-Bug-1 rule.
+    let mut top_i = 0usize;
+    for i in 1..5 {
+        let cur = rem5[i];
+        let best = rem5[top_i];
+        if cur.rank() > best.rank()
+            || (cur.rank() == best.rank() && cur.index() > best.index())
+        {
+            top_i = i;
+        }
+    }
+    top_i
+}
+
 /// For a given (mid_i, mid_j), compute the 4-card bottom that would result
-/// AFTER the top-card is chosen as the highest-rank card among the 5 leftovers
-/// (index tiebreak on rank ties). Used by the suit-aware mid tiebreak.
+/// after the top-card is chosen by `pick_top_from_rem5` (pair-preserving).
+/// Used by MFSuitAware to score the candidate mid by the resulting bot's
+/// suit structure.
 fn candidate_bot_after_top(hand: &[Card; 7], mi: usize, mj: usize) -> [Card; 4] {
     let mut rem5 = [Card(0); 5];
     let mut k = 0;
@@ -115,14 +169,7 @@ fn candidate_bot_after_top(hand: &[Card; 7], mi: usize, mj: usize) -> [Card; 4] 
             k += 1;
         }
     }
-    let mut top_i = 0usize;
-    for i in 1..5 {
-        let cur = rem5[i];
-        let best = rem5[top_i];
-        if cur.rank() > best.rank() || (cur.rank() == best.rank() && cur.index() > best.index()) {
-            top_i = i;
-        }
-    }
+    let top_i = pick_top_from_rem5(&rem5);
     let mut bot = [Card(0); 4];
     let mut bi = 0;
     for i in 0..5 {
@@ -134,8 +181,8 @@ fn candidate_bot_after_top(hand: &[Card; 7], mi: usize, mj: usize) -> [Card; 4] 
     bot
 }
 
-/// Assemble a `HandSetting` given the hand and the two mid-indices, using the
-/// standard top-selection rule (highest-rank remaining card, index tiebreak).
+/// Assemble a `HandSetting` given the hand and the two mid-indices, using
+/// the pair-preserving top-selection rule (`pick_top_from_rem5`).
 fn build_setting_mid_then_top(hand: &[Card; 7], mi: usize, mj: usize) -> HandSetting {
     let mut mid = [hand[mi], hand[mj]];
     if mid[1].index() > mid[0].index() {
@@ -149,14 +196,7 @@ fn build_setting_mid_then_top(hand: &[Card; 7], mi: usize, mj: usize) -> HandSet
             k += 1;
         }
     }
-    let mut top_i = 0usize;
-    for i in 1..5 {
-        let cur = rem5[i];
-        let best = rem5[top_i];
-        if cur.rank() > best.rank() || (cur.rank() == best.rank() && cur.index() > best.index()) {
-            top_i = i;
-        }
-    }
+    let top_i = pick_top_from_rem5(&rem5);
     let top = rem5[top_i];
     let mut bot = [Card(0); 4];
     let mut bi = 0;
@@ -395,33 +435,37 @@ pub fn opp_omaha_first(hand: [Card; 7]) -> HandSetting {
     }
     // Remaining 3 cards.
     let mut rem3 = [Card(0); 3];
-    let mut rem_idx = [0usize; 3];
     let mut k = 0;
     for x in 0..7 {
         if !best_bot.contains(&x) {
             rem3[k] = hand[x];
-            rem_idx[k] = x;
             k += 1;
         }
     }
-    // Best 2-card mid from the 3, by naive score.
-    let pairs = [(0, 1), (0, 2), (1, 2)];
-    let mut best_mid = (0, 1);
-    let mut best_mid_score = naive_mid_score(rem3[0], rem3[1]);
-    for &(a, b) in &pairs[1..] {
-        let s = naive_mid_score(rem3[a], rem3[b]);
-        if s > best_mid_score {
-            best_mid_score = s;
-            best_mid = (a, b);
+    // Bug 3 fix (Decision 026): top = highest-rank of the 3 remaining cards
+    // (index tie-break); mid = the other 2. The pre-fix behaviour picked the
+    // best 2-card Hold'em mid from rem3 and left the leftover as top, which
+    // could orphan a deuce on top while A-K sat in the mid.
+    let mut top_i = 0usize;
+    for i in 1..3 {
+        let cur = rem3[i];
+        let best = rem3[top_i];
+        if cur.rank() > best.rank()
+            || (cur.rank() == best.rank() && cur.index() > best.index())
+        {
+            top_i = i;
         }
     }
-    let (ma, mb) = best_mid;
-    let top_i = (0..3).find(|i| *i != ma && *i != mb).unwrap();
-    let mut mid = [rem3[ma], rem3[mb]];
+    let top = rem3[top_i];
+    let (mi0, mi1) = match top_i {
+        0 => (1, 2),
+        1 => (0, 2),
+        _ => (0, 1),
+    };
+    let mut mid = [rem3[mi0], rem3[mi1]];
     if mid[1].index() > mid[0].index() {
         mid.swap(0, 1);
     }
-    let top = rem3[top_i];
     let mut bot = [hand[best_bot[0]], hand[best_bot[1]], hand[best_bot[2]], hand[best_bot[3]]];
     bot.sort_unstable_by(|a, b| b.index().cmp(&a.index()));
     HandSetting { top, mid, bot }
@@ -713,6 +757,93 @@ mod tests {
         // KK should remain in middle.
         assert_eq!(s.mid[0].rank(), 13);
         assert_eq!(s.mid[1].rank(), 13);
+    }
+
+    // --- Bug 1 fix (pair preservation for top selection) ---------------------
+
+    #[test]
+    fn mfnaive_preserves_kk_on_aakk_hands() {
+        // Bug 1 regression: on `As Ah Kd Kh 7s 4c 2d` the pre-fix MFNaive
+        // set top=Kh, orphaning Kd into bot and breaking the KK pair. After
+        // the fix, top must be the highest-rank SINGLETON in rem5 (the 7s),
+        // preserving both AA in mid and KK in bot.
+        let hand = seven("As Ah Kd Kh 7s 4c 2d");
+        let s = opp_middle_first_naive(hand);
+        uses_all_7(&s, hand);
+        assert_eq!(s.top.rank(), 7, "top must be the 7 (highest singleton), not a K or A");
+        // AA must be in the mid.
+        assert_eq!(s.mid[0].rank(), 14);
+        assert_eq!(s.mid[1].rank(), 14);
+        // KK must remain intact in the bot.
+        let k_in_bot = s.bot.iter().filter(|c| c.rank() == 13).count();
+        assert_eq!(k_in_bot, 2, "both Ks must be in bot; pair preserved");
+    }
+
+    #[test]
+    fn mfsuitaware_preserves_kk_on_aakk_hands() {
+        // Same regression for MFSuitAware. Because AA is tier 5 (pocket pair,
+        // dominates every other tier), MFSuitAware must also choose AA for
+        // mid here — and then the pair-preserving top rule applies.
+        let hand = seven("As Ah Kd Kh 7s 4c 2d");
+        let s = opp_middle_first_suit_aware(hand);
+        uses_all_7(&s, hand);
+        assert_eq!(s.top.rank(), 7, "top must be the 7, not a K or A");
+        assert_eq!(s.mid[0].rank(), 14);
+        assert_eq!(s.mid[1].rank(), 14);
+        let k_in_bot = s.bot.iter().filter(|c| c.rank() == 13).count();
+        assert_eq!(k_in_bot, 2, "both Ks must remain in bot");
+    }
+
+    #[test]
+    fn topdefensive_preserves_pairs_on_aakk_redux() {
+        // TopDefensive already had pair-preservation logic pre-Bug-1, but
+        // we re-assert it here alongside the MF tests so a single regression
+        // run shows all four of the pair-preserving archetype members.
+        let hand = seven("As Ah Kd Kh 7s 4c 2d");
+        let s = opp_top_defensive(hand);
+        uses_all_7(&s, hand);
+        assert_eq!(s.top.rank(), 7, "TopDefensive top must be the highest singleton (7)");
+        // Neither AA nor KK should be broken (top is singleton 7).
+        let a_outside_top = s.mid.iter().chain(s.bot.iter()).filter(|c| c.rank() == 14).count();
+        let k_outside_top = s.mid.iter().chain(s.bot.iter()).filter(|c| c.rank() == 13).count();
+        assert_eq!(a_outside_top, 2, "AA must stay intact (both Aces in mid or bot)");
+        assert_eq!(k_outside_top, 2, "KK must stay intact (both Kings in mid or bot)");
+    }
+
+    // --- Bug 3 fix (OmahaFirst top = highest of remaining 3) ------------------
+
+    #[test]
+    fn omahafirst_picks_highest_remaining_for_top() {
+        // Bug 3 regression: on `As Kh Qd Jc Ts 9h 2d` pre-fix picked the
+        // best 2-card mid from the 3 cards not in the bot and left the
+        // leftover as top — which could be the 2d when the As and Kh were
+        // both available. After the fix, top must be the highest-rank card
+        // among the 3 non-bot cards (never the 2d when broadway cards are
+        // available).
+        let hand = seven("As Kh Qd Jc Ts 9h 2d");
+        let s = opp_omaha_first(hand);
+        uses_all_7(&s, hand);
+        assert_ne!(s.top.rank(), 2, "top must not be the deuce");
+        // Derive the 3 cards not in the bot and check top is the highest.
+        let bot_set: std::collections::BTreeSet<_> = s.bot.iter().copied().collect();
+        let rem3: Vec<Card> = hand.iter().copied().filter(|c| !bot_set.contains(c)).collect();
+        assert_eq!(rem3.len(), 3);
+        let max_rank = rem3.iter().map(|c| c.rank()).max().unwrap();
+        assert_eq!(s.top.rank(), max_rank, "top must be the highest rank of the 3 non-bot cards");
+    }
+
+    #[test]
+    fn omahafirst_top_is_highest_of_remaining_three_stress() {
+        // Broader hand (three 7s, AKQJT2) where bot is likely to take the
+        // wheel-less broadway set; whatever the bot picks, top must be the
+        // highest rank in rem3.
+        let hand = seven("As Kd Qc Jh 7s 7d 7h");
+        let s = opp_omaha_first(hand);
+        uses_all_7(&s, hand);
+        let bot_set: std::collections::BTreeSet<_> = s.bot.iter().copied().collect();
+        let rem3: Vec<Card> = hand.iter().copied().filter(|c| !bot_set.contains(c)).collect();
+        let max_rank = rem3.iter().map(|c| c.rank()).max().unwrap();
+        assert_eq!(s.top.rank(), max_rank);
     }
 
     // --- MFSuitAware ---------------------------------------------------------
