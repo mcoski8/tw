@@ -221,3 +221,64 @@ All three top picks put the Jack on top — consistent with the research finding
 **Carry-forward for Sprint 4:**
 - `data/best_response.bin` + `data/canonical_hands.bin` are the inputs. `read_best_response_file()` returns `(BrHeader, Vec<BestResponseRecord>)`; `read_canonical_hands()` returns `Vec<[u8; 7]>` indexed by `canonical_id`. Together they give `(canonical_hand, best_setting_index, best_ev)` triples.
 - Pattern mining queries that don't need EV (e.g. "what setting shape does each hand category prefer?") can mmap `best_response.bin` and seek to records directly; `bytes_to_hand` converts back to typed `[Card; 7]`.
+
+---
+
+### Session 05 — 2026-04-17 to 2026-04-18 — Sprint 2b: 7-model opp panel + diagnostic + audit + Gemini review
+
+**Scope:** Implement full 7-opponent-model panel per Claude Desktop's Sprint 2b spec. Run 10K-hand 7-model diagnostic, behavioural audit on 7 stress-test hands, Gemini 2.5 Pro adversarial review. Produce PRODUCTION COMMITMENT RECOMMENDATION for Claude Desktop's final approval. Do NOT launch production yet.
+
+**Result:** Panel + diagnostic + audit + review complete. 4 bugs found (2 critical, 1 moot, 1 archetypal). Recommended P2-alt (4 models) committed pending Claude Desktop sign-off. Test count 105 → 119 (+14 new).
+
+**Engine code delivered:**
+- `engine/src/opp_models.rs` (NEW) — all 7 opp heuristics + helpers (naive_mid_score, middle_tier, bot_suit_score, omaha_bot_score, balanced_setting_score) + `opp_middle_first_naive`, `opp_middle_first_suit_aware` (refactored), `opp_omaha_first`, `opp_top_defensive`, `opp_random_weighted`, `opp_balanced_heuristic`. 14 unit tests.
+- `engine/src/monte_carlo.rs` — `OpponentModel` enum extended: `Random | MiddleFirstNaive | MiddleFirstSuitAware | OmahaFirst | TopDefensive | RandomWeighted | BalancedHeuristic | HeuristicMixed { base: MixedBase, p_heuristic: f32 }`. Added `MixedBase` enum. Dispatcher rewritten; duplicated MFSuitAware helpers moved to opp_models.rs.
+- `engine/src/main.rs` — CLI: `--opponent {random|mfnaive|mfsuitaware|omaha|topdef|weighted|balanced|mixed}` + `--mix-base` + `--mix-p`. New subcommands: `diagnostic` (7-model panel + pairwise matrix + JSON sidecar), `validate-model`, `show-opp-picks`.
+- `engine/src/best_response.rs` — `solve_one` / `solve_range` take explicit `OpponentModel` parameter.
+- `engine/src/lib.rs` — `opp_models` module registered; `MixedBase` re-exported.
+
+**Empirical findings:**
+
+1. **BalancedHeuristic pre-validation:** 1000 hands × N=5000 vs MC-best. Agreement 18.7%, mean regret 0.653 EV, max 3.174 EV. Failed Claude Desktop's ≥70% gate.
+
+2. **7-model diagnostic (10K hands × N=1000 × 7 models):** Wall 45.6 min vs predicted 46 min (accurate to 1%). 24,585 CPU seconds, 57 MB peak RSS. All-7 agree: **11.9%** (1195/10000). Pairwise matrix showed no pair ≥95% — all 7 models meaningfully distinct. Clusters:
+   - Hold'em-centric: MFNaive ↔ MFSuitAware 88.4%, MFSuitAware ↔ TopDefensive 79.0%, MFNaive ↔ TopDefensive 77.5%
+   - OmahaFirst isolated: 17-19% with Hold'em-centric
+   - Random ↔ RandomWeighted 54.1%
+   - BalancedHeuristic's highest correlate is Random at 51.4% (predicted to cluster with MF-family; prediction WRONG)
+   - Mean per-hand EV spread: 2.225, p50 2.24, p95 3.12, p99 3.50, max 4.18.
+
+3. **Behavioural audit (7 hands × 7 models, via `show-opp-picks`):**
+   - **Bug 1 (CRITICAL):** MFNaive + MFSuitAware split the second pair on AAKK hands. `As Ah Kd Kh 7s 4c 2d` → top=Kh, mid=AA, bot=Kd+junk (breaks KK).
+   - **Bug 2 (CRITICAL):** BalancedHeuristic puts Ace in bot. `As 5s 5d Th 9c 7d 3h` → top=7d, mid=55, bot=As+rest. Weighted formula arithmetic: top=7d setting = 321 > top=As = 309.
+   - **Bug 3 (CRITICAL):** OmahaFirst picks absurd tops. `As Kh Qd Jc Ts 9h 2d` → top=2d (leftover from mid selection in remaining-3). Should be top = highest of remaining 3.
+   - **Bug 4 (MINOR, defer):** TopDefensive over-splits trips (puts lone J in bot as kicker instead of solo J on top). Gemini treats as archetype eccentricity.
+   - Not a bug: MFSuitAware's ATs-over-AKo preference on broadway hand — accepted as archetype trait (player who overvalues suitedness).
+
+4. **Gemini 2.5 Pro adversarial review** (via pal MCP): Full Socratic debate across Claude Desktop's Topics A-G. Key consensus with Claude Code:
+   - P2-alt (4 models): MFSuitAware-fixed + OmahaFirst-fixed + TopDefensive-fixed + RandomWeighted
+   - HeuristicMixed{p=0.9} for deterministic members
+   - Defer aggregation to Sprint 7; output 4 separate files
+   - N=1000 uniform, no adaptive, no preview
+   - Fix Bugs 1 + 3; defer Bug 4; Bug 2 moot (drop model)
+   - Defer adding new archetypes (Scoop-Terrified already covered by TopDefensive; Solver-app-assisted is an interesting but non-essential addition)
+
+**Decisions logged this session:** 019 (Sprint 2b panel adoption), 020 (validation gate critique), 021 (drop BalancedHeuristic), 022 (aggregation deferred), 023 (P2-alt chosen), 024 (p=0.9 wrapping).
+
+**Gotchas:**
+- `OpponentModel` enum needed `PartialEq` only (not `Eq`) once `HeuristicMixed` carried an `f32`.
+- Clap's `ValueEnum` doesn't support enum variants with data; worked around with separate `Mixed` CLI variant + `--mix-base` + `--mix-p`.
+- First version of Bug-1 test tried to construct two tied non-pair candidates from a pairless hand; impossible because the naive scorer uniquely determines rank pairs. Rewrote with a three-of-a-kind hand (three 7s) where three mid-pair choices legitimately tie.
+- `/usr/bin/time -l` in background bash output goes to the task's output file alongside stdout — scrapes cleanly for wall-clock.
+
+**Output files (data/, all gitignored):**
+- `diagnostic_7model.log` — full diagnostic stdout
+- `diagnostic_7model.json` — 10K hands × 7 models EV matrix + pairwise counts + spread series (~5 MB)
+
+**Carry-forward for Session 06 (after Claude Desktop response to PRODUCTION COMMITMENT RECOMMENDATION):**
+1. Apply Bug 1 + Bug 3 fixes to `opp_models.rs`. Gemini staged concrete diffs (pal_generated.code, deleted post-read per MCP protocol). The approach for both: prefer highest-rank *non-pair-member* card for top, with fallback to highest-rank-overall when all 5 remaining are pair-members. For OmahaFirst: after bot selection, top = highest of remaining 3, mid = other 2.
+2. Add unit tests: `mfsuitaware_preserves_kk_on_aakk_hands`, `omahafirst_top_is_highest_of_remaining_three`.
+3. Re-run `show-opp-picks` on all 7 stress-test hands to verify fixes.
+4. Re-run 7-model diagnostic on 5K hands (~25 min) to confirm the cluster structure shifts (MFNaive↔MFSuitAware should drop below 88.4%).
+5. Run mini-pilot: 50K hands × 4-model P2-alt panel × N=1000 (~4 hours).
+6. If pilot OK, launch full production: 6,009,159 × 4 × N=1000 ≈ 10.4 days Mac Mini or ~2 days cloud.

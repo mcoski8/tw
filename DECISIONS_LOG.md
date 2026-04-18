@@ -153,6 +153,54 @@
   5. **No bincode framing overhead.** Bincode's per-record framing (length prefix + variant tag) would add bytes without any benefit at this granularity.
   Trade-off: extending the record schema later (e.g. adding `second_best_ev` for adaptive refinement in Sprint 3.5) requires a version bump and a new magic-tag suffix. We accept this — it's a once-per-sprint cost and forces explicit migration paths.
 
+## Decision 019 — Sprint 2b: Multi-Archetype Opponent Panel (7 models)
+**Date:** 2026-04-17 (Sprint 2b, Session 05)
+**Question:** Single opponent model (Random or MiddleFirstSuitAware-Mixed) vs a panel of archetype-representative models?
+**Options:** (a) Single model (cheap, ~2.6d production) | (b) 3-model panel | (c) 7-model panel + diagnostic
+**Choice:** (c) — 7-model panel implemented + diagnosed first, then reduced to P2-alt (4 models) for production.
+**Why:** The 10K-hand diagnostic against only 2 opp models (Random vs HeuristicMixed-0.8) showed 45.6% same-best rate, which was already alarming. The 7-model panel revealed only 11.9% of hands have the same best-setting across all models — opp modelling dominates the solver's answer on ~88% of hands. Using a single opp model for the 6M-canonical-hand solve would produce a strategy calibrated to ONE archetype, systematically distorting Sprint 7's pattern-mining. The 7-model diagnostic (45.6 min, matching predicted ~46 min) is a reasonable one-time cost to measure the opp-model sensitivity and cluster structure empirically. Production is then committed to the minimal set of non-redundant archetypes (P2-alt).
+
+## Decision 020 — Validation Gate ≥70% MC-Agreement Was the Wrong Metric for Archetype Panels
+**Date:** 2026-04-18 (Sprint 2b, Session 05)
+**Question:** Should opponent models be required to match MC-best-setting ≥ 70% of the time before inclusion in the diagnostic panel?
+**Options:** (a) Keep ≥70% gate | (b) Drop the gate; measure distinctness from other panel models instead
+**Choice:** (b) — drop the gate.
+**Why:** Claude Desktop's original validate-model gate (BalancedHeuristic must match MC-best-setting ≥70% with ≤0.3 mean regret) conflates "is this a good solver?" with "is this a distinct play archetype?". A realistic-opponent panel needs coverage of characteristic human error modes (weak-but-systematic, Omaha-centric, scoop-avoidant, etc.), not near-GTO clones. Applying a ≥70% gate would eliminate every model EXCEPT ones already close to MC-optimal — defeating the panel's purpose. The correct gate is distinctness (low pairwise agreement with other panel members) + behavioural plausibility (does the model do things humans actually do?). Gemini 2.5 Pro independently reached the same conclusion. BalancedHeuristic was still ultimately dropped, but for Bug 2 (puts Ace in bot — no human plays this way), not for failing the ≥70% bar.
+
+## Decision 021 — Drop BalancedHeuristic Entirely
+**Date:** 2026-04-18 (Sprint 2b, Session 05)
+**Question:** Retune BalancedHeuristic's weights (×2/×4/×2.5), replace with mini-MC variant, or drop entirely?
+**Options:** (a) Retune | (b) Mini-MC replacement | (c) Drop
+**Choice:** (c) — drop.
+**Why:** The behavioural audit (`show-opp-picks`) found BalancedHeuristic puts an Ace in the bottom (instead of on top) when the bot has enough high-card density. Formula arithmetic confirmed this is systematic: the ×2.5-weighted bot-high-card component outweighs the ×2-weighted top-card component for Aces. No human archetype plays this way — it's not "miscalibrated-systematic," it's producing logically incoherent settings. Retuning becomes a whack-a-mole research project. Mini-MC replacement (top-10 by naive score + N=50 MC refinement) is a *different* archetype ("solver-app-assisted player") and doesn't belong in the slot originally designated for "player who reads the strategy guide systematically." Gemini 2.5 Pro agreed: "drop the model entirely." P2-alt panel (4 models) still covers the strategic space adequately without Balanced.
+
+## Decision 022 — Production Aggregation Strategy Deferred to Sprint 7
+**Date:** 2026-04-18 (Sprint 2b, Session 05)
+**Question:** How should 4 models' outputs combine into a single best-response per hand for the final strategy guide?
+**Options:** (a) Equal weight | (b) Realism-weighted | (c) Maximin (min-EV across models) | (d) Consensus-only | (e) Defer to Sprint 7 analytics on collected data
+**Choice:** (e) — defer; output 4 separate best-response files, let Sprint 7 choose aggregation.
+**Why:** With the 11.9% all-agree rate and mean 2.2 EV spread across models, ANY pre-committed aggregation scheme is uninformed speculation. Equal weighting treats OmahaFirst (orthogonal 17-19% archetype) as equally-likely as MFSuitAware (typical archetype), which is wrong. But any realism weighting is unvalidated. Collecting per-(hand, model) EV records in 4 separate 9-byte-record files (~54 MB each, ~216 MB total) preserves all information; Sprint 7 analytics can then experiment with aggregation schemes on the actual data without re-running the 10-day production solve. This also means each model is independently resumable — a partial production run produces 1-3 complete model files + one in-progress, which is strictly useful.
+
+## Decision 023 — Production Panel = P2-alt (4 Models)
+**Date:** 2026-04-18 (Sprint 2b, Session 05)
+**Question:** Which subset of the 7-model panel to run in production given the 10+ day compute commitment?
+**Options:** P1 (3 models) | P2 (original 4 with Balanced) | P2-alt (4 models swapping Balanced → TopDefensive) | P3 (all 7)
+**Choice:** P2-alt = MFSuitAware-fixed + OmahaFirst-fixed + TopDefensive-fixed + RandomWeighted.
+**Why:**
+  1. **Drop MFNaive (88.4% redundant with MFSuitAware):** After Bug 1 fix (pair preservation), the two may diverge more, but both occupy the same Hold'em-centric niche; MFSuitAware is strictly more refined.
+  2. **Drop BalancedHeuristic (Decision 021).**
+  3. **Keep TopDefensive:** 79% agreement with MFSuitAware = 21% disagreement is substantial. TopDefensive's pair-preservation logic correctly handles AAKK, AA+KK+Q, etc. where the Hold'em-centric models split pairs (Bug 1). Covers the "scoop-terrified / risk-averse" archetype. **No need for a separate Scoop-Terrified model — already in the panel.**
+  4. **Keep OmahaFirst:** Lowest pairwise agreement with any other model (17-19% vs Hold'em-centric, 44.8% with Random). Orthogonal archetype; essential for capturing Omaha-specialists coming to Taiwanese.
+  5. **Keep RandomWeighted:** Represents the "casual-reasonable" player — doesn't make obviously-bad plays, doesn't systematically optimise. 54% agreement with Random + 63-64% with MF-family = moderate-but-distinct signature.
+  6. P3 (all 7) was rejected for redundancy; P1 (3 models) sacrifices the TopDefensive pair-preservation archetype without gain.
+
+## Decision 024 — `HeuristicMixed{p=0.9}` Wrapping for Production
+**Date:** 2026-04-18 (Sprint 2b, Session 05)
+**Question:** With the 4-model P2-alt panel, what mix ratio should wrap each deterministic model?
+**Options:** (a) p=1.0 (no mix, pure) | (b) p=0.8 (Gemini's original recommendation) | (c) p=0.9 | (d) per-model tuning
+**Choice:** (c) p=0.9 for the three deterministic members (MFSuitAware, OmahaFirst, TopDefensive). RandomWeighted stays pure (already stochastic; wrapping it with more Random has no meaningful effect).
+**Why:** Gemini's original p=0.8 recommendation was calibrated against a Random-only baseline assumption. The 7-model diagnostic revealed the opp space is much richer than that — all-7-agree is only 11.9%, so opp-model signal matters a lot. A 20% Random tail dilutes archetype integrity more than necessary. 10% Random is sufficient to prevent brittle exploits on any single deterministic line while preserving ≥90% archetype fidelity. Gemini independently recommended p=0.9 on the 7-model data.
+
 ---
 
 ## Decision 011 — Dual Compute Backend (CPU + CUDA)

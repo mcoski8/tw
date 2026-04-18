@@ -54,9 +54,27 @@
 - [x] Progress reporting with ETA — per-block log lines
 - [x] Binary output format — 9-byte fixed records, "TWBR" magic
 - [x] N=100 quick run (hours) — verify pipeline works (3.8 s for 1K hands)
-- [ ] N=1,000 production run (days) — pipeline ready, launch is user-gated (~2.6 days)
+- [ ] N=1,000 production run (days) — P2-alt panel pending Claude Desktop approval (~10.4 days)
 - [ ] N=10,000 high-precision run (weeks, optional)
 - [ ] Summary statistics and analysis
+
+### Sprint 2b: Multi-Archetype Opponent Panel (inserted into Sprint 3)
+- [x] 7 opponent-model implementations — `engine/src/opp_models.rs` + tests (119 tests green)
+- [x] OpponentModel enum extended with 7 variants + HeuristicMixed wrapper
+- [x] CLI: --opponent flag for all 7 variants + mixed wrapping
+- [x] Diagnostic subcommand: 7-model panel + pairwise matrix + JSON sidecar
+- [x] validate-model subcommand
+- [x] show-opp-picks audit subcommand
+- [x] BalancedHeuristic pre-validation — 18.7% (failed ≥70% gate; validation gate itself critiqued)
+- [x] 10K-hand 7-model diagnostic — 45.6 min wall, 11.9% all-agree, no pair ≥95%
+- [x] Behavioural audit on 7 stress-test hands — 4 bugs identified
+- [x] Gemini 2.5 Pro adversarial review via pal MCP
+- [x] PRODUCTION COMMITMENT RECOMMENDATION document drafted for Claude Desktop
+- [ ] Claude Desktop approval of P2-alt panel (NEXT SESSION)
+- [ ] Apply Bug 1 + Bug 3 fixes to opp_models.rs
+- [ ] Add 2 unit tests for the fixes
+- [ ] Re-run 5K diagnostic to verify bug-fix impact
+- [ ] Run mini-pilot: 50K hands × 4 models × N=1000 (~4 hours)
 
 ### Sprint 4: Hand Bucketing + CFR
 - [ ] Hand feature extraction

@@ -31,13 +31,42 @@ use crate::setting::{all_settings, HandSetting};
 
 /// Strategy used by the simulated opponent to pick one of their 105 settings.
 ///
-/// `Random` is the only model shipped in Sprint 2. It's the baseline the
-/// best-response solve (Sprint 3) will use as the "uniform random opponent"
-/// target distribution. `MiddleFirst` and a showdown-time `BestResponse`
-/// variant plug in behind the same enum in later sprints.
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+/// Seven pure models (Sprint 2b panel):
+///   1. `Random`               — uniform 1/105 baseline
+///   2. `MiddleFirstNaive`     — Hold'em-optimised mid, highest top, bot sanity check
+///   3. `MiddleFirstSuitAware` — Naive + within-tier swap for bot suit gain
+///   4. `OmahaFirst`           — best Omaha bot first, then mid, then top
+///   5. `TopDefensive`         — highest non-pair-member on top; preserves pairs
+///   6. `RandomWeighted`       — uniform over "reasonable" filtered settings
+///   7. `BalancedHeuristic`    — weighted multi-tier scoring across all 105
+///
+/// Plus a wrapper:
+///   `HeuristicMixed { base, p_heuristic }` — with prob p uses `base`, else Random.
+/// The 20 % Random tail (Gemini's recommendation, Decision 019) prevents the
+/// solver from finding brittle exploits that only work vs one deterministic line.
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum OpponentModel {
     Random,
+    MiddleFirstNaive,
+    MiddleFirstSuitAware,
+    OmahaFirst,
+    TopDefensive,
+    RandomWeighted,
+    BalancedHeuristic,
+    HeuristicMixed { base: MixedBase, p_heuristic: f32 },
+}
+
+/// Which deterministic heuristic a `HeuristicMixed` variant wraps.
+/// RandomWeighted isn't included because it already has its own RNG branch —
+/// mixing it with Random would be a mix of two random distributions, not a
+/// meaningful opponent archetype.
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum MixedBase {
+    MiddleFirstNaive,
+    MiddleFirstSuitAware,
+    OmahaFirst,
+    TopDefensive,
+    BalancedHeuristic,
 }
 
 /// One setting's EV estimate from a Monte Carlo run.
@@ -228,8 +257,28 @@ fn opp_pick(
     model: OpponentModel,
     rng: &mut SmallRng,
 ) -> HandSetting {
+    use crate::opp_models::*;
     match model {
         OpponentModel::Random => random_setting(hand, rng),
+        OpponentModel::MiddleFirstNaive => opp_middle_first_naive(hand),
+        OpponentModel::MiddleFirstSuitAware => opp_middle_first_suit_aware(hand),
+        OpponentModel::OmahaFirst => opp_omaha_first(hand),
+        OpponentModel::TopDefensive => opp_top_defensive(hand),
+        OpponentModel::RandomWeighted => opp_random_weighted(hand, rng),
+        OpponentModel::BalancedHeuristic => opp_balanced_heuristic(hand),
+        OpponentModel::HeuristicMixed { base, p_heuristic } => {
+            if rng.gen::<f32>() < p_heuristic {
+                match base {
+                    MixedBase::MiddleFirstNaive => opp_middle_first_naive(hand),
+                    MixedBase::MiddleFirstSuitAware => opp_middle_first_suit_aware(hand),
+                    MixedBase::OmahaFirst => opp_omaha_first(hand),
+                    MixedBase::TopDefensive => opp_top_defensive(hand),
+                    MixedBase::BalancedHeuristic => opp_balanced_heuristic(hand),
+                }
+            } else {
+                random_setting(hand, rng)
+            }
+        }
     }
 }
 
@@ -508,6 +557,29 @@ mod tests {
             key(&s4.best().setting),
             "best setting should agree at N=5000 regardless of worker count"
         );
+    }
+
+    #[test]
+    fn heuristic_mixed_dispatch_uses_base_at_p1() {
+        // p_heuristic = 1 → always heuristic variant (here, MFSuitAware).
+        // (p = 0 just behaves like Random, covered by random_setting tests.)
+        use crate::opp_models::opp_middle_first_suit_aware;
+        let ev = Evaluator::build();
+        let hand = seven("As Ac Kh Qd Jc Ts 9h");
+        let mut rng = SmallRng::seed_from_u64(42);
+        let always_heur = opp_middle_first_suit_aware(hand);
+        for _ in 0..50 {
+            let picked = opp_pick(
+                &ev,
+                hand,
+                OpponentModel::HeuristicMixed {
+                    base: MixedBase::MiddleFirstSuitAware,
+                    p_heuristic: 1.0,
+                },
+                &mut rng,
+            );
+            assert_eq!(picked, always_heur, "p=1.0 should always yield the base heuristic's setting");
+        }
     }
 
     #[test]

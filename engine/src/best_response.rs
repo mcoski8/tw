@@ -282,13 +282,14 @@ pub fn solve_one(
     canonical_id: u32,
     samples: usize,
     base_seed: u64,
+    model: OpponentModel,
 ) -> BestResponseRecord {
     let hand = bytes_to_hand(canonical_bytes);
     let per_hand_seed = base_seed
         .wrapping_add((canonical_id as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15));
     let mut rng = SmallRng::seed_from_u64(per_hand_seed);
     let summary: McSummary =
-        mc_evaluate_all_settings(ev, hand, OpponentModel::Random, samples, &mut rng);
+        mc_evaluate_all_settings(ev, hand, model, samples, &mut rng);
     let best = summary.best();
     // `summary.results` is sorted by EV, but we need the index into the
     // ORIGINAL `all_settings(hand)` order so Sprint 5's trainer can
@@ -322,6 +323,7 @@ pub fn solve_range<F>(
     start_id: u32,
     samples: usize,
     base_seed: u64,
+    model: OpponentModel,
     block_size: usize,
     writer: &mut BrWriter,
     mut on_block: F,
@@ -341,7 +343,7 @@ where
             .enumerate()
             .map(|(k, h)| {
                 let id = start_id + (i + k) as u32;
-                solve_one(ev, h, id, samples, base_seed)
+                solve_one(ev, h, id, samples, base_seed, model)
             })
             .collect();
         writer.append(&records)?;
@@ -539,7 +541,7 @@ mod tests {
         let cards = parse_hand("As Kh Qd Jc Ts 9h 2d").unwrap();
         let arr: [crate::card::Card; 7] = cards.try_into().unwrap();
         let bytes = hand_to_bytes(&arr);
-        let rec = solve_one(&ev, &bytes, 7, 200, 123);
+        let rec = solve_one(&ev, &bytes, 7, 200, 123, OpponentModel::Random);
         assert!(rec.best_setting_index < 105);
         // Use f32 not f64 — records are stored as f32. Net points are bounded
         // [-20, 20], so f32 covers the range.
