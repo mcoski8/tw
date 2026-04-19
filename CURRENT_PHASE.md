@@ -1,88 +1,82 @@
-# Current: Sprint 3 — Production launch pending (USER-LAUNCHED ON CLOUD)
+# Current: Sprint 3 — Cloud production RUNNING on RunPod
 
-> Updated: 2026-04-18 (end of Session 06)
-> Previous sprint status: Sprint 2b complete, bug fixes applied, diagnostic re-validated, pilot running. Mac-Mini production is OFF the table (user veto); cloud launch awaits user.
-
----
-
-## What Was Completed This Session (Session 06)
-
-### Bug fixes (Claude Desktop approved, Decisions 025 + 026)
-
-- **Bug 1 fix** — pair-preserving top-card selection in MFNaive + MFSuitAware via new `pick_top_from_rem5` helper. Routes `build_setting_mid_then_top` and `candidate_bot_after_top` through the helper.
-- **Bug 3 fix** — OmahaFirst top = highest-rank of the 3 cards not in the bot (was leftover-of-mid-selection, which produced deuce-on-top absurdities).
-- **Bug 4 deferred** (TopDefensive trip-split kept as archetype eccentricity).
-- **BalancedHeuristic dropped** from production panel (Bug 2, Decision 021) — kept in codebase for audit reproducibility.
-
-### Tests
-
-- 5 new unit tests added (MFNaive KK preservation, MFSuitAware KK preservation, TopDefensive AAKK redux, OmahaFirst highest-of-rem3 + stress variant).
-- **124 tests passing**, 0 failures (119 pre-session + 5 new).
-
-### Empirical validation
-
-- **Stress-test audit** via `show-opp-picks` on 7 stress hands: all 4 production models produce archetype-correct settings. Output saved to `data/session06/stress_audit_postfix.log`.
-- **5K-hand post-fix diagnostic** (1389 s wall):
-  - All-7 agree: 11.9% → **14.4%** (as expected — Bug 3 fix reduces OmahaFirst's isolation).
-  - OmahaFirst vs Hold'em-centric models: 17-19% → **29-36%** (~2× increase — Bug 3 empirically validated).
-  - MFNaive↔MFSuitAware: 88.4% → 89.0% (~same — expected because both got identical fix).
-  - No pair ≥ 95% — 4-model P2-alt panel remains fully justified; no cluster collapse.
-- Output: `data/session06/diagnostic_5k_postfix.log` + `diagnostic_5k_postfix.json` (JSON gitignored).
-
-### Cloud production plan (new this session — user pivoted from Mac Mini)
-
-- **User vetoed** the 10-day Mac Mini production plan mid-session; asked for cloud alternative.
-- After two Socratic rounds with **Gemini 3 Pro** via PAL MCP, top 3 cloud providers finalized:
-  - **#1 DigitalOcean** — simplest UI, $200 signup credit (covers job), needs quota-bump ticket for 48-vCPU.
-  - **#2 RunPod** — prepaid model bypasses fraud filters, ~$17 total, starts in 10 minutes. **Recommended.**
-  - **#3 GCP** — $300 credit covers job, fastest machine (112 vCPU, ~1.7 days wall), but quota review bureaucracy is real.
-- **GPU rejected** — workload is branchy integer code + lookup-table memory-bound; months of CUDA rewrite for ≤5× speedup is not rational.
-- **Sub-24-hour variants** documented for each provider.
-- **CLOUD_PRODUCTION_GUIDE.md** at repo root has full click-by-click for all 3 options.
-
-### Pilot (running in background at session end)
-
-- Launched at 23:34 via `scripts/pilot_all_models.sh` (job ID `butlu0ted`).
-- 50K canonical hands × 4 models × N=1000.
-- Expected wall ~2 hours. User will wake up after completion.
-- Outputs: `data/pilot/*.bin` (gitignored).
+> Updated: 2026-04-19 (end of Session 07)
+> Previous sprint status: Bug fixes + pilot validated in Session 06; cloud launch was user-gated. Session 07 pivoted the guide to overspend-safety ranking and got the user actually running on cloud.
 
 ---
 
-## Current State — READY FOR CLOUD LAUNCH
+## What Was Completed This Session (Session 07)
 
-Mac Mini production is **NOT running** and will NOT run. All production work happens on cloud per CLOUD_PRODUCTION_GUIDE.md.
+### Cloud production guide rewrite
 
-Repo state:
-- All bug fixes committed + pushed to `github.com/mcoski8/tw` (main branch).
-- Cloud guide pushed with the same commit so the user can read it from any browser.
-- Pilot is the ONLY compute still running locally and is independent of the cloud launch.
+- User surfaced concern that "hourly pricing" might be a monthly subscription. Rewrote `CLOUD_PRODUCTION_GUIDE.md` entirely:
+  - New upfront callout: **none of the 3 options are monthly commitments** — metered billing, destroy = stops.
+  - Re-ranked by **overspend-safety** rather than raw cost/speed:
+    - **#1 RunPod** — strictly prepaid, deposit is a hard physical cap. No credit-card auto-charging.
+    - **#2 GCP** — $300 free-trial credit as hard cap; per-second billing; expanded section explains SUDs (auto) vs CUDs (commitment — avoid).
+    - **#3 DigitalOcean** — $200 credit + per-second billing (since Jan 2026) + monthly price cap as safety net.
+  - Dropped Hetzner entirely per user preference; added Google Cloud per-usage pricing section.
+  - Updated pricing: verified April 2026 via web search (RunPod $0.96/hr 32-vCPU, GCP `c2d-highcpu-112` ~$4.22/hr, DO monthly cap for 48-vCPU).
+  - Added billing-alert steps for DO + GCP.
+  - Added explicit "don't click Reserved / Savings Plan / CUD" warnings on every provider.
+
+### Script portability fixes (critical — scripts were Mac-only)
+
+- `scripts/production_all_models.sh` + `scripts/pilot_all_models.sh` had two fatal macOS-isms:
+  - Hardcoded `PROJ="/Users/michaelchang/Documents/claudecode/taiwanese"` — doesn't exist on Linux.
+  - `/usr/bin/time -l` — `-l` is BSD-only; Linux GNU time doesn't accept it.
+- Both files now use portable `PROJ="$(cd "$(dirname "$0")/.." && pwd)"` and call the engine binary directly (no `/usr/bin/time` prefix).
+- Decision 027 appended to `DECISIONS_LOG.md` covering this fix.
+
+### RunPod cloud production — LAUNCHED and RUNNING
+
+User completed the full RunPod onboarding flow with click-by-click guidance. Current state:
+
+- **Pod ID**: `0f8279f6fd0a`
+- **Region**: `US-GA-2` (first attempt `US-TX-3` had no 32-vCPU capacity — network volume had to be re-created in GA region)
+- **Hardware**: 3 GHz Compute-Optimized, 32 vCPU, 64 GB RAM @ $0.96/hr
+- **Storage**: Network volume `tw-solver-data` (20 GB, persistent — survives pod termination) mounted at `/workspace`; container disk 20 GB
+- **Balance**: $120 prepaid + auto-refill $25 when below $10
+- **Launch time**: 2026-04-19 19:16:28 UTC
+- **First model running**: `mfsuitaware_mixed90` (PID 2009 on the pod at launch)
+- **Expected wall-clock**: ~4.9 days sequential for all 4 models
+
+User can close the browser tab; `nohup` keeps the job alive.
+
+### Session gotchas worth remembering
+
+- **Web terminal mangles large heredoc pastes.** First attempt to create `production_cloud.sh` via `cat > ... <<'EOF'` hung in heredoc mode with line-joined/whitespace-stripped content. Fallback: two `sed -i` in-place patches on the original script worked cleanly. For future non-technical cloud walkthroughs, prefer `sed` over heredocs for long content.
+- **Markdown code fences (```` ``` ````) get copied with the commands** when users select an entire code block visually. First install attempt pasted the fences and bash interpreted them as command substitution, silently swallowing the whole script. Always remind non-technical users to copy only the lines *between* the fences.
+- **RunPod capacity is region-sensitive.** User's first choice (US-TX-3) had no 32-vCPU available; had to delete the tw-solver-data network volume and re-create it in US-GA-2. Volume region is locked to pod region.
+- **Auto-refill softens the "prepaid hard cap" guarantee.** With auto-refill enabled, deposit is no longer the absolute ceiling — noted in the guide. User consciously chose it for safety-net over strict-cap.
+
+---
+
+## Current State — CLOUD PRODUCTION RUNNING
+
+Next action is monitoring + download, not launching anything else. Repo state:
+
+- All fixes committed + pushed (will be true after this session's commit).
+- Mac Mini production remains vetoed. Cloud is the only production path.
+- Pilot from Session 06 remains intact at `data/pilot/` for spot-check reference.
 
 ---
 
 ## Blockers / Issues
 
-None. All work is either complete or user-gated (cloud launch).
+None. Job is running on cloud; user is free to disconnect.
 
 ---
 
 ## Files touched this session
 
 **Modified:**
-- `engine/src/opp_models.rs` — Bug 1 + Bug 3 fixes + 5 new tests
-- `DECISIONS_LOG.md` — Decisions 025 (Bug 1 fix) + 026 (Bug 3 fix) appended
-- `checklist.md` — Sprint 2b items checked off; production marked cloud-pending
-- `.gitignore` — added `data/pilot/`, `data/*.json`, `data/session*/*.json`
-- `handoff/MASTER_HANDOFF_01.md` — Session 06 entry appended
+- `CLOUD_PRODUCTION_GUIDE.md` — full rewrite: overspend-safety ranking, RunPod #1, expanded GCP per-usage section, Hetzner removed
+- `scripts/production_all_models.sh` — portable `PROJ` via `dirname`; removed `/usr/bin/time -l`
+- `scripts/pilot_all_models.sh` — same two fixes
+- `DECISIONS_LOG.md` — Decision 027 appended
+- `handoff/MASTER_HANDOFF_01.md` — Session 07 entry appended
 - `CURRENT_PHASE.md` — this file, fully rewritten
-
-**New:**
-- `scripts/pilot_all_models.sh` — pilot runner (50K × 4 models)
-- `scripts/production_all_models.sh` — production runner (usable on cloud too)
-- `CLOUD_PRODUCTION_GUIDE.md` — 3-option cloud launch guide (Socratic-tested with Gemini 3 Pro)
-- `data/session06/stress_audit_postfix.log` — 7 stress hands × 7 models output
-- `data/session06/diagnostic_5k_postfix.log` — full diagnostic text summary
-- `data/session06/diagnostic_5k_postfix.json` — diagnostic JSON (gitignored)
 
 ---
 
@@ -92,42 +86,43 @@ None. All work is either complete or user-gated (cloud launch).
 
 ---
 
-## Resume Prompt (next session — after user runs cloud production)
+## Resume Prompt (next session)
 
 ```
 Read these files for context:
 - CLAUDE.md
 - CURRENT_PHASE.md
 - modules/game-rules.md   (MANDATORY)
-- DECISIONS_LOG.md  (scan 017-026 for Sprint 2b + Sprint 3 context)
-- handoff/MASTER_HANDOFF_01.md  (scan Session 06)
-- CLOUD_PRODUCTION_GUIDE.md   (in case user ran production on cloud)
+- DECISIONS_LOG.md  (scan 025-027 for Sprint 2b/3 context)
+- handoff/MASTER_HANDOFF_01.md  (scan Session 07)
+- CLOUD_PRODUCTION_GUIDE.md   (in case user asks about re-running)
 
-Session 06 applied Bug 1 + Bug 3 fixes (pair-preserving top in MF-family,
-OmahaFirst top=highest-of-rem3). 124 tests green. Stress audit + 5K
-re-diagnostic validated the fixes empirically (OmahaFirst agreement with
-Hold'em-centric ~2× up; all-7 agree 11.9%→14.4%; no cluster collapse).
+Session 07 pivoted CLOUD_PRODUCTION_GUIDE.md to an overspend-safety
+ranking (RunPod #1 prepaid, GCP #2 $300 credit, DO #3 signup credit).
+Also fixed Mac-only bugs in scripts/production_all_models.sh and
+scripts/pilot_all_models.sh (hardcoded PROJ path, /usr/bin/time -l).
 
-Pilot of 50K × 4 models × N=1000 ran at session close (2026-04-18 ~23:34
-launch). Results in data/pilot/*.bin + data/session06/pilot_*.log. User
-was asleep; pilot validation should be checked at session start.
-
-User PIVOTED from Mac Mini production to CLOUD mid-session. They wanted
-a non-technical first-time cloud guide with sub-24-hour options at
-nominal fee, no GPU. After Socratic with Gemini 3 Pro via PAL MCP, the
-top 3 in CLOUD_PRODUCTION_GUIDE.md are DigitalOcean, RunPod, GCP.
+User launched RunPod cloud production at 2026-04-19 19:16:28 UTC:
+- Pod 0f8279f6fd0a, region US-GA-2
+- 32 vCPU / 64 GB @ $0.96/hr
+- Network volume tw-solver-data (20 GB) mounted at /workspace
+- Balance $120 + auto-refill $25 at $10
+- Expected wall ~4.9 days for all 4 models sequentially
+- First model mfsuitaware_mixed90 running (PID 2009 at launch)
 
 First-session-start tasks:
-1. Check pilot output (data/pilot/{mfsuitaware_mixed90,omahafirst_mixed90,
-   topdefensive_mixed90,randomweighted}.bin). Each should be ~450 KB
-   (32-byte header + 9 × 50,000 records). Header tags should match
-   model specs (1002090, 1003090, 1004090, 6 respectively).
-2. Spot-check 10-20 pilot records against known-correct hand settings.
-3. Ask user whether they've kicked off the cloud run. If yes, how's it
-   going (any errors, any pods stuck)? If not, walk them through
-   CLOUD_PRODUCTION_GUIDE.md.
-4. Once user has all 4 best_response/*.bin files back on the Mac (from
-   cloud download or Mac run), Sprint 7 analysis unlocks.
+1. Ask user the pod status. Monitor via RunPod web terminal:
+   cd /workspace/tw
+   tail -15 data/session06/production_launch.log
+   for f in data/session06/prod_*.log; do echo "=== $f ==="; tail -3 "$f"; done
+   pgrep -af "tw-engine solve" || echo "Job stopped."
+2. If any prod_*.bin files are complete in /workspace/tw/data/best_response/,
+   walk the user through scp or Jupyter download to
+   /Users/michaelchang/Documents/claudecode/taiwanese/data/best_response_cloud/.
+3. If job has crashed mid-run, resume with same command — append-only .bin
+   writer continues from last flushed block.
+4. After all 4 .bin files are on the Mac, Sprint 7 analysis unlocks.
+5. Remind user to TERMINATE (not just Stop) the pod once downloads finish.
 
 Do NOT launch Mac Mini production. User has vetoed that path.
 ```

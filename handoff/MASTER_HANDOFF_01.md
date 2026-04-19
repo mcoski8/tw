@@ -353,3 +353,61 @@ Pre-fix (Session 05 10K) vs post-fix (Session 06 5K):
 - Pre-run prediction about MFNaive↔MFSuitAware agreement change was wrong (flagged above). Both models got the identical fix → relative agreement preserved.
 - CLI flag mismatch between Claude Desktop's recipe and actual implementation (`--num-hands` vs `--limit`, no `--parallel` flag on `solve` since rayon is always on, no `--checkpoint-dir` since append-only writer handles it in `--out`). Translated to actual CLI in scripts.
 - `data/session06/*.json` needed a new gitignore rule to match session 05's convention — added.
+
+---
+
+### Session 07 — 2026-04-19 — Sprint 3 Cloud Launch (RUNNING)
+
+**Scope:** Rewrite `CLOUD_PRODUCTION_GUIDE.md` around user's overspend-anxiety, fix fatal script portability bugs, and get the user actually running on cloud. The 10-day Mac Mini alternative is still vetoed from Session 06.
+
+**Trigger:** User opened session by questioning whether the cloud providers in the prior guide committed them to monthly billing. The honest answer is "no — these are all metered per-second/per-hour, destroy = stops," but that framing wasn't prominent enough in the prior guide to defuse the anxiety. User explicitly asked for verification + rewrite.
+
+**Pricing verification (web search, April 2026):**
+- DigitalOcean Droplets: per-second billing since Jan 2026 (60-sec minimum), monthly cap of 672 hours = bill never exceeds advertised monthly rate. Confirmed via DigitalOcean blog (per-sec billing announcement) + docs.
+- RunPod: strictly prepaid, per-second, no credit card auto-charge. Balance = hard cap unless auto-refill is enabled.
+- GCP: per-second, 1-minute minimum. $300 Welcome credit, 90-day expiry or until $300 consumed — whichever first. Trial ends automatically unless user clicks explicit "Upgrade to Paid." Sustained Use Discounts auto-apply (no commitment); Committed Use Discounts ARE multi-year commitments and must be avoided.
+- Hetzner CCX63 (48 vCPU AMD EPYC): €0.60/hr or €374/mo cap, ~€47 for the job. Cheapest on paper. KYC requires passport + selfie; reviews suggest US customer onboarding is still flaky in 2026. User opted to exclude Hetzner from the guide.
+- GCP `c2d-highcpu-112`: ~$4.22/hr (corrected from prior guide's ~$3.40/hr stale estimate). 40-hour run ≈ $169, under $300 credit.
+
+**`CLOUD_PRODUCTION_GUIDE.md` rewrite delivered:**
+- Upfront callout: **"None of these are monthly commitments."** Reframed every subsequent section around overspend-safety tiers.
+- Re-ranked: **RunPod #1** (structurally impossible to overspend), **GCP #2** (expanded per-usage pricing section — explains SUDs vs CUDs, "will GCP auto-bill after trial" FAQ, explicit "avoid Committed Use Discounts"), **DigitalOcean #3** (still strong — monthly cap is a real safety net).
+- Per-provider billing alert steps added (DO + GCP).
+- Explicit "don't click Reserved / Savings Plan / CUD" warnings on every provider.
+- Hetzner moved to the rejected-alternatives table per user preference.
+- Sub-24-hour variant updated: `c3-highcpu-176` on GCP under $300 credit as the realistic path (removed stale `c2d-highcpu-224` claim).
+
+**Script portability fixes (the actual production-launch unblocker):**
+- `scripts/production_all_models.sh` and `scripts/pilot_all_models.sh` had two fatal Mac-isms that caused `set -euo pipefail` to abort immediately on Linux:
+  1. Hardcoded `PROJ="/Users/michaelchang/Documents/claudecode/taiwanese"` — path doesn't exist on the cloud pod.
+  2. `/usr/bin/time -l` — `-l` is a BSD/macOS flag; GNU time on Linux rejects it, script exits via `set -e`.
+- Both scripts now use `PROJ="$(cd "$(dirname "$0")/.." && pwd)"` and call `"$ENGINE" solve` directly (no `/usr/bin/time` prefix). Logged as Decision 027.
+- On the live pod we patched the shipped `production_all_models.sh` with two `sed -i` commands as an in-flight unblock; the local fix ensures future cloud runs don't need manual patching.
+
+**Cloud production launched:**
+- **Provider**: RunPod (prepaid / no overspend risk was the user's deciding factor)
+- **Pod ID**: `0f8279f6fd0a`
+- **Region**: `US-GA-2` (first attempt `US-TX-3` had no 32-vCPU Compute-Optimized capacity; had to delete + recreate the network volume in GA — volumes are region-locked)
+- **Hardware**: 3 GHz Compute-Optimized, 32 vCPU, 64 GB RAM @ $0.96/hr
+- **Storage**: Network volume `tw-solver-data` (20 GB, $0.07/GB/mo) mounted at `/workspace`; container disk 20 GB
+- **Deposit**: $120 + auto-refill $25 when balance drops below $10
+- **Launch timestamp**: 2026-04-19 19:16:28 UTC
+- **Log line**: `[19:16:28] === Production: mfsuitaware_mixed90 ===`
+- **Engine PID at launch**: 2009 on the pod
+- **Expected wall-clock**: ~4.9 days for all 4 models sequentially (mfsuitaware_mixed90 → omahafirst_mixed90 → topdefensive_mixed90 → randomweighted)
+- **Output destination on pod**: `/workspace/tw/data/best_response/*.bin` (4 files, ~52 MB each)
+
+**Gotchas this session (worth propagating to future non-technical cloud walkthroughs):**
+- **Markdown code-fence traps**: users copying from the rendered chat can accidentally include the triple-backtick fences. Bash interprets ```` ``` ```` as command substitution, so the first install attempt silently swallowed the entire block — no apt output, no rust install. Prompted the fix by re-pasting commands fence-free.
+- **Web-terminal heredoc fragility**: `cat > file <<'EOF' ...` over the RunPod web terminal mangled the paste — lines joined, extra blank-line separators, hung in heredoc state. Had to Ctrl+C and fall back to in-place `sed` patches. Lesson: for long script edits over a web terminal, prefer `sed -i` point edits over large heredocs.
+- **Region capacity matters**: RunPod's 32-vCPU CPU pods have sparse availability; first-choice regions may not provision. Network volumes are region-locked, so pod-region changes require volume recreation.
+- **Auto-refill ≠ hard cap**: with auto-refill enabled, RunPod's "prepaid = overspend-impossible" guarantee becomes "prepaid with soft cap at each refill threshold." User consciously chose this for mid-job-interruption resilience over strict cap. Called out in guide.
+- **Enumerate-canonical ≠ lookup table**: the `build-lookup` subcommand is separate. Production script expects both `data/canonical_hands.bin` AND `data/lookup_table.bin` present. Added to the cloud walkthrough.
+
+**Carry-forward for Session 08:**
+1. **Pod is running unattended.** First task next session: check pod status via RunPod web terminal with the monitoring commands captured in `CURRENT_PHASE.md` resume prompt.
+2. **Download workflow not yet executed.** When models complete, walk user through Jupyter-Lab or scp download to Mac (`data/best_response_cloud/`).
+3. **Pod termination is user's responsibility.** Flag it when all 4 files are safely on the Mac — don't just stop, **Terminate**.
+4. **Sprint 7 analysis is unblocked** once all 4 `best_response/*.bin` files are on the Mac. That's the next real sprint.
+5. **If the pod dies mid-job** (balance runs out without auto-refill kicking in, provider issue, etc.): the solver's append-only writer + network-volume persistence means resumption is a single re-run of the same script. Partial `.bin` files survive on `/workspace/tw/data/best_response/` because `/workspace` is on the network volume.
+

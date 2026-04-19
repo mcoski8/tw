@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-PROJ="/Users/michaelchang/Documents/claudecode/taiwanese"
+PROJ="$(cd "$(dirname "$0")/.." && pwd)"
 ENGINE="$PROJ/engine/target/release/tw-engine"
 CANON="$PROJ/data/canonical_hands.bin"
 LOOKUP="$PROJ/data/lookup_table.bin"
@@ -30,7 +30,7 @@ run_model() {
 
     echo "[$(date +%H:%M:%S)] === Pilot: $name ==="
     # shellcheck disable=SC2086
-    /usr/bin/time -l "$ENGINE" solve \
+    "$ENGINE" solve \
         --canonical "$CANON" \
         --lookup "$LOOKUP" \
         --out "$out" \

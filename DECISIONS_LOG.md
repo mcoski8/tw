@@ -238,3 +238,19 @@
 **Options:** CPU only (simpler) | GPU only (fastest but limits hardware) | Both via feature flags (flexible)
 **Choice:** Both — CPU is default, CUDA is opt-in via cargo feature flag
 **Why:** CPU-only (Rust + rayon) works everywhere and requires no special dependencies. CUDA requires an NVIDIA GPU and CUDA toolkit but offers 10-50x speedup for the Monte Carlo inner loop. Using Cargo feature flags (--features cuda), we compile the same codebase with or without GPU support. The CPU path is developed first and serves as the reference implementation. The CUDA path is added in a sub-sprint after CPU is validated. This lets the user choose: run locally on Mac Mini for free (CPU, 8-12 days), rent a cheap CPU cloud server ($15-25, 1-2 days), or rent a GPU ($3-10, 4-8 hours).
+
+---
+
+## Decision 027 — Portable Scripts (Cross-Platform Path Resolution, Drop macOS-only time flags)
+**Date:** 2026-04-19 (Sprint 3, Session 07)
+**Question:** `scripts/production_all_models.sh` and `scripts/pilot_all_models.sh` were written for the Mac Mini and fail immediately on Linux cloud hosts. How do we make them portable without breaking Mac usage?
+**Options:**
+  - (a) Keep as-is; write a separate cloud-specific script each run.
+  - (b) Hardcode both Mac and Linux paths with a conditional.
+  - (c) Use `$(cd "$(dirname "$0")/.." && pwd)` to resolve repo root relative to the script's own location. Drop `/usr/bin/time -l` entirely since engine logs timing itself.
+**Choice:** (c).
+**Why:**
+  1. **One source of truth.** Same script works on Mac Mini (`/Users/michaelchang/.../taiwanese`), on `/workspace/tw` inside a RunPod container, on `~/tw` under a GCP VM, etc. The `dirname/..` pattern is POSIX-standard shell and doesn't depend on the invoker's CWD.
+  2. **`/usr/bin/time -l` was never essential.** The `-l` flag is BSD-only (macOS); GNU time uses `-v`. The engine's own log output captures per-block timing via `block-size` reports, so dropping the wrapper loses no operational signal. (If we ever want wall-clock + max-RSS again, add `command -v /usr/bin/time && /usr/bin/time -v ... || ...` guard.)
+  3. **Discovered in production.** Session 07 had to unblock a live RunPod pod with two `sed -i` in-place patches applied over a web terminal. Committing the fix upstream prevents every future cloud user from re-doing that.
+  4. **No Mac regression risk.** The resolved `$PROJ` on the Mac is still the absolute project root (same as the hardcoded path was). Removing `/usr/bin/time -l` only loses the post-run memory summary line on Mac runs — none of our downstream analysis consumes that line.
