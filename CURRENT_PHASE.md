@@ -1,82 +1,68 @@
-# Current: Sprint 3 — Cloud production RUNNING on RunPod
+# Current: Sprint 3 cloud production still running + Python analysis pipeline built (Sprint 7 foundation)
 
-> Updated: 2026-04-19 (end of Session 07)
-> Previous sprint status: Bug fixes + pilot validated in Session 06; cloud launch was user-gated. Session 07 pivoted the guide to overspend-safety ranking and got the user actually running on cloud.
-
----
-
-## What Was Completed This Session (Session 07)
-
-### Cloud production guide rewrite
-
-- User surfaced concern that "hourly pricing" might be a monthly subscription. Rewrote `CLOUD_PRODUCTION_GUIDE.md` entirely:
-  - New upfront callout: **none of the 3 options are monthly commitments** — metered billing, destroy = stops.
-  - Re-ranked by **overspend-safety** rather than raw cost/speed:
-    - **#1 RunPod** — strictly prepaid, deposit is a hard physical cap. No credit-card auto-charging.
-    - **#2 GCP** — $300 free-trial credit as hard cap; per-second billing; expanded section explains SUDs (auto) vs CUDs (commitment — avoid).
-    - **#3 DigitalOcean** — $200 credit + per-second billing (since Jan 2026) + monthly price cap as safety net.
-  - Dropped Hetzner entirely per user preference; added Google Cloud per-usage pricing section.
-  - Updated pricing: verified April 2026 via web search (RunPod $0.96/hr 32-vCPU, GCP `c2d-highcpu-112` ~$4.22/hr, DO monthly cap for 48-vCPU).
-  - Added billing-alert steps for DO + GCP.
-  - Added explicit "don't click Reserved / Savings Plan / CUD" warnings on every provider.
-
-### Script portability fixes (critical — scripts were Mac-only)
-
-- `scripts/production_all_models.sh` + `scripts/pilot_all_models.sh` had two fatal macOS-isms:
-  - Hardcoded `PROJ="/Users/michaelchang/Documents/claudecode/taiwanese"` — doesn't exist on Linux.
-  - `/usr/bin/time -l` — `-l` is BSD-only; Linux GNU time doesn't accept it.
-- Both files now use portable `PROJ="$(cd "$(dirname "$0")/.." && pwd)"` and call the engine binary directly (no `/usr/bin/time` prefix).
-- Decision 027 appended to `DECISIONS_LOG.md` covering this fix.
-
-### RunPod cloud production — LAUNCHED and RUNNING
-
-User completed the full RunPod onboarding flow with click-by-click guidance. Current state:
-
-- **Pod ID**: `0f8279f6fd0a`
-- **Region**: `US-GA-2` (first attempt `US-TX-3` had no 32-vCPU capacity — network volume had to be re-created in GA region)
-- **Hardware**: 3 GHz Compute-Optimized, 32 vCPU, 64 GB RAM @ $0.96/hr
-- **Storage**: Network volume `tw-solver-data` (20 GB, persistent — survives pod termination) mounted at `/workspace`; container disk 20 GB
-- **Balance**: $120 prepaid + auto-refill $25 when below $10
-- **Launch time**: 2026-04-19 19:16:28 UTC
-- **First model running**: `mfsuitaware_mixed90` (PID 2009 on the pod at launch)
-- **Expected wall-clock**: ~4.9 days sequential for all 4 models
-
-User can close the browser tab; `nohup` keeps the job alive.
-
-### Session gotchas worth remembering
-
-- **Web terminal mangles large heredoc pastes.** First attempt to create `production_cloud.sh` via `cat > ... <<'EOF'` hung in heredoc mode with line-joined/whitespace-stripped content. Fallback: two `sed -i` in-place patches on the original script worked cleanly. For future non-technical cloud walkthroughs, prefer `sed` over heredocs for long content.
-- **Markdown code fences (```` ``` ````) get copied with the commands** when users select an entire code block visually. First install attempt pasted the fences and bash interpreted them as command substitution, silently swallowing the whole script. Always remind non-technical users to copy only the lines *between* the fences.
-- **RunPod capacity is region-sensitive.** User's first choice (US-TX-3) had no 32-vCPU available; had to delete the tw-solver-data network volume and re-create it in US-GA-2. Volume region is locked to pod region.
-- **Auto-refill softens the "prepaid hard cap" guarantee.** With auto-refill enabled, deposit is no longer the absolute ceiling — noted in the guide. User consciously chose it for safety-net over strict-cap.
+> Updated: 2026-04-21 (end of Session 08)
+> Previous sprint status: Session 07 launched cloud production; RunPod pod `0f8279f6fd0a` began grinding 4 × 6,009,159 hands at 2026-04-19 19:16 UTC. Session 08 built the Python analysis stack while the job runs unattended.
 
 ---
 
-## Current State — CLOUD PRODUCTION RUNNING
+## Cloud production status (Sprint 3) — Model 1 DONE, Model 2 in progress
 
-Next action is monitoring + download, not launching anything else. Repo state:
+- **Model 1** `mfsuitaware_mixed90.bin` — **DONE**. Finished 2026-04-21 11:55:13 UTC, 40.65 wall hours, 52 MB / 6,009,159 records. **Downloaded to `data/best_response_cloud/` on the Mac.**
+- **Model 2** `omahafirst_mixed90` — **RUNNING**. PID 2583, ~35% done at session end (2,100,000 / 6,009,159 hands, ETA ~26 hours remaining at ~49.4 s per 2000-hand block).
+- **Models 3 & 4** — queued on the pod; launch automatically from `scripts/production_all_models.sh` after Model 2 exits 0.
+- **Projected finish** — all 4 models by ~2026-04-26, ~$155 total compute ($120 prepaid + ~$50 auto-refill).
+- **Pod + volume** — `tw-solver-data` network volume persists across pod lifecycle; do NOT terminate the pod until all 4 `.bin` files are on the Mac.
 
-- All fixes committed + pushed (will be true after this session's commit).
-- Mac Mini production remains vetoed. Cloud is the only production path.
-- Pilot from Session 06 remains intact at `data/pilot/` for spot-check reference.
+---
+
+## What was completed this session (Session 08)
+
+### Pod monitoring cadence + Model 1 download workflow
+- Daily status-block established: `tail -15 data/session06/production_launch.log` + per-model log tails + `pgrep tw-engine solve` + `ls -lh data/best_response/`.
+- SSH key setup on the fly — user had no keypair. Generated `~/.ssh/id_ed25519` (no passphrase); RunPod only auto-provisions SSH keys on pod creation, so appended the public key to the pod's `~/.ssh/authorized_keys` via the web terminal. `scp -P 11400 root@205.196.19.130:/workspace/tw/data/best_response/<file> ...` works end-to-end. Models 2/3/4 will be a single scp each.
+
+### Python analysis package: `analysis/src/tw_analysis/`
+- `br_reader.py` — best-response `.bin` reader. Numpy structured dtype with explicit offsets (no padding); header + record validation; `load` (~16 ms for 54 MB) and `memmap` (~8 ms zero-copy) modes.
+- `settings.py` — `Card`, `HandSetting`, `parse_hand`, `decode_setting(hand_7, index)`, `all_settings(hand_7)`. Mirrors `engine/src/card.rs` and `engine/src/setting.rs` enumeration exactly (outer top 0..7 × inner `a<b` mid-pair, 15 pairs, mid/bot sorted desc by packed index).
+- `canonical.py` — reader for `canonical_hands.bin` (`TWCH` magic + header + N × 7 uint8 rows). Includes `canonicalize()` / `is_canonical()` (24 suit permutations, mirrors `engine/src/bucketing.rs`), `CanonicalHands.hand_cards(id)`, `CanonicalHands.find(hand) → canonical_id` via binary search on `tobytes()` comparisons.
+- `analysis/scripts/inspect_br.py` — CLI inspector (header + validation + EV stats + top-5 settings + head).
+- Tests: `analysis/scripts/test_settings.py` 11/11 pass, `analysis/scripts/test_canonical.py` 9/9 pass.
+
+### Byte-identical Rust parity (correctness gate)
+- Ran `./engine/target/release/tw-engine spot-check --canonical data/canonical_hands.bin --out data/best_response_cloud/mfsuitaware_mixed90.bin --show 500`.
+- Produced the same 519-line output from Python using the pipeline record → canonical hand → decoded setting → formatted line.
+- `diff` reports ZERO differences. Decision 028 logs this as the standing correctness gate for all future decoders/readers.
+
+### Full-file validation on real data (Model 1 + canonical hands)
+- `mfsuitaware_mixed90.bin` — 6,009,159 records, canonical_id 0..N-1 in order, setting_indices all in [0,104], all EVs finite, header fields correctly decoded (opponent tag 1_002_090 → `HeuristicMixed(MiddleFirstSuitAware, p=0.90)`).
+- `canonical_hands.bin` — full-file lex-ordering check, 500-hand `is_canonical` spot-check all true, cross-checked `br.header.canonical_total == len(canonical) == 6,009,159`.
 
 ---
 
 ## Blockers / Issues
 
-None. Job is running on cloud; user is free to disconnect.
+None. Cloud job is healthy; Python pipeline is verified correct; workflow for subsequent model downloads is proven.
 
 ---
 
 ## Files touched this session
 
+**Added:**
+- `analysis/src/tw_analysis/__init__.py`
+- `analysis/src/tw_analysis/br_reader.py`
+- `analysis/src/tw_analysis/settings.py`
+- `analysis/src/tw_analysis/canonical.py`
+- `analysis/scripts/inspect_br.py`
+- `analysis/scripts/test_settings.py`
+- `analysis/scripts/test_canonical.py`
+- `data/best_response_cloud/mfsuitaware_mixed90.bin` (52 MB downloaded from pod)
+
 **Modified:**
-- `CLOUD_PRODUCTION_GUIDE.md` — full rewrite: overspend-safety ranking, RunPod #1, expanded GCP per-usage section, Hetzner removed
-- `scripts/production_all_models.sh` — portable `PROJ` via `dirname`; removed `/usr/bin/time -l`
-- `scripts/pilot_all_models.sh` — same two fixes
-- `DECISIONS_LOG.md` — Decision 027 appended
-- `handoff/MASTER_HANDOFF_01.md` — Session 07 entry appended
-- `CURRENT_PHASE.md` — this file, fully rewritten
+- `CURRENT_PHASE.md` — this file, rewritten
+- `DECISIONS_LOG.md` — Decision 028 appended (byte-identical parity gate)
+- `handoff/MASTER_HANDOFF_01.md` — Session 08 entry appended
+- `checklist.md` — Sprint 7 Python-reader task checked off + infrastructure subitems added
+- `sprints/s7-analytics.md` — session log entry + "Read binary solver output into Python" task marked DONE
 
 ---
 
@@ -93,38 +79,39 @@ Read these files for context:
 - CLAUDE.md
 - CURRENT_PHASE.md
 - modules/game-rules.md   (MANDATORY)
-- DECISIONS_LOG.md  (scan 025-027 for Sprint 2b/3 context)
-- handoff/MASTER_HANDOFF_01.md  (scan Session 07)
-- CLOUD_PRODUCTION_GUIDE.md   (in case user asks about re-running)
+- DECISIONS_LOG.md  (scan Decision 028 for Session 08 parity gate)
+- handoff/MASTER_HANDOFF_01.md  (scan Session 08)
+- analysis/src/tw_analysis/  (package skeleton exists; readers + decoders are verified)
 
-Session 07 pivoted CLOUD_PRODUCTION_GUIDE.md to an overspend-safety
-ranking (RunPod #1 prepaid, GCP #2 $300 credit, DO #3 signup credit).
-Also fixed Mac-only bugs in scripts/production_all_models.sh and
-scripts/pilot_all_models.sh (hardcoded PROJ path, /usr/bin/time -l).
-
-User launched RunPod cloud production at 2026-04-19 19:16:28 UTC:
-- Pod 0f8279f6fd0a, region US-GA-2
-- 32 vCPU / 64 GB @ $0.96/hr
-- Network volume tw-solver-data (20 GB) mounted at /workspace
-- Balance $120 + auto-refill $25 at $10
-- Expected wall ~4.9 days for all 4 models sequentially
-- First model mfsuitaware_mixed90 running (PID 2009 at launch)
+Cloud pod `0f8279f6fd0a` has been running since 2026-04-19 19:16 UTC.
+Model 1 (`mfsuitaware_mixed90`) is DONE and already downloaded to
+`data/best_response_cloud/`. Model 2 (`omahafirst_mixed90`) was at ~35%
+with ~26 h ETA at end of Session 08.
 
 First-session-start tasks:
-1. Ask user the pod status. Monitor via RunPod web terminal:
+1. Ask user for current pod status. Monitoring commands:
    cd /workspace/tw
    tail -15 data/session06/production_launch.log
    for f in data/session06/prod_*.log; do echo "=== $f ==="; tail -3 "$f"; done
    pgrep -af "tw-engine solve" || echo "Job stopped."
-2. If any prod_*.bin files are complete in /workspace/tw/data/best_response/,
-   walk the user through scp or Jupyter download to
-   /Users/michaelchang/Documents/claudecode/taiwanese/data/best_response_cloud/.
-3. If job has crashed mid-run, resume with same command — append-only .bin
-   writer continues from last flushed block.
-4. After all 4 .bin files are on the Mac, Sprint 7 analysis unlocks.
-5. Remind user to TERMINATE (not just Stop) the pod once downloads finish.
+   ls -lh data/best_response/
+2. For every completed model that isn't already on the Mac, run:
+   scp -P 11400 root@205.196.19.130:/workspace/tw/data/best_response/<model>.bin \
+       /Users/michaelchang/Documents/claudecode/taiwanese/data/best_response_cloud/
+   then python3 analysis/scripts/inspect_br.py data/best_response_cloud/<model>.bin
+   to confirm the reader validates it.
+3. When all 4 files are on the Mac, remind the user to TERMINATE (not Stop) the
+   pod on RunPod's UI. Data survives on the network volume either way, but
+   terminate fully stops billing.
+4. Sprint 7 formally unlocks once all 4 .bin files are local. First planned
+   Sprint 7 tasks: (a) hand-feature extractor over the canonical hands,
+   (b) cross-model join script that pairs records by canonical_id across all
+   four opponents to surface per-hand agreement/disagreement — both of these
+   are easier to design with four files than one, which is why Session 08
+   stopped at the reader + decoder layer.
 
 Do NOT launch Mac Mini production. User has vetoed that path.
+Do NOT begin single-model pattern mining. Wait for all 4 files first.
 ```
 
 ---

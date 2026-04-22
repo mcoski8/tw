@@ -411,3 +411,51 @@ Pre-fix (Session 05 10K) vs post-fix (Session 06 5K):
 4. **Sprint 7 analysis is unblocked** once all 4 `best_response/*.bin` files are on the Mac. That's the next real sprint.
 5. **If the pod dies mid-job** (balance runs out without auto-refill kicking in, provider issue, etc.): the solver's append-only writer + network-volume persistence means resumption is a single re-run of the same script. Partial `.bin` files survive on `/workspace/tw/data/best_response/` because `/workspace` is on the network volume.
 
+
+---
+
+### Session 08 — 2026-04-20 to 2026-04-21 — Python analysis pipeline (readers, decoders, byte-identical Rust parity)
+
+**Scope:** Sprint 3 cloud production is still running on RunPod (Model 1 `mfsuitaware_mixed90` complete; Model 2 `omahafirst_mixed90` in progress). Rather than idle for the ~5 remaining days, this session built out the Python-side analysis stack that Sprint 7 will depend on and verified it matches the Rust engine's decoding byte-for-byte. All work is model-independent glue — nothing committed to pattern conclusions from a single model.
+
+**Pod monitoring + Model 1 download:**
+- Daily status checks via RunPod web terminal: `tail` on production launcher + per-model logs, `pgrep` for `tw-engine solve`, `ls -lh data/best_response/`.
+- Model 1 completed 2026-04-21 11:55:13 UTC, 40.65 wall hours, `data/best_response/mfsuitaware_mixed90.bin` 52 MB / 6,009,159 records.
+- **SSH setup on-the-fly** — user had no SSH key. Generated `ed25519` keypair at `~/.ssh/id_ed25519` (no passphrase). RunPod's Connect panel only provisions SSH keys on NEW pods, so appended the public key manually to the pod's `~/.ssh/authorized_keys` via the web terminal. Web terminal's usual line-wrapping-in-single-quotes did NOT break the key — the full key data landed on the first authorized-keys line, with the trailing comment (`mcoski@gmail.com`) orphaned on a second line (ignored by OpenSSH).
+- `scp -P 11400 root@205.196.19.130:/workspace/tw/data/best_response/mfsuitaware_mixed90.bin ...` pulled the 52 MB file to `data/best_response_cloud/` in seconds. Workflow confirmed repeatable; Models 2-4 downloads will be a single command each.
+
+**Model 2 in-flight status (snapshot taken mid-session):**
+- `omahafirst_mixed90` PID 2583, 2,100,000 / 6,009,159 hands = ~35%, ETA ~26 hours remaining. Speed steady at ~49.4s per 2000-hand block. Progression:
+  - 2026-04-20: 1,066,000 → 3,214,000 → 4,168,000 hands
+  - 2026-04-21: 4,498,000 → 6,009,159 (done) → 2,100,000 (Model 2 start) → 2,100,000 progress snapshot
+- Overall elapsed ~55 hours; projection remains ~April 26 finish for all 4 models; projected total cost ~$155 (on track within $120 prepaid + ~$50 auto-refills).
+
+**Python analysis stack built (`analysis/src/tw_analysis/`):**
+- `br_reader.py` — best-response `.bin` reader. Numpy structured dtypes with explicit offsets (no implicit padding); supports `load` (~16 ms for 54 MB) and `memmap` (~8 ms zero-copy) modes; `validate_br_file()` covers magic bytes, version, canonical_id monotonicity, setting-index bounds, EV finite/range.
+- `settings.py` — `Card` / `HandSetting` types, `parse_hand()`, `decode_setting(hand_7, index) → HandSetting`, `all_settings(hand_7) → list[105]`. Mirrors `engine/src/card.rs` and `engine/src/setting.rs` enumeration exactly (top outer loop 0..7 × mid `a<b` inner loop 15 pairs, mid/bot sorted desc by `Card.0`).
+- `canonical.py` — canonical-hand file reader (format `TWCH` magic + u32 version + u64 num_hands + reserved, then `num_hands × 7` uint8 rows), `canonicalize()` / `is_canonical()` (24 suit permutations, mirrors `engine/src/bucketing.rs`), `CanonicalHands.hand_cards(id) → list[Card]`, `CanonicalHands.find(hand) → canonical_id` (binary search via `tobytes()` comparison; `np.searchsorted` and `<=` don't work on `np.void` dtypes — attempted and reverted).
+- `__init__.py` re-exports everything for `from tw_analysis import ...` convenience.
+- `analysis/scripts/inspect_br.py` — CLI inspector (header + validation + EV stats + top-5 setting indices + head of records).
+- `analysis/scripts/test_settings.py` — 11 unit tests, all pass (card pack/unpack, setting count = 105, all-7-cards-used invariant, uniqueness, decode-matches-all-settings, tier sort order, top-card-by-outer-index, mid-pair enumeration order, bad-input rejection, permutation-invariance sanity).
+- `analysis/scripts/test_canonical.py` — 9 unit tests, all pass (24 distinct bijection permutations, canonicalize idempotence, agreement under all 24 relabelings, `is_canonical` fixed-point agreement, suit-0 always-used, rank-only orbit, bad-shape rejection, `apply_perm` preserves ranks).
+
+**Real-data validation results:**
+- Loaded Model 1 (`mfsuitaware_mixed90.bin`): all 6,009,159 records, canonical_id 0..N-1 in order, all setting_indices ∈ [0,104], all EV finite, min −9.839 / mean +0.533 / max +6.593, opponent tag decoded as `HeuristicMixed(base=MiddleFirstSuitAware, p=0.90)` matching the filename, top-5 most-chosen indices [104 @ 19.7%, 102 @ 10.6%, 74 @ 10.3%, 99 @ 9.5%, 90 @ 9.3%].
+- Loaded `data/canonical_hands.bin` (42 MB, 6,009,159 hands): full-file lex-ordering check passed, 500-hand `is_canonical` spot-check all true, cross-checked `br.header.canonical_total == len(canonical)`.
+- **Byte-identical cross-verify against Rust** — ran `./engine/target/release/tw-engine spot-check --show 500` and produced the same 519-line output from Python using the same record stream → canonical hand → setting decode pipeline. `diff` reports no differences. This is the definitive correctness gate: any pattern analysis built on this stack inherits verified decoding.
+
+**Pre-flight at session end:** `cargo build --release` ok, full `cargo test --release` green (124+ tests across unit/integration/scoring), `python3 analysis/scripts/test_settings.py` 11/11, `python3 analysis/scripts/test_canonical.py` 9/9.
+
+**Gotchas discovered this session:**
+- `np.searchsorted` and `<=` / `!=` on `np.void` structured dtypes do not work (no ufunc loop). First draft of `CanonicalHands.find()` and the adjacent-pair ordering check both failed; replaced with row-wise `tobytes()` binary search and a vectorized int16 column-diff (argmax of first non-zero column) respectively.
+- RunPod's account-level SSH-key setting only auto-provisions on pod CREATION. Running pods (like ours, launched 2026-04-19) require a manual append to `~/.ssh/authorized_keys` inside the container. Script this into the cloud guide eventually.
+- Web terminal's single-quote line wrapping doesn't break SSH keys as long as the full Base64 payload stays on one line; the trailing comment can be safely orphaned on a second line.
+
+**Carry-forward for Session 09:**
+1. **Monitor pod daily.** Same status block as Session 07/08 (tail logs + pgrep + ls best_response).
+2. **Download Models 2/3/4 as they complete.** Command template (SSH key now in place):
+   `scp -P 11400 root@205.196.19.130:/workspace/tw/data/best_response/<model>.bin /Users/michaelchang/Documents/claudecode/taiwanese/data/best_response_cloud/`
+3. **After each download, run** `python3 analysis/scripts/inspect_br.py data/best_response_cloud/<file>.bin` to confirm the reader validates it (new model = new opponent tag, same structure).
+4. **When all 4 files landed:** remind user to **Terminate** (not Stop) the RunPod pod. Network volume preserves data, but terminate fully stops billing.
+5. **Sprint 7 formally unlocks** once all 4 `.bin` files are local. Planned starting point: use the new reader/decoder stack to build a hand-feature extractor (pair count, suitedness, connectivity, high card) — deferred from Session 08 because it's easier to design once four opponents' data can be compared side-by-side.
+6. **Cross-model comparison scaffolding** — when ≥2 `.bin` files exist, a small script that joins records by `canonical_id` across models to show per-hand setting agreement / disagreement across opponents would be the first cross-model analysis worth writing (still model-independent in structure, just fed N files).

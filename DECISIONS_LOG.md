@@ -254,3 +254,20 @@
   2. **`/usr/bin/time -l` was never essential.** The `-l` flag is BSD-only (macOS); GNU time uses `-v`. The engine's own log output captures per-block timing via `block-size` reports, so dropping the wrapper loses no operational signal. (If we ever want wall-clock + max-RSS again, add `command -v /usr/bin/time && /usr/bin/time -v ... || ...` guard.)
   3. **Discovered in production.** Session 07 had to unblock a live RunPod pod with two `sed -i` in-place patches applied over a web terminal. Committing the fix upstream prevents every future cloud user from re-doing that.
   4. **No Mac regression risk.** The resolved `$PROJ` on the Mac is still the absolute project root (same as the hardcoded path was). Removing `/usr/bin/time -l` only loses the post-run memory summary line on Mac runs — none of our downstream analysis consumes that line.
+
+
+## Decision 028 — Python analysis stack with byte-identical Rust parity as its correctness gate
+**Date:** 2026-04-21 (Session 08)
+**Question:** How do we gain confidence that the Python-side analysis pipeline (readers, canonical decoder, setting-index decoder) matches the Rust engine's interpretation of the same data? Test parity with small hand-written cases, or commit to a stronger gate?
+**Options:**
+  - (a) Unit-test each module against hand-rolled expected values and call it good. Easy, but any hidden Rust-specific encoding subtlety (endianness, padding, float formatting) could slip through.
+  - (b) Round-trip small synthetic records through both engines and compare.
+  - (c) Run the Rust engine's own `spot-check` CLI on the exact same on-disk file the Python pipeline reads, render output in Python using the same format string Rust uses, and require `diff` to report zero differences.
+**Choice:** (c), enforced for every major reader/decoder addition.
+**Why:**
+  1. **The whole analysis stack is downstream of correct decoding.** Every later claim — "setting 104 is picked 19.7% of the time," "this EV distribution looks right," any pattern miner, any decision tree — inherits correctness from the readers. A subtly-wrong decoder would poison all derived work silently and would be nearly impossible to back out of once pattern-mining conclusions are published.
+  2. **Byte-equality beats semantic equality as a test.** Testing "the same set of settings" or "the same numeric EV" admits rounding errors, ordering drift, and format divergence. `diff` on formatted text is a strictly stronger constraint: if the Python output matches Rust's spot-check output byte-for-byte across 500 records (519 lines counting header+stats), the decoders agree on every u32 / u8 / f32 / enumeration choice we've implemented so far.
+  3. **Cheap to produce, expensive to skip.** The Rust engine already has `spot-check` built for humans. Reformatting Python's output to match took ~5 minutes. The return is durable: a single `diff` run becomes the regression test for every future reader or decoder addition, including Models 2-4 when they land (same record format, same canonical file — if diff holds, they're correct).
+  4. **Catches issues unit tests miss.** In practice the implementation path uncovered that `np.searchsorted` and `np.void` comparisons don't work as expected (fixed via `tobytes()` binary search + vectorized int16 column-diff for lex ordering). Pure unit tests against small synthetic data wouldn't have exercised the 6M-row code paths where these issues surfaced.
+  5. **Forces format discipline.** Maintaining byte-for-byte parity means the Python code can't silently reformat outputs — which means any future "nice to read" pretty-printing must go in a separate presentation layer, not the decoder. That's the right architectural boundary anyway.
+**Consequence:** Every new Python decoder (e.g. bottom-hand Omaha evaluator, feature extractor when it lands) should be paired with a Rust spot-check-style cross-verification before being trusted for downstream analysis.

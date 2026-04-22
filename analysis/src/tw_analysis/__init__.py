@@ -1,0 +1,68 @@
+"""Analysis package for the Taiwanese Poker solver."""
+from tw_analysis.br_reader import (
+    BrFile,
+    BrHeader,
+    HEADER_DTYPE,
+    HEADER_SIZE,
+    MAGIC,
+    RECORD_DTYPE,
+    RECORD_SIZE,
+    decode_opp_tag,
+    read_br_file,
+    validate_br_file,
+)
+from tw_analysis.settings import (
+    HAND_SIZE,
+    NUM_SETTINGS,
+    Card,
+    HandSetting,
+    all_settings,
+    decode_setting,
+    parse_hand,
+)
+from tw_analysis.canonical import (
+    CANON_HAND_BYTES,
+    CANON_HEADER_SIZE,
+    CANON_MAGIC,
+    SUIT_PERMUTATIONS,
+    CanonicalHands,
+    CanonicalHeader,
+    apply_perm,
+    canonicalize,
+    is_canonical,
+    read_canonical_hands,
+    validate_canonical_hands,
+)
+
+__version__ = "0.1.0"
+
+__all__ = [
+    "BrFile",
+    "BrHeader",
+    "CANON_HAND_BYTES",
+    "CANON_HEADER_SIZE",
+    "CANON_MAGIC",
+    "Card",
+    "CanonicalHands",
+    "CanonicalHeader",
+    "HAND_SIZE",
+    "HEADER_DTYPE",
+    "HEADER_SIZE",
+    "HandSetting",
+    "MAGIC",
+    "NUM_SETTINGS",
+    "RECORD_DTYPE",
+    "RECORD_SIZE",
+    "SUIT_PERMUTATIONS",
+    "all_settings",
+    "apply_perm",
+    "canonicalize",
+    "decode_opp_tag",
+    "decode_setting",
+    "is_canonical",
+    "parse_hand",
+    "read_br_file",
+    "read_canonical_hands",
+    "validate_br_file",
+    "validate_canonical_hands",
+]

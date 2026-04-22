@@ -6,6 +6,7 @@ Cargo.lock.bak
 # Generated lookup / solver data (large binary blobs)
 data/*.bin
 data/best_response/
+data/best_response_cloud/
 data/cfr/
 data/results/
 data/pilot/

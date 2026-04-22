@@ -110,6 +110,17 @@
 ## Phase 4: Analytics & Final Output
 
 ### Sprint 7: Analytics Pipeline + GTO Strategy Extraction
+
+#### Python analysis infrastructure (Session 08 — 2026-04-21)
+- [x] Read binary solver output into Python — `tw_analysis.br_reader` (numpy dtype, load + memmap)
+- [x] Read canonical-hand file into Python — `tw_analysis.canonical` (`CanonicalHands.hand_cards(id)`)
+- [x] Setting-index decoder — `tw_analysis.settings.decode_setting(hand_7, index)` mirrors Rust enumeration
+- [x] Canonicalize + is_canonical in Python — mirrors `engine/src/bucketing.rs`
+- [x] Inverse hand→canonical_id lookup — binary search over tobytes() rows
+- [x] Full-file validation on real Model 1 data — ordering, ranges, finite EV, header fields
+- [x] Byte-identical Rust parity — `diff` of `tw-engine spot-check --show 500` vs Python 519-line rendering passes (Decision 028)
+- [x] Python unit tests — 11 settings + 9 canonical, all green
+
 - [ ] Export solver results with full feature extraction to Parquet/SQLite
 - [ ] Extract hand features (pair count, ranks, suits, connectivity, category)
 - [ ] Extract setting features (mid type, top rank, bot suitedness)
