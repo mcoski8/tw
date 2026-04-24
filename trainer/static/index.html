@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Taiwanese Poker Trainer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>Taiwanese Poker Trainer</h1>
+    <div id="opponent-strip">
+      Training vs
+      <select id="profile-select"></select>
+      <span id="profile-hint">— your EVs compare to this profile's best-response.</span>
+    </div>
+  </header>
+
+  <section id="hand-row" class="hand-row">
+    <div class="slot hand-slot" data-slot-id="hand-0"></div>
+    <div class="slot hand-slot" data-slot-id="hand-1"></div>
+    <div class="slot hand-slot" data-slot-id="hand-2"></div>
+    <div class="slot hand-slot" data-slot-id="hand-3"></div>
+    <div class="slot hand-slot" data-slot-id="hand-4"></div>
+    <div class="slot hand-slot" data-slot-id="hand-5"></div>
+    <div class="slot hand-slot" data-slot-id="hand-6"></div>
+  </section>
+
+  <section id="tiers">
+    <div class="tier">
+      <div class="tier-label">
+        <span class="tier-name">Top</span>
+        <span class="tier-points">1 point/board</span>
+        <button class="clear-tier" data-tier="top">clear</button>
+      </div>
+      <div class="tier-slots tier-top">
+        <div class="slot tier-slot" data-slot-id="top-0" data-tier="top"></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-label">
+        <span class="tier-name">Middle</span>
+        <span class="tier-points">2 points/board</span>
+        <button class="clear-tier" data-tier="mid">clear</button>
+      </div>
+      <div class="tier-slots tier-mid">
+        <div class="slot tier-slot" data-slot-id="mid-0" data-tier="mid"></div>
+        <div class="slot tier-slot" data-slot-id="mid-1" data-tier="mid"></div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-label">
+        <span class="tier-name">Bottom (Omaha: 2 from hand + 3 from board)</span>
+        <span class="tier-points">3 points/board</span>
+        <button class="clear-tier" data-tier="bot">clear</button>
+      </div>
+      <div class="tier-slots tier-bot">
+        <div class="slot tier-slot" data-slot-id="bot-0" data-tier="bot"></div>
+        <div class="slot tier-slot" data-slot-id="bot-1" data-tier="bot"></div>
+        <div class="slot tier-slot" data-slot-id="bot-2" data-tier="bot"></div>
+        <div class="slot tier-slot" data-slot-id="bot-3" data-tier="bot"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="controls">
+    <button id="deal-btn" class="primary">Deal new hand</button>
+    <button id="clear-all-btn">Clear all tiers</button>
+    <button id="submit-btn" class="primary" disabled>Submit &amp; score</button>
+    <button id="compare-btn" disabled>Compare across all profiles</button>
+    <span id="status-line"></span>
+  </section>
+
+  <section id="result" hidden>
+    <div id="result-headline"></div>
+    <div id="result-ev-row">
+      <div class="ev-block">
+        <div class="ev-label">Your EV</div>
+        <div id="user-ev" class="ev-value">–</div>
+      </div>
+      <div class="ev-block">
+        <div class="ev-label">Best EV</div>
+        <div id="best-ev" class="ev-value">–</div>
+      </div>
+      <div class="ev-block">
+        <div class="ev-label">Delta</div>
+        <div id="delta-ev" class="ev-value">–</div>
+      </div>
+    </div>
+    <p id="result-summary"></p>
+    <div id="best-arrangement">
+      <div class="best-title">Solver's best arrangement</div>
+      <div class="best-tiers">
+        <div><span class="tier-name">Top:</span> <span id="best-top"></span></div>
+        <div><span class="tier-name">Middle:</span> <span id="best-mid"></span></div>
+        <div><span class="tier-name">Bottom:</span> <span id="best-bot"></span></div>
+      </div>
+    </div>
+    <ul id="findings-list"></ul>
+  </section>
+
+  <section id="compare-result" hidden>
+    <h2 class="compare-title">Comparison across all 4 opponent profiles</h2>
+    <p class="compare-help">
+      A robustly-GTO choice ranks near-best against <em>every</em> profile.
+      A high "worst delta" means your setting is exploitable by at least one
+      opponent type.
+    </p>
+    <div id="compare-robustness"></div>
+    <table id="compare-table">
+      <thead>
+        <tr>
+          <th>Profile</th>
+          <th>Your EV</th>
+          <th>Profile's best EV</th>
+          <th>Δ</th>
+          <th>Match?</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div id="compare-arrangements"></div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

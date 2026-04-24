@@ -1,7 +1,11 @@
 # Sprint 5: Trainer Application
 
 > **Phase:** Phase 3 - Trainer
-> **Status:** NOT STARTED
+> **Status:** Sprint 5a FOUNDATION COMPLETE (2026-04-24) — Sprint 5b (stats, difficulty modes, solver-derived explanations) pending
+
+## Session 09 log — 2026-04-23/24
+
+Sprint 5a vertical slice complete. Single opponent: Python-orchestrated Flask trainer with drag-and-drop UI, Rust subprocess for live MC (new `mc --tsv` flag), heuristic explanation layer v1. Multi-opponent: profile selector (4 production profiles) + "Compare across all profiles" with per-profile best-arrangement rendering. See `DECISIONS_LOG.md` Decision 029 and `handoff/MASTER_HANDOFF_01.md` Session 09 for full details. Files: `trainer/app.py`, `trainer/src/{dealer,engine,explain}.py`, `trainer/static/{index.html,style.css,app.js}`, `engine/src/main.rs` (--tsv flag).
 
 ---
 

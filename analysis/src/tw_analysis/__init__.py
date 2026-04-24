@@ -33,6 +33,15 @@ from tw_analysis.canonical import (
     read_canonical_hands,
     validate_canonical_hands,
 )
+from tw_analysis.cross_model import (
+    CrossModel,
+    build_cross_model,
+    consensus_setting_counts,
+    pairwise_agreement,
+    unanimous_mask,
+    unanimous_setting_counts,
+    unique_settings_per_hand,
+)
 
 __version__ = "0.1.0"
 
@@ -45,6 +54,7 @@ __all__ = [
     "Card",
     "CanonicalHands",
     "CanonicalHeader",
+    "CrossModel",
     "HAND_SIZE",
     "HEADER_DTYPE",
     "HEADER_SIZE",
@@ -56,13 +66,19 @@ __all__ = [
     "SUIT_PERMUTATIONS",
     "all_settings",
     "apply_perm",
+    "build_cross_model",
     "canonicalize",
+    "consensus_setting_counts",
     "decode_opp_tag",
     "decode_setting",
     "is_canonical",
+    "pairwise_agreement",
     "parse_hand",
     "read_br_file",
     "read_canonical_hands",
+    "unanimous_mask",
+    "unanimous_setting_counts",
+    "unique_settings_per_hand",
     "validate_br_file",
     "validate_canonical_hands",
 ]

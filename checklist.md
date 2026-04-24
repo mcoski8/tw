@@ -91,12 +91,18 @@
 ## Phase 3: Trainer + Validation
 
 ### Sprint 5: Trainer Application
-- [ ] Load optimal settings database
-- [ ] Deal random hands to user
-- [ ] Accept user hand setting input
-- [ ] Compare user vs optimal, display results
-- [ ] Track user accuracy statistics
-- [ ] Difficulty modes
+
+#### Sprint 5a — foundation (Session 09 — 2026-04-23/24)
+- [x] Engine CLI: `mc --tsv` emits all 105 settings with EVs in machine-readable TSV
+- [x] Trainer dealer: random 7-card hand
+- [x] Trainer engine wrapper: subprocess `tw-engine mc --tsv` with LRU cache per (hand, profile)
+- [x] Trainer explain layer v1: heuristic detectors (split-pair, isolated-bottom-suit, wrong-top-card, tier-swap) + EV-delta severity
+- [x] Flask backend: `/api/deal`, `/api/score`, `/api/profiles`, `/api/compare`
+- [x] Web UI: drag-and-drop, click-to-fill, per-tier + clear-all buttons, submit/score flow
+- [x] Profile selector (4 production profiles) + compare-across view with per-profile best arrangements
+- [ ] Track user accuracy statistics (Sprint 5b)
+- [ ] Difficulty modes (Sprint 5b)
+- [ ] Solver-derived explanation rules (gated on Sprint 7 pattern mining)
 
 ### Sprint 6: Validation & Comparison
 - [ ] Heuristic vs computed optimal comparison
@@ -120,6 +126,12 @@
 - [x] Full-file validation on real Model 1 data — ordering, ranges, finite EV, header fields
 - [x] Byte-identical Rust parity — `diff` of `tw-engine spot-check --show 500` vs Python 519-line rendering passes (Decision 028)
 - [x] Python unit tests — 11 settings + 9 canonical, all green
+
+#### Cross-model tooling (Session 09 — 2026-04-23)
+- [x] `tw_analysis.cross_model` — join N BrFiles by canonical_id, settings/EV matrices, unanimity mask, pairwise agreement, consensus histograms
+- [x] `analysis/scripts/cross_model_join.py` — CLI report
+- [x] `analysis/scripts/test_cross_model.py` — 9 unit tests, all green
+- [x] First real cross-model finding on 2 models: 39.31% unanimous hands, setting 104 dominates unanimous bucket (28.6%)
 
 - [ ] Export solver results with full feature extraction to Parquet/SQLite
 - [ ] Extract hand features (pair count, ranks, suits, connectivity, category)

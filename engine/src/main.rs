@@ -84,6 +84,13 @@ enum Command {
         #[arg(long, default_value_t = 10)]
         show_top: usize,
 
+        /// Emit all 105 settings as machine-readable TSV on stdout (status
+        /// prints go to stderr). Columns: setting_index, ev, top, mid1, mid2,
+        /// bot1..bot4. Settings are emitted in setting-index order (not sorted
+        /// by EV). Used by the trainer to score user-submitted arrangements.
+        #[arg(long)]
+        tsv: bool,
+
         /// Path to the 5-card lookup table.
         #[arg(long, default_value = "../data/lookup_table.bin")]
         lookup: PathBuf,
@@ -342,6 +349,7 @@ fn main() -> ExitCode {
             parallel,
             seed,
             show_top,
+            tsv,
             lookup,
         } => run_mc(
             &hand,
@@ -350,6 +358,7 @@ fn main() -> ExitCode {
             parallel,
             seed,
             show_top,
+            tsv,
             &lookup,
         ),
         Command::EnumerateCanonical { out, count_only } => run_enumerate(&out, count_only),
@@ -464,6 +473,7 @@ fn run_mc(
     parallel: bool,
     seed: u64,
     show_top: usize,
+    tsv: bool,
     lookup_path: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if samples == 0 {
@@ -471,12 +481,22 @@ fn run_mc(
     }
     let hand = parse_seven(hand_str)?;
 
-    println!("Loading 5-card lookup table from {} ...", lookup_path.display());
+    // When emitting TSV, status prints go to stderr so stdout stays parseable.
+    if tsv {
+        eprintln!("Loading 5-card lookup table from {} ...", lookup_path.display());
+    } else {
+        println!("Loading 5-card lookup table from {} ...", lookup_path.display());
+    }
     let ev = Evaluator::load_or_build(lookup_path)?;
-    println!(
+    let status = format!(
         "Table ready. Running {} Monte Carlo samples × 105 settings (opponent={:?}, parallel={}, seed={:#x}).",
         samples, model, parallel, seed
     );
+    if tsv {
+        eprintln!("{}", status);
+    } else {
+        println!("{}", status);
+    }
 
     let t0 = Instant::now();
     let summary = if parallel {
@@ -486,6 +506,17 @@ fn run_mc(
         mc_evaluate_all_settings(&ev, hand, model, samples, &mut rng)
     };
     let elapsed = t0.elapsed();
+
+    if tsv {
+        eprintln!(
+            "Elapsed: {:.2?}  (N={} samples) — best EV = {:+.3}",
+            elapsed,
+            summary.num_samples,
+            summary.best().ev
+        );
+        print_mc_tsv(&hand, model, &summary);
+        return Ok(());
+    }
 
     println!(
         "\nHand: {} {} {} {} {} {} {}",
@@ -525,6 +556,45 @@ fn run_mc(
     );
 
     Ok(())
+}
+
+/// Emit all 105 settings in setting-index order as TSV on stdout.
+///
+/// Format:
+///   # header lines starting with '#'
+///   # columns: setting_index ev top mid1 mid2 bot1 bot2 bot3 bot4
+///   0<TAB>-1.234<TAB>As<TAB>Kh<TAB>Qd<TAB>Jc<TAB>Ts<TAB>9h<TAB>2d
+///   ...
+///
+/// The summary's results are pre-sorted by EV; for TSV we reorder back into
+/// setting-index order so index i maps to the i-th HandSetting from
+/// `all_settings(hand)`. 105 × 105 linear scan is trivially cheap.
+fn print_mc_tsv(hand: &[Card; 7], model: OpponentModel, summary: &McSummary) {
+    println!("# engine-mc-tsv v1");
+    println!(
+        "# hand: {} {} {} {} {} {} {}",
+        hand[0], hand[1], hand[2], hand[3], hand[4], hand[5], hand[6]
+    );
+    println!("# samples: {}", summary.num_samples);
+    println!("# opponent: {:?}", model);
+    println!("# columns: setting_index\tev\ttop\tmid1\tmid2\tbot1\tbot2\tbot3\tbot4");
+
+    let settings = all_settings(*hand);
+    for (idx, s) in settings.iter().enumerate() {
+        let ev = summary
+            .results
+            .iter()
+            .find(|r| r.setting == *s)
+            .map(|r| r.ev)
+            .expect("every enumerated setting must appear in summary");
+        println!(
+            "{}\t{:.6}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            idx, ev,
+            s.top,
+            s.mid[0], s.mid[1],
+            s.bot[0], s.bot[1], s.bot[2], s.bot[3],
+        );
+    }
 }
 
 fn run_enumerate(

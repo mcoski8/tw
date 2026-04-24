@@ -271,3 +271,27 @@
   4. **Catches issues unit tests miss.** In practice the implementation path uncovered that `np.searchsorted` and `np.void` comparisons don't work as expected (fixed via `tobytes()` binary search + vectorized int16 column-diff for lex ordering). Pure unit tests against small synthetic data wouldn't have exercised the 6M-row code paths where these issues surfaced.
   5. **Forces format discipline.** Maintaining byte-for-byte parity means the Python code can't silently reformat outputs — which means any future "nice to read" pretty-printing must go in a separate presentation layer, not the decoder. That's the right architectural boundary anyway.
 **Consequence:** Every new Python decoder (e.g. bottom-hand Omaha evaluator, feature extractor when it lands) should be paired with a Rust spot-check-style cross-verification before being trusted for downstream analysis.
+
+
+## Decision 029 — Sprint 5a trainer: Flask + vanilla JS, subprocess-per-MC, on-demand Compare across all 4 profiles
+**Date:** 2026-04-23/24 (Session 09)
+**Question:** How do we build the trainer interface requested in the secondary project goal, given (a) only 1 of 4 `.bin` files is local, (b) Sprint 7 pattern mining that would produce solver-derived explanations is still blocked, (c) user wants interactive drag-and-drop + per-profile EV comparison?
+**Options considered:**
+  - (a) Terminal / CLI trainer — fast to build, but the user explicitly wanted drag-and-drop UI.
+  - (b) React/Vite single-page app — richer stack, but adds a build step and npm dependency surface for what is still a local-only tool.
+  - (c) Flask + vanilla JS + native HTML5 drag-and-drop — no build step, minimal dependency surface (Flask only), serves HTML/CSS/JS directly.
+  - EV computation strategy: pre-store full 105-setting EVs per hand (~56 GB per model, prohibitive) vs. call the Rust engine on demand via a stable CLI flag.
+  - Opponent-profile strategy: pin to the one we have data for (MiddleFirstSuitAware) vs. run MC live against every profile on request.
+**Choice:** (c) Flask + vanilla JS + subprocess-per-MC via new `mc --tsv` flag. Trainer defaults to MiddleFirstSuitAware for single-hand scoring, but a "Compare across all 4 profiles" button triggers live MC against every production-profile (~5s total serial) and renders per-profile best arrangements.
+**Why:**
+  1. **Zero new dependencies beyond Flask.** The trainer/ package adds no JS toolchain, no React/Vite, no TypeScript. Static files are dropped straight into `trainer/static/` and served by Flask. One `python3 trainer/app.py` starts the whole thing.
+  2. **The Rust engine already had the math.** `mc_evaluate_all_settings` already computes all 105 EVs for a hand against any opponent. We only needed a parseable output mode. Adding `--tsv` is a 40-line patch in `main.rs` that routes status prints to stderr and emits one TSV header block + 105 rows. No duplication of Monte Carlo logic in Python.
+  3. **Subprocess-per-MC is "fast enough" and avoids FFI complexity.** Single MC at samples=1000 parallel runs in ~300ms — well under the threshold where humans perceive latency. Compare mode at 4 × ~300ms ≈ 1.5s serial is acceptable because it is not the primary interaction loop. Avoiding PyO3/FFI keeps the build story simple: `cargo build --release` once, then Python is the only iteration layer for trainer work.
+  4. **On-demand MC is unbounded in opponent choice.** We did not need to precompute .bin files for every profile we wanted to train against — any opponent-model flag combination is reachable. This is what lets Compare work with only 1 or 2 `.bin` files on disk (the cloud solve progresses independently), and what will let us add exploitative-mix profiles later without re-running the cloud.
+  5. **Per-profile Compare matches the user's mental model of "robust vs exploitative" play.** A setting that is top-EV against all 4 profiles is close to Nash (robust). A setting that is only top-EV against one profile is exploitative. The table + per-profile arrangements panel make this visible, which is the whole reason the user wanted the feature. Worst-case delta ("exploitable by [profile] for +X.XX EV") is the single most important number for a player evaluating their own play; it is shown prominently.
+  6. **Pre-Sprint-7 explanations are explicitly hand-written heuristics.** The `explain.py` detectors (split-pair, isolated-bottom-suit, wrong-top-card, tier-swap) are derived from the game rules, not from solver data. They are good first-pass coaching but will be replaced once Sprint 7 pattern mining produces solver-derived rules. The interface shape (Finding { title, detail } list) is rule-engine-agnostic, so swapping the rule source later is a single-file change.
+**Consequence:**
+  1. The trainer is feature-complete at "dealt 7 cards → arrange → submit → see EV gap + per-profile comparison" with only 1 of 4 models on disk. When Models 3 & 4 land, no trainer code changes — the subprocess call already uses any valid opponent flag.
+  2. Future enhancements gated on Sprint 7: swap `explain.py` rule source, add decision-tree explanations, surface "in 97% of similar hands the solver plays X" style claims.
+  3. Future enhancement orthogonal to Sprint 7: user-accuracy stats tracking, difficulty modes, hand-category drill-down (Sprint 5b).
+  4. Port 5050 (not Flask default 5000) because macOS AirPlay Receiver claims 5000. Documented in `trainer/app.py`.

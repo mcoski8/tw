@@ -459,3 +459,57 @@ Pre-fix (Session 05 10K) vs post-fix (Session 06 5K):
 4. **When all 4 files landed:** remind user to **Terminate** (not Stop) the RunPod pod. Network volume preserves data, but terminate fully stops billing.
 5. **Sprint 7 formally unlocks** once all 4 `.bin` files are local. Planned starting point: use the new reader/decoder stack to build a hand-feature extractor (pair count, suitedness, connectivity, high card) — deferred from Session 08 because it's easier to design once four opponents' data can be compared side-by-side.
 6. **Cross-model comparison scaffolding** — when ≥2 `.bin` files exist, a small script that joins records by `canonical_id` across models to show per-hand setting agreement / disagreement across opponents would be the first cross-model analysis worth writing (still model-independent in structure, just fed N files).
+
+
+---
+
+### Session 09 — 2026-04-23 to 2026-04-24 — Model 2 downloaded, cross-model join tooling, Sprint 5a trainer foundation
+
+**Scope:** Cloud production still running on RunPod (Models 1 & 2 now complete; Model 3 `topdefensive_mixed90` at ~80% at session end; Model 4 `randomweighted` queued). While the cloud continued, Session 09 pulled Model 2 down, built the Sprint 7 cross-model join scaffolding against the 2 available .bin files, and stood up the complete Sprint 5a trainer with per-profile compare mode. Both additions are model-independent in structure — Models 3 & 4 slotting in requires zero code changes.
+
+**Model 2 download + validation:**
+- `scp -P 11400 root@205.196.19.130:/workspace/tw/data/best_response/omahafirst_mixed90.bin …` pulled the 52 MB file to `data/best_response_cloud/`. SSH key from Session 08 still valid — single scp command, seconds.
+- `python3 analysis/scripts/inspect_br.py data/best_response_cloud/omahafirst_mixed90.bin` — validation PASS, 6,009,159 records, opponent decoded as `HeuristicMixed(base=OmahaFirst, p=0.90)` (tag 1_003_090), mean EV +2.123 (vs Model 1 +0.533 — OmahaFirst is a substantially weaker opponent than MiddleFirstSuitAware), setting 104 picked 22.72%.
+
+**Cross-model join scaffolding (Sprint 7 prep — reused by trainer later):**
+- `analysis/src/tw_analysis/cross_model.py` — `CrossModel` dataclass (settings + EV matrices, n_hands × n_models), `build_cross_model(files)`, `unanimous_mask`, `unique_settings_per_hand`, `pairwise_agreement`, `consensus_setting_counts`, `unanimous_setting_counts`. Join is a column-stack over BrFiles already in canonical_id order (no hash-join needed; Session 08 validated monotonicity).
+- `analysis/scripts/cross_model_join.py` — CLI report: per-model summary, unanimity %, distinct-settings histogram, M×M pairwise agreement matrix, top-K cells histogram, top-K unanimous settings histogram.
+- `analysis/scripts/test_cross_model.py` — 9 unit tests using synthetic `BrFile` fixtures (no real file dependency). Caught one test-bug (I mis-counted "both models pick 99" matches as non-matches) before the real file run — the numeric answer self-proved the test logic.
+- **First real cross-model finding on 2 models (MF-SA vs Omaha-first, each mixed 90%):**
+  - 39.31% of hands are unanimous across these 2 opponents. 60.69% require opponent-specific choices.
+  - Setting 104 accounts for 28.63% of unanimous hands (robust setting).
+  - Four-way unanimity is strictly lower than 39.31% — when all 4 models land we'll see how much lower.
+
+**Sprint 5a trainer — `trainer/` package, full vertical slice:**
+- **Rust side:** Added `--tsv` flag to `tw-engine mc` (`engine/src/main.rs`). Human output goes to stdout by default; with `--tsv`, a `# engine-mc-tsv v1` header block + 105 TSV rows (setting_index, EV, top, mid1, mid2, bot1..bot4) go to stdout and status prints are routed to stderr so stdout stays parseable. `McSummary.results` is sorted by EV; the TSV writer reorders by enumeration index (`all_settings(hand)`) via HandSetting equality — 105×105 scan, trivial cost.
+- **Python backend:**
+  - `trainer/src/dealer.py` — `deal_hand()` returns a 7-card list of "Rs" strings via `random.SystemRandom`.
+  - `trainer/src/engine.py` — `evaluate_hand_cached` wraps `subprocess.run(tw-engine mc --tsv …)`. LRU cache keyed by sorted-hand + opponent params + seed, size 128. Parses TSV on stdout, tolerates comment lines. `find_setting_index(mc, user_cards)` normalizes mid/bot via frozenset for tier-internal order-independence.
+  - `PROFILES` tuple in `engine.py` mirrors `scripts/production_all_models.sh` exactly: `mfsuitaware`, `omaha`, `topdef`, `weighted` (note: the 4th production model is `--opponent weighted`, not another heuristic mix — decoded from the pod's production script).
+  - `trainer/src/explain.py` — severity classifier (trivial < 0.10, minor < 0.50, moderate < 2.00, major ≥ 2.00) + 4 detectors: `detect_split_pair`, `detect_isolated_bottom_suit` (double-suited vs 3+ of a suit; Omaha 2+3 rule awareness), `detect_wrong_top_card` (flags when user's top card is ≥2 ranks weaker than solver's), `detect_tier_swap` (user may have middle and bottom swapped). All hand-written against game rules, explicitly noted as pre-Sprint-7 placeholder.
+- **Flask app** (`trainer/app.py`) — `/`, `/api/deal`, `/api/score`, `/api/profiles`, `/api/compare`. `use_reloader=True` for live code reload on .py edits. Port 5050 (not 5000 — macOS AirPlay Receiver claims 5000 and returns 403 "You don't have authorization to view this page" which looks like a Flask permission error but isn't).
+- **Web UI** (`trainer/static/`):
+  - `index.html` — hand row (7 slots) → 3 tier cards (top 1 / mid 2 / bot 4) with per-tier "clear" buttons and point-per-board labels. Controls: Deal new hand | Clear all tiers | Submit & score | Compare across all profiles. Two result panels (single-profile result, 4-way compare result).
+  - `style.css` — dark theme, card rendering (rank top-left, suit center, red for ♥♦), drop-hover highlight, severity colors, mini-card variant for the per-profile comparison layouts.
+  - `app.js` — state = `{dealtHand, placement: Map, profileId, profiles}`. Native HTML5 drag-and-drop (dragstart/dragover/drop). Click-to-fill: click a card in hand → moves to first empty tier slot; click a card in a tier → returns to hand. `/api/compare` handler renders per-profile table AND a "Per-profile optimal arrangement" panel: if all 4 agreement sets are equal (compared by top + sorted-mid + sorted-bot), one big arrangement with a green "all 4 agree — robust / GTO-approximating" banner; if they differ, 4 stacked mini-layouts per profile with their best EV.
+
+**Verified end-to-end this session:**
+- Rust `cargo build --release` clean, `cargo test --release` 124+ tests green (unchanged from Session 08 plus the main.rs signature changes compile).
+- Python `test_settings.py` 11/11, `test_canonical.py` 9/9, `test_cross_model.py` 9/9 green.
+- Flask in-process `test_client` verified `/api/profiles`, `/api/deal`, `/api/score` (with `profile_id`), `/api/compare` (all 4 profiles, non-zero deltas + per-profile best arrangements).
+- User ran the trainer in a browser, interacted with the dropdown + drag-and-drop + compare flow, reported back that it works and the UI is clear.
+
+**Gotchas discovered this session:**
+- **macOS AirPlay Receiver owns port 5000 and returns a 403 with body "You don't have authorization to view this page."** This looks exactly like a Flask permissions error but is actually the OS. Trainer pinned to port 5050.
+- **Flask without `use_reloader=True` silently serves stale code** after a .py edit, and HTML that references routes added in the new code fails with "Unexpected token '<'" because the 404 HTML page is parsed as JSON. Trainer now boots with `use_reloader=True`.
+- **Web-terminal line-wrap still mangles multi-line copy-paste** (same as Session 08). Long command blocks had to be joined with `&&` into a single logical line; `\n`-separated blocks get broken at awkward places when pasted. Documented the one-line pattern in the resume prompt.
+- **A unit test was wrong before the code was.** `test_pairwise_agreement_matrix` expected 0.2 for B vs C; the code said 0.6; recounting by hand confirmed code was right. The test fixture had both B and C picking 99 on hands 3+4 (both match), which I'd forgotten when writing the assertion. Fix was in the test, not the code.
+
+**Carry-forward for Session 10:**
+1. **Pod status check first.** Model 3 `topdefensive_mixed90` was at ~80% with ~8h ETA at session end 2026-04-24 00:48 UTC; may well be done by next session start.
+2. **Download Models 3 & 4** as they complete (single scp each; SSH key already in place).
+3. **After each download**, run `inspect_br.py` to validate.
+4. **When all 4 files are local:** remind user to TERMINATE (not Stop) the RunPod pod.
+5. **Re-run cross-model join with all 4 files** for the first true 4-way unanimity rate. The existing CLI already handles N files without changes.
+6. **Sprint 7 formally unlocks.** Planned first task: hand-feature extractor (`analysis/src/tw_analysis/features.py`) — pair count, top-rank, suitedness, connectivity, hand category — joined to cross-model settings to surface "which features correlate with 4-way unanimity" and "which features correlate with strong disagreement".
+7. **Trainer refinements once Sprint 7 produces rules:** swap `explain.py` rule source from hand-written heuristics to solver-derived patterns. Single-file change; the Finding schema is rule-engine-agnostic.
