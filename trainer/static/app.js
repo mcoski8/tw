@@ -14,6 +14,7 @@ const state = {
   placement: new Map(),  // slot-id -> card-string | null
   profileId: null,       // currently selected training profile
   profiles: [],          // {id, label} list from /api/profiles
+  playerCount: 2,        // 2=heads-up, 3-5=multiway. Informational only in v1.
 };
 
 // ---- Helpers ----
@@ -221,6 +222,15 @@ async function loadProfiles() {
   }
   sel.addEventListener('change', () => {
     state.profileId = sel.value;
+    hideResult();
+  });
+
+  const pc = document.getElementById('player-count-select');
+  state.playerCount = parseInt(pc.value, 10);
+  pc.addEventListener('change', () => {
+    state.playerCount = parseInt(pc.value, 10);
+    const banner = document.getElementById('multiway-banner');
+    banner.hidden = state.playerCount < 3;
     hideResult();
   });
 }

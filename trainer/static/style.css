@@ -110,6 +110,15 @@ header h1 { margin: 0 0 4px; font-size: 22px; }
   padding: 3px 6px; margin: 0 6px; font-size: 13px;
 }
 #profile-hint { color: var(--muted); font-size: 12px; }
+#multiway-banner {
+  background: rgba(243, 156, 18, 0.10);
+  border: 1px solid rgba(243, 156, 18, 0.35);
+  color: #f0d4a0;
+  padding: 10px 14px; border-radius: 8px;
+  margin: 8px 0 16px; font-size: 13px; line-height: 1.5;
+}
+#multiway-banner strong { color: var(--warn); }
+#multiway-banner em { color: var(--text); font-style: normal; }
 
 /* ---- Compare table ---- */
 #compare-result { margin-top: 26px; background: var(--panel); border-radius: 12px; padding: 16px 18px; }

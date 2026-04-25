@@ -13,7 +13,18 @@
     <div id="opponent-strip">
       Training vs
       <select id="profile-select"></select>
+      at
+      <select id="player-count-select">
+        <option value="2" selected>heads-up (1 opponent)</option>
+        <option value="3">3 players (2 opponents)</option>
+        <option value="4">4 players (3 opponents)</option>
+        <option value="5">5 players (4 opponents)</option>
+      </select>
       <span id="profile-hint">— your EVs compare to this profile's best-response.</span>
+    </div>
+    <div id="multiway-banner" hidden>
+      <strong>Multiway mode (informational):</strong>
+      Single-profile scoring below is computed against ONE opponent of the selected profile. Real multiway play (3+) involves a mixture of opponents whose joint best-response differs from any single-opponent BR. Use the <em>Compare across all profiles</em> button — the unanimous (robust) setting in that view is the closest current proxy for multiway-optimal play. <em>Data-driven multiway analysis is Phase 2 (post-Model 4).</em>
     </div>
   </header>
 

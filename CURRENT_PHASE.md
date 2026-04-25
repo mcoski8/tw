@@ -1,65 +1,72 @@
-# Current: Sprint 3 cloud production ~75% through; Sprint 5a trainer foundation complete; Sprint 7 cross-model tooling bootstrapped
+# Current: Models 1+2+3 on Mac, Model 4 in progress; Sprint 5a trainer extended (profile + player-count selectors); skill-gap empirically quantified
 
-> Updated: 2026-04-24 (end of Session 09)
-> Previous sprint status: Session 08 landed the Python analysis stack (readers/decoders + byte-identical Rust parity). Session 09 built the Sprint 5a trainer + the Sprint 7 cross-model join scaffolding, all while the cloud solve continued.
-
----
-
-## Cloud production status (Sprint 3) — Models 1 & 2 DONE, Model 3 in progress
-
-- **Model 1** `mfsuitaware_mixed90.bin` — DONE 2026-04-21. 52 MB, 6,009,159 records. On Mac at `data/best_response_cloud/`.
-- **Model 2** `omahafirst_mixed90.bin` — DONE 2026-04-23 04:52 UTC. 52 MB, 6,009,159 records. **Downloaded to Mac this session**, validated via `inspect_br.py`, mean EV +2.123, setting 104 picked 22.72%.
-- **Model 3** `topdefensive_mixed90` — RUNNING. At ~80% / 4,796,000 of 6,009,159 at last check (2026-04-24 ~00:48 UTC). Solver-reported ETA ~8.2 hours remaining; should finish approximately 2026-04-25 morning UTC.
-- **Model 4** `randomweighted` — queued. Note the 4th production model is `--opponent weighted` (RandomWeighted), not another heuristic mix — this is correct per `scripts/production_all_models.sh`. Estimated ~41 hours after Model 3 completes.
-- **Projected full-project finish:** ~2026-04-26 late afternoon UTC.
-- **Budget:** user had $26.06 at start of session, planned to add $40 and disable auto-refill — target ~$2.70 leftover at completion. (Action was described to the user; we don't know which path was actually taken.)
+> Updated: 2026-04-24 (end of Session 10)
+> Previous sprint status: Session 09 built the Sprint 5a trainer foundation + cross-model join scaffolding. Session 10 downloaded Model 3, ran 3-way cross-model analysis, empirically settled the "is this game skill-driven?" question, scoped the heads-up vs multiway question as a Phase 2 priority, and scaffolded the trainer UI for multiway selection.
 
 ---
 
-## What was completed this session (Session 09)
+## Cloud production status (Sprint 3) — Models 1, 2, 3 DONE; Model 4 in progress
 
-### Model 2 download + cross-model tooling (Sprint 7 prep)
-- SCP pulled `omahafirst_mixed90.bin` to `data/best_response_cloud/`. Validated clean via `inspect_br.py`.
-- Added `analysis/src/tw_analysis/cross_model.py` — joins N BrFiles by canonical_id, exposes settings/EV matrices, `unanimous_mask`, `unique_settings_per_hand`, `pairwise_agreement`, `consensus_setting_counts`, `unanimous_setting_counts`.
-- Added `analysis/scripts/cross_model_join.py` — CLI report (per-model summary, unanimity %, distinct-settings histogram, pairwise matrix, top consensus settings).
-- Added `analysis/scripts/test_cross_model.py` — 9 unit tests, all pass (uses synthetic BrFile fixtures; no reliance on real .bin files).
-- **First real cross-model finding** (on 2 of 4 models): 39.31% unanimous hands, setting 104 dominates unanimous bucket (28.6%). Mean EV shift MF→Omaha is +1.59 points (opponent quality differential).
-
-### Sprint 5a trainer foundation (new `trainer/` package)
-- **Rust engine change:** added `--tsv` flag to `mc` subcommand (`engine/src/main.rs`). Emits all 105 settings with EVs in setting-index order, status prints routed to stderr so stdout stays parseable. 105 data rows verified.
-- **Python backend** (`trainer/src/`):
-  - `dealer.py` — random 7-card hand dealer, "Rs" card string format.
-  - `engine.py` — subprocess wrapper around `tw-engine mc --tsv` with LRU cache keyed by (sorted hand, opponent, samples, seed). Exposes `ProfileSpec`, `PROFILES` (4 production profiles matching `scripts/production_all_models.sh`), `evaluate_hand_profile`, `evaluate_all_profiles`, `find_setting_index`.
-  - `explain.py` — heuristic explanation layer v1. Severity tag (trivial / minor / moderate / major) by EV delta. 4 pre-Sprint-7 detectors: split-pair, isolated-bottom-suit (double-suited vs 3+ of a suit), wrong-top-card, tier-swap.
-- **Flask app** (`trainer/app.py`): routes `/`, `/api/deal`, `/api/score`, `/api/profiles`, `/api/compare`. Port 5050 (avoids macOS AirPlay Receiver on 5000). `use_reloader=True` so Python edits live-reload.
-- **Web UI** (`trainer/static/`): `index.html`, `style.css`, `app.js`. Dark theme, drag-and-drop, click-to-fill (hand → next empty tier slot), per-tier + clear-all buttons, submit/compare flow. Result panel shows user EV vs best EV, severity-colored headline, best arrangement, heuristic findings list. Compare mode shows per-profile table + "per-profile optimal arrangement" panel with mini tier layouts. If all 4 profiles agree, one large "all 4 agree — robust / GTO-approximating" banner; if they differ, 4 stacked mini-layouts per profile.
-
-### Decisions logged
-- Decision 029 — Session 09 below.
+- **Model 1** `mfsuitaware_mixed90.bin` — DONE 2026-04-21. 6,009,159 records on Mac.
+- **Model 2** `omahafirst_mixed90.bin` — DONE 2026-04-23. 6,009,159 records on Mac.
+- **Model 3** `topdefensive_mixed90.bin` — DONE 2026-04-24 21:32 UTC. **Downloaded + validated this session**, mean EV +0.498 (between Model 1's +0.533 and Model 2's +2.123 — Top-Defensive is the second-strongest opponent of the three by raw exploitability).
+- **Model 4** `randomweighted` — RUNNING. Auto-launched after Model 3 exit 0; at last check (2026-04-24 ~00:48 UTC) was at ~14% / 834,000 hands, ETA ~34.8 hours.
+- **Projected full-project finish:** ~2026-04-26 ~08:30 UTC (1:30 AM PT Saturday).
 
 ---
 
-## Blockers / Issues
+## What was completed this session (Session 10)
 
-None. Cloud job is healthy. Trainer works end-to-end (verified via Flask test client + user's browser).
+### Cross-model 3-way analysis (with Models 1, 2, 3)
+- 3-way unanimity dropped to **30.99%** (from 39.31% with 2 files).
+- Pairwise agreement matrix revealed: **MiddleFirstSuitAware ↔ TopDefensive: 78.9%** — these two heuristic profiles are functionally similar in their effect on the optimal best-response. OmahaFirst is the outlier (~33% agreement with each of the other two). User reframed this as confirmation that strategies converge as players improve, not redundancy — the 21% disagreement zone is where SKILL matters and where the trainer should drill.
+- Setting 104 dominates unanimous bucket at 31.28% (up from 28.6% with 2 models).
+- 11.04% of hands had all 3 opponents picking different settings — those are the "highly opponent-dependent" hands.
+
+### Setting 104 decoded
+- Setting 104 = "highest card → top, next 2 → middle, lowest 4 → bottom" (the naive sort-and-slice). Optimal arrangement for **21% of all (hand × model) cells**, dominates unanimous bucket at 31%.
+- Concrete: it's the most natural human heuristic, and it's right one-fifth of the time. The OTHER 79% is where the solver earns its keep.
+
+### Skill-gap empirical analysis (**direct rebuttal to "this game is just luck"**)
+- New script `analysis/scripts/skill_gap.py` — samples N canonical hands × P opponent profiles, runs MC for all 105 settings, reports the EV gap between optimal play and naive (setting 104) play.
+- 100 hands × 3 profiles × 500 MC samples produced:
+  - **Mean gap: +1.68 EV per hand** in favor of optimizer
+  - Per-hand variability (sd of optimal EV across hands): 1.57
+  - **Hands required for 2-sigma confidence in skill edge: ~3**
+  - In 300 (hand × profile) trials, naive play was **never strictly better** than optimal — tied on a handful of "easy" hands, lost on the rest
+- This is the empirical answer to the user's friends' "glorified coin flip" claim: the skill edge dwarfs variance after only a few hands. At $1/point, that's $168 of pure skill edge per 100 hands vs naive play.
+
+### Socratic dialogue with Gemini 2.5 Pro on opponent-set design
+- 3-turn substantive dialogue documenting:
+  - Naive Sorter rejected as a production opponent (deterministic → no MC needed)
+  - Hold'em Transplant rejected by user (his player population doesn't include this archetype — at his stake level, all opponents are competent at both Hold'em and PLO)
+  - **Gambler (scoop-maximizer) accepted as future Phase 2 candidate** — the only archetype attacking the scoring structure rather than card valuations
+  - Iterated Best Response acknowledged but rejected for this project — each round amplifies complexity, contradicting the trainer's learnable-rules goal
+  - **CFR re-estimated**: not "months of compute" — Taiwanese Poker has no betting tree, so CFR on this game is a ONE-SHOT Bayesian decision problem. Realistic estimate: days, not months. Phase 3 candidate.
+
+### Trainer UI extended
+- Profile selector (4 production profiles): Middle-First Suit-Aware, Omaha-First, Top-Defensive, Random-Weighted
+- Compare-across-all-profiles button + per-profile arrangement panel (mini tier layouts; "all 4 agree" banner when robust)
+- **Player-count selector added**: heads-up (default), 3p, 4p, 5p. Currently informational — when user selects 3+, an amber banner appears explaining current scoring is heads-up-only and pointing them at the Compare button as the closest current proxy for multiway-robust play. Backend doesn't yet branch on this; the UI is scaffolded so Phase 2 multiway analysis can plug in cleanly.
+
+### Multiway as Phase 2 data-driven priority (user-flagged as critical)
+- User plays **mostly 3-5 player, sometimes heads-up** — and has explicit intuition that multiway should be played differently ("weaker top, stronger mid+bottom"). Strict ground rule: this question gets answered with **hard data**, not theory.
+- Reasoning audit so far: scoop math compounds with more opponents (supports the intuition for stronger bottom) but per-opponent BR is independent and stronger competition argues for safer play (cuts against the "weaker top" piece). Net answer is empirical and Sprint 7 work.
+- Tasks added to `checklist.md` Sprint 7 section: compute multiway-robust setting per canonical hand from N-way cross-model unanimity; quantify systematic top/mid/bot composition differences by player count; test the user's specific hypothesis with numbers; expose in trainer if confirmed.
 
 ---
 
 ## Files touched this session
 
 **Added:**
-- `analysis/src/tw_analysis/cross_model.py`
-- `analysis/scripts/cross_model_join.py`
-- `analysis/scripts/test_cross_model.py`
-- `trainer/app.py`
-- `trainer/src/__init__.py`, `trainer/src/dealer.py`, `trainer/src/engine.py`, `trainer/src/explain.py`
-- `trainer/static/index.html`, `trainer/static/style.css`, `trainer/static/app.js`
-- `data/best_response_cloud/omahafirst_mixed90.bin` (52 MB, gitignored)
+- `analysis/scripts/skill_gap.py` — empirical skill-gap analysis tool
 
 **Modified:**
-- `engine/src/main.rs` — added `--tsv` flag to `mc` subcommand
-- `analysis/src/tw_analysis/__init__.py` — exports for `cross_model`
-- `CURRENT_PHASE.md`, `DECISIONS_LOG.md` (Decision 029), `handoff/MASTER_HANDOFF_01.md` (Session 09), `checklist.md` (Sprint 5a + cross-model sections)
+- `trainer/static/index.html` — player-count selector + multiway info banner
+- `trainer/static/style.css` — banner styling
+- `trainer/static/app.js` — player-count state + change handler
+- `checklist.md` — Sprint 7 multiway analysis tasks added
+- `CURRENT_PHASE.md` — this file, rewritten
 
 ---
 
@@ -69,7 +76,7 @@ None. Cloud job is healthy. Trainer works end-to-end (verified via Flask test cl
 
 ---
 
-## Resume Prompt (next session)
+## Resume Prompt (next session — paused until Model 4 finishes)
 
 ```
 Read these files for context:
@@ -77,40 +84,49 @@ Read these files for context:
 - CURRENT_PHASE.md
 - modules/game-rules.md   (MANDATORY)
 - DECISIONS_LOG.md  (scan Decisions 028 + 029)
-- handoff/MASTER_HANDOFF_01.md  (scan Session 09)
-- trainer/  (Sprint 5a foundation complete; Flask on port 5050)
+- handoff/MASTER_HANDOFF_01.md  (scan Sessions 09 + 10)
+- analysis/scripts/skill_gap.py  (Session 10 skill-gap analysis tool)
+- trainer/  (Sprint 5a foundation; player-count selector scaffolded for Phase 2)
 - analysis/src/tw_analysis/cross_model.py  (Sprint 7 cross-model join)
 
-Cloud pod `0f8279f6fd0a` has Models 1 & 2 DONE and downloaded to the Mac.
-Model 3 (topdefensive_mixed90) was at ~80% with ~8h ETA at end of Session 09.
-Model 4 (randomweighted) is queued and launches automatically after Model 3.
+Models 1, 2, 3 DONE and on Mac. Model 4 (randomweighted) was at ~14% with
+~34h ETA at end of Session 10.
 
 First-session-start tasks:
-1. Ask user for current pod status. Monitoring commands (single line so web-
-   terminal line-wrap doesn't mangle it):
+1. Pod status check. Single-line command (paste into RunPod web terminal):
 
-   cd /workspace/tw && echo "=== Launcher ===" && tail -8 data/session06/production_launch.log && echo "" && echo "=== Model 3 last 5 ===" && tail -5 data/session06/prod_topdefensive_mixed90.log && echo "" && echo "=== Model 4 last 5 if started ===" && (tail -5 data/session06/prod_randomweighted.log 2>/dev/null || echo "not started yet") && echo "" && echo "=== Job running? ===" && (pgrep -af "tw-engine solve" || echo "Job stopped.") && echo "" && echo "=== Files ===" && ls -lh data/best_response/
+   cd /workspace/tw && echo "=== Launcher ===" && tail -8 data/session06/production_launch.log && echo "" && echo "=== Model 4 (randomweighted) last 5 ===" && tail -5 data/session06/prod_randomweighted.log && echo "" && echo "=== Job running? ===" && (pgrep -af "tw-engine solve" || echo "Job stopped.") && echo "" && echo "=== Files ===" && ls -lh data/best_response/
 
-2. Pull any completed models to the Mac with:
-   scp -P 11400 root@205.196.19.130:/workspace/tw/data/best_response/<model>.bin \
-       /Users/michaelchang/Documents/claudecode/taiwanese/data/best_response_cloud/
-   Then `python3 analysis/scripts/inspect_br.py data/best_response_cloud/<model>.bin`.
+2. If Model 4 is done, scp it to the Mac:
+   scp -P 11400 root@205.196.19.130:/workspace/tw/data/best_response/randomweighted.bin /Users/michaelchang/Documents/claudecode/taiwanese/data/best_response_cloud/
 
-3. When all 4 files are local, remind user to TERMINATE (not Stop) the pod.
+3. After Model 4 download, validate:
+   python3 analysis/scripts/inspect_br.py data/best_response_cloud/randomweighted.bin
 
-4. Sprint 7 formally unlocks once all 4 .bin files are local. Immediate tasks:
-   (a) re-run `analysis/scripts/cross_model_join.py` with all 4 files for the
-       true 4-way unanimity rate, (b) hand-feature extractor over canonical
-       hands + join on canonical_id for per-hand feature × per-profile setting.
+4. When all 4 files are local: remind user to TERMINATE the RunPod pod.
 
-5. Trainer refinements (user-requested once all data is in):
-   - Replace heuristic explain.py rules with solver-derived rules from Sprint 7
-     pattern mining
-   - Cache Compare results so re-runs don't re-MC — currently per-profile
-     caches are independent so Compare re-runs the 4 MCs fresh if parameters
-     shift; fine for now.
+5. Re-run cross-model join with all 4 files to get the true 4-way unanimity rate:
+   python3 analysis/scripts/cross_model_join.py data/best_response_cloud/*.bin
 
-Do NOT launch Mac Mini production. User has vetoed that path.
+6. Re-run skill_gap.py with all 4 profiles for the published number:
+   python3 analysis/scripts/skill_gap.py --hands 500
+
+7. Sprint 7 work formally unlocks. PRIORITIES IN ORDER:
+   (a) MULTIWAY ANALYSIS — compute multiway-robust setting per canonical hand
+       from 4-way cross-model unanimity. Quantify systematic differences in
+       setting composition by player count. Test user's specific hypothesis
+       ("weaker top, stronger mid+bot in multiway") with hard numbers.
+   (b) Hand-feature extractor — pair count, top-rank, suitedness, connectivity.
+   (c) Pattern mining toward 5-10 rule decision tree (user's stated rule budget).
+   (d) Self-play "break-even against itself" Nash check on the resulting strategy.
+
+USER PRIORITIES:
+- 5-10 rules max. 100 rules is too many. Sprint 7 mining must compress.
+- Multiway analysis is data-driven, not assumed. User explicit on this.
+- HoldemTransplant rejected (not in user's player population).
+- Gambler (scoop-maximizer) is the one Phase 2 opponent worth adding.
+- CFR (Sprint 4 / Phase 3) revised down from "months" to "days" — interesting
+  to user IF rule-based approach has gaps.
 ```
 
 ---

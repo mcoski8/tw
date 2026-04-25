@@ -513,3 +513,74 @@ Pre-fix (Session 05 10K) vs post-fix (Session 06 5K):
 5. **Re-run cross-model join with all 4 files** for the first true 4-way unanimity rate. The existing CLI already handles N files without changes.
 6. **Sprint 7 formally unlocks.** Planned first task: hand-feature extractor (`analysis/src/tw_analysis/features.py`) — pair count, top-rank, suitedness, connectivity, hand category — joined to cross-model settings to surface "which features correlate with 4-way unanimity" and "which features correlate with strong disagreement".
 7. **Trainer refinements once Sprint 7 produces rules:** swap `explain.py` rule source from hand-written heuristics to solver-derived patterns. Single-file change; the Finding schema is rule-engine-agnostic.
+
+
+---
+
+### Session 10 — 2026-04-24 — Model 3 downloaded, 3-way cross-model, skill-gap empirical proof, multiway scoped as Phase 2 priority
+
+**Scope:** Model 3 (`topdefensive_mixed90`) finished mid-session and was pulled to the Mac. With 3 of 4 .bin files local, ran the first multi-model cross-join, decoded the dominant setting (104), and empirically settled the "is this game just luck?" question with a custom skill-gap analysis tool. A 3-turn Socratic dialogue with Gemini 2.5 Pro on opponent-set design produced a refined Phase 2 plan. The user pivoted from "add more profiles" to "swap the redundant TopDefensive for the Gambler eventually" and made the heads-up-vs-multiway question a top-priority data-driven task. Trainer UI extended to scaffold multiway selection.
+
+**Cross-model 3-way (Models 1+2+3):**
+- 3-way unanimity: 30.99% of canonical hands have all 3 opponents inducing the same best-response.
+- Pairwise: MF-SA ↔ TopDefensive 78.9%; MF-SA ↔ OmahaFirst 39.3%; OmahaFirst ↔ TopDefensive 32.8%. The two non-Omaha heuristics are functionally similar; OmahaFirst is the structural outlier.
+- Distinct-settings histogram: 31% have 1 distinct, 58% have 2, 11% have 3 (all-disagree hands — highly opponent-dependent).
+- Setting 104 still dominates unanimous bucket at 31.28%.
+
+**Setting 104 decoded:**
+- Structurally: top = card[6] (highest by canonical rank-major-asc index), mid = cards[4,5] (next 2), bot = cards[0..3] (lowest 4). I.e., **sort cards descending and slice [1, 2, 4]**.
+- It's optimal 21% of the time. The other 79% is where the solver provides value over naive play.
+- Why it dominates: Hold'em-style middle plays pairs as full pairs (using both hole cards), so middle is the highest-leverage tier for paired holdings. Bottom is Omaha 2+3 → high pair in bottom caps at "pair of X" anyway, so the value is in the connectivity/suitedness, not the rank.
+
+**Skill-gap analysis (`analysis/scripts/skill_gap.py`):**
+- Samples N canonical hands × P profiles, runs `evaluate_hand_profile` (existing trainer wrapper), reports mean EV gap between best play and setting-104 play.
+- 100 hands × 3 profiles × 500 MC samples produced **mean gap +1.68 EV/hand, sd 1.57**, hands-to-2σ-confidence ~3.
+- In 300 (hand × profile) trials, naive was never strictly better than optimal — tied on a few trivial hands, lost on the rest.
+- This is the empirical rebuttal to "Taiwanese Poker is just a coin flip." The skill edge dwarfs variance after only a few hands.
+- Re-run targeted at N=500 hands × 4 profiles once Model 4 is local for the published number.
+
+**Gemini 2.5 Pro Socratic dialogue (3 turns, continuation_id 083667c6-e7d6-472e-b9e2-2ff21d11d9fb):**
+- Pushback 1 (Naive Sorter is degenerate as opponent): conceded — useful only as benchmark/UI sanity check, not in production opponent pool.
+- Pushback 2 (psychological archetypes need algorithmic specs): produced concrete pseudocode for HoldemTransplant + Draw-Chaser with prediction of which existing model each overlaps with most.
+- Pushback 3 (ME ≠ Nash regardless of opponent set diversity): conceded — confirmed user's framing of two distinct goals: (A) ME against modeled population, (B) Nash via CFR. Suggested Iterated Best Response as a hybrid; later retracted given the project's learnable-rules constraint.
+- Pushback 4-7 forced concrete predictions on overlap rates, missing axes (Gambler / scoop-maximizer = most important missing archetype), and the learnability tradeoff.
+- **User decisions after dialogue:**
+  - HoldemTransplant rejected — at user's stake level, all opponents are competent multi-game players. Theoretical archetype, not real population.
+  - Gambler kept as Phase 2 candidate. Attacks scoring structure (scoop bonus), not card valuation.
+  - Iterated BR rejected for this project — complexity amplification contradicts learnable-rules goal.
+  - **CFR re-estimated**: not "months." This game has no betting tree (one-shot Bayesian decision), so CFR is dramatically simpler than full poker CFR. Realistic estimate: days, not months. Phase 3 candidate IF the rule-based approach has gaps.
+
+**Multiway analysis as Phase 2 PRIORITY (user-flagged as critical):**
+- User plays mostly 3-5 player, sometimes heads-up. Has explicit intuition: "in multiway should play with weaker top, stronger mid+bottom." Demands this question gets answered with hard data, not theory.
+- Reasoning audit so far:
+  - Scoop math compounds with more opponents — each scoop pays +20, P(scoop someone) ↑ with N → leans toward stronger bottom (supports intuition).
+  - Top tier chops more often (1-card Hold'em often plays board) → with more opponents, P(at least one top chop) ↑ → top contributes less reliable EV (supports "weaker top").
+  - BUT: per-opponent BR is independent in multiway, and the optimal play against MIXED archetypes is BR-against-mixture, which is more BALANCED than any single-opponent BR (cuts against intuition).
+  - BUT: stronger competition (max-of-N opponents > average opponent) argues for SAFER play (cuts against intuition).
+- Net: intuition has scoop-economic basis but probably overweights it. Sprint 7 will settle empirically.
+- New checklist tasks: compute multiway-robust setting per canonical hand from N-way cross-model unanimity; quantify systematic differences in top-rank/bot-suitedness between heads-up BR and multiway-robust setting; test user's hypothesis directly.
+
+**Trainer UI extended (Session 10):**
+- Player-count selector added in header: heads-up (default), 3p, 4p, 5p.
+- When user selects 3+, an amber info banner appears explaining current scoring is heads-up-only, points at the Compare-across-all-profiles button as the closest current proxy for multiway-robust play.
+- Backend doesn't yet branch on player count — UI is scaffolded for Phase 2 multiway analysis to plug in cleanly without a UI redesign.
+- State variable `state.playerCount` added to JS; not yet sent to backend (would be dead data; will wire when Phase 2 multiway BR computation lands).
+
+**Verified end-to-end this session:**
+- Model 3 downloaded (52 MB scp), validated via inspect_br.py — VALIDATION PASS, 6,009,159 records, opp tag 1_004_090 = HeuristicMixed(TopDefensive, p=0.90).
+- Cross-model join with 3 files runs cleanly, produces sane unanimity + pairwise stats.
+- Skill-gap script runs cleanly, produces sensible numbers consistent with our expectations.
+- Trainer UI: user reload showed player-count selector working; multiway banner toggles correctly.
+
+**Gotchas this session:**
+- The web-terminal multi-line copy/paste mangling is reproducible — same pattern as Sessions 8/9. Single-`&&`-line commands continue to be the workaround. Documented in resume prompts.
+- macOS post-quantum SSH warning is a noise message (RunPod's SSH server hasn't upgraded), not a security issue. Documented.
+
+**Carry-forward for Session 11:**
+1. Model 4 status check first. If done, scp + inspect.
+2. After Model 4 lands: run cross-model join with all 4 files, run skill_gap with all 4 profiles for the published number.
+3. Remind user to TERMINATE pod once all 4 files are local.
+4. **Sprint 7 Priority 1: Multiway analysis.** This is the top user-flagged priority. Compute multiway-robust setting per canonical hand; quantify systematic differences vs heads-up BR; test "weaker top stronger bot" hypothesis with data.
+5. Sprint 7 Priority 2: Hand-feature extractor for pattern mining toward 5-10 rule decision tree.
+6. Sprint 7 Priority 3: Self-play break-even Nash check on the eventual robust strategy.
+7. Phase 3 is unlocked but not started: CFR for true Nash (revised: days not months).

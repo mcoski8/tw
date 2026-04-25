@@ -133,6 +133,13 @@
 - [x] `analysis/scripts/test_cross_model.py` — 9 unit tests, all green
 - [x] First real cross-model finding on 2 models: 39.31% unanimous hands, setting 104 dominates unanimous bucket (28.6%)
 
+#### Multiway analysis (Sprint 7 — data-driven, post-Model-4)
+- [ ] Compute multiway-robust setting per canonical hand from N-way cross-model unanimity
+- [ ] Quantify systematic differences in setting composition (top rank distribution, bot suitedness, mid pair-vs-broadway split) between heads-up BR and N-way robust setting, by N=2,3,4,5
+- [ ] Test user's hypothesis: does multiway play favor "weaker top, stronger mid+bot"? Answer with hard numbers, not theory.
+- [ ] Quantify scoop-frequency change with player count — when does scoop value justify variance?
+- [ ] If statistically meaningful differences found, expose in trainer UI (already scaffolded — player-count selector + banner in place)
+
 - [ ] Export solver results with full feature extraction to Parquet/SQLite
 - [ ] Extract hand features (pair count, ranks, suits, connectivity, category)
 - [ ] Extract setting features (mid type, top rank, bot suitedness)
