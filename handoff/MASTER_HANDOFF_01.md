@@ -726,3 +726,70 @@ Pre-fix (Session 05 10K) vs post-fix (Session 06 5K):
 5. **Self-play break-even Nash check (Sprint 7 P3, lower priority).** Once chain hits ~75-80% shape-agreement, run the rule strategy as both players in 100K hands; mean EV ≈ 0 measures Nash distance.
 
 DEFERRED: per-tier EV decomposition (engine `matchup_breakdown` exposure — for trainer coaching, not rule mining), naive-distance metric (diagnostic only), category bucketing fix (affects <0.5% of hands).
+
+
+---
+
+### Session 13 — 2026-04-26 — Sprint 7 Phase B: high_only refinement, REFINED extension, unanimous diagnostic, buyout signature
+
+**Scope:** Sprint 7 Phase B priorities 1-4. Built a high_only-focused miner; iterated three weight schemes for the search-based no-pair fallback (final: mid-first weighting); attempted top-search refinement for pair/two_pair/quads (no-op gain after analysis); deep-dive unanimous-miss investigation surfaced two_pair lower-pair-mid pattern; shipped a tightened buyout signature as `tw_analysis.buyout` module.
+
+**What landed:**
+
+1. **High_only deep mining (`mine_high_only.py`)** — 8 sections over 1.23M no-pair hands. Headlines:
+   - top == hand top_rank: 83.05% (already in NAIVE_104).
+   - mid is suited 58.4%, connected 85.13%; mid = (second, third) only 20.37% (NAIVE_104's mid-pick is wrong 80% of the time).
+   - bot DS rate when feasible (suit_2nd ≥ 2): 55.44%.
+   - 79% of NAIVE_104 misses are MID-tier wrong, only 21% are TOP-tier wrong.
+
+2. **Search-based hi_only_search** (`encode_rules.py`) — 4 weight-scheme iterations:
+   - V1 (composite, DS+8): 29.96% on high_only.
+   - V2 (DS-required pool + low-mid tiebreak): 27.71% on high_only.
+   - V3 (bot-first, DS+4 conn+4): 27.54% on high_only.
+   - V4 (mid-first, suited+conn+6, DS+5): **31.01% on high_only.** Winner.
+   - Overall: 53.58% → **55.93%** (+2.35pp).
+
+3. **Inter-profile ceiling diagnostic (`diag_high_only_ceiling.py`)** — Critical reality check:
+   - Only **8.62% of high_only hands are unanimous** (vs 26.7% overall).
+   - Inter-profile shape-agreement on high_only: mfsa↔omaha 22.98%, mfsa↔topdef 66.55%, omaha↔topdef 21.80%, omaha↔weighted 15.48%. Mean ~36%.
+   - **A single deterministic rule cannot exceed ~50% on high_only** because the right answer is opponent-dependent.
+   - This insight reframes the 70% target as opponent-modelling work, not rule-mining work.
+
+4. **REFINED_v2 with top-search** — extended to pair/two_pair/quads via `_best_top_for_locked_mid`. Composite: top=highest-singleton +5, bot DS +3, bot conn≥4 +1. **0pp gain over hi_only_search.** Why: highest singleton is correct in 77%+ of locked-mid hands, and the +5 preference dominates the +3 DS bonus. Forcing a different top would regress. Conclusion: the existing default IS the refined rule for top selection.
+
+5. **Unanimous-miss investigation (`diag_unanimous_misses.py`)** — bucketed 273K unanimous misses, inspected 30 examples, then probed further:
+   - **Major discovery: two_pair often picks LOWER pair → mid.** AAKK = 60.9% lower→mid; KKQQ = 33.3% lower→mid; even mid-rank adjacent pairs (8,7), (7,6) hit ~45% lower→mid.
+   - For low two_pair (high ≤ 5): mid is "no pair at all" 30-50% of the time (both pairs to bot, mid = singleton-pair).
+   - DECISION: documented but did not encode — each refinement adds <1pp and adds conditional complexity. Listed as Phase B+ candidate work.
+
+6. **Buyout signature module (`tw_analysis.buyout`)** — tightened from initial broad rule (4% precision, 98% recall) to high-precision narrow rule:
+   - **Quads of rank ≤ 5** → BUYOUT
+   - **Trips ≤ 4 + pair ≤ 3** → BUYOUT
+   - Validated on full 6M hands: precision 26.30%, recall 46.56%, F1 33.6% vs ground truth (ev_mean < -4).
+   - Catches 99.4% of low-quads buyout cases. Misses pure-trips category (too noisy as single-feature rule; trainer should use ev_mean lookup for those).
+   - Exported via `tw_analysis` package; trainer integration deferred.
+
+**Verified end-to-end this session:**
+- `cargo build --release` clean (no Rust changes).
+- `cargo test --release`: all tests pass (omaha 15, scoring 6, hand_eval, integration).
+- Python tests: `test_features.py` 24/24 still green after package additions.
+- `encode_rules.py` full 6M run completes in ~5 minutes; 4 strategies scored.
+- `buyout_signature.py` full 6M validation runs cleanly.
+- All new diagnostic scripts produce expected output.
+
+**Gotchas this session:**
+- **First 200K canonical hands have NO high_only hands** (canonical sort puts them later — high_only requires 7 distinct ranks which is rare in low-byte canonical prefix). Smoke tests on `--limit 200000` were misleading; had to run full 6M to see high_only category at all.
+- **Search-based refinement weights are surprisingly opinion-dependent.** First DS-heavy weights (DS+8) over-DSd the bot (77% vs robust 49%). Mid-first weights (DS+5, mid-suited+6) gave the +1.5pp gain over original. The "best" weights only work because they trade off the +9pp gain on DS-feasible hands against the -2pp loss on connectivity-preferred hands.
+- **Top-search for pair/two_pair was a wash.** Initial expectation: would optimize bot DS by picking different top. Reality: top=highest-singleton is so dominant (77%+) that any deviation regresses the dominant case more than it helps the edge case.
+- **Buyout precision-vs-recall tradeoff is steep.** Loose rule (quads ≤ 7, trips ≤ 5) hit 98% recall but 4% precision — too noisy. Tight rule hit 26% precision but only 47% recall. The middle ground doesn't exist as a clean cutoff — the EV distribution within each rank is wide.
+
+**Carry-forward for Session 14 (Sprint 7 Phase B+):**
+1. Wire buyout signature into trainer (`trainer/app.py`) with both signature-based BUYOUT badge AND ev_mean-lookup softer "consider buyout vs [profile]" for borderline cases.
+2. (Optional) Encode the two_pair lower-pair-mid pattern. Each adds <1pp; only worth pursuing if 70% target is hard-required.
+3. **Self-play break-even Nash check (Sprint 7 P3).** Encode `strategy_hi_only_search` as both players in 100K self-play hands; mean EV ≈ 0 measures Nash distance.
+4. Trainer `explain.py` update — swap from hand-written heuristics to rule-chain-grounded explanations.
+5. (If reaching for ≥60%) Bot-rundown detection, low-pair-to-bot rule, per-profile MFSA-only weight rebalancing.
+
+DEFERRED: per-tier EV decomposition, naive-distance metric, category bucketing fix.
+
+**Session conclusion:** Rule chain at 55.93%. The 70% target is reframed as opponent-modelling work given the inter-profile-disagreement diagnostic. The current chain is suitable as a "robust core strategy" for the trainer; opponent-dependent refinements belong in a separate exploit layer.

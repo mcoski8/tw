@@ -56,6 +56,10 @@ from tw_analysis.features import (
     tier_features_batch,
     tier_features_scalar,
 )
+from tw_analysis.buyout import (
+    buyout_signature_batch,
+    buyout_signature_scalar,
+)
 
 __version__ = "0.1.0"
 
@@ -87,6 +91,8 @@ __all__ = [
     "apply_perm",
     "assert_scalar_batch_parity",
     "build_cross_model",
+    "buyout_signature_batch",
+    "buyout_signature_scalar",
     "canonicalize",
     "compute_multiway_robust",
     "consensus_setting_counts",

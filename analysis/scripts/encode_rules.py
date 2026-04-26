@@ -299,13 +299,266 @@ def strategy_refined(hand: np.ndarray) -> int:
 
 
 # ----------------------------------------------------------------------
+# Strategy 3: HI_ONLY_SEARCH — REFINED + structural search for high_only.
+#
+# For no-pair hands, naive (top=highest, mid=2nd-3rd, bot=rest) only matches
+# the robust shape 19.5% of the time. Mining showed:
+#   * top = highest hand-rank is right 83% of robust answers (keep it)
+#   * mid ≠ (2nd, 3rd) in 79.6% of cases — robust mid is suited 58%,
+#     connected 85% of the time
+#   * bot is double-suited 55% when feasible (suit_2nd ≥ 2)
+#
+# This strategy keeps top=highest singleton, then enumerates the 15 (mid, bot)
+# splits of the remaining 6 cards and picks the one maximising a small
+# composite score: DS bot (heavy weight), then mid-suited, then mid-connected.
+# Tie-break favours higher mid-rank-sum. Still expressible as a rule:
+#   "Top = highest. Then choose the bot that is double-suited if possible,
+#    and among the remaining mid choices prefer suited+connected pairs."
+# ----------------------------------------------------------------------
+
+def _bot_is_double_suited_at(suits: np.ndarray, positions: tuple) -> bool:
+    counts = [0, 0, 0, 0]
+    for p in positions:
+        counts[int(suits[p])] += 1
+    counts.sort(reverse=True)
+    return counts[0] == 2 and counts[1] == 2
+
+
+def _max_run_in_ranks(ranks_iter) -> int:
+    """Longest consecutive run including wheel-low ace."""
+    rs = set(int(r) for r in ranks_iter)
+    if 14 in rs:
+        rs = rs | {1}
+    if not rs:
+        return 0
+    best = cur = 0
+    last = -2
+    for r in sorted(rs):
+        cur = cur + 1 if r == last + 1 else 1
+        best = max(best, cur)
+        last = r
+    return best
+
+
+def _hi_only_pick(d: dict) -> tuple[int, tuple[int, int]]:
+    """
+    Search-based pick for no-pair hands: top = highest singleton, then
+    score 15 (mid, bot) splits with MID-FIRST emphasis.
+
+    Diagnostic findings (50K sample of high_only):
+      * Inter-profile shape-agreement averages ~36% — the answer is
+        opponent-dependent. Single-rule shape-ceiling ≈ MFSA agreement.
+      * mid_suited rate in robust 58.4% > bot_DS rate (when feasible) 55.4%
+      * Original composite scoring at +10pp (19.5% → 29.96%); this version
+        rebalances weights toward mid structure.
+
+    Score weights:
+      mid suited+connected:  +6
+      mid suited only:       +4
+      mid connected (gap≤2): +2
+      bot DS:                +5  (still meaningful, but no longer dominant)
+      bot connectivity ≥ 4:  +2
+      bot n_broadway ≥ 2:    +1
+      mid rank-sum × 1/100 (final tiebreak, prefer higher value mid)
+    """
+    ranks = d["ranks"]
+    suits = d["suits"]
+    sing = d["singletons"]
+
+    top_pos = sing[0][1]
+    remaining = [i for i in range(7) if i != top_pos]
+
+    best_score = -1e9
+    best_mid: tuple[int, int] = (remaining[0], remaining[1])
+    for ai in range(6):
+        for bi in range(ai + 1, 6):
+            mid_a, mid_b = remaining[ai], remaining[bi]
+            bot_pos = tuple(p for p in remaining if p not in (mid_a, mid_b))
+
+            ra, rb = int(ranks[mid_a]), int(ranks[mid_b])
+            mid_hi, mid_lo = max(ra, rb), min(ra, rb)
+            mid_suited = int(suits[mid_a]) == int(suits[mid_b])
+            mid_gap = mid_hi - mid_lo
+            mid_connected = mid_gap <= 2
+
+            bot_ranks_sorted = sorted(int(ranks[p]) for p in bot_pos)
+            bot_ds = _bot_is_double_suited_at(suits, bot_pos)
+            bot_conn = _max_run_in_ranks(bot_ranks_sorted)
+            bot_n_bw = sum(1 for r in bot_ranks_sorted if r >= 10)
+
+            score = 0.0
+            if mid_suited and mid_connected:
+                score += 6.0
+            elif mid_suited:
+                score += 4.0
+            elif mid_connected:
+                score += 2.0
+            if bot_ds:
+                score += 5.0
+            if bot_conn >= 4:
+                score += 2.0
+            if bot_n_bw >= 2:
+                score += 1.0
+            score += (mid_hi + mid_lo) / 100.0
+
+            if score > best_score:
+                best_score = score
+                best_mid = (mid_a, mid_b)
+
+    return top_pos, best_mid
+
+
+def strategy_hi_only_search(hand: np.ndarray) -> int:
+    d = hand_decompose(hand)
+    pairs_desc = d["pairs"]
+    trips_desc = d["trips"]
+    quads_desc = d["quads"]
+
+    # Same as REFINED for non-high_only hands.
+    if quads_desc:
+        quad_rank, qpos = quads_desc[0]
+        mid = (qpos[0], qpos[1])
+        used = {mid[0], mid[1]}
+        top = _pick_top_default(d, used)
+        return positions_to_setting_index(top, mid)
+    if trips_desc and pairs_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        used = {mid[0], mid[1]}
+        top = _pick_top_default(d, used)
+        return positions_to_setting_index(top, mid)
+    if trips_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        used = {mid[0], mid[1]}
+        top = _pick_top_default(d, used)
+        return positions_to_setting_index(top, mid)
+    if len(pairs_desc) >= 1:
+        # Same handling as REFINED for any-pair hands.
+        pair_rank, ppos = pairs_desc[0]
+        mid = (ppos[0], ppos[1])
+        used = {mid[0], mid[1]}
+        top = _pick_top_default(d, used)
+        return positions_to_setting_index(top, mid)
+
+    # NEW: search-based high_only fallback.
+    top_pos, mid = _hi_only_pick(d)
+    return positions_to_setting_index(top_pos, mid)
+
+
+# ----------------------------------------------------------------------
+# Strategy 4: REFINED_V2 — adds DS-aware top search to pair / two_pair /
+# trips_pair branches, plus the high_only search.
+#
+# For pair-based hands the mid is locked (= the highest pair), but the
+# choice of TOP determines which singletons end up in the bot 4. If we
+# pick a different top we can sometimes upgrade the bot to DS.
+#
+# Mining showed: for pair hands, robust mid = the pair only 85%, top =
+# highest singleton 77%, bot DS picked only 35% (38% when feasible).
+# So we don't FORCE DS — we use it as a tiebreaker.
+#
+# Score for a given (top, mid) — the bot is auto-forced:
+#   bot DS:                +3
+#   bot connectivity ≥ 4:  +1
+#   top is highest-rank singleton:  +5  (strongest preference)
+#   top rank itself / 100             (final tiebreaker; prefer high)
+# Mid composition is fixed (the pair) so doesn't enter the score.
+# ----------------------------------------------------------------------
+
+def _score_top_choice_for_locked_mid(d: dict, top: int, mid: tuple[int, int]) -> float:
+    """Composite score for a (top, mid) pair where mid is locked."""
+    suits = d["suits"]
+    ranks = d["ranks"]
+    bot_pos = tuple(p for p in range(7) if p != top and p not in mid)
+    bot_ds = _bot_is_double_suited_at(suits, bot_pos)
+    bot_ranks_sorted = sorted(int(ranks[p]) for p in bot_pos)
+    bot_conn = _max_run_in_ranks(bot_ranks_sorted)
+
+    # Is `top` the highest-rank singleton?
+    sing_positions = [p for (_, p) in d["singletons"]]
+    if sing_positions and top == sing_positions[0]:
+        top_pref = 5.0
+    elif top in sing_positions:
+        top_pref = 0.0  # not the highest singleton
+    else:
+        # top is breaking a pair / trip — strongly disprefer.
+        top_pref = -10.0
+
+    score = top_pref
+    if bot_ds:
+        score += 3.0
+    if bot_conn >= 4:
+        score += 1.0
+    score += int(ranks[top]) / 100.0
+    return score
+
+
+def _best_top_for_locked_mid(d: dict, mid: tuple[int, int]) -> int:
+    """
+    For a locked mid pair, enumerate the 5 remaining positions for top
+    and return the one with highest composite score.
+    """
+    candidates = [p for p in range(7) if p not in mid]
+    best_top = candidates[0]
+    best_score = -1e18
+    for t in candidates:
+        s = _score_top_choice_for_locked_mid(d, t, mid)
+        if s > best_score:
+            best_score = s
+            best_top = t
+    return best_top
+
+
+def strategy_refined_v2(hand: np.ndarray) -> int:
+    d = hand_decompose(hand)
+    pairs_desc = d["pairs"]
+    trips_desc = d["trips"]
+    quads_desc = d["quads"]
+
+    # ---- Quads — split 2 mid + 2 bot. Top via search. ----
+    if quads_desc:
+        quad_rank, qpos = quads_desc[0]
+        mid = (qpos[0], qpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # ---- Trips + pair (full house shape). Trips → mid (dominant). ----
+    if trips_desc and pairs_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # ---- Pure trips → mid. ----
+    if trips_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # ---- Any pair-based hand → highest pair → mid, top via search. ----
+    if pairs_desc:
+        pair_rank, ppos = pairs_desc[0]
+        mid = (ppos[0], ppos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # ---- High_only via search. ----
+    top_pos, mid = _hi_only_pick(d)
+    return positions_to_setting_index(top_pos, mid)
+
+
+# ----------------------------------------------------------------------
 # Scorer.
 # ----------------------------------------------------------------------
 
 STRATEGIES = {
-    "naive_104": strategy_naive_104,
-    "simple":    strategy_simple,
-    "refined":   strategy_refined,
+    "naive_104":      strategy_naive_104,
+    "simple":         strategy_simple,
+    "refined":        strategy_refined,
+    "hi_only_search": strategy_hi_only_search,
+    "refined_v2":     strategy_refined_v2,
 }
 
 
