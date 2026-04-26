@@ -133,12 +133,15 @@
 - [x] `analysis/scripts/test_cross_model.py` — 9 unit tests, all green
 - [x] First real cross-model finding on 2 models: 39.31% unanimous hands, setting 104 dominates unanimous bucket (28.6%)
 
-#### Multiway analysis (Sprint 7 — data-driven, post-Model-4)
-- [ ] Compute multiway-robust setting per canonical hand from N-way cross-model unanimity
-- [ ] Quantify systematic differences in setting composition (top rank distribution, bot suitedness, mid pair-vs-broadway split) between heads-up BR and N-way robust setting, by N=2,3,4,5
-- [ ] Test user's hypothesis: does multiway play favor "weaker top, stronger mid+bot"? Answer with hard numbers, not theory.
+#### Multiway analysis (Sprint 7 — data-driven, post-Model-4) — Session 11 first pass complete
+
+- [x] Compute multiway-robust setting per canonical hand from 4-way cross-model unanimity (mode of per-profile BRs) — `analysis/scripts/multiway_analysis.py`
+- [x] Quantify systematic differences in setting composition (top rank, mid pair rate, mid rank-sum, bot DS%, bot rank-sum) between heads-up BR and multiway-robust — done at N=200K-hand sample
+- [x] Test user's hypothesis ("weaker top, stronger mid+bot") with data: 4 of 5 axes directionally support it (Δ top rank −0.18, Δ mid pair rate +2.2pp, Δ bot DS rate +1.2pp); bot rank-sum essentially unchanged (intuition wrong on rank, right on structure)
+- [x] Empirical skill-gap finalized at N=500 × 4 profiles: optimizer +1.538 EV/hand vs naive (idx 104), naive 0/2000 strict wins, hands-to-2σ ~5
 - [ ] Quantify scoop-frequency change with player count — when does scoop value justify variance?
-- [ ] If statistically meaningful differences found, expose in trainer UI (already scaffolded — player-count selector + banner in place)
+- [ ] Run multiway analysis at full 6M hands (sample run is representative; full run for the published number)
+- [ ] Player-count-aware UI: surface "robust play" when 3+ players selected, with the unanimous-only structural rule (high card top, pair middle, double-suited bottom)
 
 - [ ] Export solver results with full feature extraction to Parquet/SQLite
 - [ ] Extract hand features (pair count, ranks, suits, connectivity, category)

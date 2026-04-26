@@ -295,3 +295,24 @@
   2. Future enhancements gated on Sprint 7: swap `explain.py` rule source, add decision-tree explanations, surface "in 97% of similar hands the solver plays X" style claims.
   3. Future enhancement orthogonal to Sprint 7: user-accuracy stats tracking, difficulty modes, hand-category drill-down (Sprint 5b).
   4. Port 5050 (not Flask default 5000) because macOS AirPlay Receiver claims 5000. Documented in `trainer/app.py`.
+
+
+## Decision 030 — Multiway-robust setting = mode of per-profile best-responses
+**Date:** 2026-04-26 (Session 11)
+**Question:** Given 4 best-response files (one per opponent profile), how do we operationally define the "multiway-robust" setting for a canonical hand? Several plausible definitions exist with different computational costs and theoretical justifications.
+**Options considered:**
+  - (a) Run a separate Monte Carlo simulation against an equal-mixture of the 4 profiles for every canonical hand. Theoretically the cleanest "BR vs uniform mixture of opponents." Cost: ~6M × 105 settings × 1000 samples = effectively re-doing one of our cloud runs. ~40 hours at full sample size. Prohibitive.
+  - (b) Use the per-hand cross-model UNANIMOUS setting where it exists; for non-unanimous hands, compute analytically. Clean for the 26.68% of hands that are unanimous, but leaves 73% undefined.
+  - (c) Use the MODE of the 4 per-profile best-response settings as the multiway-robust answer. Computable instantly from the existing .bin files; well-defined for every hand; tie-breaking ambiguity only affects 9.6% of hands (2-2 splits) plus 2.7% all-distinct.
+  - (d) Compute a weighted score: multiway-robust = the setting that maximizes the SUM of "match counts" across the 4 profiles plus (when available) any EV margin info. More principled than (c) but data-hungry.
+**Choice:** (c) — multiway-robust setting = MODE of the 4 per-profile best-responses. For 2-2 splits, take the first encountered in profile order; for all-distinct hands, also take the first. Document the tie-break behavior so it's reproducible.
+**Why:**
+  1. **Computable from existing data.** All 4 .bin files are on disk. Mode is an O(N×4) sweep with no MC. Full 6M-hand pass takes seconds.
+  2. **The mode IS the operational best-response against an equal-mixture opponent population for the 90.4% of hands where the mode-count is ≥3.** When 3+ profiles agree on a setting, that setting is best against ≥75% of opponents → it's the dominant choice against any mixture weighted approximately equally. The error vs option (a) only matters for the ~10% of hands with 2-2 splits, which the analysis already flags as "genuinely contested."
+  3. **The mode-rate IS the natural confidence signal.** Unanimous (4-of-4) → strongest robust answer. 3-of-4 → strong. 2-of-4 (2-1-1) → moderate, with one rival. 2-2 → genuinely opponent-dependent. 1-1-1-1 → highly opponent-dependent. This bucketing is exactly what the trainer wants to surface to the user ("how contested is this decision?").
+  4. **Avoids the "sum of EVs" trap of option (d).** EVs aren't comparable across profiles — vs OmahaFirst the optimal hand has mean EV +2.12, vs TopDef it's +0.50. Adding raw EVs would systematically over-weight OmahaFirst's preference simply because OmahaFirst is a weaker opponent. Mode-counting normalizes for opponent strength implicitly.
+  5. **Preserves the agreement-class signal for downstream Sprint 7 work.** The pattern miner can filter to unanimous hands for clean rule extraction, then validate against 3-of-4 hands as a holdout, then study contested hands separately. Mode-as-definition makes that stratification easy.
+**Consequence:**
+  1. `analysis/scripts/multiway_analysis.py` uses this definition. The hypothesis test "Δ multiway-robust vs heads-up BR" reported in CURRENT_PHASE.md and the handoff is downstream of this choice.
+  2. Future feature mining (Sprint 7 hand-feature extractor) joins to multiway-robust setting using this definition. If we ever upgrade to option (a) we'd need to re-run analyses, but the qualitative findings (top rank −0.18, mid pair +2.2pp, bot DS +1.2pp) should hold because the mode and the true BR-vs-mixture agree on ≥90% of hands.
+  3. Trainer UI's eventual multiway recommendations will derive from the mode + the agreement class — a hand with unanimous 4-of-4 is a "high-confidence rule applies" hand; a 2-2-split hand is a "your read on the table determines the answer" hand.

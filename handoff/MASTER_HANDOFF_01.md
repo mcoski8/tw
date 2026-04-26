@@ -584,3 +584,71 @@ Pre-fix (Session 05 10K) vs post-fix (Session 06 5K):
 5. Sprint 7 Priority 2: Hand-feature extractor for pattern mining toward 5-10 rule decision tree.
 6. Sprint 7 Priority 3: Self-play break-even Nash check on the eventual robust strategy.
 7. Phase 3 is unlocked but not started: CFR for true Nash (revised: days not months).
+
+
+---
+
+### Session 11 — 2026-04-26 — Cloud production COMPLETE. Full 4-way analysis. Multiway hypothesis test.
+
+**Scope:** Final session of Sprint 3 cloud production. Pulled Model 4 (`randomweighted`) to the Mac, validated, terminated the RunPod pod. Ran the first complete-data analyses: full 4-way cross-model join, full 4-profile skill-gap (definitive answer to "is this game skill-driven?"), and the first multiway-robust hypothesis test answering the user's "weaker top, stronger mid+bot in multiway" intuition with hard data. Sprint 3 declared complete; Sprint 7 unblocked.
+
+**Pod termination flow (RunPod UX gotcha):**
+- RunPod's UI doesn't expose a "Terminate" button directly; the action is two-step: **Stop Pod** first (halts compute billing immediately), then a **Delete Pod** option appears on the now-stopped pod. User had $3.76 in residual credit at termination; ~3+ remaining.
+- The network volume `tw-solver-data` survives termination by default (cheap to keep, ~$0.07/GB-month for ~200 MB). Recommended retention for a few days as belt-and-suspenders backup; can delete once trainer confirms .bin integrity in production.
+
+**Cross-model 4-way (all 4 profiles):**
+- 26.68% unanimous (down from 30.99% with 3 profiles, 39.31% with 2). Each new profile cuts unanimity proportionally as you'd expect.
+- 49.96% have 2 distinct settings, 20.64% have 3, **2.71% have all 4 distinct** — the "highly opponent-dependent" hands worth flagging in the trainer.
+- Pairwise agreement matrix is the most insightful artifact. **OmahaFirst is the structural outlier** — agrees only 33-43% with each of the other 3. The other three (MF-SA, TopDef, RandomWeighted) cluster at 58-79% pairwise. This validates the user's reframe that opponent-strategy convergence is the signature of approaching equilibrium; OmahaFirst's distinct prioritization (loading the bottom Omaha tier) is what separates it.
+
+**Skill-gap analysis at production scale (rebuttal to "game is just luck"):**
+- N=500 canonical hands × 4 profiles × 1000 MC samples = 2,000 trials. Each trial compares the optimal best-response EV to the EV of always-playing-setting-104 (sort-cards-descending-and-slice).
+- Cross-profile mean gap: **+1.538 EV per hand** in favor of optimizer. Per-hand variability sd ≈ 1.66. Hands-to-2σ confidence in skill edge: **~5**.
+- Naive play strictly beat optimal in **0 of 2,000 trials.** Tied on a few easy hands. Lost on the rest.
+- At $1/point stakes, optimizer extracts +$153.80 of pure skill edge per 100 hands vs naive play. The "glorified coin flip" claim is empirically falsified by orders of magnitude.
+
+**Multiway hypothesis test (user's Sprint 7 P1 priority):**
+- New script `analysis/scripts/multiway_analysis.py`. For each canonical hand, computes the multiway-robust setting as the MODE of the 4 per-profile best-responses (Decision 030 — see DECISIONS_LOG.md for the methodological choice + alternatives considered).
+- 200K-hand random sample. Agreement-class breakdown:
+  - Unanimous (4-of-4): 26.6%
+  - 3-of-4 majority: 40.4%
+  - 2-of-4 (2-1-1): 20.6%
+  - 2-2 split: 9.6%
+  - All distinct (1-1-1-1): 2.7%
+  - **67% clear-majority hands; 12.3% genuinely contested.**
+- Hypothesis "multiway favors weaker top, stronger mid+bot" tested on 5 axes:
+
+| Δ axis | Effect | Direction | Verdict |
+|---|---|---|---|
+| Top rank | −0.18 | Lower in multiway | ✓ |
+| Mid pair rate | +2.2 pp | More pairs | ✓ |
+| Mid rank-sum | +0.22 | Higher | ✓ |
+| Bot DS rate | +1.2 pp | More double-suited | ✓ |
+| Bot rank-sum | −0.04 | Essentially zero | ✗ |
+
+  4 of 5 axes directionally consistent with the user's intuition. The only axis where the intuition is wrong: bottom isn't higher-RANKED in multiway, it's better-STRUCTURED (more often double-suited). Stronger bot in the connectivity/suitedness sense, not the rank sense.
+
+- **Unanimous-only subset shows the clean rule** the trainer can teach: mid pair rate jumps to **90.5%**, bot DS rate to **45.8%**, top rank UP at 12.65. When robust play is unambiguous, the structural rule is "high card top, pair middle, double-suited bottom" — same direction as setting 104 but more disciplined.
+
+**Verified end-to-end this session:**
+- Model 4 download via single scp, 100% in ~10 seconds. inspect_br.py PASS (54 MB, 6,009,159 records, opponent tag 6 = RandomWeighted).
+- All 4 .bin files re-validated via batch inspector script.
+- Pod terminated. Compute billing stopped.
+- cargo build + cargo test green (Rust unchanged this session).
+- Python tests green (settings 11/11, canonical 9/9, cross_model 9/9).
+- Cross-model join with 4 files runs cleanly.
+- Skill-gap script runs at N=500 × 4 profiles × 1000 samples in ~40 minutes (background) and produces stable numbers.
+- Multiway analysis script runs at 200K-hand sample in ~2 minutes; produces all expected outputs.
+
+**Gotchas this session:**
+- Skill-gap script had a leftover hardcoded filter (`if p.id in ("mfsuitaware", "omaha", "topdef")`) from when only 3 .bin files existed. Updated to use all 4 production profiles. Worth checking similar filters in any other Sprint 7 scripts as they're written.
+- Web-terminal multi-line copy/paste mangling continues to be reproducible. Status checks must be single-line `&&`-chained commands. `pgrep -af "tw-engine solve"` mangled into pgrep with no args, which then echoed the misleading "Job stopped." fallback. Workaround: cross-check against file mtimes and progress-log tails which are definitive.
+- RunPod "Terminate" is a two-step Stop-then-Delete UX. Future sessions should document this in the pod-termination instructions if cloud runs resume.
+
+**Carry-forward for Session 12 (Sprint 7 rule mining proper):**
+1. Build `analysis/src/tw_analysis/features.py` — hand-feature extractor: pair count + ranks, top-card rank, suitedness, connectivity, hand category. Output Parquet/SQLite for fast queries.
+2. Pattern mining toward 5-10 rule decision tree. Test rule candidates as predicates and measure agreement with multiway-robust mode setting on 6M hands.
+3. Self-play break-even Nash check on the eventual rule strategy.
+4. Trainer integration — swap explain.py from hand-written heuristics to mined rules; add "rule firing" view.
+5. Optional: re-run multiway_analysis.py at full 6M hands for the published number (sample run is representative; full run for the publication).
+6. Optional: scoop-frequency-by-player-count analysis (the deferred multiway question).

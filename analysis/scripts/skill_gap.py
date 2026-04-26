@@ -57,10 +57,8 @@ def main() -> int:
     rng = random.Random(args.seed)
     indices = rng.sample(range(n_total), args.hands)
 
-    # Only profiles where we already have a .bin downloaded (Models 1, 2, 3).
-    # Random-Weighted (Model 4) excluded — would still work, just we want to
-    # match what the user is staring at right now.
-    target_profiles = [p for p in PROFILES if p.id in ("mfsuitaware", "omaha", "topdef")]
+    # All 4 production profiles.
+    target_profiles = list(PROFILES)
 
     print(f"Sampling {args.hands} canonical hands; {args.samples} MC samples/setting; "
           f"{len(target_profiles)} opponent profiles.")
