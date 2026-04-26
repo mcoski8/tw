@@ -1,149 +1,161 @@
-# Current: All 4 production .bin files local + verified; Sprint 3 cloud production COMPLETE; Sprint 7 unblocked and first-pass results published
+# Current: Sprint 7 Phase A complete — feature table built, first encoded rule chain measured at 53.58% shape-agreement vs multiway-robust on 6M hands
 
-> Updated: 2026-04-26 (end of Session 11)
-> Previous sprint status: Session 10 downloaded Models 1-3, ran 3-way cross-model, ran skill-gap on 3 profiles, scaffolded multiway UI. Session 11 finished the cloud project: pulled Model 4, terminated the pod, ran the full 4-way cross-model + 4-profile skill-gap, and shipped the first multiway-robust analysis answering the user's "weaker top, stronger mid+bot" hypothesis with data.
-
----
-
-## Cloud production status (Sprint 3) — **COMPLETE**
-
-- All 4 best-response files on Mac at `data/best_response_cloud/`. Each 54,082,463 bytes, 6,009,159 records, validation PASS.
-- RunPod pod `0f8279f6fd0a` TERMINATED (not Stopped). Compute billing halted.
-- Network volume `tw-solver-data` decision: user retained briefly; can be deleted any time once trainer use confirms .bin integrity in production.
-- Total project compute time: ~6.9 days, ~$159 spent, ~$3+ residual credit.
-
-| Profile | File | Mean EV | Setting 104 share |
-|---|---|---|---|
-| MiddleFirstSuitAware mixed90 | `mfsuitaware_mixed90.bin` | +0.533 | 19.70% |
-| OmahaFirst mixed90 | `omahafirst_mixed90.bin` | +2.123 | 22.72% |
-| TopDefensive mixed90 | `topdefensive_mixed90.bin` | +0.498 | 21.79% |
-| RandomWeighted | `randomweighted.bin` | +1.547 | 16.26% |
-
-Mean EV ranking: TopDef is the strongest opponent (lowest EV for us); OmahaFirst is the weakest (most exploitable).
+> Updated: 2026-04-26 (end of Session 12)
+> Previous sprint status: Session 11 finished cloud production (4 .bin files local, pod terminated), shipped first multiway hypothesis test (200K-sample). Session 12 unblocked Sprint 7 properly: built the hand-feature extractor + Parquet pipeline (priorities 1 from the resume prompt), did pattern probing (priorities 2), encoded rules as strategy functions and measured GTO-distance baseline. Pulled in the user's home-game **buyout option** as a new strategic dimension.
 
 ---
 
-## What was completed this session (Session 11)
+## What was completed this session (Session 12)
 
-### Model 4 download + full 4-way cross-model
+### Infrastructure (Sprint 7 P1)
+- `analysis/src/tw_analysis/features.py` — scalar reference + numpy-vectorized batch extractor for hand-level (n_pairs, pair_ranks, top/2nd/3rd rank, suit profile, connectivity, n_broadway, n_low, category) and per-tier (top_rank, mid_is_pair/suited, bot_suit_max/DS/n_pairs/connectivity/...) features. Multiway-robust mode resolver. Scalar/batch parity gate (Decision 028 discipline).
+- `analysis/scripts/test_features.py` — 24 tests, all green.
+- `analysis/scripts/build_feature_table.py` — streams 6,009,159 canonical hands × 4 BR files → `data/feature_table.parquet` (208 MB, 51 cols). Includes hand features + per-profile BR settings + multiway-robust + agreement_class + per-profile EVs (added mid-session) + ev_mean / ev_min / ev_max derived. Agreement-class breakdown matches the 200K-sample numbers from Session 11 exactly (26.68% / 40.48% / 20.64% / 9.48% / 2.71%) — sample was representative.
+- Updated `tw_analysis/__init__.py` to export feature module.
 
-- scp + inspect_br.py validation — clean, all expected fields decoded.
-- Cross-model join with all 4 .bin files: **26.68% unanimity** (down from 30.99% with 3 models).
-- Distinct-settings histogram: 26.68% unanimous, 49.96% have 2 distincts, 20.64% have 3, **2.71% have all 4 distinct (highly opponent-dependent)**.
-- Pairwise agreement matrix confirmed **OmahaFirst is the structural outlier** — 33-43% with the others, vs 58-79% among the rest. The other three (MF-SA, TopDef, RandomWeighted) cluster together.
+### Pattern mining (Sprint 7 P2)
+- `analysis/scripts/probe_rules.py` — quick rule-by-rule applicability + agreement on 6M.
+- `analysis/scripts/mine_patterns.py` — comprehensive 9-section miner: trips placement, full-house quadrant analysis, quads, three-pair, big-pair-to-bot, top-card cutoff, suits-vs-connectivity, garbage hands, **buyout +EV per profile + signature**.
 
-### Skill-gap analysis at production scale (definitive answer to "is this game just luck?")
+### Rule encoding + GTO-baseline measurement
+- `analysis/scripts/encode_rules.py` — encodes 7 candidate placement rules as `apply_rules(hand) → setting_index`. Three strategies: NAIVE_104, SIMPLE, REFINED. Scores literal + **shape** agreement (shape ignores suit-position tie-breaks — the measure that actually reflects rule correctness).
 
-- N=500 hands × 4 profiles × 1000 MC samples each = 2,000 trials.
-- **Cross-profile mean gap: +1.538 EV per hand** in favor of optimizer over naive (setting 104 = highest-card-top + next-2-mid + lowest-4-bot).
-- Per-hand variability: 1.66 EV. Hands-to-2σ confidence in skill edge: **~5**.
-- **Naive play strictly beat optimal in 0 of 2,000 trials.** Tied on a few easy hands; lost on the rest.
-- At $1/point, that's **+$153.80 of pure skill edge per 100 hands** vs naive play. Empirical rebuttal to "Taiwanese Poker is a glorified coin flip."
-- `analysis/scripts/skill_gap.py` — filter previously hardcoded to 3 profiles; updated to all 4.
+### Headlines
 
-### Multiway analysis — first-pass empirical answer to user's hypothesis
+**Strong rules surfaced from mining (>90% agreement on relevant subsets):**
+- 9+ pair → middle: 93.5% agreement (J-pair 94.6%, A-pair 99.65%)
+- Pure trips → middle: 93.8% (low trips 81%, high trips 99%)
+- Three-pair → highest pair to mid: 75.4% (mid is **always** a pair, 0% miss)
+- Quads → split 2 mid + 2 bot: 80–95% by rank, dips at quad-A (73.6%)
+- Top = highest UNPAIRED rank: 82.7% when applicable; 1.6% when highest IS paired (pair-preservation crushes the rule)
+- Mid-locked-as-pair + DS-bot feasible: DS wins 1.8x over connectivity
 
-- New script `analysis/scripts/multiway_analysis.py` — computes multiway-robust setting per canonical hand as the MODE of the 4 per-profile best-responses, then compares feature distributions (top rank, mid pair %, mid rank-sum, bot double-suited %, bot rank-sum) between multiway-robust and the average heads-up BR.
-- 200K-hand sample. Agreement-class breakdown:
-  - Unanimous: 26.6%
-  - 3-of-4: 40.4%
-  - 2-of-4 (2-1-1): 20.6%
-  - 2-2 split: 9.6%
-  - All distinct (1-1-1-1): 2.7%
-  - **67% of hands have a clear majority answer** (unanimous + 3-of-4); 12.3% are genuinely contested.
-- **Hypothesis test (user's "weaker top, stronger mid+bot in multiway"):**
-  - Δ top rank: **−0.18** (lower in multiway) → SUPPORTS "weaker top"
-  - Δ mid pair rate: **+2.2 pp** → SUPPORTS "stronger mid"
-  - Δ mid rank-sum: +0.22 → supports stronger mid
-  - Δ bot DS rate: **+1.2 pp** (more often double-suited) → SUPPORTS "stronger bot (structurally)"
-  - Δ bot rank-sum: −0.04 → bot is NOT higher-ranked, just better-coordinated
-  - **4 of 5 axes directionally consistent with intuition.** Wrong on bot-rank, right on bot-structure.
-- **Unanimous-only subset (the cleanest signal): mid pair rate jumps to 90.5%, bot DS rate to 45.8%, top rank UP at 12.65** — when robust play is unambiguous, the structural rule is "high card top, pair middle, double-suited bottom." Same direction as setting 104 but more disciplined.
+**Buyout (NEW strategic layer added this session):**
+- ev_mean across 4 profiles < −4 in only **0.09%** of hands (~5,600 of 6M).
+- Per-profile rates: vs MFSA 0.37%, vs TopDef 0.37%, vs OmahaFirst 0.01% (never), vs RandomWeighted 0.05%.
+- **Anti-intuitive signature:** NOT garbage hands. It's hands with HARMFUL pair structure: quads of 2-7 (lift 117x), pure low trips (8x), trips+low-pair (6.6x). Garbage hands average -0.98 EV — bad but not catastrophic.
+- Total selective-buyout edge in 4-handed: ~0.56 points per 100 hands.
+
+**First encoded rule chain baseline (`encode_rules.py` SIMPLE/REFINED, all 6M hands):**
+| metric | NAIVE_104 | SIMPLE = REFINED |
+|---|---|---|
+| **Overall shape-agreement** | 21.77% | **53.58%** |
+| Unanimous slice (26.7%) | 30.13% | 82.93% |
+| Quads | 23.14% | 79.20% |
+| Three-pair | 17.90% | 72.88% |
+| Pair | 19.09% | 65.02% |
+| **High-only (no pair)** | 19.50% | **19.50%** ← biggest gap |
+
+The 7-rule chain is **2.5x better than naive** but leaves a real gap. The rule chain currently falls back to NAIVE_104 for `high_only` hands, which is wrong 80% of the time — that's where Phase B should start.
+
+### Gemini 2.5 Pro Socratic dialogue (continuation_id ec08b754-69f3-479d-bb5a-c15fee965876)
+- Pushback: "encode-then-measure" risks rediscovering the need for feasibility flags + category fixes. Strongest argument: section-5 mining showed high-pair-to-bot correlates with `bot_is_double_suited` 62% — encoding without the flag would be incomplete.
+- Synthesis: hybrid Phase A — derive feasibility from existing columns (`can_make_ds_bot ≡ suit_2nd ≥ 2`, `can_make_4run_bot ≡ connectivity ≥ 4`) instead of extending features.py; encode multiple competing rule strategies; let the gap measurement tell us whether refinement helps.
+- Result confirmed Gemini was partially right: SIMPLE = REFINED at 53.58% because REFINED doesn't yet add anything beyond SIMPLE. Phase B needs ACTUAL conditional refinement, not just renamed strategies.
 
 ---
 
 ## Files touched this session
 
 **Added:**
-- `data/best_response_cloud/randomweighted.bin` (52 MB, gitignored)
-- `analysis/scripts/multiway_analysis.py` — Sprint 7 multiway hypothesis test
+- `analysis/src/tw_analysis/features.py`
+- `analysis/scripts/test_features.py`
+- `analysis/scripts/build_feature_table.py`
+- `analysis/scripts/probe_rules.py`
+- `analysis/scripts/mine_patterns.py`
+- `analysis/scripts/encode_rules.py`
+- `data/feature_table.parquet` (208 MB, gitignored)
+- `data/mine_patterns_session12.txt` (9 KB session output for posterity)
 
 **Modified:**
-- `analysis/scripts/skill_gap.py` — filter expanded from 3 profiles to all 4
-- `checklist.md` — Sprint 7 multiway analysis tasks marked complete with measured outcomes
+- `analysis/src/tw_analysis/__init__.py` — exports for features module
 - `CURRENT_PHASE.md` — this file (rewritten)
-- `handoff/MASTER_HANDOFF_01.md` — Session 11 entry appended
-- `DECISIONS_LOG.md` — Decision 030 appended (multiway-robust = mode methodology)
 
 ---
 
 ## Active Handoff File
 
-`handoff/MASTER_HANDOFF_01.md`
+`handoff/MASTER_HANDOFF_01.md` (Session 12 entry appended)
 
 ---
 
-## Resume Prompt (next session — Sprint 7 rule mining proper)
+## Resume Prompt (next session — Sprint 7 Phase B)
 
 ```
 Read these files for context:
 - CLAUDE.md
 - CURRENT_PHASE.md
 - modules/game-rules.md   (MANDATORY)
-- DECISIONS_LOG.md  (scan Decisions 028, 029, 030)
-- handoff/MASTER_HANDOFF_01.md  (scan Sessions 09, 10, 11)
-- analysis/scripts/skill_gap.py + multiway_analysis.py (Session 11 outputs)
-- trainer/  (Sprint 5a foundation; player-count selector scaffolded)
-- analysis/src/tw_analysis/cross_model.py  (Sprint 7 cross-model join)
+- DECISIONS_LOG.md  (latest is Decision 030)
+- handoff/MASTER_HANDOFF_01.md  (scan Session 12)
+- analysis/src/tw_analysis/features.py  (the feature extractor)
+- analysis/scripts/encode_rules.py  (the encoded rule chain)
+- data/mine_patterns_session12.txt  (Session 12 mining output)
 
 State of the project:
-- All 4 production .bin files on Mac at data/best_response_cloud/. Pod terminated.
-- Cloud production COMPLETE. Total ~6.9 days, ~$159 spent.
-- Skill-gap: optimizer +1.538 EV/hand vs naive across 4 profiles; naive strictly
-  better on 0 of 2000 trials. Game is provably skill-driven, not luck.
-- Multiway hypothesis test: user's "weaker top, stronger mid+bot" intuition
-  empirically supported on 4 of 5 axes (top rank −0.18, mid pair +2.2pp,
-  bot DS +1.2pp; bot rank-sum essentially zero — wrong on rank, right on
-  structure).
-- Cross-model 4-way: 26.68% unanimous, 67% clear-majority, OmahaFirst is
-  the structural outlier.
+- All 4 production .bin files at data/best_response_cloud/. Pod terminated.
+- data/feature_table.parquet built (6,009,159 hands × 51 cols). EV columns
+  included (per-profile + ev_mean/min/max).
+- 7-rule chain encoded as encode_rules.py strategies SIMPLE / REFINED.
+  Both produce identical output: 53.58% shape-agreement vs multiway-robust
+  on 6M hands. NAIVE_104 baseline is 21.77%. So the rules are 2.5x better
+  than naive — but 46% of hands still mismatch.
+- Use SHAPE agreement, NOT literal. Literal scores include suit-tie-break
+  artifacts and grossly under-report rule correctness.
 
-Sprint 7 PRIORITIES IN ORDER:
+Sprint 7 Phase B PRIORITIES IN ORDER:
 
-1. **Hand feature extractor** — build `tw_analysis/features.py` that turns a
-   canonical 7-card hand into a feature vector: pair count + ranks, top-card
-   rank, suitedness profile, connectivity, hand category (pair / two-pair /
-   trips / quads / flush-potential / straight-potential / high-card-only).
-   Join to per-profile BR settings + multiway-robust setting. Output a
-   Parquet/SQLite file for fast queries.
+1. **Close the high_only gap.** 35% of all rule misses are no-pair hands;
+   miss rate is 80.5% within that category. The rule chain falls back to
+   NAIVE_104 there, but multiway-robust isn't 104 for ~80% of high_only
+   hands. Mine these specifically:
+     - Run the same probing on the high_only subset only.
+     - Look at top-card distribution, mid-card composition (do robust
+       answers prefer suited/connected mid pairs?), bot-DS preference.
+     - Hypothesize candidate rules; encode them; re-measure.
+   Expected payoff: closing this fully would push the rule chain from
+   53.58% to ~70%.
 
-2. **Pattern mining toward 5-10 rule decision tree** (user's stated rule
-   budget). Look for compressible patterns. Examples to test empirically:
-     - "If you have a pair of 9+, put it in middle" — true for what %?
-     - "If a double-suited bottom is achievable, take it" — what % robust?
-     - "Top is the highest single card" — when does that fail?
-     - "When in doubt, sort and slice (setting 104)" — when does that win?
-   Each candidate rule: measure agreement % with multiway-robust on 6M hands.
+2. **Make REFINED actually refined.** Currently SIMPLE == REFINED. The
+   conditionals to add (driven by mining):
+     - "9+ pair → mid UNLESS trips present OR a higher pair exists" (this
+       captures the 6.5% high-pair-to-bot cases as 19% trips + 29% higher pair).
+     - "When mid locked as a high pair AND can_make_ds_bot, optimize bot
+       for DS" (1.8x preference observed).
+     - "trips_low + pair_high: pair displaces trips from mid 36.5% of the
+       time" — encode as a tunable conditional and measure.
 
-3. **Self-play break-even Nash check** — once a candidate rule set is in
-   place, encode it as a strategy function. Simulate (rule_strategy vs
-   rule_strategy) for 100k hands. Mean EV should be ≈ 0; deviation from 0
-   measures distance from Nash. Single-script, ~150 lines.
+3. **Investigate the 17.1% miss rate on UNANIMOUS hands.** These are hands
+   where ALL 4 profiles agree on the answer but my rule chain disagrees.
+   Pure rule-logic failures, not opponent-dependent. ~273K hands. Likely
+   reveals one or two missing rules.
 
-4. **Trainer integration** — once rules are confident, swap trainer/src/explain.py
-   from hand-written heuristics to the mined rule set. Add a "current rule
-   firing" view to the trainer ("you violated rule 3 — pair to middle").
+4. **Buyout integration.** Add a buyout pre-step to the rule chain:
+   "if ev_mean < -4 vs the actual opponent type, recommend buyout."
+   Trainer surfaces a "BUYOUT" badge. Confirm signature: low quads,
+   pure low trips, trips+low-pair (per project memory).
+
+5. **(Lower priority) Self-play break-even Nash check** (Sprint 7 P3).
+   Once the rule chain hits ~75-80% shape-agreement, encode it as both
+   players in 100K self-play hands. Mean EV should be ≈ 0; deviation
+   measures Nash distance.
+
+DEFERRED (don't do unless rule mining is exhausted):
+- Per-tier EV decomposition (engine matchup_breakdown exposure) — for
+  trainer COACHING, not rule mining
+- Naive-distance metric — diagnostic only
+- Category bucketing fix (trips+trips, quads+pair) — affects <0.5% of
+  hands, low leverage
 
 PRIORITY FROM USER:
-- 5-10 rules max. 100 too many. Compression is non-negotiable.
-- Multiway analysis was Sprint 7 P1 — first pass done, follow-up is full-6M
-  re-run + scoop-frequency-by-player-count question.
-- HoldemTransplant rejected. Gambler is the one Phase 2 opponent worth adding.
-- CFR (Phase 3) revised to "days, not months" — interesting if rules approach
-  has gaps.
+- 5-10 rules max. Compression non-negotiable.
+- Brainstormed coverage: trips, trips+pair quadrants, quads, three-pair,
+  big pair on bot, top-card cutoff, suits vs connectivity, garbage,
+  buyout. ALL are now empirically measured (see mine_patterns_session12.txt).
 
-Suggested starting point for next session: build features.py + Parquet export,
-then iteratively test rule candidates against multiway-robust mode setting.
+Suggested starting point for next session: build a high_only-focused
+miner, hypothesize 2-3 rules, encode, re-measure. Goal: rule chain to
+≥70% shape-agreement.
 ```
 
 ---

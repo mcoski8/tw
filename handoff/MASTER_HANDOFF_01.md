@@ -652,3 +652,77 @@ Pre-fix (Session 05 10K) vs post-fix (Session 06 5K):
 4. Trainer integration — swap explain.py from hand-written heuristics to mined rules; add "rule firing" view.
 5. Optional: re-run multiway_analysis.py at full 6M hands for the published number (sample run is representative; full run for the publication).
 6. Optional: scoop-frequency-by-player-count analysis (the deferred multiway question).
+
+
+---
+
+### Session 12 — 2026-04-26 — Sprint 7 Phase A: feature pipeline + rule encoding + first GTO baseline
+
+**Scope:** Sprint 7 P1 (feature extractor + Parquet) and Sprint 7 P2 (pattern mining toward decision tree) — both delivered. Built end-to-end: scalar+vectorized feature extractor, comprehensive miner, encoded the 7 candidate rules as actual strategy functions, and measured shape-agreement vs the multiway-robust setting on all 6,009,159 canonical hands. Pulled in user's home-game **buyout option** as a new strategic dimension and quantified its applicability rate + signature. Mid-session Socratic dialogue with Gemini 2.5 Pro on the "encode-then-measure vs build-infrastructure-first" decision; integrated pushback as a hybrid path.
+
+**What landed:**
+
+1. **Feature extractor (`analysis/src/tw_analysis/features.py`)** — scalar reference + numpy-vectorized batch implementations of HAND_FEATURE_KEYS (n_pairs, pair_ranks, n_trips/quads, top/2nd/3rd rank, suit_max/2nd/3rd/4th, n_suits_present, is_monosuit, connectivity with wheel-low ace, n_broadway, n_low, category_id) and TIER_FEATURE_KEYS (top_rank, mid_is_pair/suited/high/low/sum, bot_suit_max/DS/n_pairs/pair_high/high/low/sum/n_broadway/connectivity). Multiway-robust mode resolver `compute_multiway_robust(per_profile)` returns (mode setting, agreement class, mode count) — vectorized via `((N,4)==(N,1,4)).sum(axis=2)` argmax. **Scalar/batch parity gate** (`assert_scalar_batch_parity`) per Decision 028 discipline; called inside `build_feature_table.py` on first chunk before anything trusts the batch path. 24 unit tests (`test_features.py`) covering all categories + wheel + monosuit + edge tier decompositions, all green.
+
+2. **Feature table CLI (`build_feature_table.py`)** — streams canonical_hands.bin + 4 .bin files in 250K-row chunks, computes hand features + per-profile BR settings + multiway-robust setting + agreement class + per-profile EVs + ev_mean/ev_min/ev_max derived. Writes `data/feature_table.parquet` (208 MB zstd-compressed, 51 columns, 6,009,159 rows). Agreement-class breakdown matches the 200K-sample numbers from Session 11 to two decimals (26.68% / 40.48% / 20.64% / 9.48% / 2.71%) — confirmation that the sample was representative. EV columns added mid-session after the buyout question came up; rebuild is ~2 minutes end-to-end.
+
+3. **Pattern mining (`probe_rules.py`, `mine_patterns.py`)** — 9-section comprehensive miner answering every question the user brainstormed:
+   - Trips placement: pure trips → mid 93.8% (low 81%, high 99%)
+   - Trips+pair quadrants: trips→mid wins 75-96% in three quadrants; **trips_low+pair_high is the only one where pair displaces trips ~37%**
+   - Quads → split 2 mid + 2 bot, 80-95% climbing with rank, dips at quad-A (73.6% — ace probably wants top)
+   - Three-pair → highest pair to mid 75.4%; mid is **always** a pair (0% miss)
+   - 9+ pair → mid 93.5%; J+ pair 95%+; A-pair 99.65%
+   - When mid locked AND DS feasible: DS bot beats connected bot ~1.8x
+   - Top = highest rank: 67.4% overall. Failure mode is pair-preservation: when highest IS paired, only 1.6% follow; when highest isn't, 82.7% follow. The **actionable rule** is "top = highest UNPAIRED rank."
+   - Garbage hands (no pair, ≥3 low, ≤2 broadway): 6.4% of hands, mean ev_mean −0.98, but only 1.1% qualify for buyout
+
+4. **Buyout analysis (NEW, user's home-game variant):** Pay 4 points per willing opponent to fold. Empirical:
+   - Per-profile heads-up buyout +EV rate: vs MFSA 0.37%, vs TopDef 0.37%, vs OmahaFirst 0.01%, vs RandomWeighted 0.05%
+   - 4-profile-mean buyout rate: **0.09%** (~5,600 of 6M hands)
+   - **Anti-intuitive signature: NOT garbage hands. It's harmful pair structure.** Quads of 2-7 (lift 117x), pure low trips (8x), trips+low-pair (6.6x). High_only/two_pair/three_pair: ~0% buyout share.
+   - Total selective-buyout edge in 4-handed play: ~+0.56 points per 100 hands.
+   - Caveat: rates based on `best_ev` (optimal play); naive players should buy out more often.
+
+5. **Encoded rule chain + GTO baseline (`encode_rules.py`)** — three strategies (NAIVE_104, SIMPLE, REFINED) implemented as `apply_rules(hand) → setting_index`. Inverse-decoder helper `positions_to_setting_index` round-trip-verified for all 105 settings. Critical methodology insight: literal `setting_index ==` agreement is **dominated by suit-position tie-break artifacts** (e.g., 3 ways to put a "pair of 4s" in mid produce 3 different indices but same play). Added **shape agreement** (compare `(top_rank, sorted_mid_ranks, sorted_bot_ranks)` tuples) — the rule-correctness measure that actually matters.
+
+   Headline measurements (full 6M):
+
+   | metric | NAIVE_104 | SIMPLE = REFINED |
+   |---|---|---|
+   | Overall LITERAL agreement | 20.09% | 49.06% |
+   | **Overall SHAPE agreement** | **21.77%** | **53.58%** |
+   | Unanimous slice (26.7%) | 30.13% | 82.93% |
+   | Quads | 23.14% | 79.20% |
+   | Three-pair | 17.90% | 72.88% |
+   | Pair | 19.09% | 65.02% |
+   | Two-pair | 26.12% | 59.16% |
+   | Trips | 30.57% | 56.39% |
+   | Trips_pair | 32.64% | 46.16% |
+   | **High_only (no pair)** | 19.50% | **19.50% — biggest gap** |
+
+   Rule chain is **2.5x better than naive** but leaves 46.42% mismatch. The single biggest miss category is `high_only` (35% of all misses, 80.5% miss rate within category) where the rule chain currently falls back to NAIVE_104 — and that fallback is wrong 80% of the time.
+
+6. **Gemini 2.5 Pro Socratic dialogue (continuation_id ec08b754-69f3-479d-bb5a-c15fee965876):**
+   Question: "encode current rules and measure" vs "build feasibility-flag + category-fix infrastructure first"? Gemini argued the latter on the strength of section-5 mining (high-pair-to-bot correlates with bot-DS 62%) — encoding without DS-feasibility would be incomplete. Synthesis: hybrid Phase A — derive feasibility from existing columns (`can_make_ds_bot ≡ suit_2nd ≥ 2`, `can_make_4run_bot ≡ connectivity ≥ 4`) instead of extending features.py; encode multiple competing strategies; let the gap measurement tell us whether refinement helps. **Result: SIMPLE = REFINED at 53.58% — confirms Gemini's point that the current REFINED doesn't actually refine anything beyond SIMPLE; Phase B needs ACTUAL conditional refinement, not renamed strategies.**
+
+**Verified end-to-end this session:**
+- Rust `cargo build --release` clean (no Rust changes this session); existing tests still green by extension.
+- Python tests: `test_features.py` 24/24, settings 11/11, canonical 9/9, cross_model 9/9.
+- `build_feature_table.py` full 6M run completes cleanly in ~2 minutes; output Parquet validates against Session 11's agreement-class numbers.
+- `mine_patterns.py` full run completes in ~75 seconds; produces all 9 sections.
+- `encode_rules.py` full 6M run completes in ~3 minutes; literal + shape agreement reported per strategy + per category + per agreement_class.
+
+**Gotchas this session:**
+- **LITERAL vs SHAPE agreement.** Massive trap. First smoke test on 50K hands showed SIMPLE at 3.74% literal agreement — looked like a fundamental bug. Actually was just suit-position tie-break: 3 equivalent (rank-equal) mid arrangements produce 3 different setting indices, my strategy picks one specific tie-break and the canonical robust answer's MC-mode picks another. Shape-agreement on the same data was 42.82%. Always trust SHAPE. Memorialized in `project_taiwanese_rule_baseline.md`.
+- **First 50K canonical hands are NOT representative.** They're sorted ascending by card byte = lowest-rank hands first, which loads up trips+trips, quads+trips, and other structural edge cases. Smoke tests on the head are misleading; need to run on the full 6M or stratified sample.
+- **Trips+trips edge case is mis-bucketed as "trips".** Hand with two trips (e.g., 2-2-2-3-3-3-4) has `n_trips=2` but my category logic only checks `pairs_ranks` for the "trips_pair" branch — so it falls through to "trips". Multiway-robust on these correctly splits both trips into bot for a 2-2-3-3 Omaha two-pair structure, while my SIMPLE strategy puts the higher trips in mid as a pair. Affects ~0.02% of hands; deferred to a future category-bucketing pass.
+- **`n_trips=2` (two distinct trips), `n_quads=1+pair=1` (quads+pair), `n_quads=1+trips=1` (quads+trips) all collapse into wrong category buckets.** Combined ~0.5% of hands. Listed as deferred work.
+
+**Carry-forward for Session 13 (Sprint 7 Phase B):**
+1. **Close the high_only gap.** 35% of all rule misses are no-pair hands; miss rate 80.5% within category. Run mining on the high_only subset specifically — top-card distribution, mid-card composition (do robust answers prefer suited/connected mid pairs?), bot-DS preference. Hypothesize 2-3 rules; encode; re-measure. Expected payoff: chain from 53.58% → ~70%.
+2. **Make REFINED actually refined.** Add the conditionals mining surfaced: "9+ pair → mid UNLESS trips OR higher pair", "mid-locked + can_make_ds_bot → optimize bot for DS", "trips_low + pair_high: pair displaces trips 37%". Currently SIMPLE == REFINED, which means my "REFINED" is misnamed.
+3. **Investigate 17.1% miss rate on UNANIMOUS hands** (~273K hands). These are pure rule-logic failures, not opponent-dependent. Should reveal one or two missing rules.
+4. **Buyout integration.** Add buyout pre-step: "if ev_mean < -4 vs actual opponent type, recommend buyout." Trainer surfaces a "BUYOUT" badge.
+5. **Self-play break-even Nash check (Sprint 7 P3, lower priority).** Once chain hits ~75-80% shape-agreement, run the rule strategy as both players in 100K hands; mean EV ≈ 0 measures Nash distance.
+
+DEFERRED: per-tier EV decomposition (engine `matchup_breakdown` exposure — for trainer coaching, not rule mining), naive-distance metric (diagnostic only), category bucketing fix (affects <0.5% of hands).

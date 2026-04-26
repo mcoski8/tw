@@ -1,0 +1,218 @@
+Loading /Users/michaelchang/Documents/claudecode/taiwanese/data/feature_table.parquet…
+  6,009,159 canonical hands × 51 columns
+
+
+==============================================================================
+ 1. Trips placement (where do 3-of-a-kind go?)
+==============================================================================
+Pure-trips hands (no accompanying pair): 332,475 (5.53%)
+  trips → mid (pair) + 1 elsewhere : 93.77%
+  trips → bot (pair) + 1 elsewhere :  6.23%
+  trips split across all 3 tiers   :  0.00%
+
+--- By trips_rank: ---
+   rank         n   trips→mid   trips→bot
+      2    25,245      81.22%      18.78%
+      3    25,300      86.08%      13.92%
+      4    25,355      88.91%      11.09%
+      5    25,410      90.84%       9.16%
+      6    25,465      92.09%       7.91%
+      7    25,520      93.55%       6.45%
+      8    25,575      95.43%       4.57%
+      9    25,630      97.25%       2.75%
+     10    25,685      98.33%       1.67%
+     11    25,740      98.62%       1.38%
+     12    25,795      98.51%       1.49%
+     13    25,850      98.64%       1.36%
+     14    25,905      98.97%       1.03%
+
+==============================================================================
+ 2. Trips + pair (full-house shape) — split by trip & pair rank
+==============================================================================
+Full-house-shape hands: 178,464 (2.97%)
+
+  trips_low_pair_low  n=47,040
+    trips → mid: 75.25%
+    pair  → mid:  2.17%
+    trips → bot (pair-of-3rd-rank): 12.11%
+    mean ev (vs MFSA): -2.101
+
+  trips_low_pair_high  n=49,056
+    trips → mid: 54.62%
+    pair  → mid: 36.53%
+    trips → bot (pair-of-3rd-rank): 33.60%
+    mean ev (vs MFSA): -0.010
+
+  trips_high_pair_low  n=47,208
+    trips → mid: 95.88%
+    pair  → mid:  1.98%
+    trips → bot (pair-of-3rd-rank):  4.12%
+    mean ev (vs MFSA): +1.263
+
+  trips_high_pair_high  n=35,160
+    trips → mid: 70.91%
+    pair  → mid: 28.90%
+    trips → bot (pair-of-3rd-rank): 28.84%
+    mean ev (vs MFSA): +2.966
+
+==============================================================================
+ 3. Quads (4-of-a-kind)
+==============================================================================
+Quads hands: 17,888 (0.30%)
+   rank       n  split 2mid+2bot   ≥3 in bot   mean_ev
+      2   1,376           79.94%       0.00%    -4.624
+      3   1,376           81.47%       0.07%    -3.797
+      4   1,376           83.28%       0.00%    -2.932
+      5   1,376           84.96%       0.00%    -2.035
+      6   1,376           86.70%       0.07%    -1.403
+      7   1,376           88.88%       0.00%    -0.762
+      8   1,376           90.99%       0.00%    -0.119
+      9   1,376           92.95%       0.00%    +0.529
+     10   1,376           95.57%       0.00%    +1.200
+     11   1,376           97.46%       0.00%    +1.762
+     12   1,376           97.09%       0.00%    +2.357
+     13   1,376           92.88%       0.00%    +3.007
+     14   1,376           73.62%       0.00%    +3.977
+
+==============================================================================
+ 4. Three-pair hands — which pair lands in middle?
+==============================================================================
+Three-pair hands: 114,400 (1.90%)
+  mid = highest pair : 75.43%
+  mid = middle pair  : 19.92%
+  mid = lowest pair  :  4.65%
+  mid is not a pair  :  0.00%
+
+==============================================================================
+ 5. When does a high pair (9+) go to BOTTOM instead of MIDDLE?
+==============================================================================
+Hands with a 9+ pair: 2,456,864 (40.89%)
+  high pair → mid : 93.53%
+  high pair → bot :  6.47%
+  high pair split :  0.00%
+
+--- by highest-pair rank: ---
+   rank         n      →mid      →bot     split
+      9   358,024    78.16%    21.84%     0.00%
+     10   378,072    88.16%    11.84%     0.00%
+     11   398,520    94.64%     5.36%     0.00%
+     12   419,368    97.78%     2.22%     0.00%
+     13   440,616    99.17%     0.83%     0.00%
+     14   462,264    99.65%     0.34%     0.01%
+
+  When high pair lands in BOT (158,862 hands), what's also true?
+    has_trips         : 19.49%
+    has_higher_pair   : 28.96%
+    is_double_suited_hand_friendly (suit_max==4): 13.26%
+    bot_is_double_suited (in robust): 62.44%
+
+==============================================================================
+ 6. Top-card cutoff for hands where the top is a singleton
+==============================================================================
+Hands where robust top is a singleton: 5,870,216 (97.69%)
+
+   top_rank         n   share
+          2   406,976   6.93%
+          3   242,474   4.13%
+          4   141,233   2.41%
+          5    81,759   1.39%
+          6    66,959   1.14%
+          7    61,424   1.05%
+          8    67,564   1.15%
+          9    99,927   1.70%
+         10   180,909   3.08%
+         11   351,749   5.99%
+         12   716,104  12.20%
+         13 1,340,113  22.83%
+         14 2,113,025  36.00%
+
+  P(robust top ≤  2) =  6.93%
+  P(robust top ≤  3) = 11.06%
+  P(robust top ≤  4) = 13.47%
+  P(robust top ≤  5) = 14.86%
+  P(robust top ≤  6) = 16.00%
+  P(robust top ≤  7) = 17.05%
+  P(robust top ≤  8) = 18.20%
+  P(robust top ≤  9) = 19.90%
+  P(robust top ≤ 10) = 22.98%
+  P(robust top ≤ 11) = 28.98%
+  P(robust top ≤ 12) = 41.18%
+  P(robust top ≤ 13) = 64.00%
+  P(robust top ≤ 14) = 100.00%
+
+==============================================================================
+ 7. With mid locked as a high pair, does bot lean DS or connectivity?
+==============================================================================
+Hands with mid = pair of T+ (and no trips/quads): 1,959,430
+  bot DS-only (no straight)        : 23.85%
+  bot connected-only (≥4 in run)   :  1.50%
+  bot both DS AND connected        :  0.45%
+  bot neither (random fill)        : 74.20%
+
+  When the hand can support EITHER DS or connectivity (175,626 hands):
+    robust picked DS:        27.62%
+    robust picked connected: 15.41%
+
+==============================================================================
+ 8. Garbage hands (low cards dominate, no pairs)
+==============================================================================
+Garbage hands (no pair, ≥3 low, ≤2 broadway): 382,516 ( 6.37%)
+  mean ev_mean    : -0.981
+  mean ev_min     : -1.834
+  mean ev_max     : +0.423
+  share with ev_mean < -4 (buyout +EV vs avg):  1.12%
+  share with ev_mean < 0  : 86.86%
+
+==============================================================================
+ 9. BUYOUT analysis — when is paying 4 to fold cheaper than playing?
+==============================================================================
+Buyout cost per accepting opponent: 4.0 points
+Heads-up buyout is +EV iff ev < -4.0 vs that opponent.
+
+
+--- Per-profile buyout-rate (% of hands where heads-up buyout is +EV): ---
+  MF-SA (typical)              buyout +EV:  0.37%  min=-9.84  p1=-3.32  p5=-2.21  median=+0.42
+  OmahaFirst (weakest opp)     buyout +EV:  0.01%  min=-7.18  p1=-1.08  p5=+0.03  median=+2.03
+  TopDefensive (toughest opp)  buyout +EV:  0.37%  min=-9.72  p1=-3.32  p5=-2.22  median=+0.39
+  RandomWeighted (loose-ish)   buyout +EV:  0.05%  min=-7.84  p1=-2.14  p5=-1.08  median=+1.45
+
+--- Mean-EV (4-profile average) buyout rate — robust to opp identity: ---
+  P(ev_mean < -4.0)     =  0.09%
+  P(ev_mean <  -2)       =  1.90%
+  P(ev_mean <  -3)       =  0.40%
+  P(ev_mean <  -4)       =  0.09%
+  P(ev_mean <  -5)       =  0.02%
+  P(ev_mean <  -6)       =  0.00%
+  P(ev_mean <  -8)       =  0.00%
+  P(ev_mean < -10)       =  0.00%
+
+--- FEATURE signature of buyout-candidate hands (ev_mean < -4): ---
+  buyout-candidate hands: 5,599 ( 0.09%)
+
+  By category (buyout share vs base):
+    quads        buyout=34.93% base= 0.30% lift=117.36x
+    trips        buyout=45.31% base= 5.53% lift= 8.19x
+    trips_pair   buyout=19.72% base= 2.97% lift= 6.64x
+    three_pair   buyout= 0.00% base= 1.90% lift= 0.00x
+    two_pair     buyout= 0.02% base=22.27% lift= 0.00x
+    pair         buyout= 0.02% base=46.60% lift= 0.00x
+    high_only    buyout= 0.00% base=20.42% lift= 0.00x
+  n_pairs        buyout-candidate mean: 0.24  all-hands mean: 1.00
+  top_rank       buyout-candidate mean: 8.73  all-hands mean: 12.91
+  n_broadway     buyout-candidate mean: 0.39  all-hands mean: 2.69
+  n_low          buyout-candidate mean: 5.36  all-hands mean: 2.15
+  suit_max       buyout-candidate mean: 3.10  all-hands mean: 3.12
+  connectivity   buyout-candidate mean: 2.62  all-hands mean: 2.74
+
+--- Multiway buyout intuition (per-profile-INDEPENDENT decision): ---
+  In a 4-handed game with one opp from each profile,
+  distribution of #opps you should buy out from:
+    0 buyouts : 99.61%
+    1 buyouts :  0.05%
+    2 buyouts :  0.29%
+    3 buyouts :  0.04%
+    4 buyouts :  0.01%
+  At least 1 buyout :  0.39%
+  All 4 buyouts     :  0.01%
+  Total avg points saved/hand by selective buyout in 4-handed: +0.0056
+  Per-100-hands savings: +0.56 points

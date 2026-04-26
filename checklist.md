@@ -143,25 +143,36 @@
 - [ ] Run multiway analysis at full 6M hands (sample run is representative; full run for the published number)
 - [ ] Player-count-aware UI: surface "robust play" when 3+ players selected, with the unanimous-only structural rule (high card top, pair middle, double-suited bottom)
 
-- [ ] Export solver results with full feature extraction to Parquet/SQLite
-- [ ] Extract hand features (pair count, ranks, suits, connectivity, category)
-- [ ] Extract setting features (mid type, top rank, bot suitedness)
-- [ ] Pattern mining: pair-in-mid % by hand category and pair rank
-- [ ] Pattern mining: two pair — which pair goes where
-- [ ] Pattern mining: trips — verify third card never goes top
-- [ ] Pattern mining: unpaired — what 2-card combo goes mid
-- [ ] Pattern mining: suitedness impact (DS vs SS vs rainbow EV by hand type)
-- [ ] Pattern mining: when does optimal deviate from MiddleFirst? Full catalog
-- [ ] Pattern mining: top card EV by rank across all hands
-- [ ] Build decision tree: category → rank → suitedness → action
-- [ ] Implement decision tree as code (JSON/rules engine)
-- [ ] Validate decision tree on 100K+ random hands vs solver
-- [ ] Iterate decision tree until 95%+ agreement
-- [ ] Push toward 98%+ agreement with additional branches
+- [x] Export solver results with full feature extraction to Parquet/SQLite — `analysis/scripts/build_feature_table.py` → `data/feature_table.parquet` (6M hands × 51 cols, 208 MB) (Session 12)
+- [x] Extract hand features (pair count, ranks, suits, connectivity, category) — `tw_analysis.features.hand_features_batch` (Session 12)
+- [x] Extract setting features (mid type, top rank, bot suitedness) — `tier_features_batch` (Session 12)
+- [x] Pattern mining: pair-in-mid % by hand category and pair rank — `mine_patterns.py` section 5 (9+ pair → mid 93.5%; J+ 95%, A 99.65%) (Session 12)
+- [x] Pattern mining: two pair — which pair goes where — covered in three-pair section (`mid = highest pair` 75.4%) (Session 12)
+- [x] Pattern mining: trips — placement by rank — section 1 of `mine_patterns.py` (trips→mid 81% low rank, 99% high rank) (Session 12)
+- [x] Pattern mining: unpaired — top-card distribution measured (section 6 of `mine_patterns.py`) — but a focused mine on the no-pair (high_only) decision is Phase B priority
+- [x] Pattern mining: suitedness — DS vs connectivity tiebreaker measured (section 7); DS wins 1.8x when both feasible (Session 12)
+- [x] Pattern mining: top card cutoff by rank (section 6) (Session 12)
+- [x] Build decision tree (first cut): 7-rule chain in `analysis/scripts/encode_rules.py` (Session 12)
+- [x] Implement decision tree as code — `apply_rules(hand) → setting_index` in `encode_rules.py` (Session 12)
+- [x] Validate decision tree on 6M canonical hands vs multiway-robust — **53.58% shape-agreement** baseline; naive_104 baseline 21.77% (Session 12)
+- [ ] Iterate decision tree until 70%+ agreement (Phase B target — close `high_only` gap, the biggest miss category at 35% of all misses)
+- [ ] Push toward 95%+ agreement with conditional refinements
 - [ ] Agreement analysis: avg EV loss when tree disagrees
 - [ ] Comparison report: pre-solver heuristic vs solver
-- [ ] Catalog: top 100 most surprising solver decisions
+- [ ] Catalog: top surprising solver decisions
 - [ ] Catalog: hands where simple rules fail (edge cases)
+
+#### Buyout option analysis (Session 12)
+- [x] Empirical buyout-rate per opponent profile — vs MFSA 0.37%, vs TopDef 0.37%, vs OmahaFirst 0.01%, vs RandomWeighted 0.05%
+- [x] Mean-EV buyout rate (4-profile-mean < -4): 0.09% of hands
+- [x] Feature signature of buyout candidates — quads of 2-7 (lift 117x), pure low trips (8x), trips+low-pair (6.6x). NOT garbage hands (those are mildly bad, not catastrophic)
+- [x] 4-handed selective-buyout edge measurement: ~+0.56 points per 100 hands
+- [ ] Trainer integration: surface BUYOUT badge in trainer when ev_mean < -4 vs the active opponent profile
+
+#### Encode-then-measure methodology (Session 12)
+- [x] Inverse decoder `positions_to_setting_index` (round-trip-verified for all 105 settings)
+- [x] Shape-agreement metric (compare `(top_rank, sorted_mid_ranks, sorted_bot_ranks)`) — corrects for suit-position tie-break artifacts in literal `setting_index` comparison. Always use SHAPE for rule evaluation.
+- [x] Gemini Socratic dialogue on encode-vs-build-infrastructure-first (continuation_id ec08b754-69f3-479d-bb5a-c15fee965876); synthesized hybrid path
 - [ ] Quantify: EV gain of perfect play vs MiddleFirst
 - [ ] Generate: one-page decision flowchart
 - [ ] Generate: detailed rules per hand category with solver numbers

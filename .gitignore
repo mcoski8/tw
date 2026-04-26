@@ -12,6 +12,8 @@ data/results/
 data/pilot/
 data/*.json
 data/session*/*.json
+data/*.parquet
+data/*.log
 
 # Python
 __pycache__/
