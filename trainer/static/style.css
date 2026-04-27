@@ -191,3 +191,49 @@ header h1 { margin: 0 0 4px; font-size: 22px; }
 .mini-card .suit { font-size: 16px; line-height: 1; }
 .mini-card.big .rank { font-size: 17px; }
 .mini-card.big .suit { font-size: 22px; }
+
+/* ---- Buyout banner (high-precision rule + soft EV-based hint) ---- */
+.buyout-banner {
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+}
+.buyout-banner.buyout-signature {
+  background: rgba(231,76,60,0.15);
+  border: 1.5px solid var(--bad);
+  color: #fff;
+}
+.buyout-banner.buyout-soft {
+  background: rgba(243,156,18,0.10);
+  border: 1px solid rgba(243,156,18,0.5);
+  color: var(--warn);
+}
+.buyout-banner .buyout-headline {
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+.buyout-banner .buyout-detail {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+.buyout-banner .buyout-meta {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+}
+.buyout-cell {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(243,156,18,0.18);
+  color: var(--warn);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}

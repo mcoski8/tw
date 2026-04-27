@@ -20,6 +20,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from flask import Flask, jsonify, request, send_from_directory  # noqa: E402
 
+from trainer.src.buyout_eval import evaluate_buyout  # noqa: E402
 from trainer.src.dealer import deal_hand  # noqa: E402
 from trainer.src.engine import (  # noqa: E402
     DEFAULT_PROFILE_ID,
@@ -134,6 +135,9 @@ def api_score():
         is_match=is_match,
     )
 
+    buyout = evaluate_buyout(list(hand), best_ev=best_result.ev)
+    buyout["profile_label"] = profile.label
+
     return jsonify({
         "user": {
             "ev": user_result.ev,
@@ -153,6 +157,7 @@ def api_score():
         "findings": [asdict(f) for f in feedback.findings],
         "profile": {"id": profile.id, "label": profile.label},
         "samples": mc.samples,
+        "buyout": buyout,
     })
 
 
@@ -212,6 +217,8 @@ def api_compare():
     matches = 0
     worst_delta = -1e9
     worst_label = ""
+    soft_recommend_profiles = []
+    best_evs = []
     for profile, mc in results:
         try:
             user_idx = find_setting_index(mc, user_setting)
@@ -224,9 +231,14 @@ def api_compare():
         if is_match:
             matches += 1
         deltas.append(delta)
+        best_evs.append(best_r.ev)
         if delta > worst_delta:
             worst_delta = delta
             worst_label = profile.label
+        # Per-profile soft buyout signal: best-EV here is below the buyout cost.
+        per_profile_buyout = evaluate_buyout(list(hand), best_ev=best_r.ev)
+        if per_profile_buyout["soft_recommend"]:
+            soft_recommend_profiles.append(profile.label)
         per_profile.append({
             "profile": {"id": profile.id, "label": profile.label},
             "user": {"ev": user_r.ev, "setting_index": user_r.setting_index},
@@ -237,7 +249,14 @@ def api_compare():
             },
             "delta": delta,
             "is_match": is_match,
+            "buyout_soft": per_profile_buyout["soft_recommend"],
         })
+
+    # Hand-level buyout signature: doesn't depend on opponent. Use the worst
+    # best-EV across the panel as the headline expected loss.
+    worst_best_ev = min(best_evs) if best_evs else None
+    buyout = evaluate_buyout(list(hand), best_ev=worst_best_ev)
+    buyout["soft_profiles"] = soft_recommend_profiles
 
     return jsonify({
         "samples": SAMPLES,
@@ -248,6 +267,7 @@ def api_compare():
             "mean_delta":  sum(deltas) / len(deltas),
             "matches":     matches,
         },
+        "buyout": buyout,
     })
 
 

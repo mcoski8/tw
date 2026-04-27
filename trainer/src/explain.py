@@ -1,33 +1,64 @@
 """
-Heuristic explanation layer (v1, pre-Sprint-7).
+Rule-chain-grounded explanation layer (v2, post-Sprint-7-Phase-B).
 
-Given the user's submitted arrangement, the solver's best arrangement, and
-the full 105-setting EV table, produce human-readable feedback:
+Replaces the v1 hand-written heuristic detectors. For each hand the trainer
+now compares THREE arrangements:
 
-  * Severity tag (trivial / minor / moderate / major) based on EV delta
-  * Concrete structural diff: which cards moved between tiers
-  * A small library of common-mistake detectors that fire when a pattern
-    is present in the user's arrangement but not in the best arrangement
+  * USER  — what the player submitted.
+  * CHAIN — what strategy_v3 (the encoded rule chain) picks.
+  * BEST  — what the live MC against the chosen profile says is optimal.
 
-This is NOT solver-derived pattern mining. That's Sprint 7, when all 4
-opponent models are on disk. The rules below are hand-written heuristics
-based on the game rules and the Omaha 2+3 constraint. They'll be replaced
-or augmented as Sprint 7 mines real patterns from the .bin data.
+We surface the three-way relationship between these and ground each finding
+in measured rule-chain agreement on the hand's category. The category-level
+stats are baked from the latest full 6M scoring of strategy_v3 (see
+``analysis/scripts/encode_rules.py``).
 """
 from __future__ import annotations
 
+import sys
 from collections import Counter
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import List, Tuple
+
+import numpy as np
 
 from trainer.src.dealer import card_rank, card_suit
 
+# Allow tw_analysis + encode_rules import (analysis lives outside trainer).
+REPO_ROOT = Path(__file__).resolve().parents[2]
+ANALYSIS_SRC = REPO_ROOT / "analysis" / "src"
+ANALYSIS_SCRIPTS = REPO_ROOT / "analysis" / "scripts"
+for p in (str(ANALYSIS_SRC), str(ANALYSIS_SCRIPTS)):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+from tw_analysis.settings import Card  # noqa: E402
+from tw_analysis.features import (  # noqa: E402
+    CATEGORY_HIGH_ONLY, CATEGORY_PAIR, CATEGORY_TWO_PAIR,
+    CATEGORY_THREE_PAIR, CATEGORY_TRIPS, CATEGORY_TRIPS_PAIR, CATEGORY_QUADS,
+    hand_features_scalar, ID_TO_CATEGORY,
+)
+from encode_rules import (  # noqa: E402
+    decode_tier_positions, strategy_v3,
+)
+
+
+# Latest full-6M shape-agreement of strategy_v3 vs multiway-robust setting.
+# Source: analysis/scripts/encode_rules.py 2026-04-26 run.
+CATEGORY_AGREEMENT_V3 = {
+    CATEGORY_HIGH_ONLY:  0.3101,
+    CATEGORY_PAIR:       0.6502,
+    CATEGORY_TWO_PAIR:   0.6020,
+    CATEGORY_THREE_PAIR: 0.7288,
+    CATEGORY_TRIPS:      0.5639,
+    CATEGORY_TRIPS_PAIR: 0.4612,
+    CATEGORY_QUADS:      0.7920,
+}
+OVERALL_V3_SHAPE_AGREEMENT = 0.5616
+
 
 def _severity(delta: float) -> Tuple[str, str]:
-    """Return (tag, plain-English phrase) based on EV gap in points.
-
-    Phrase does NOT include a leading article — the caller wraps it.
-    """
     d = abs(delta)
     if d < 0.10:
         return "trivial", "essentially equivalent to the solver's pick"
@@ -40,184 +71,146 @@ def _severity(delta: float) -> Tuple[str, str]:
 
 @dataclass
 class Finding:
-    """One observation for the user. Ordered most-severe-first in output."""
-    title: str            # one-line headline, e.g. "You split a pair."
-    detail: str           # longer plain-English description
+    title: str
+    detail: str
 
 
 @dataclass
 class Feedback:
     user_ev: float
     best_ev: float
-    delta: float          # best_ev - user_ev (>= 0)
-    severity: str         # "trivial" | "minor" | "moderate" | "major"
-    severity_phrase: str  # human-readable
-    is_match: bool        # True iff user's setting index matches best
+    delta: float
+    severity: str
+    severity_phrase: str
+    is_match: bool
     findings: List[Finding] = field(default_factory=list)
-    summary: str = ""     # one-paragraph synthesis
+    summary: str = ""
 
 
-def _tiers(cards: List[str]) -> Tuple[str, Tuple[str, str], Tuple[str, str, str, str]]:
-    return cards[0], (cards[1], cards[2]), (cards[3], cards[4], cards[5], cards[6])
+# ---------------------------------------------------------------------------
+# Setting-shape utilities. The "shape" is the rank-only composition of each
+# tier — agreement-comparable across suit-equivalent settings.
+# ---------------------------------------------------------------------------
+
+def _hand_to_bytes_sorted(hand_strs: List[str]) -> np.ndarray:
+    arr = np.array([Card.parse(s).idx for s in hand_strs], dtype=np.uint8)
+    arr.sort()
+    return arr
 
 
-def _find_pairs(cards: List[str]) -> List[str]:
-    """Return list of ranks (as strings) that appear ≥2 times in the given cards."""
-    rank_count = Counter(card_rank(c) for c in cards)
-    return [r for r, n in rank_count.items() if n >= 2]
+def _shape_from_cards(cards: List[str]) -> tuple:
+    """(top_rank, sorted_mid_ranks_tuple, sorted_bot_ranks_tuple)."""
+    top_r = card_rank(cards[0])
+    mid_rs = tuple(sorted([card_rank(c) for c in cards[1:3]]))
+    bot_rs = tuple(sorted([card_rank(c) for c in cards[3:7]]))
+    return (top_r, mid_rs, bot_rs)
 
 
-def _tier_of(card: str, cards: List[str]) -> str:
-    i = cards.index(card)
-    if i == 0:
-        return "top"
-    if i in (1, 2):
-        return "middle"
-    return "bottom"
+def _chain_arrangement(hand_strs: List[str]) -> List[str]:
+    """Apply strategy_v3 and return cards in trainer order [top, m1, m2, b1..b4]."""
+    sorted_bytes = _hand_to_bytes_sorted(hand_strs)
+    setting_idx = strategy_v3(sorted_bytes)
+    top_pos, mid_pos, bot_pos = decode_tier_positions(setting_idx)
+    sorted_cards = [str(Card(int(b))) for b in sorted_bytes]
+    return [
+        sorted_cards[top_pos],
+        sorted_cards[mid_pos[0]], sorted_cards[mid_pos[1]],
+        sorted_cards[bot_pos[0]], sorted_cards[bot_pos[1]],
+        sorted_cards[bot_pos[2]], sorted_cards[bot_pos[3]],
+    ]
 
 
-def _suit_counts(tier_cards) -> Counter:
-    return Counter(card_suit(c) for c in tier_cards)
+def _hand_category(hand_strs: List[str]) -> str:
+    bytes_ = [Card.parse(s).idx for s in hand_strs]
+    hf = hand_features_scalar(bytes_)
+    return ID_TO_CATEGORY[int(hf["category_id"])]
 
 
-# --------------------------------------------------------------------------
-# Detectors. Each returns a Finding or None, comparing user vs best.
-# --------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Per-tier diff: which tier(s) of two settings have a different rank shape.
+# ---------------------------------------------------------------------------
 
-def detect_split_pair(user: List[str], best: List[str]) -> Finding | None:
-    """User split a pair across tiers that the solver kept together."""
-    best_pairs = _find_pairs(best)
-    user_pairs = _find_pairs(user)
-    # Pairs the solver DID play together.
-    for rank_val in best_pairs:
-        pair_cards_in_best = [c for c in best if card_rank(c) == rank_val]
-        best_tiers = {_tier_of(c, best) for c in pair_cards_in_best}
-        if len(best_tiers) > 1:
-            continue  # solver also split this pair — not a user-specific error
-        # How did the user place them?
-        pair_cards_in_user = [c for c in user if card_rank(c) == rank_val]
-        user_tiers = {_tier_of(c, user) for c in pair_cards_in_user}
-        if len(user_tiers) > 1:
-            rank_names = {14: "aces", 13: "kings", 12: "queens", 11: "jacks", 10: "tens"}
-            name = rank_names.get(rank_val, f"{rank_val}s")
-            return Finding(
-                title=f"You split a pair of {name}.",
-                detail=(
-                    f"The solver kept the pair of {name} together in one tier. "
-                    "Pairs usually produce more EV when combined — two of a "
-                    "rank in Omaha (bottom) qualify as the hand's two 'from hole' "
-                    "cards, and in Hold'em tiers (top/middle) they form a pair "
-                    "immediately regardless of board."
-                ),
-            )
-    _ = user_pairs  # reserved for a future "you created a pair that shouldn't exist" check
-    return None
+def _diff_tiers(s_a: tuple, s_b: tuple) -> List[str]:
+    out = []
+    if s_a[0] != s_b[0]:
+        out.append("top")
+    if s_a[1] != s_b[1]:
+        out.append("middle")
+    if s_a[2] != s_b[2]:
+        out.append("bottom")
+    return out
 
 
-def detect_isolated_bottom_suit(user: List[str], best: List[str]) -> Finding | None:
-    """
-    In Omaha (bottom), you must use EXACTLY 2 from hole + 3 from board.
-    A tier with 0, 1, or 3+ cards of a suit has no 'clean' flush
-    contribution. Specifically:
-      * 0-suited of any suit: no flush possible in that suit.
-      * 1-suited: no flush possible (need 2 from hole).
-      * 3+-suited of one suit: you only ever use 2, so the extras are
-        burned cards removed from the deck for nothing.
-    The strongest Omaha configuration is double-suited (2+2) — two flush
-    draws. If the solver's bottom has a double-suited layout and yours
-    doesn't, call that out.
-    """
-    u_bot = user[3:7]
-    b_bot = best[3:7]
-    u_sc = _suit_counts(u_bot)
-    b_sc = _suit_counts(b_bot)
+def _rank_seq(ranks: tuple) -> str:
+    return "-".join(_RANK_NAMES[r] for r in ranks)
 
-    def is_double_suited(sc: Counter) -> bool:
-        vals = sorted(sc.values(), reverse=True)
-        return vals[:2] == [2, 2]
 
-    if is_double_suited(b_sc) and not is_double_suited(u_sc):
+_RANK_NAMES = {
+    2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9",
+    10: "T", 11: "J", 12: "Q", 13: "K", 14: "A",
+}
+
+
+def _shape_phrase(s: tuple) -> str:
+    return (
+        f"top {_RANK_NAMES[s[0]]} | "
+        f"mid {_rank_seq(s[1])} | "
+        f"bot {_rank_seq(s[2])}"
+    )
+
+
+def _category_label(cat: str) -> str:
+    return {
+        CATEGORY_HIGH_ONLY:  "no-pair",
+        CATEGORY_PAIR:       "pair",
+        CATEGORY_TWO_PAIR:   "two-pair",
+        CATEGORY_THREE_PAIR: "three-pair",
+        CATEGORY_TRIPS:      "trips",
+        CATEGORY_TRIPS_PAIR: "trips+pair (full-house shape)",
+        CATEGORY_QUADS:      "quads",
+    }.get(cat, cat)
+
+
+# ---------------------------------------------------------------------------
+# Supplementary structural detector (kept from v1 — still useful regardless
+# of rule-chain comparison).
+# ---------------------------------------------------------------------------
+
+def _is_double_suited(tier_cards) -> bool:
+    counts = sorted(Counter(card_suit(c) for c in tier_cards).values(),
+                    reverse=True)
+    return len(counts) >= 2 and counts[0] == 2 and counts[1] == 2
+
+
+def _detect_isolated_bottom_suit(user: List[str], best: List[str]) -> Finding | None:
+    u_bot, b_bot = user[3:7], best[3:7]
+    if _is_double_suited(b_bot) and not _is_double_suited(u_bot):
         return Finding(
             title="Your bottom isn't double-suited.",
             detail=(
                 "Omaha's 2+3 rule means the strongest bottom holdings have "
-                "two pairs of suits (e.g. two spades + two hearts), giving "
-                "you two independent flush draws. The solver found a way to "
-                "arrange your four bottom cards as 2+2. Look for suit pairs "
-                "when setting the bottom."
+                "two pairs of suits (e.g. 2 spades + 2 hearts), giving you "
+                "two independent flush draws. The solver found a 2+2 "
+                "arrangement of your bottom cards."
             ),
         )
-
-    def has_three_of_a_suit(sc: Counter) -> bool:
-        return any(v >= 3 for v in sc.values())
-
-    if has_three_of_a_suit(u_sc) and not has_three_of_a_suit(b_sc):
+    u_sc = Counter(card_suit(c) for c in u_bot)
+    b_sc = Counter(card_suit(c) for c in b_bot)
+    if any(v >= 3 for v in u_sc.values()) and not any(v >= 3 for v in b_sc.values()):
         return Finding(
             title="You put 3+ of one suit in the bottom.",
             detail=(
-                "In Omaha you only ever use 2 of your 4 hole cards, so the "
-                "3rd (or 4th) card of a suit can never reach the flush. "
-                "Those extras also remove suited cards from the deck, "
-                "shrinking the board's chance of cooperating. The solver "
-                "spread the suits more evenly."
+                "Omaha lets you use only 2 of your 4 hole cards, so the "
+                "3rd or 4th card of a suit can never reach the flush — "
+                "those cards are wasted."
             ),
         )
     return None
 
 
-def detect_wrong_top_card(user: List[str], best: List[str]) -> Finding | None:
-    """
-    Top is a 1-card Hold'em tier. The solver's top is almost always one of
-    the two highest cards in the hand (often the Ace). If the user put a
-    notably weaker card on top, flag it.
-    """
-    if user[0] == best[0]:
-        return None
-    user_top_rank = card_rank(user[0])
-    best_top_rank = card_rank(best[0])
-    if best_top_rank - user_top_rank >= 2:
-        return Finding(
-            title=f"You put {user[0]} on top instead of a higher card.",
-            detail=(
-                f"The solver chose {best[0]} for the top tier — it's "
-                f"{best_top_rank - user_top_rank} rank(s) stronger. Top plays "
-                "as 1-card Hold'em (uses the 5-card board), so the single "
-                "card's own rank matters most. Lower cards play the board "
-                "more often and chop."
-            ),
-        )
-    return None
-
-
-def detect_tier_swap(user: List[str], best: List[str]) -> Finding | None:
-    """
-    If the user's middle and bottom are internally strong in total rank but
-    in the wrong tier (e.g. their strongest 4 are in middle/top rather than
-    bottom), note that swapping tiers would help.
-    """
-    u_mid_ranks = [card_rank(c) for c in user[1:3]]
-    u_bot_ranks = [card_rank(c) for c in user[3:7]]
-    b_mid_ranks = [card_rank(c) for c in best[1:3]]
-    b_bot_ranks = [card_rank(c) for c in best[3:7]]
-
-    if sorted(u_mid_ranks) == sorted(b_bot_ranks[:2]) and \
-       sorted(u_bot_ranks)[-2:] == sorted(b_mid_ranks):
-        return Finding(
-            title="You may have the middle and bottom tiers swapped.",
-            detail=(
-                "Your middle cards look like the solver's bottom-pair "
-                "selections and vice versa. Bottom scores 3 points per board "
-                "(vs 2 for middle), so stronger pairings generally belong "
-                "there — unless the Omaha 2+3 rule makes them less effective "
-                "than in Hold'em middle."
-            ),
-        )
-    return None
-
-
-# --------------------------------------------------------------------------
-# Entry point.
-# --------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Core: build_feedback — three-way comparison + rule-chain context.
+# ---------------------------------------------------------------------------
 
 def build_feedback(
     user_cards: List[str],
@@ -229,35 +222,116 @@ def build_feedback(
     delta = best_ev - user_ev
     severity, phrase = _severity(delta)
 
+    # All 7 cards in play (ranks identical regardless of where the user put them).
+    hand_strs = list(user_cards)
+
+    chain_cards = _chain_arrangement(hand_strs)
+    chain_shape = _shape_from_cards(chain_cards)
+    user_shape = _shape_from_cards(user_cards)
+    best_shape = _shape_from_cards(best_cards)
+
+    cat = _hand_category(hand_strs)
+    chain_acc = CATEGORY_AGREEMENT_V3.get(cat, OVERALL_V3_SHAPE_AGREEMENT)
+    cat_label = _category_label(cat)
+
+    user_eq_chain = (user_shape == chain_shape)
+    user_eq_best = (user_shape == best_shape)
+    chain_eq_best = (chain_shape == best_shape)
+
     findings: List[Finding] = []
-    if not is_match:
-        for detector in (
-            detect_split_pair,
-            detect_isolated_bottom_suit,
-            detect_wrong_top_card,
-            detect_tier_swap,
-        ):
-            f = detector(user_cards, best_cards)
-            if f is not None:
-                findings.append(f)
+
+    if user_eq_best and chain_eq_best:
+        # User matches both. Strongest possible signal.
+        findings.append(Finding(
+            title="Solver, rule chain, and your pick all agree.",
+            detail=(
+                f"The rule chain hits the solver's optimal on "
+                f"{100*chain_acc:.0f}% of {cat_label} hands; this is one of "
+                f"them, and you found it."
+            ),
+        ))
+    elif user_eq_chain and not chain_eq_best:
+        # User followed the chain but solver disagrees (~rule-chain failure).
+        findings.append(Finding(
+            title="You followed the rule chain — this hand is one of its misses.",
+            detail=(
+                f"The rule chain matches the solver on {100*chain_acc:.0f}% "
+                f"of {cat_label} hands; this hand is in the remaining "
+                f"{100*(1-chain_acc):.0f}%. Solver's pick: "
+                f"{_shape_phrase(best_shape)}."
+            ),
+        ))
+    elif user_eq_best and not user_eq_chain:
+        # User beat the chain by finding the solver's answer.
+        findings.append(Finding(
+            title="You picked the solver's answer — better than the rule chain.",
+            detail=(
+                f"On {cat_label} hands the rule chain matches the solver "
+                f"{100*chain_acc:.0f}% of the time; here it picked "
+                f"{_shape_phrase(chain_shape)} but the solver wanted "
+                f"{_shape_phrase(best_shape)}, which is what you played."
+            ),
+        ))
+    elif chain_eq_best and not user_eq_chain:
+        # Solver and chain agree, user differs.
+        diffs = _diff_tiers(user_shape, best_shape)
+        diff_str = ", ".join(diffs) if diffs else "tier composition"
+        findings.append(Finding(
+            title=(f"Your {diff_str} differs from both the rule chain and "
+                   f"the solver."),
+            detail=(
+                f"Both agree on {_shape_phrase(best_shape)}. The rule chain "
+                f"matches the solver on {100*chain_acc:.0f}% of {cat_label} "
+                f"hands — this is one of those clean cases."
+            ),
+        ))
+    else:
+        # All three differ. Hardest case.
+        findings.append(Finding(
+            title="Your pick differs from both the rule chain and the solver.",
+            detail=(
+                f"Rule chain: {_shape_phrase(chain_shape)}. "
+                f"Solver: {_shape_phrase(best_shape)}. "
+                f"You played: {_shape_phrase(user_shape)}. "
+                f"On {cat_label} hands the rule chain matches the solver "
+                f"{100*chain_acc:.0f}% of the time, so neither line is "
+                f"obviously dominant — likely an opponent-dependent decision."
+            ),
+        ))
+
+    # Per-tier diff vs solver as a separate, concrete finding when not a match.
+    if not user_eq_best:
+        tier_diffs = _diff_tiers(user_shape, best_shape)
+        if tier_diffs:
+            findings.append(Finding(
+                title=f"Different tier(s) from solver: {', '.join(tier_diffs)}.",
+                detail=(
+                    f"Your shape: {_shape_phrase(user_shape)}.  "
+                    f"Solver shape: {_shape_phrase(best_shape)}."
+                ),
+            ))
+
+    # Always-relevant supplementary detector: bottom-suit composition.
+    bot_finding = _detect_isolated_bottom_suit(user_cards, best_cards)
+    if bot_finding is not None:
+        findings.append(bot_finding)
 
     if is_match:
         summary = (
-            f"Perfect — your arrangement matches the solver's best response "
-            f"(EV {best_ev:+.3f}). "
+            f"Perfect — your arrangement matches the solver (EV {best_ev:+.3f})."
+        )
+    elif delta < 0.01:
+        summary = (
+            f"Your arrangement differs from the solver but EVs are essentially "
+            f"tied ({user_ev:+.3f} vs {best_ev:+.3f})."
         )
     else:
-        if delta < 0.01:
-            summary = (
-                f"Your arrangement isn't identical to the solver's, but the "
-                f"EVs are essentially tied ({user_ev:+.3f} vs {best_ev:+.3f}, "
-                f"delta {delta:+.3f})."
-            )
-        else:
-            summary = (
-                f"Your EV was {user_ev:+.3f}; the solver's best was "
-                f"{best_ev:+.3f} — a {phrase} of {delta:+.3f} points."
-            )
+        summary = (
+            f"Your EV was {user_ev:+.3f}; the solver's best was "
+            f"{best_ev:+.3f} — a {phrase} of {delta:+.3f} points. "
+            f"This is a {cat_label} hand; the rule chain matches the solver "
+            f"{100*chain_acc:.0f}% of the time on this category."
+        )
 
     return Feedback(
         user_ev=user_ev,

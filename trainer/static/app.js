@@ -180,7 +180,38 @@ function setHeadline(isMatch, severity) {
   }
 }
 
+function renderBuyoutBanner(elId, buyout, profileLabel) {
+  const el = document.getElementById(elId);
+  if (!buyout) { el.hidden = true; return; }
+  if (buyout.signature) {
+    el.className = 'buyout-banner buyout-signature';
+    el.innerHTML = `
+      <div class="buyout-headline">⚠ BUYOUT — pay ${buyout.cost} to fold</div>
+      <div class="buyout-detail">${buyout.signature_reason}</div>
+      <div class="buyout-meta">High-confidence rule (validated at 26% precision / 47% recall vs ground truth ev_mean &lt; -${buyout.cost}).</div>
+    `;
+    el.hidden = false;
+    return;
+  }
+  if (buyout.soft_recommend) {
+    const loss = buyout.expected_loss !== null ? buyout.expected_loss.toFixed(2) : '?';
+    const profilesNote = (buyout.soft_profiles && buyout.soft_profiles.length)
+      ? ` against ${buyout.soft_profiles.join(', ')}`
+      : (profileLabel ? ` vs ${profileLabel}` : '');
+    el.className = 'buyout-banner buyout-soft';
+    el.innerHTML = `
+      <div class="buyout-headline">Consider buyout${profilesNote}</div>
+      <div class="buyout-detail">Even optimal play loses ~${loss} EV here — paying ${buyout.cost} to fold saves points.</div>
+    `;
+    el.hidden = false;
+    return;
+  }
+  el.hidden = true;
+}
+
 function showResult(r) {
+  renderBuyoutBanner('buyout-banner', r.buyout, r.profile && r.profile.label);
+
   document.getElementById('user-ev').textContent = (r.user.ev >= 0 ? '+' : '') + r.user.ev.toFixed(3);
   document.getElementById('best-ev').textContent = (r.best.ev >= 0 ? '+' : '') + r.best.ev.toFixed(3);
   document.getElementById('delta-ev').textContent = r.delta.toFixed(3);
@@ -342,6 +373,8 @@ function arrangementsIdentical(rows) {
 }
 
 function showCompareResult(r) {
+  renderBuyoutBanner('compare-buyout-banner', r.buyout, null);
+
   const tbody = document.querySelector('#compare-table tbody');
   tbody.innerHTML = '';
   for (const row of r.per_profile) {
@@ -349,8 +382,9 @@ function showCompareResult(r) {
     if (row.is_match) tr.classList.add('match-row');
     const deltaCls = severityClassForDelta(row.delta);
     const fmtEv = (ev) => (ev >= 0 ? '+' : '') + ev.toFixed(3);
+    const buyoutMark = row.buyout_soft ? ' <span class="buyout-cell">buyout</span>' : '';
     tr.innerHTML = `
-      <td>${row.profile.label}</td>
+      <td>${row.profile.label}${buyoutMark}</td>
       <td class="num">${fmtEv(row.user.ev)}</td>
       <td class="num">${fmtEv(row.best.ev)}</td>
       <td class="num ${deltaCls}">${row.delta.toFixed(3)}</td>

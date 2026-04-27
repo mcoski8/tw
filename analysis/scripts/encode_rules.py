@@ -550,6 +550,237 @@ def strategy_refined_v2(hand: np.ndarray) -> int:
 
 
 # ----------------------------------------------------------------------
+# Strategy 5: V3 — refined_v2 + two_pair-aware conditionals.
+#
+# Empirical basis (probe_two_pair.py over 6M hands):
+#   * AAKK (14,13): robust picks LOW pair (KK) → mid 60.9% of the time.
+#     This is the ONLY high-pair pair where low → mid wins; KKQQ down to
+#     TT99 still go high → mid 67-69%.
+#   * Low two_pair (high ≤ 5): "no pair in mid" (both pairs → bot, mid =
+#     two highest singletons) is the modal robust answer 41-56% of the
+#     time on (3,2)/(4,2)/(4,3)/(5,2)/(5,3); the (5,4) cell narrowly
+#     prefers low → mid (39%) but no-pair-mid is still 34%, and either
+#     beats high → mid (27%).
+#
+# Combined predicted gain: ~0.3pp overall. Both rules are cleanly
+# conditional and don't regress the dominant two_pair behaviour
+# (high pair ≥ 6, non-AAKK still uses high → mid).
+# ----------------------------------------------------------------------
+
+def strategy_v3(hand: np.ndarray) -> int:
+    d = hand_decompose(hand)
+    pairs_desc = d["pairs"]
+    trips_desc = d["trips"]
+    quads_desc = d["quads"]
+
+    # Quads / trips_pair / pure trips: same as refined_v2 (top via search).
+    if quads_desc:
+        quad_rank, qpos = quads_desc[0]
+        mid = (qpos[0], qpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+    if trips_desc and pairs_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+    if trips_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # Two-pair refinements before the generic "high pair → mid".
+    if len(pairs_desc) == 2:
+        (high_rank, hpos), (low_rank, lpos) = pairs_desc[0], pairs_desc[1]
+
+        # AAKK exception: low pair (KK) goes to mid.
+        if high_rank == 14 and low_rank == 13:
+            mid = (lpos[0], lpos[1])
+            top = _best_top_for_locked_mid(d, mid)
+            return positions_to_setting_index(top, mid)
+
+        # Low two_pair: both pairs to bot, mid = highest 2 singletons.
+        if high_rank <= 5:
+            singletons_desc = d["singletons"]
+            top_pos = singletons_desc[0][1]
+            mid_a, mid_b = singletons_desc[1][1], singletons_desc[2][1]
+            return positions_to_setting_index(top_pos, (mid_a, mid_b))
+
+        # Default two_pair: high pair → mid (refined_v2 default).
+        mid = (hpos[0], hpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # Three pair / single pair: same as refined_v2.
+    if pairs_desc:
+        pair_rank, ppos = pairs_desc[0]
+        mid = (ppos[0], ppos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # High_only via search.
+    top_pos, mid = _hi_only_pick(d)
+    return positions_to_setting_index(top_pos, mid)
+
+
+# ----------------------------------------------------------------------
+# Strategy 6: V4 — V3 + rebalanced bot weights for pair/two_pair/quads
+# top selection AND for the high_only mid+bot search.
+#
+# Rationale: probe_pair and the per-profile breakdown both show that
+# strategy_v3 picks top=highest-singleton in 100% of pair hands, but
+# robust prefers a different top in 23% of cases — usually one that
+# enables a better bot configuration (DS or 4-card rundown). The fix
+# is to make the bot's structural advantages weigh more relative to
+# top_pref so the search swaps top when the bot-shape gain is real.
+#
+# Specific changes:
+#   _score_top_choice_for_locked_mid:
+#     top_pref +5 unchanged
+#     bot DS    3 -> 4
+#     bot conn  1 -> 2
+#   _hi_only_pick:
+#     bot DS   5 -> 5 unchanged
+#     bot conn 2 -> 3
+#     mid weights unchanged
+# ----------------------------------------------------------------------
+
+def _score_top_choice_v4(d: dict, top: int, mid: tuple[int, int]) -> float:
+    suits = d["suits"]
+    ranks = d["ranks"]
+    bot_pos = tuple(p for p in range(7) if p != top and p not in mid)
+    bot_ds = _bot_is_double_suited_at(suits, bot_pos)
+    bot_ranks_sorted = sorted(int(ranks[p]) for p in bot_pos)
+    bot_conn = _max_run_in_ranks(bot_ranks_sorted)
+
+    sing_positions = [p for (_, p) in d["singletons"]]
+    if sing_positions and top == sing_positions[0]:
+        top_pref = 5.0
+    elif top in sing_positions:
+        top_pref = 0.0
+    else:
+        top_pref = -10.0
+
+    score = top_pref
+    if bot_ds:
+        score += 4.0       # was 3
+    if bot_conn >= 4:
+        score += 2.0       # was 1
+    score += int(ranks[top]) / 100.0
+    return score
+
+
+def _best_top_for_locked_mid_v4(d: dict, mid: tuple[int, int]) -> int:
+    candidates = [p for p in range(7) if p not in mid]
+    best_top = candidates[0]
+    best_score = -1e18
+    for t in candidates:
+        s = _score_top_choice_v4(d, t, mid)
+        if s > best_score:
+            best_score = s
+            best_top = t
+    return best_top
+
+
+def _hi_only_pick_v4(d: dict) -> tuple[int, tuple[int, int]]:
+    """Same structure as v3's _hi_only_pick but bot conn weight 2 -> 3."""
+    ranks = d["ranks"]
+    suits = d["suits"]
+    sing = d["singletons"]
+
+    top_pos = sing[0][1]
+    remaining = [i for i in range(7) if i != top_pos]
+
+    best_score = -1e9
+    best_mid: tuple[int, int] = (remaining[0], remaining[1])
+    for ai in range(6):
+        for bi in range(ai + 1, 6):
+            mid_a, mid_b = remaining[ai], remaining[bi]
+            bot_pos = tuple(p for p in remaining if p not in (mid_a, mid_b))
+
+            ra, rb = int(ranks[mid_a]), int(ranks[mid_b])
+            mid_hi, mid_lo = max(ra, rb), min(ra, rb)
+            mid_suited = int(suits[mid_a]) == int(suits[mid_b])
+            mid_gap = mid_hi - mid_lo
+            mid_connected = mid_gap <= 2
+
+            bot_ranks_sorted = sorted(int(ranks[p]) for p in bot_pos)
+            bot_ds = _bot_is_double_suited_at(suits, bot_pos)
+            bot_conn = _max_run_in_ranks(bot_ranks_sorted)
+            bot_n_bw = sum(1 for r in bot_ranks_sorted if r >= 10)
+
+            score = 0.0
+            if mid_suited and mid_connected:
+                score += 6.0
+            elif mid_suited:
+                score += 4.0
+            elif mid_connected:
+                score += 2.0
+            if bot_ds:
+                score += 5.0
+            if bot_conn >= 4:
+                score += 3.0     # was 2 — explicit rundown bonus
+            if bot_n_bw >= 2:
+                score += 1.0
+            score += (mid_hi + mid_lo) / 100.0
+
+            if score > best_score:
+                best_score = score
+                best_mid = (mid_a, mid_b)
+
+    return top_pos, best_mid
+
+
+def strategy_v4(hand: np.ndarray) -> int:
+    d = hand_decompose(hand)
+    pairs_desc = d["pairs"]
+    trips_desc = d["trips"]
+    quads_desc = d["quads"]
+
+    if quads_desc:
+        quad_rank, qpos = quads_desc[0]
+        mid = (qpos[0], qpos[1])
+        top = _best_top_for_locked_mid_v4(d, mid)
+        return positions_to_setting_index(top, mid)
+    if trips_desc and pairs_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        top = _best_top_for_locked_mid_v4(d, mid)
+        return positions_to_setting_index(top, mid)
+    if trips_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        top = _best_top_for_locked_mid_v4(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # Two_pair refinements (inherited from v3).
+    if len(pairs_desc) == 2:
+        (high_rank, hpos), (low_rank, lpos) = pairs_desc[0], pairs_desc[1]
+        if high_rank == 14 and low_rank == 13:  # AAKK
+            mid = (lpos[0], lpos[1])
+            top = _best_top_for_locked_mid_v4(d, mid)
+            return positions_to_setting_index(top, mid)
+        if high_rank <= 5:
+            singletons_desc = d["singletons"]
+            top_pos = singletons_desc[0][1]
+            mid_a, mid_b = singletons_desc[1][1], singletons_desc[2][1]
+            return positions_to_setting_index(top_pos, (mid_a, mid_b))
+        mid = (hpos[0], hpos[1])
+        top = _best_top_for_locked_mid_v4(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    if pairs_desc:
+        pair_rank, ppos = pairs_desc[0]
+        mid = (ppos[0], ppos[1])
+        top = _best_top_for_locked_mid_v4(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    top_pos, mid = _hi_only_pick_v4(d)
+    return positions_to_setting_index(top_pos, mid)
+
+
+# ----------------------------------------------------------------------
 # Scorer.
 # ----------------------------------------------------------------------
 
@@ -559,6 +790,8 @@ STRATEGIES = {
     "refined":        strategy_refined,
     "hi_only_search": strategy_hi_only_search,
     "refined_v2":     strategy_refined_v2,
+    "v3":             strategy_v3,
+    "v4":             strategy_v4,
 }
 
 
@@ -657,8 +890,10 @@ def main() -> int:
     print(f"  {n_total:,} hands")
 
     print(f"Loading feature table from {args.table}…")
-    df = pq.read_table(args.table, columns=["category", "agreement_class",
-                                              "multiway_robust"]).to_pandas()
+    df = pq.read_table(args.table, columns=[
+        "category", "agreement_class", "multiway_robust",
+        "br_mfsuitaware", "br_omaha", "br_topdef", "br_weighted",
+    ]).to_pandas()
     print(f"  {len(df):,} rows")
 
     if args.limit > 0:
@@ -712,6 +947,33 @@ def main() -> int:
             v = results[name]["by_agreement_class_shape"].get(ac, float("nan"))
             row += f" {100*v:>9.2f}%"
         print(row)
+
+    # ------------------------------------------------------------------
+    # Per-profile shape-agreement table for the WINNING strategy.
+    # ------------------------------------------------------------------
+    winner_name = max(STRATEGIES, key=lambda n: results[n]["overall_shape"])
+    print()
+    print("=" * 78)
+    print(f"PER-PROFILE SHAPE-AGREEMENT for '{winner_name}'  (vs each "
+          f"opponent's BR setting)")
+    print("=" * 78)
+    pred = results[winner_name]["predictions"]
+    for col_name, label in [
+        ("multiway_robust", "multiway_robust (mode of 4)"),
+        ("br_mfsuitaware",  "vs MFSuitAware (modal opp)"),
+        ("br_omaha",        "vs OmahaFirst"),
+        ("br_topdef",       "vs TopDefensive"),
+        ("br_weighted",     "vs RandomWeighted"),
+    ]:
+        target = df[col_name].values.astype(np.uint8)
+        # Compute SHAPE agreement, not literal — same metric the headline uses.
+        shape_match = np.empty(len(pred), dtype=bool)
+        for i in range(len(pred)):
+            shape_match[i] = (
+                setting_shape(cards[i], int(pred[i]))
+                == setting_shape(cards[i], int(target[i]))
+            )
+        print(f"  {label:<35}  {100*shape_match.mean():>6.2f}%")
 
     print()
     print("=" * 78)

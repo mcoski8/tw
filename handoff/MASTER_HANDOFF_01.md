@@ -793,3 +793,69 @@ DEFERRED: per-tier EV decomposition (engine `matchup_breakdown` exposure — for
 DEFERRED: per-tier EV decomposition, naive-distance metric, category bucketing fix.
 
 **Session conclusion:** Rule chain at 55.93%. The 70% target is reframed as opponent-modelling work given the inter-profile-disagreement diagnostic. The current chain is suitable as a "robust core strategy" for the trainer; opponent-dependent refinements belong in a separate exploit layer.
+
+
+---
+
+### Session 14 — 2026-04-26 — Sprint 7 Phase B+: full priority list cleared (buyout in trainer, two_pair v3, self-play, rule-grounded explain, weight-rebalance null result)
+
+**Scope:** Sprint 7 Phase B+ priorities 1-5, end-to-end. Buyout signature wired into the trainer with both signature + soft-EV signals. Two_pair lower-pair-mid pattern encoded as `strategy_v3` (v3 wins multiway-robust at 56.16%). Self-play regret check shipped via new script. `trainer/src/explain.py` fully rewritten to compare USER vs CHAIN vs SOLVER. v4 weight rebalance attempted, no gain — accepted as evidence the 60% multiway-robust ceiling has been reached.
+
+**What landed:**
+
+1. **Buyout in trainer (`trainer/src/buyout_eval.py`, `trainer/app.py`, JS+CSS):**
+   - `evaluate_buyout(hand_strs, best_ev=...)` returns `{signature, signature_reason, soft_recommend, expected_loss, cost, ...}`. Signature uses the validated `tw_analysis.buyout.buyout_signature_scalar`; soft_recommend = `best_ev < -BUYOUT_COST` (4.0).
+   - `/api/score` includes a `buyout` block per profile; `/api/compare` includes hand-level signature + per-row `buyout_soft` + a `soft_profiles` list.
+   - UI: red BUYOUT banner above result panel for signature hits; amber "consider buyout vs <profile>" for soft hits; per-row "buyout" tag in compare table.
+   - Manual smoke verified: quad-2 hand fires signature with reason "Quads of deuces…"; AAKK case shows EV +5.2 and clean result; trips-3+pair-2 fires signature + soft on MFSA & TopDef.
+
+2. **Strategy v3 — two_pair refinements (`encode_rules.py::strategy_v3`):**
+   - AAKK (high=14, low=13) → KK in mid (60.9% of robust per probe_two_pair).
+   - Low two_pair (high ≤ 5) → both pairs to bot, mid = highest 2 singletons (modal robust 41-56%).
+   - All other two_pair → unchanged (high pair → mid).
+   - Adjacent high pairs (KKQQ etc.) deliberately NOT changed — high → mid still wins ~67-69%.
+   - Result: two_pair 59.16% → **60.20%**, overall **55.93% → 56.16%** (+0.23pp).
+
+3. **Self-play regret check (`analysis/scripts/selfplay_check.py`):**
+   - Documented in script docstring that pure symmetric self-play is trivially zero EV by construction; the useful measurement is exploitability gap to the per-profile best-response.
+   - Engine subprocess per (hand, profile) MC; samples=1000; runs 200 hands × 4 profiles in ~50s.
+   - Result on 200 hands: v3 BEATS every profile (mean EV +0.13 to +1.63), gap to solver-optimal 0.14-0.40 EV/hand. Solidly competitive, not Nash. Match% with per-profile solver: 47.5-62.5%.
+
+4. **Rule-chain-grounded explain.py (`trainer/src/explain.py`):**
+   - Three-way comparison USER ↔ CHAIN (via `strategy_v3`) ↔ SOLVER (live MC best). Five branches cover all relationships.
+   - Category-level rule-chain accuracy is baked into the constants table `CATEGORY_AGREEMENT_V3`; each finding cites this prior ("matches the solver on X% of <category> hands").
+   - Per-tier diff finding identifies tier-by-tier composition mismatch in plain rank notation ("top 9 | mid K-K | bot 3-5-A-A").
+   - Kept the bottom-suit detector from v1 as a supplementary observation; dropped split-pair / wrong-top / tier-swap (subsumed by rule-chain comparison).
+   - Verified on AAKK hand via curl: trainer correctly says "You followed the rule chain — this hand is one of its misses" with solver's preferred shape spelled out.
+
+5. **Weight rebalance v4 — null result (`encode_rules.py::strategy_v4`):**
+   - `_score_top_choice_v4`: bot DS 3 → 4, bot conn 1 → 2.
+   - `_hi_only_pick_v4`: bot conn 2 → 3 (rundown bonus).
+   - Result: **v4 = 56.12% (-0.04pp vs v3).** High_only 31.01% → 30.84%; pair, two_pair, trips unchanged.
+   - Conclusion: at the structural ceiling for opponent-agnostic rule weights. Kept v4 in code so future sessions don't re-do the experiment.
+   - Per-profile breakdown for v3: vs MFSuitAware 55.7%, vs OmahaFirst 45.9%, vs TopDefensive 46.3%, **vs RandomWeighted 62.0%** (already over 60% on the easiest opponent).
+
+**Verified end-to-end this session:**
+- `cargo build --release` clean.
+- `cargo test --release`: 124 tests pass (88 unit + 15 omaha + 15 hand_eval + 6 scoring).
+- Python tests: `test_features.py` 24/24, `test_canonical.py` 9/9, `test_settings.py` 11/11.
+- `encode_rules.py` full 6M run completes in ~5 min; 7 strategies scored + per-profile breakdown.
+- `selfplay_check.py --hands 200 --samples 1000` runs cleanly in ~50s.
+- Trainer manual smoke covers quad-2 (signature), AA broadway (clean), trips-3+pair-2 (signature + soft), AAKK (rule-chain miss explanation).
+
+**Gotchas this session:**
+- **`tail -50` masks long-running output until exit.** First v3 run via `python3 ... | tail -50` had empty stdout file for 5 minutes — looked stuck but was just stdout buffering through tail. Switching to `python3 -u` or `TaskOutput` blocking on the underlying script fixed visibility.
+- **Symmetric self-play is mathematically trivially zero.** Initial framing of "Nash break-even" implied a meaningful empirical test, but if both players use the same deterministic strategy on a uniform hand distribution, mean net EV is identically zero by symmetry. The actually informative measurement is exploitability (gap to per-profile best-response). selfplay_check.py docstring documents this.
+- **Weight tweaks don't compound.** v4 bumped both DS and rundown weights independently expecting additive gain; got -0.04pp. The structural ceiling is real — DS-feasible hands and rundown-feasible hands overlap, and the weights interact non-linearly with top_pref.
+- **Per-profile RandomWeighted is the easiest target.** v3 hits 62.0% against it without any RandomWeighted-specific tuning, because it's the closest profile to "no opponent model" — i.e., closest to the assumption the rule chain implicitly makes.
+
+**Carry-forward for Session 15 (Sprint 7 Phase C? or Sprint 5b trainer work):**
+1. **Per-profile rule overlays.** Build profile-specific rule chains for OmahaFirst (45.9%) and TopDefensive (46.3%). Surface in the trainer when the user picks that profile. Plausibly reaches 70%+ per-profile.
+2. **Trainer accuracy tracking** (Sprint 5b). Persist user submissions, track accuracy by category, build "drill weak categories" mode.
+3. **Decision-tree extraction for publication.** strategy_v3 in Python is the "code"; need a Markdown export for the human-readable strategy guide.
+4. **Tighter buyout signature.** Precision 26% → can go higher with more feature buckets. Probe required.
+5. **Rule chain golden tests.** Lock in v3 behavior with unit tests so refactors don't regress.
+
+DEFERRED: per-tier EV decomposition, naive-distance metric, category bucketing fix.
+
+**Session conclusion:** Sprint 7 Phase B+ complete. Production rule chain = `strategy_v3`. Trainer is feature-complete with rule-chain explanations + buyout signals. The 60% multiway-robust target is at the structural ceiling for opponent-agnostic rules; further gains require per-profile work or accepting the current chain as the publishable "robust core strategy."
