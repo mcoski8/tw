@@ -1,5 +1,7 @@
 # Current: Sprint 7 Phase C/C+ shipped — per-profile overlays + golden tests for v3 and overlays. Decision-tree extraction methodology agreed with Gemini 2.5 Pro; Phase D pipeline ready, blocked on macOS TCC permission glitch (transient).
 
+> **🔥 IMMEDIATE NEXT ACTION (Session 16):** Run `python3 analysis/scripts/dt_phase1.py` from project root. It prints a depth-vs-agreement table that determines whether the 95% multiway-robust target is structurally reachable. Then continue with Phase D step 2 (extract chosen depth → Python if/elif → byte-identical parity check → EV-loss backtest). Full methodology + carry-forward at the bottom of this file under "Resume Prompt (next session)."
+
 > Updated: 2026-04-27 (end of Session 15)
 > Previous sprint status: Session 14 finalized strategy_v3 at 56.16% multiway-robust shape-agreement and declared rule chain Phase-B-final at structural ceiling for opponent-agnostic 7-rule chain.
 
