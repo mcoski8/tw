@@ -85,26 +85,26 @@ CHAIN_AGREEMENT_BY_PROFILE = {
         CATEGORY_TRIPS_PAIR: 0.5785,
         CATEGORY_QUADS:      0.8371,
     },
-    # omaha uses strategy_omaha_overlay; agreement vs br_omaha (300K sample).
+    # omaha uses strategy_omaha_overlay (Phase C+); vs br_omaha (300K sample).
     "omaha": {
-        "overall": 0.5469,
+        "overall": 0.5516,
         CATEGORY_HIGH_ONLY:  0.2585,
         CATEGORY_PAIR:       0.6349,
         CATEGORY_TWO_PAIR:   0.6325,
-        CATEGORY_THREE_PAIR: 0.2996,
+        CATEGORY_THREE_PAIR: 0.5414,
         CATEGORY_TRIPS:      0.6034,
         CATEGORY_TRIPS_PAIR: 0.5504,
         CATEGORY_QUADS:      0.8360,
     },
-    # topdef uses strategy_topdef_overlay; agreement vs br_topdef (300K sample).
+    # topdef uses strategy_topdef_overlay (Phase C+); vs br_topdef (300K sample).
     "topdef": {
-        "overall": 0.5014,
+        "overall": 0.5107,
         CATEGORY_HIGH_ONLY:  0.2631,
         CATEGORY_PAIR:       0.5830,
-        CATEGORY_TWO_PAIR:   0.5415,
+        CATEGORY_TWO_PAIR:   0.5433,
         CATEGORY_THREE_PAIR: 0.7386,
-        CATEGORY_TRIPS:      0.4951,
-        CATEGORY_TRIPS_PAIR: 0.4041,
+        CATEGORY_TRIPS:      0.5949,
+        CATEGORY_TRIPS_PAIR: 0.5159,
         CATEGORY_QUADS:      0.7472,
     },
 }

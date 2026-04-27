@@ -914,10 +914,16 @@ def strategy_omaha_overlay(hand: np.ndarray) -> int:
         top = _best_top_for_locked_mid(d, mid)
         return positions_to_setting_index(top, mid)
 
-    # Three-pair: same as v3 (high pair → mid).
+    # Three-pair: premium-pair-flip (Session 15 Phase C+ mining).
+    #   high_pair ≥ 13 → high→BOT, mid_pair→MID (73% B/M/B vs 4% v3-default).
+    #   Other bands: v3 default (high→MID).
     if len(pairs_desc) == 3:
-        pair_rank, ppos = pairs_desc[0]
-        mid = (ppos[0], ppos[1])
+        (high_rank, hpos), (mid_rank, mpos), _ = pairs_desc
+        if high_rank >= 13:
+            mid = (mpos[0], mpos[1])    # mid pair → MID
+            top = _best_top_for_locked_mid(d, mid)
+            return positions_to_setting_index(top, mid)
+        mid = (hpos[0], hpos[1])
         top = _best_top_for_locked_mid(d, mid)
         return positions_to_setting_index(top, mid)
 
@@ -1021,41 +1027,60 @@ def _hi_only_pick_topdef(d: dict) -> tuple[int, tuple[int, int]]:
 
 def strategy_topdef_overlay(hand: np.ndarray) -> int:
     """
-    v3 with the top-sacrifice rule applied ONLY to single-pair and
-    high_only branches — the two categories where the empirical mining
-    showed large divergence (50.9% / 23.5%). Quads / trips / trips_pair /
-    two_pair / three_pair use v3 unchanged because applying the
-    top-sacrifice rule there caused -5 to -10pp regressions in measurement
-    (initial-version Session 15 finding).
+    Per-profile overlay tuned for TopDefensive opponents.
+
+    Phase C (Session 15) — initial overlay:
+      * Single-pair / high_only → top-sacrifice via _topdef_top_pick.
+
+    Phase C+ (Session 15, residual mining):
+      * Premium trips (rank ≥ 13): top = 1 trip card, mid = 2 trip cards
+        (86% modal on premium trips; 14% v3-default — clean signal). Both
+        pure-trips and trips_pair branches.
+      * Two-pair AAKK reverse: high pair (AA) → MID (48% modal vs 30% v3
+        bot/mid). Implemented by NOT special-casing AAKK — it falls
+        through to the default high-pair-to-mid branch.
+
+    Other categories (quads, two_pair non-AAKK, three_pair) use v3
+    behaviour because the residual mine showed v3-default is modal.
     """
     d = hand_decompose(hand)
     pairs_desc = d["pairs"]
     trips_desc = d["trips"]
     quads_desc = d["quads"]
 
-    # Quads / trips_pair / pure trips / two_pair / three_pair: same as v3.
     if quads_desc:
         quad_rank, qpos = quads_desc[0]
         mid = (qpos[0], qpos[1])
         top = _best_top_for_locked_mid(d, mid)
         return positions_to_setting_index(top, mid)
+
+    # Trips_pair: premium trips (≥13) get the top-trip-mid-trip break-down.
     if trips_desc and pairs_desc:
         trip_rank, tpos = trips_desc[0]
-        mid = (tpos[0], tpos[1])
-        top = _best_top_for_locked_mid(d, mid)
-        return positions_to_setting_index(top, mid)
-    if trips_desc:
-        trip_rank, tpos = trips_desc[0]
+        if trip_rank >= 13:
+            top = tpos[0]                        # one trip card on top
+            mid = (tpos[1], tpos[2])             # other two trip cards in mid
+            return positions_to_setting_index(top, mid)
         mid = (tpos[0], tpos[1])
         top = _best_top_for_locked_mid(d, mid)
         return positions_to_setting_index(top, mid)
 
+    # Pure trips: same premium-rank rule.
+    if trips_desc:
+        trip_rank, tpos = trips_desc[0]
+        if trip_rank >= 13:
+            top = tpos[0]
+            mid = (tpos[1], tpos[2])
+            return positions_to_setting_index(top, mid)
+        mid = (tpos[0], tpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # Two-pair: NOTE no AAKK reverse — AAKK falls through to the default
+    # branch where high pair (AA) goes to MID. That's the 48%-modal answer
+    # for TopDef, vs v3's 30% bot/mid.
     if len(pairs_desc) == 2:
         (high_rank, hpos), (low_rank, lpos) = pairs_desc[0], pairs_desc[1]
-        if high_rank == 14 and low_rank == 13:
-            mid = (lpos[0], lpos[1])
-            top = _best_top_for_locked_mid(d, mid)
-            return positions_to_setting_index(top, mid)
         if high_rank <= 5:
             singletons_desc = d["singletons"]
             top_pos = singletons_desc[0][1]

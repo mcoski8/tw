@@ -93,9 +93,10 @@ OMAHA_GOLDEN: list[tuple[str, list[str], int, tuple]] = [
     ("two_pair_default_TT88_v3_compatible",
      ["Tc","Td","8h","8s","As","Kh","4d"],    102, (14, (10, 10), (4, 8, 8, 13))),
 
-    # Three pair — same as v3.
-    ("three_pair",
-     ["As","Ad","Kh","Kc","9h","9s","4c"],     14, (4,  (14, 14), (9, 9, 13, 13))),
+    # Three pair OVERLAY-DIVERGES — premium-pair-flip (high_pair >= 13):
+    # high → BOT, mid pair → MID. v3 default was AA→MID with both KK+99 in bot.
+    ("three_pair_premium_flip",
+     ["As","Ad","Kh","Kc","9h","9s","4c"],      9, (4,  (13, 13), (9, 9, 14, 14))),
 
     # Single-pair OVERLAY-DIVERGES — pair rank ∈ {A, K, 2} → bot.
     ("single_pair_AA_to_bot",
@@ -129,14 +130,19 @@ TOPDEF_GOLDEN: list[tuple[str, list[str], int, tuple]] = [
      ["2c","2d","2h","2s","Ah","Kh","5d"],     90, (14, (2, 2),   (2, 2, 5, 13))),
     ("quads_high_kings",
      ["Ks","Kh","Kc","Kd","7s","4h","2c"],     39, (7,  (13, 13), (2, 4, 13, 13))),
-    ("trips_pair_low_high",
+    ("trips_pair_low_high_v3_default",
      ["5c","5d","5h","Ks","Kd","8s","2c"],     65, (8,  (5, 5),   (2, 5, 13, 13))),
-    ("trips_pair_high_low",
-     ["As","Ad","Ah","4c","4d","9h","2s"],     57, (9,  (14, 14), (2, 4, 4, 14))),
-    ("pure_trips",
+    # Premium trips (rank >= 13) trips_pair — break-down: 1 trip on top,
+    # 2 trips in mid, pair stays in bot.
+    ("trips_pair_premium_KKK_44_breakdown",
+     ["Kc","Kd","Kh","4c","4d","9h","2s"],     74, (13, (13, 13), (2, 4, 4, 9))),
+    ("pure_trips_low_v3_default",
      ["8c","8d","8h","Ks","Qd","5h","2c"],     99, (13, (8, 8),   (2, 5, 8, 12))),
-    ("two_pair_AAKK",
-     ["As","Ah","Kd","Kh","7c","4d","2s"],     39, (7,  (13, 13), (2, 4, 14, 14))),
+    ("pure_trips_premium_AAA_breakdown",
+     ["Ac","Ad","Ah","Ks","Qd","5h","2c"],     74, (14, (14, 14), (2, 5, 12, 13))),
+    # Two-pair AAKK — TopDef AAKK reverse: AA→MID (vs v3's KK→MID).
+    ("two_pair_AAKK_aa_to_mid",
+     ["As","Ah","Kd","Kh","7c","4d","2s"],     44, (7,  (14, 14), (2, 4, 13, 13))),
     ("two_pair_AAQQ_v3_default",
      ["As","Ah","Qd","Qc","9s","4h","2c"],     44, (9,  (14, 14), (2, 4, 12, 12))),
     ("two_pair_default_KKQQ_v3_default",
@@ -202,6 +208,7 @@ OMAHA_MUST_DIFFER_FROM_V3 = [
     ["Tc","Td","Jh","Js","Ah","6c","2d"],   # TTJJ both 10-12
     ["As","Ah","Kc","Qd","Jc","8h","4d"],   # AA single-pair → bot
     ["2c","2d","Kh","Qs","Jc","8h","4d"],   # 22 single-pair → bot
+    ["As","Ad","Kh","Kc","9h","9s","4c"],   # 3-pair AAKK99 — premium flip
 ]
 
 
@@ -226,21 +233,40 @@ def test_topdef_overlay_diverges_from_v3_on_low_max_singleton():
     )
 
 
+TOPDEF_PREMIUM_TRIPS_DIVERGENT = [
+    ["Ac","Ad","Ah","Ks","Qd","5h","2c"],   # AAA — top-trip break-down
+    ["Kc","Kd","Kh","Qs","9d","5h","2c"],   # KKK — same
+    ["Kc","Kd","Kh","4c","4d","9h","2s"],   # KKK + 44 trips_pair break-down
+    ["As","Ah","Kd","Kh","7c","4d","2s"],   # AAKK reverse: AA→MID
+]
+
+
+def test_topdef_premium_trips_breakdown_and_aakk_reverse():
+    """Lock in the Phase C+ rules: premium trips top-break-down + AAKK reverse."""
+    for cards in TOPDEF_PREMIUM_TRIPS_DIVERGENT:
+        arr = _sorted_bytes(cards)
+        s_v3 = int(strategy_v3(arr))
+        s_td = int(strategy_topdef_overlay(arr))
+        assert s_v3 != s_td, (
+            f"topdef_overlay must differ from v3 on {cards}; both gave {s_v3}"
+        )
+
+
 # ---------------------------------------------------------------------------
 # 4. 100-hand fixed-seed SHA fixtures.
 # ---------------------------------------------------------------------------
 
 EXPECTED_OMAHA_OUTPUT_SHA = (
-    "f7233301680809a29f47af8fd117f4f0c745b40ae4835ba25a37b3cbb3bad065"
+    "3099dfd77305f4dc5c489cfdb5175eaf10410ea640acdf92bde92fbf23cfd801"
 )
 EXPECTED_OMAHA_SHAPE_SHA = (
-    "6c973aa8dd94bd140d7d370582c3426d58f055a9b74cd527e2b4fb0dcf0843c3"
+    "6bc16fed95d33d238195a0d4604bc9afa170c67b96022c92b957e6b8e7e1eb24"
 )
 EXPECTED_TOPDEF_OUTPUT_SHA = (
-    "c73978dc6dffc4f110c9b447ed58a618edb14964e27a4a8e7bb49bd61dc0146c"
+    "6490e324593b1a3959cc29b14dbb6a9b5f437d1c0069cb6ae4e19de5f4aafb25"
 )
 EXPECTED_TOPDEF_SHAPE_SHA = (
-    "dff583e7a947950962a86734be03e994543172271f20f29ffbbf093f22b5cc73"
+    "71faf6a19e47e325eb1072d86f5760ea0307ba560c36b9111d97c91c847f9f2f"
 )
 
 
