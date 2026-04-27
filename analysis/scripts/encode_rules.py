@@ -781,6 +781,329 @@ def strategy_v4(hand: np.ndarray) -> int:
 
 
 # ----------------------------------------------------------------------
+# Per-profile overlays (Sprint 7 Phase C, Session 15).
+#
+# v3 hits 56.16% multiway-robust on 6M hands but only 45.9% / 46.3% against
+# the OmahaFirst / TopDefensive best-responses. Mining (Session 15) found
+# clean threshold rules per profile. The overlays below are routed via
+# `strategy_for_profile(hand, profile)`; v3 remains the multiway default.
+#
+# OmahaFirst overlay — empirical thresholds from 300-400K-hand mines:
+#   * Pair → BOT (not mid) when pair_rank ∈ {A, K, 2}.
+#       AA: 97.8% to bot.   KK: 66.1% to bot.   22: 68% to bot.
+#       Mid-rank pairs (3-12) stay in mid (≥52% agree).
+#   * Two_pair → high pair to BOT, low pair to MID, when high_pair ≥ 13
+#     OR both pairs in 10-12 range. Generalises v3's AAKK exception:
+#       premium+premium 73% bot/mid; premium+high 95%; premium+mid 99%;
+#       premium+low 50% bot/mid; high+high 74% bot/mid.
+#   * High_only — re-tuned _hi_only_pick weights: bot DS +5→+8,
+#     bot rundown ≥4 +2→+4 (Omaha-tilted bot preferences).
+#   * Quads / trips / trips_pair / three_pair / low two_pair: same as v3
+#     (already 55-83% agreement, no clear improvement signal).
+#
+# TopDefensive overlay — single rule modification:
+#   * Top = highest singleton IF rank ≥ 13 (A or K). ELSE top = LOWEST
+#     singleton (sacrifice the top tier; free A/K-less high cards into
+#     mid+bot for guaranteed points). Empirical:
+#       hand has A: 99% br_topdef keeps A on top.
+#       hand has K (no A): 77% K on top.
+#       hand max ≤ Q: br_topdef puts low<5 on top 53-84% of the time.
+#   * Everything else: identical to v3.
+# ----------------------------------------------------------------------
+
+# --- OmahaFirst helpers ---
+
+def _hi_only_pick_omaha(d: dict) -> tuple[int, tuple[int, int]]:
+    """Same shape as ``_hi_only_pick`` but with bot-DS / rundown weights
+    tilted up to favour Omaha-strong bots."""
+    ranks = d["ranks"]
+    suits = d["suits"]
+    sing = d["singletons"]
+
+    top_pos = sing[0][1]
+    remaining = [i for i in range(7) if i != top_pos]
+
+    best_score = -1e9
+    best_mid: tuple[int, int] = (remaining[0], remaining[1])
+    for ai in range(6):
+        for bi in range(ai + 1, 6):
+            mid_a, mid_b = remaining[ai], remaining[bi]
+            bot_pos = tuple(p for p in remaining if p not in (mid_a, mid_b))
+
+            ra, rb = int(ranks[mid_a]), int(ranks[mid_b])
+            mid_hi, mid_lo = max(ra, rb), min(ra, rb)
+            mid_suited = int(suits[mid_a]) == int(suits[mid_b])
+            mid_gap = mid_hi - mid_lo
+            mid_connected = mid_gap <= 2
+
+            bot_ranks_sorted = sorted(int(ranks[p]) for p in bot_pos)
+            bot_ds = _bot_is_double_suited_at(suits, bot_pos)
+            bot_conn = _max_run_in_ranks(bot_ranks_sorted)
+            bot_n_bw = sum(1 for r in bot_ranks_sorted if r >= 10)
+
+            score = 0.0
+            if mid_suited and mid_connected:
+                score += 6.0
+            elif mid_suited:
+                score += 4.0
+            elif mid_connected:
+                score += 2.0
+            if bot_ds:
+                score += 8.0       # was 5 in v3 — heavier weight for Omaha
+            if bot_conn >= 4:
+                score += 4.0       # was 2 — explicit rundown preference
+            if bot_n_bw >= 2:
+                score += 1.0
+            score += (mid_hi + mid_lo) / 100.0
+
+            if score > best_score:
+                best_score = score
+                best_mid = (mid_a, mid_b)
+
+    return top_pos, best_mid
+
+
+def strategy_omaha_overlay(hand: np.ndarray) -> int:
+    """Best-response chain tuned for OmahaFirst opponents."""
+    d = hand_decompose(hand)
+    pairs_desc = d["pairs"]
+    trips_desc = d["trips"]
+    quads_desc = d["quads"]
+
+    # Quads / trips_pair / pure trips: same as v3.
+    if quads_desc:
+        quad_rank, qpos = quads_desc[0]
+        mid = (qpos[0], qpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+    if trips_desc and pairs_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+    if trips_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # Two-pair with extended premium-to-bot rule.
+    if len(pairs_desc) == 2:
+        (high_rank, hpos), (low_rank, lpos) = pairs_desc[0], pairs_desc[1]
+
+        # Low two_pair: both pairs to bot (unchanged from v3).
+        if high_rank <= 5:
+            singletons_desc = d["singletons"]
+            top_pos = singletons_desc[0][1]
+            mid_a, mid_b = singletons_desc[1][1], singletons_desc[2][1]
+            return positions_to_setting_index(top_pos, (mid_a, mid_b))
+
+        # Premium high pair (A or K), or both pairs in 10-12 range:
+        # high pair stays in BOT, low pair goes to MID.
+        flip_to_bot = (
+            high_rank >= 13
+            or (high_rank in (10, 11, 12) and low_rank in (10, 11, 12))
+        )
+        if flip_to_bot:
+            mid = (lpos[0], lpos[1])
+            top = _best_top_for_locked_mid(d, mid)
+            return positions_to_setting_index(top, mid)
+
+        # Default two_pair: high pair → mid (same as v3).
+        mid = (hpos[0], hpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # Three-pair: same as v3 (high pair → mid).
+    if len(pairs_desc) == 3:
+        pair_rank, ppos = pairs_desc[0]
+        mid = (ppos[0], ppos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # Single pair: rank-conditional placement.
+    if len(pairs_desc) == 1:
+        pair_rank, ppos = pairs_desc[0]
+        if pair_rank in (14, 13, 2):
+            # Pair to BOT. Mid = next 2 highest singletons. Top = highest
+            # singleton.
+            sing_desc = d["singletons"]
+            top_pos = sing_desc[0][1]
+            mid_a, mid_b = sing_desc[1][1], sing_desc[2][1]
+            return positions_to_setting_index(top_pos, (mid_a, mid_b))
+
+        # Default: pair → mid (v3).
+        mid = (ppos[0], ppos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # High_only via Omaha-tilted search.
+    top_pos, mid = _hi_only_pick_omaha(d)
+    return positions_to_setting_index(top_pos, mid)
+
+
+# --- TopDefensive helpers ---
+
+def _topdef_top_pick(d: dict, mid: tuple[int, int]) -> int:
+    """
+    TopDef top-pick: highest singleton iff rank ≥ 13 (A or K), else lowest
+    singleton — the "sacrifice the top tier" rule.
+
+    Falls back to v3's _best_top_for_locked_mid when no singleton candidate
+    exists (i.e., every remaining position is paired/tripped, e.g.
+    three-pair hands where mid is the high pair).
+    """
+    sing_in_candidates = [(r, p) for (r, p) in d["singletons"] if p not in mid]
+    if not sing_in_candidates:
+        return _best_top_for_locked_mid(d, mid)
+    highest_rank = sing_in_candidates[0][0]
+    if highest_rank >= 12:
+        return sing_in_candidates[0][1]   # keep Q+ on top (A/K/Q)
+    return sing_in_candidates[-1][1]      # lowest singleton (sacrifice)
+
+
+def _hi_only_pick_topdef(d: dict) -> tuple[int, tuple[int, int]]:
+    """
+    Top-sacrifice variant of ``_hi_only_pick``: top selection follows the
+    A/K-or-lowest rule, then mid+bot search uses v3's same composite scoring
+    over the 6 remaining cards.
+    """
+    sing = d["singletons"]
+    highest_rank = sing[0][0]
+    if highest_rank >= 13:
+        top_pos = sing[0][1]
+    else:
+        top_pos = sing[-1][1]
+
+    ranks = d["ranks"]
+    suits = d["suits"]
+    remaining = [i for i in range(7) if i != top_pos]
+
+    best_score = -1e9
+    best_mid: tuple[int, int] = (remaining[0], remaining[1])
+    for ai in range(6):
+        for bi in range(ai + 1, 6):
+            mid_a, mid_b = remaining[ai], remaining[bi]
+            bot_pos = tuple(p for p in remaining if p not in (mid_a, mid_b))
+
+            ra, rb = int(ranks[mid_a]), int(ranks[mid_b])
+            mid_hi, mid_lo = max(ra, rb), min(ra, rb)
+            mid_suited = int(suits[mid_a]) == int(suits[mid_b])
+            mid_gap = mid_hi - mid_lo
+            mid_connected = mid_gap <= 2
+
+            bot_ranks_sorted = sorted(int(ranks[p]) for p in bot_pos)
+            bot_ds = _bot_is_double_suited_at(suits, bot_pos)
+            bot_conn = _max_run_in_ranks(bot_ranks_sorted)
+            bot_n_bw = sum(1 for r in bot_ranks_sorted if r >= 10)
+
+            score = 0.0
+            if mid_suited and mid_connected:
+                score += 6.0
+            elif mid_suited:
+                score += 4.0
+            elif mid_connected:
+                score += 2.0
+            if bot_ds:
+                score += 5.0
+            if bot_conn >= 4:
+                score += 2.0
+            if bot_n_bw >= 2:
+                score += 1.0
+            score += (mid_hi + mid_lo) / 100.0
+
+            if score > best_score:
+                best_score = score
+                best_mid = (mid_a, mid_b)
+
+    return top_pos, best_mid
+
+
+def strategy_topdef_overlay(hand: np.ndarray) -> int:
+    """
+    v3 with the top-sacrifice rule applied ONLY to single-pair and
+    high_only branches — the two categories where the empirical mining
+    showed large divergence (50.9% / 23.5%). Quads / trips / trips_pair /
+    two_pair / three_pair use v3 unchanged because applying the
+    top-sacrifice rule there caused -5 to -10pp regressions in measurement
+    (initial-version Session 15 finding).
+    """
+    d = hand_decompose(hand)
+    pairs_desc = d["pairs"]
+    trips_desc = d["trips"]
+    quads_desc = d["quads"]
+
+    # Quads / trips_pair / pure trips / two_pair / three_pair: same as v3.
+    if quads_desc:
+        quad_rank, qpos = quads_desc[0]
+        mid = (qpos[0], qpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+    if trips_desc and pairs_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+    if trips_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    if len(pairs_desc) == 2:
+        (high_rank, hpos), (low_rank, lpos) = pairs_desc[0], pairs_desc[1]
+        if high_rank == 14 and low_rank == 13:
+            mid = (lpos[0], lpos[1])
+            top = _best_top_for_locked_mid(d, mid)
+            return positions_to_setting_index(top, mid)
+        if high_rank <= 5:
+            singletons_desc = d["singletons"]
+            top_pos = singletons_desc[0][1]
+            mid_a, mid_b = singletons_desc[1][1], singletons_desc[2][1]
+            return positions_to_setting_index(top_pos, (mid_a, mid_b))
+        mid = (hpos[0], hpos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    if len(pairs_desc) == 3:
+        pair_rank, ppos = pairs_desc[0]
+        mid = (ppos[0], ppos[1])
+        top = _best_top_for_locked_mid(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # SINGLE PAIR — top-sacrifice rule applies here.
+    if len(pairs_desc) == 1:
+        pair_rank, ppos = pairs_desc[0]
+        mid = (ppos[0], ppos[1])
+        top = _topdef_top_pick(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # HIGH_ONLY — top-sacrifice rule applies here.
+    top_pos, mid = _hi_only_pick_topdef(d)
+    return positions_to_setting_index(top_pos, mid)
+
+
+# --- Per-profile dispatcher ---
+
+PROFILE_TO_STRATEGY = {
+    "multiway":   "v3",
+    "mfsuitaware": "v3",
+    "weighted":   "v3",
+    "omaha":      "omaha_overlay",
+    "topdef":     "topdef_overlay",
+}
+
+
+def strategy_for_profile(hand: np.ndarray, profile: str) -> int:
+    """
+    Dispatch to the right rule chain for a given opponent-profile choice.
+    Unknown profile → v3 (the multiway-robust default).
+    """
+    name = PROFILE_TO_STRATEGY.get(profile, "v3")
+    return STRATEGIES[name](hand)
+
+
+# ----------------------------------------------------------------------
 # Scorer.
 # ----------------------------------------------------------------------
 
@@ -792,6 +1115,8 @@ STRATEGIES = {
     "refined_v2":     strategy_refined_v2,
     "v3":             strategy_v3,
     "v4":             strategy_v4,
+    "omaha_overlay":  strategy_omaha_overlay,
+    "topdef_overlay": strategy_topdef_overlay,
 }
 
 

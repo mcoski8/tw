@@ -1,17 +1,19 @@
 """
-Rule-chain-grounded explanation layer (v2, post-Sprint-7-Phase-B).
+Rule-chain-grounded explanation layer (v3, post-Sprint-7-Phase-C).
 
-Replaces the v1 hand-written heuristic detectors. For each hand the trainer
-now compares THREE arrangements:
+For each hand the trainer compares THREE arrangements:
 
   * USER  — what the player submitted.
-  * CHAIN — what strategy_v3 (the encoded rule chain) picks.
+  * CHAIN — what the rule chain for the active profile picks. The chain is
+            ``strategy_v3`` for the multiway/mfsuitaware/weighted profiles,
+            and the per-profile overlay for OmahaFirst / TopDefensive
+            (Sprint 7 Phase C, Session 15). Routed via
+            ``encode_rules.strategy_for_profile``.
   * BEST  — what the live MC against the chosen profile says is optimal.
 
-We surface the three-way relationship between these and ground each finding
-in measured rule-chain agreement on the hand's category. The category-level
-stats are baked from the latest full 6M scoring of strategy_v3 (see
-``analysis/scripts/encode_rules.py``).
+Each finding is grounded in the measured chain-vs-BR shape-agreement for
+the active profile and the hand's category, baked into
+``CHAIN_AGREEMENT_BY_PROFILE`` below.
 """
 from __future__ import annotations
 
@@ -40,22 +42,72 @@ from tw_analysis.features import (  # noqa: E402
     hand_features_scalar, ID_TO_CATEGORY,
 )
 from encode_rules import (  # noqa: E402
-    decode_tier_positions, strategy_v3,
+    decode_tier_positions, strategy_for_profile,
 )
 
 
-# Latest full-6M shape-agreement of strategy_v3 vs multiway-robust setting.
-# Source: analysis/scripts/encode_rules.py 2026-04-26 run.
-CATEGORY_AGREEMENT_V3 = {
-    CATEGORY_HIGH_ONLY:  0.3101,
-    CATEGORY_PAIR:       0.6502,
-    CATEGORY_TWO_PAIR:   0.6020,
-    CATEGORY_THREE_PAIR: 0.7288,
-    CATEGORY_TRIPS:      0.5639,
-    CATEGORY_TRIPS_PAIR: 0.4612,
-    CATEGORY_QUADS:      0.7920,
+# Per-profile chain-vs-BR shape-agreement, sourced from
+# ``analysis/scripts/encode_rules.py`` and the Session 15 overlay-measurement
+# pass. Multiway-robust agreement is from the full-6M run; per-profile
+# agreement (mfsa, omaha, topdef, weighted) is from a 300K random sample
+# (rng seed 42). Numbers are stable to ~0.05pp at this sample size.
+CHAIN_AGREEMENT_BY_PROFILE = {
+    # multiway = strategy_v3 vs multiway_robust mode (full 6M).
+    "multiway": {
+        "overall": 0.5616,
+        CATEGORY_HIGH_ONLY:  0.3101,
+        CATEGORY_PAIR:       0.6502,
+        CATEGORY_TWO_PAIR:   0.6020,
+        CATEGORY_THREE_PAIR: 0.7288,
+        CATEGORY_TRIPS:      0.5639,
+        CATEGORY_TRIPS_PAIR: 0.4612,
+        CATEGORY_QUADS:      0.7920,
+    },
+    # mfsuitaware uses strategy_v3; agreement vs br_mfsuitaware (300K sample).
+    "mfsuitaware": {
+        "overall": 0.5551,
+        CATEGORY_HIGH_ONLY:  0.3120,
+        CATEGORY_PAIR:       0.6398,
+        CATEGORY_TWO_PAIR:   0.5974,
+        CATEGORY_THREE_PAIR: 0.7249,
+        CATEGORY_TRIPS:      0.5575,
+        CATEGORY_TRIPS_PAIR: 0.4522,
+        CATEGORY_QUADS:      0.7984,
+    },
+    # weighted uses strategy_v3; agreement vs br_weighted (300K sample).
+    "weighted": {
+        "overall": 0.6198,
+        CATEGORY_HIGH_ONLY:  0.3030,
+        CATEGORY_PAIR:       0.7751,
+        CATEGORY_TWO_PAIR:   0.5877,
+        CATEGORY_THREE_PAIR: 0.6045,
+        CATEGORY_TRIPS:      0.6348,
+        CATEGORY_TRIPS_PAIR: 0.5785,
+        CATEGORY_QUADS:      0.8371,
+    },
+    # omaha uses strategy_omaha_overlay; agreement vs br_omaha (300K sample).
+    "omaha": {
+        "overall": 0.5469,
+        CATEGORY_HIGH_ONLY:  0.2585,
+        CATEGORY_PAIR:       0.6349,
+        CATEGORY_TWO_PAIR:   0.6325,
+        CATEGORY_THREE_PAIR: 0.2996,
+        CATEGORY_TRIPS:      0.6034,
+        CATEGORY_TRIPS_PAIR: 0.5504,
+        CATEGORY_QUADS:      0.8360,
+    },
+    # topdef uses strategy_topdef_overlay; agreement vs br_topdef (300K sample).
+    "topdef": {
+        "overall": 0.5014,
+        CATEGORY_HIGH_ONLY:  0.2631,
+        CATEGORY_PAIR:       0.5830,
+        CATEGORY_TWO_PAIR:   0.5415,
+        CATEGORY_THREE_PAIR: 0.7386,
+        CATEGORY_TRIPS:      0.4951,
+        CATEGORY_TRIPS_PAIR: 0.4041,
+        CATEGORY_QUADS:      0.7472,
+    },
 }
-OVERALL_V3_SHAPE_AGREEMENT = 0.5616
 
 
 def _severity(delta: float) -> Tuple[str, str]:
@@ -106,10 +158,11 @@ def _shape_from_cards(cards: List[str]) -> tuple:
     return (top_r, mid_rs, bot_rs)
 
 
-def _chain_arrangement(hand_strs: List[str]) -> List[str]:
-    """Apply strategy_v3 and return cards in trainer order [top, m1, m2, b1..b4]."""
+def _chain_arrangement(hand_strs: List[str], profile_id: str) -> List[str]:
+    """Apply the active profile's chain and return cards in trainer order
+    [top, m1, m2, b1..b4]."""
     sorted_bytes = _hand_to_bytes_sorted(hand_strs)
-    setting_idx = strategy_v3(sorted_bytes)
+    setting_idx = strategy_for_profile(sorted_bytes, profile_id)
     top_pos, mid_pos, bot_pos = decode_tier_positions(setting_idx)
     sorted_cards = [str(Card(int(b))) for b in sorted_bytes]
     return [
@@ -218,6 +271,7 @@ def build_feedback(
     user_ev: float,
     best_ev: float,
     is_match: bool,
+    profile_id: str = "multiway",
 ) -> Feedback:
     delta = best_ev - user_ev
     severity, phrase = _severity(delta)
@@ -225,13 +279,15 @@ def build_feedback(
     # All 7 cards in play (ranks identical regardless of where the user put them).
     hand_strs = list(user_cards)
 
-    chain_cards = _chain_arrangement(hand_strs)
+    chain_cards = _chain_arrangement(hand_strs, profile_id)
     chain_shape = _shape_from_cards(chain_cards)
     user_shape = _shape_from_cards(user_cards)
     best_shape = _shape_from_cards(best_cards)
 
     cat = _hand_category(hand_strs)
-    chain_acc = CATEGORY_AGREEMENT_V3.get(cat, OVERALL_V3_SHAPE_AGREEMENT)
+    profile_table = CHAIN_AGREEMENT_BY_PROFILE.get(
+        profile_id, CHAIN_AGREEMENT_BY_PROFILE["multiway"])
+    chain_acc = profile_table.get(cat, profile_table["overall"])
     cat_label = _category_label(cat)
 
     user_eq_chain = (user_shape == chain_shape)

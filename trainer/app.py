@@ -133,6 +133,7 @@ def api_score():
         user_ev=user_result.ev,
         best_ev=best_result.ev,
         is_match=is_match,
+        profile_id=profile.id,
     )
 
     buyout = evaluate_buyout(list(hand), best_ev=best_result.ev)
