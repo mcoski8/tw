@@ -859,3 +859,62 @@ DEFERRED: per-tier EV decomposition, naive-distance metric, category bucketing f
 DEFERRED: per-tier EV decomposition, naive-distance metric, category bucketing fix.
 
 **Session conclusion:** Sprint 7 Phase B+ complete. Production rule chain = `strategy_v3`. Trainer is feature-complete with rule-chain explanations + buyout signals. The 60% multiway-robust target is at the structural ceiling for opponent-agnostic rules; further gains require per-profile work or accepting the current chain as the publishable "robust core strategy."
+
+
+---
+
+### Session 15 — 2026-04-27 — Sprint 7 Phase C/C+: per-profile overlays + golden tests; Phase D methodology agreed (sklearn DT extraction)
+
+**Scope:** Three commits across the session. (1) v3 golden tests (regression gate). (2) per-profile overlays for OmahaFirst & TopDefensive. (3) residual-mining rules tightened the overlays. Late-session pivot to the project's stated end goal — the 5-10 rule chain matching the multiway-robust solver ≥95% — landed on a sklearn decision-tree extraction methodology agreed via Socratic dialog with Gemini 2.5 Pro. Phase D execution blocked by transient macOS `tccd` permission glitch after a SIGKILL'd Python child poisoned the kernel TCC cache.
+
+**What landed:**
+
+1. **strategy_v3 golden tests** (`d5ed9ff`) — `analysis/scripts/test_strategy_v3_golden.py`:
+   - 13 tests: per-branch goldens (9 dispatch branches), setting-104 layout sanity, 105-setting round-trip, v3≠v4 lockstep on a known divergent hand, 100-hand seed=42 SHA fixture.
+   - Negative-test verified: replacing strategy_v3 with strategy_v4 fires the lockstep + SHA-fixture tests, both designed for that exact drift.
+
+2. **Per-profile overlays — Phase C** (`a5df1d8`) — `analysis/scripts/encode_rules.py`:
+   - `strategy_omaha_overlay` (5 rules): single-pair → BOT when pair_rank ∈ {A, K, 2}; two-pair high → BOT when high_rank ≥ 13 or both pairs in 10-12 (generalises AAKK exception); high_only weight rebalance (DS +5→+8, rundown ≥4 +2→+4); quads/trips/three_pair/low-two-pair via v3 default. **45.82% → 54.69% on br_omaha** (300K sample).
+   - `strategy_topdef_overlay` (1 rule mod): `_topdef_top_pick` — top = highest singleton iff ≥ Q (12), else LOWEST singleton (sacrifice the top tier when no Q+ singleton). Applied ONLY to single-pair and high_only branches; quads/trips/two_pair/three_pair use v3 (initial-version applied broadly caused -10pp regressions). Threshold tuned: ≥ 13 caused -13.2pp regression on Q-singleton bucket; ≥ 12 captures Q. **46.12% → 50.14% on br_topdef** (300K sample).
+   - `PROFILE_TO_STRATEGY` mapping + `strategy_for_profile(hand, profile)` dispatcher (option-c-routes-to-option-a per Gemini's earlier Socratic guidance).
+   - Golden tests in `analysis/scripts/test_overlays_golden.py` (7 initially, 8 post-Phase-C+).
+   - Trainer integration: `trainer/app.py` passes `profile_id` to `build_feedback`; `trainer/src/explain.py` rewritten with `CHAIN_AGREEMENT_BY_PROFILE` per-profile per-category table; `_chain_arrangement(hand, profile_id)` routes through dispatcher; explanation findings cite the right "matches solver on X% of <category> hands" prior for the active profile.
+
+3. **Per-profile overlays — Phase C+ residual rules** (`5a815ce`):
+   - **OmahaFirst three_pair premium-flip**: when high_pair ≥ 13, high → BOT, mid_pair → MID. three_pair 29.96% → 54.14% (+24.18pp on category, +0.47pp overall). Generalises premium-flip principle from two_pair to three_pair. Mining: prem-high three-pair shows B/M/B at 73% modal vs 4% v3-default M/B/B.
+   - **TopDef premium-trips break-down**: when trip_rank ≥ 13, top = ONE trip card, mid = TWO trip cards. Applied to pure trips and trips_pair branches. Mining: 86% modal on premium trips. Lifts: trips 49.51% → 59.49% (+9.98pp); trips_pair 40.41% → 51.59% (+11.18pp).
+   - **TopDef AAKK reverse**: removed v3's KK→MID exception in topdef overlay; AAKK falls through to default high→MID (TopDef's modal at 48% vs v3's bot/mid 30%).
+
+4. **User-driven mid-session reframe**: Around the time we'd hit "55% on omaha, 51% on topdef," the user challenged that I was chasing the wrong metric. Per-profile agreement is a tactical detour useful for the trainer; the project's STATED end product (CLAUDE.md) is a 5-10 rule chain matching the multiway-robust solver ≥95% on all 6M canonical hands. v3 is at 56.16% — 39pp short, not 5pp. The 95% target is the headline; per-profile overlays are auxiliary.
+
+5. **Phase D methodology — Socratic consult with Gemini 2.5 Pro** (continuation `97707ec2-1603-44d2-a534-236caa6e92a2`, NO commit yet):
+   - Methodology decided: sklearn `DecisionTreeClassifier` on (hand_features, multiway_robust setting_index), scored by SHAPE-equivalence (collapses 105 setting_indexes to fewer strategic equivalents). Target = setting_index NOT shape-tuple (shape-tuple has 254K unique classes — the model would explode).
+   - 4-phase pipeline: (a) ceiling curve — train at depths {3, 5, 7, 10, 15, 20, None} on 1M subsample with 3-fold CV; full-6M fit at chosen depth; (b) extract via sklearn `export_text` → translate to Python if/elif → verify byte-identical predictions on full 6M; (c) EV-loss backtest on 5-10K-hand sample × 4 profiles × 1000 MC samples (engine MC); (d) ship as `strategy_v5_dt` with golden tests + Markdown export of the tree.
+   - Features: 21 hand-features + 6 boolean feasibility flags (`can_make_ds_bot`, `can_make_4run`, `has_high_pair`, `has_low_pair`, `has_premium_pair`, `has_ace_singleton`, `has_king_singleton`).
+   - Validation: 3-fold CV for depth selection (full 6M is the population — CV is for robust depth choice, not generalization). Full-data train of chosen depth for final model + report. Manual inspection of misses for refinements.
+
+6. **Phase D execution — BLOCKED**:
+   - `analysis/scripts/dt_phase1.py` written and saved.
+   - First run via my Bash tool started CV training, ran for ~1 minute, was SIGKILL'd by user interrupt (Exit code 137).
+   - Post-SIGKILL: macOS `tccd` cached denied-path entries for `~/Documents/claudecode/taiwanese/`. EVERY subsequent file access from python3 (and intermittently from `ls`/`cat`) returned `PermissionError: [Errno 1] Operation not permitted` — BOTH from my Bash sandbox AND the user's own Terminal.
+   - Diagnosed as transient kernel TCC cache poisoning (a known macOS bug after SIGKILL'd children).
+   - Resolution: user toggled python3.13 + Terminal in System Settings → Privacy & Security → App Management. Quit Terminal completely (Cmd+Q) → reopen restored access. Permissions are now valid for next session.
+
+**Verified end-to-end this session:**
+- `cargo build --release` clean (no Rust changes).
+- All Python tests green: 24 features + 11 settings + 9 canonical + 9 cross_model + 13 v3_golden + 8 overlays_golden = **74 tests**.
+- Manual end-to-end smoke of profile-aware `build_feedback` confirmed correct routing across 5 profile_ids; on AAQQ test case, omaha overlay agrees with solver where v3 doesn't, and explanation correctly says "the rule chain matches the solver — you played differently."
+
+**Gotchas this session:**
+- **Initial unanimous-miss mining was MISREAD.** Bucketed only the ~30% of unanimous two_pair where v3 misses; the modal-flip pattern (high→BOT) applied only to that subset, not to all two_pair. I prototyped the flip rule and measured -27pp on two_pair before catching the analytical error. Lesson: when bucketing misses, also check the FULL distribution per cell to avoid generalising from the conditional distribution.
+- **Threshold tuning matters.** TopDef top-sacrifice rule at threshold ≥ 13 caused -13.2pp on the Q-singleton bucket; ≥ 12 was right. The empirical mining that suggested "Q stays on top 28.9% of the time" was misleading without the alternative-distribution drill.
+- **macOS TCC SIGKILL bug**: never SIGKILL a python3 child mid-execution if it's reading a TCC-protected directory. The kernel cache pessimistically denies subsequent access until permissions are re-toggled and Terminal is restarted. Workaround discovered: System Settings → App Management → toggle python3.13 + Terminal off, then on; Cmd+Q Terminal; relaunch.
+
+**Carry-forward for Session 16 (Phase D execution proper):**
+1. **Run `analysis/scripts/dt_phase1.py`** from project root in fresh Terminal session. Output is a 7-row depth-vs-agreement table. The unbounded (None) depth is the structural ceiling for our feature set — determines whether 95% is reachable.
+2. **Pick depth** at the agreement-curve knee.
+3. **Extract** the chosen tree via sklearn `export_text`; translate to Python if/elif chain; verify byte-identical predictions across all 6M hands.
+4. **EV-loss backtest**: 5-10K hands × 4 profiles × 1000 MC samples via engine. Compute mean EV-loss per profile; compare v3, overlays, learned tree.
+5. **Ship** as `strategy_v5_dt`. Add golden tests. Generate Markdown export of the tree as the publishable strategy artifact. Update `CHAIN_AGREEMENT_BY_PROFILE` in explain.py.
+
+**Session conclusion:** Per-profile overlays delivered (Phase C/C+) for the trainer side. The strategic pivot — recognised mid-session — is that the published guide is the multiway-robust 95% target, and decision-tree extraction is the right methodology. Pipeline is designed and saved; one TCC-permission restart away from execution.

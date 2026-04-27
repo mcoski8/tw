@@ -316,3 +316,48 @@
   1. `analysis/scripts/multiway_analysis.py` uses this definition. The hypothesis test "Δ multiway-robust vs heads-up BR" reported in CURRENT_PHASE.md and the handoff is downstream of this choice.
   2. Future feature mining (Sprint 7 hand-feature extractor) joins to multiway-robust setting using this definition. If we ever upgrade to option (a) we'd need to re-run analyses, but the qualitative findings (top rank −0.18, mid pair +2.2pp, bot DS +1.2pp) should hold because the mode and the true BR-vs-mixture agree on ≥90% of hands.
   3. Trainer UI's eventual multiway recommendations will derive from the mode + the agreement class — a hand with unanimous 4-of-4 is a "high-confidence rule applies" hand; a 2-2-split hand is a "your read on the table determines the answer" hand.
+
+
+## Decision 031 — Per-profile overlays vs GTO core; overlays are auxiliary (trainer side), the published guide is multiway-robust
+**Date:** 2026-04-27 (Sprint 7 Phase C, Session 15)
+**Question:** When v3 hits 56.16% multiway-robust shape-agreement and only ~46% on br_omaha / br_topdef, should the project's effort go toward (a) per-profile overlays that lift the weak profiles to 50-55%, or (b) directly attacking the multiway-robust 95% target via richer rule structure?
+**Options:**
+  - (a) Overlays first — tactical lift visible in the trainer when the user picks an OmahaFirst or TopDefensive opponent. Surfaces in `strategy_for_profile` dispatcher.
+  - (b) GTO-core first — the published guide is opponent-AGNOSTIC, multiway-robust agreement is the headline metric. Overlays are auxiliary tactical tools.
+  - (c) Both, with explicit hierarchy: GTO core is the published 5-10 rule chain; overlays are an opt-in tactical layer in the trainer for opponent-specific drilling.
+**Choice:** (c) — both, but with the hierarchy made explicit.
+**Why:**
+  1. **The published end product is opponent-AGNOSTIC.** CLAUDE.md states: "the END PRODUCT is a condensed decision tree / hierarchy of rules that a human can memorize and apply in <30 seconds" and "the definitive GTO Taiwanese Poker strategy guide — backed by exhaustive computation, not heuristics." Per-profile rules are NOT in that brief.
+  2. **Multiway-robust agreement is the headline.** v3 at 56.16% is 39pp short of the 95% target — that's the real distance, not 5pp on per-profile.
+  3. **Overlays still have value for the trainer.** When the user is drilling against a specific profile (e.g., "I always lose to the Omaha-leaning friend"), the per-profile overlay is the right tactical surface. Routed via `strategy_for_profile` dispatcher.
+  4. **The methodology divides cleanly.** GTO-core work is supervised rule learning over the multiway-robust target; overlay work is tactical tuning per opponent BR. Don't conflate.
+  5. **Recognised mid-session in Session 15** after pursuing per-profile overlays for two phases (Phase C, Phase C+). User pushback ("you're chasing the wrong metric") triggered the pivot to Phase D (decision-tree extraction).
+**Consequence:**
+  1. `strategy_v3` (or future `strategy_v5_dt`) is the publishable rule chain. Overlays remain available for trainer profile-specific mode but are NOT part of the published artifact.
+  2. The 95% headline is measured against multiway-robust, not against any single profile.
+  3. Future per-profile improvements are scoped as trainer enhancements; future GTO-core improvements are scoped as published-guide updates. Different reviewers / different release cadences.
+
+
+## Decision 032 — Phase D methodology: sklearn DecisionTreeClassifier with shape-equivalence scoring
+**Date:** 2026-04-27 (Sprint 7 Phase D scoping, Session 15)
+**Question:** How do we extract a 5-10 rule chain matching the multiway-robust solver ≥95% on all 6M canonical hands, in a way that is testable, repeatable, and provable?
+**Options considered:**
+  - (a) Continue hand-engineering rules from miss-bucket inspection. Failed in Session 15 — I misread the unanimous-miss subset's modal pattern as a global pattern and proposed a flip rule that regressed two_pair by -27pp.
+  - (b) sklearn `DecisionTreeClassifier` on (hand_features, multiway_robust setting_index), scored by shape-equivalence. Native `export_text` produces the if/elif chain.
+  - (c) RuleFit / SkopeRules — designed for "small set of rules" output natively. Plan B if (b) produces convoluted rules.
+  - (d) Hierarchical: predict tier features sequentially (top, then mid, then bot). Risk of cascading errors.
+  - (e) Per-category trees, ensembled. Loses cross-category structure; complicates the human-memorizable guide with a preliminary "what category" step.
+**Choice:** (b) — sklearn DecisionTreeClassifier on full 6M, scored by shape-equivalence.
+**Why** (after Socratic dialog with Gemini 2.5 Pro, continuation `97707ec2-1603-44d2-a534-236caa6e92a2`):
+  1. **Native rule output.** `export_text` produces the if/elif chain that IS the publishable artifact. Aligns model with deliverable.
+  2. **Target = setting_index (105 classes), not shape-tuple (254K classes).** Shape-tuple is hand-specific (each hand has different ranks); 254K-class classification is intractable. Setting_index is bounded; we score predictions by collapsing both predicted and true to shape via `setting_shape()`.
+  3. **Features are 21 hand-features + 6 boolean feasibility flags** (`can_make_ds_bot`, `can_make_4run`, `has_high_pair`, `has_low_pair`, `has_premium_pair`, `has_ace_singleton`, `has_king_singleton`). Boolean flags encode poker concepts the tree can split on cheaply. NO per-suit rank vectors (overfit risk).
+  4. **3-fold CV on 1M subsample for depth selection; full-6M fit at chosen depth.** The population is finite — CV is for robust depth choice, not generalization to unseen data. This matches the rigorous standard for rule extraction over a known population.
+  5. **EV-loss backtest is the ground truth.** Shape-agreement is the cheap proxy used for training. The actual game-cost is mean (BR_ev − chain_ev) across hands × profiles, computed via engine MC on a 5-10K-hand sample.
+  6. **Don't anchor on the 83.2% "ceiling" napkin math.** The empirical depth=∞ tree is the actual ceiling. If it caps below 95%, the feature set is the limiter (next lever: feature engineering). If it exceeds 95%, depth pruning is the lever.
+  7. **Testable:** the depth-vs-agreement curve is reproducible by anyone with the same seed + dataset. Repeatable: byte-identical-prediction parity check between sklearn tree and extracted Python rule chain. Provable: depth=∞ tree is empirical proof of structural ceiling.
+**Consequence:**
+  1. `analysis/scripts/dt_phase1.py` saved (Session 15) — the ceiling-curve experiment.
+  2. Future `strategy_v5_dt` in `encode_rules.py` will be the learned chain.
+  3. EV-loss reporting becomes a standard validation artifact alongside shape-agreement.
+  4. If sklearn DT output is convoluted (e.g., many splits on continuous features that don't map to clean poker concepts), fall back to RuleFit / SkopeRules. Decision deferred to Phase D execution.

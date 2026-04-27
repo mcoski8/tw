@@ -1,168 +1,148 @@
-# Current: Sprint 7 Phase B+ shipped — buyout in trainer, two_pair refinements (v3 = 56.16%), self-play regret check, rule-grounded explain.py, v4 weight rebalance attempted (no gain). Rule chain at v3, considered Phase-B-final.
+# Current: Sprint 7 Phase C/C+ shipped — per-profile overlays + golden tests for v3 and overlays. Decision-tree extraction methodology agreed with Gemini 2.5 Pro; Phase D pipeline ready, blocked on macOS TCC permission glitch (transient).
 
-> Updated: 2026-04-26 (end of Session 14)
-> Previous sprint status: Session 13 delivered the high_only refinement (+11.5pp on category) and the buyout module. Session 14 worked through the entire Phase B+ priority list, ending with v3 (56.16%) as the production rule chain. v4's weight rebalance had ~0 effect, confirming we're at the structural ceiling for opponent-agnostic rules.
+> Updated: 2026-04-27 (end of Session 15)
+> Previous sprint status: Session 14 finalized strategy_v3 at 56.16% multiway-robust shape-agreement and declared rule chain Phase-B-final at structural ceiling for opponent-agnostic 7-rule chain.
 
 ---
 
-## What was completed this session (Session 14)
+## Headline state at end of Session 15
 
-### Priority 1 — Buyout signature wired into trainer (DELIVERED)
-- `trainer/src/buyout_eval.py` — bridge module that converts trainer card-strings to engine bytes, calls `tw_analysis.buyout.buyout_signature_scalar`, and combines with the live MC `best_ev` to produce both the high-precision signature signal AND a softer per-profile "best play loses more than the buyout cost" signal (`BUYOUT_COST = 4.0`).
-- `trainer/app.py` — `/api/score` now returns a `buyout` dict per request; `/api/compare` returns hand-level signature + per-row `buyout_soft` flags + `soft_profiles` list of which profiles trigger the soft signal.
-- `trainer/static/index.html`, `app.js`, `style.css` — banner above the result panel renders red BUYOUT badge for signature hits, amber "consider buyout" hint for soft hits, plus per-row "buyout" tag in the compare table.
-- Smoke-tested end-to-end: quad-2 hand fires signature (best_ev -7.76), AA broadway clean, trips-3+pair-2 fires signature with soft_profiles=[MFSA, TopDef].
+| chain                      | overall multiway | vs MFSA | vs OmahaFirst | vs TopDef | vs RandWtd | rules |
+|----------------------------|------------------|---------|---------------|-----------|------------|-------|
+| **strategy_v3** (default)  | **56.16%**       | 55.51%  | 45.82%        | 46.12%    | 61.98%     | 7+2+1 |
+| strategy_omaha_overlay     | 44.17%           | 43.57%  | **55.16%**    | 35.10%    | 47.49%     | 6     |
+| strategy_topdef_overlay    | 53.76% (Phase C) → 57.34% (Phase C+) | 57.16%  | 38.92%        | **51.07%** | 59.75%     | 4     |
 
-### Priority 2 — Two_pair lower-pair-mid pattern (DELIVERED)
-- `analysis/scripts/encode_rules.py::strategy_v3` — extends `refined_v2` with two_pair conditionals:
-  * AAKK (high=14, low=13) → low pair (KK) → mid (60.9% of robust per probe_two_pair).
-  * Low two_pair (high ≤ 5) → both pairs to bot, mid = highest 2 singletons (modal robust answer 41-56% on these cells).
-  * All other two_pair → unchanged (high pair → mid).
-- Result on full 6M: **two_pair 59.16% → 60.20% (+1.04pp); overall 55.93% → 56.16% (+0.23pp).**
-- Adjacent high pairs (KKQQ, QQJJ etc.) deliberately NOT changed — high → mid still wins ~67-69% on those.
+(Per-profile shape-agreement on 300K-hand random sample, rng seed 42.)
 
-### Priority 3 — Self-play regret check (DELIVERED)
-- `analysis/scripts/selfplay_check.py` — samples random hands, runs engine MC against all 4 production profiles, and reports per-profile `(mean v3 EV, mean best EV, mean gap, match%)`. Documents in its docstring that pure self-play under symmetry is trivially zero, and explains that the useful measurement is exploitability gap.
-- Result on 200 hands × samples=1000:
+**Project goal reframed.** The published end product is a 5-10 rule chain matching the multiway-robust solver ≥95% of all 6M canonical hands. v3 is at 56.16% — 39pp short. Per-profile overlays were a tactical detour useful for the trainer; the GTO core is multiway-robust. **Session 16 starts with Phase D (decision-tree extraction).**
 
-  | profile        | mean v3 EV | mean best EV | mean gap  | match% |
-  |----------------|------------|--------------|-----------|--------|
-  | MFSuitAware    | +0.235     | +0.398       | +0.164    | 56.5%  |
-  | OmahaFirst     | +1.627     | +2.027       | +0.400    | 47.5%  |
-  | TopDefensive   | +0.128     | +0.359       | +0.231    | 47.5%  |
-  | RandomWeighted | +1.252     | +1.389       | +0.137    | 62.5%  |
+---
 
-- Strategy_v3 BEATS every profile on average (mean EV positive) and the average gap to solver-optimal stays under 0.50 EV/hand (the "meaningful" threshold). Not Nash, but solidly competitive.
+## What was completed this session (Session 15)
 
-### Priority 4 — Rule-chain-grounded explain.py (DELIVERED)
-- `trainer/src/explain.py` — full rewrite. Now does a three-way comparison: USER's setting vs CHAIN's setting (via `strategy_v3`) vs SOLVER's best.
-- Findings cover all five three-way relationships (all-agree, user=chain≠best, user=best≠chain, chain=best≠user, all-different), each with category-level rule-chain accuracy as the prior ("matches the solver on X% of <category> hands").
-- Per-tier diff finding identifies which tier(s) differ between user and solver in plain rank notation.
-- Kept the Omaha bottom-suit detector from v1 as a supplementary structural observation; dropped split-pair / wrong-top / tier-swap detectors since the rule-chain comparison subsumes them.
-- Verified end-to-end via curl on AAKK case: trainer correctly says "You followed the rule chain — this hand is one of its misses" with the solver's pick spelled out.
+### Phase A — strategy_v3 golden tests (`d5ed9ff`)
+- New file `analysis/scripts/test_strategy_v3_golden.py` — 13 tests (per-branch goldens × 9 dispatch branches, setting-104 layout sanity, 105-setting round-trip, v3≠v4 lockstep, 100-hand seed=42 SHA fixture).
+- Locks current v3 behaviour as a regression gate.
+- Negative-test verified: replacing strategy_v3 with strategy_v4 fires the lockstep + SHA tests.
 
-### Priority 5 — Reach for ≥60% shape-agreement (ATTEMPTED, NULL RESULT)
-- `analysis/scripts/encode_rules.py::strategy_v4` — bumps bot weights in both `_score_top_choice_for_locked_mid` (DS 3→4, conn 1→2) and `_hi_only_pick` (conn 2→3) to enable bot DS / 4-rundown more aggressively.
-- Result on full 6M: **v4 = 56.12%** (vs v3 = 56.16%, a -0.04pp regression). High_only category 31.01% → 30.84% — the rebalance shifts choices on a few thousand hands but the gains and losses approximately cancel.
-- Per-profile breakdown for v3: against multiway-robust 56.16%; vs MFSuitAware 55.68%; vs OmahaFirst 45.87%; vs TopDefensive 46.32%; **vs RandomWeighted 62.05%**. Strategy_v3 already crosses 60% against the easiest opponent.
-- **Conclusion: 60% multiway-robust is at or beyond the structural ceiling for an opponent-agnostic 7-rule chain.** Any further rule additions that improve one opponent profile likely degrade another. The proper path to >60% is per-profile rule overlays — kept v4 in the file as documented "tried it, didn't move" so future sessions don't re-do the experiment.
+### Phase C — Per-profile overlays (`a5df1d8`)
+- **`strategy_omaha_overlay`** (5 rules) — 45.82% → 54.69% on br_omaha:
+  - Single-pair → BOT when pair_rank ∈ {A, K, 2}; else MID (v3 default).
+  - Two-pair: high pair → BOT when high_rank ≥ 13 OR both pairs in 10-12. Generalises v3's AAKK exception. premium+premium 73% bot/mid; premium+high 95%; high+high 74%.
+  - High_only: re-tune `_hi_only_pick` weights — bot DS +5→+8, rundown ≥4 +2→+4.
+- **`strategy_topdef_overlay`** (1 rule mod) — 46.12% → 50.14% on br_topdef:
+  - `_topdef_top_pick`: top = highest singleton iff rank ≥ Q (12), else LOWEST singleton.
+  - Threshold tuned: ≥ 13 caused -13.2pp regression on Q-singleton bucket; ≥ 12 captures Q without sacrifice.
+  - Applied ONLY to single-pair and high_only branches; quads/trips/two_pair use v3 (initial scope caused -10pp regressions there).
+- **`strategy_for_profile(hand, profile)`** dispatcher.
+- `trainer/src/explain.py`: profile-aware. New `CHAIN_AGREEMENT_BY_PROFILE` table; `_chain_arrangement(hand, profile_id)` routes to right chain; `build_feedback(..., profile_id)` accepts the active profile.
+- 7 overlay golden tests in `analysis/scripts/test_overlays_golden.py`.
 
-### Headlines (full 6M, end of session)
+### Phase C+ — Residual rules (`5a815ce`)
+Targeted residual mining surfaced two additional rules:
+- **OmahaFirst three_pair premium-flip**: when high_pair ≥ 13, high → BOT, mid_pair → MID. Lifted three_pair 29.96% → 54.14% (+24.18pp on category, +0.47pp overall). Generalises premium-flip principle to three_pair.
+- **TopDef premium-trips break-down**: when trip_rank ≥ 13, top = ONE trip card, mid = TWO trip cards (instead of v3's trips→mid+1bot). Mining: 86% modal on premium trips. Applied to pure trips and trips_pair branches. Lifted trips 49.51% → 59.49%, trips_pair 40.41% → 51.59%.
+- **TopDef AAKK reverse**: removed v3's KK→MID exception; AAKK falls through to default high→MID (TopDef's modal answer at 48% vs v3's bot/mid 30%).
 
-| metric | NAIVE_104 | SIMPLE = REFINED | hi_only_search = refined_v2 | **v3 (production)** | v4 (no gain) |
-|---|---|---|---|---|---|
-| Overall LITERAL agreement | 20.09% | 49.06% | 51.41% | **51.64%** | 51.60% |
-| **Overall SHAPE agreement** | **21.77%** | **53.58%** | **55.93%** | **56.16%** | **56.12%** |
-| Unanimous slice (26.7%) | 30.13% | 82.93% | 83.70% | 83.73% | 83.70% |
-| 3of4 (40.5%) | 22.44% | 57.89% | 60.60% | 60.97% | 60.94% |
-| Quads | 23.14% | 79.20% | 79.20% | 79.20% | 79.20% |
-| Three-pair | 17.90% | 72.88% | 72.88% | 72.88% | 72.88% |
-| Pair | 19.09% | 65.02% | 65.02% | 65.02% | 65.03% |
-| Two-pair | 26.12% | 59.16% | 59.16% | **60.20%** | 60.20% |
-| Trips | 30.57% | 56.39% | 56.39% | 56.39% | 56.38% |
-| Trips_pair | 32.64% | 46.16% | 46.16% | 46.12% | 46.12% |
-| **High_only** | **19.50%** | **19.50%** | **31.01%** | **31.01%** | 30.84% |
+### Phase D scoping — Methodology Socratic with Gemini 2.5 Pro (no commit)
+- Multi-turn dialog (continuation `97707ec2-1603-44d2-a534-236caa6e92a2`).
+- Decided: sklearn `DecisionTreeClassifier` on (hand_features, multiway_robust_setting), scored by shape-equivalence. Target = setting_index (105 classes), NOT shape-tuple (254K classes — would explode).
+- Engineered 6 boolean feasibility features: `can_make_ds_bot`, `can_make_4run`, `has_high_pair`, `has_low_pair`, `has_premium_pair`, `has_ace_singleton`, `has_king_singleton`.
+- 27-feature input vector ready; full 6M target shape pre-computed in 27s.
+- Pipeline: 3-fold CV on 1M subsample for depth selection {3, 5, 7, 10, 15, 20, None} → full-6M fit at chosen depth → `export_text` → translate to Python → byte-identical parity check → EV-loss backtest on 5-10K sample × 4 profiles × 1000 MC.
 
-### Per-profile shape-agreement (v3)
-
-| target opponent           | v3 shape-agreement |
-|---------------------------|---|
-| multiway_robust (mode)    | 56.16% |
-| MFSuitAware (modal)       | 55.68% |
-| OmahaFirst                | 45.87% |
-| TopDefensive              | 46.32% |
-| RandomWeighted            | **62.05%** |
+### Phase D execution — BLOCKED (macOS TCC glitch)
+- `analysis/scripts/dt_phase1.py` written and saved.
+- First run via my Bash tool: ran for ~1 minute, started CV training, was SIGKILL'd mid-run by user interrupt (Exit code 137).
+- After SIGKILL: macOS `tccd` got into stuck state. ALL access to `~/Documents/claudecode/taiwanese/` from python3 (and intermittently from `ls`/`cat`) returned `PermissionError: [Errno 1] Operation not permitted` from BOTH my Bash sandbox AND the user's own Terminal.
+- Diagnosis: SIGKILL'd Python child process leaked TCC tokens; classic Apple `tccd` cache poisoning bug.
+- Fix path: user toggled python3.13 + Terminal in System Settings → Privacy & Security → App Management. Quit Terminal completely (Cmd+Q) → reopen → permissions restored.
 
 ---
 
 ## Files touched this session
 
 **Added:**
-- `trainer/src/buyout_eval.py`
-- `analysis/scripts/selfplay_check.py`
+- `analysis/scripts/test_strategy_v3_golden.py` — 13 v3 golden tests
+- `analysis/scripts/test_overlays_golden.py` — 8 overlay golden tests (including v3-divergence assertions)
+- `analysis/scripts/dt_phase1.py` — Phase D ceiling-curve script (NOT YET RUN due to TCC glitch)
 
 **Modified:**
-- `trainer/app.py` — `/api/score` and `/api/compare` now include buyout
-- `trainer/src/explain.py` — full rewrite, rule-chain-grounded
-- `trainer/static/index.html` — buyout banner placeholders
-- `trainer/static/app.js` — `renderBuyoutBanner`, per-row buyout tag
-- `trainer/static/style.css` — buyout banner styles
-- `analysis/scripts/encode_rules.py` — added `strategy_v3` + `strategy_v4` + per-profile measurement
-- `CURRENT_PHASE.md` — this file (rewritten)
-- `handoff/MASTER_HANDOFF_01.md` — Session 14 entry appended
+- `analysis/scripts/encode_rules.py` — added `_hi_only_pick_omaha`, `_topdef_top_pick`, `_hi_only_pick_topdef`, `strategy_omaha_overlay`, `strategy_topdef_overlay`, `strategy_for_profile`, `PROFILE_TO_STRATEGY`, plus three_pair premium-flip and topdef premium-trips break-down rules.
+- `trainer/app.py` — passes `profile_id` to `build_feedback`.
+- `trainer/src/explain.py` — `CHAIN_AGREEMENT_BY_PROFILE` per-profile table; `_chain_arrangement(hand, profile_id)`; `build_feedback(..., profile_id)`.
 
 **Verified end-to-end:**
-- `cargo build --release` clean.
-- `cargo test --release`: 88 + 15 + 15 + 6 = 124 tests pass.
-- Python tests: features 24/24, settings 11/11, canonical 9/9.
-- `encode_rules.py` full 6M run completes in ~5 minutes; 7 strategies scored.
-- `selfplay_check.py --hands 200 --samples 1000` runs in ~50s; per-profile gap report renders cleanly.
-- Trainer manual smoke: quad-2 hand fires BUYOUT badge, AAKK case shows rule-chain-vs-solver explanation.
+- All 74 Python tests pass (24 features + 11 settings + 9 canonical + 9 cross_model + 13 v3_golden + 8 overlays_golden).
+- `cargo build --release` clean (no Rust changes).
+- 3 commits this session: `d5ed9ff`, `a5df1d8`, `5a815ce`.
 
 ---
 
 ## Active Handoff File
 
-`handoff/MASTER_HANDOFF_01.md` (Session 14 entry appended)
+`handoff/MASTER_HANDOFF_01.md` (Session 15 entry to be appended in this session-end)
 
 ---
 
 ## Resume Prompt (next session)
 
 ```
+Resume Session 16 of the Taiwanese Poker Solver project.
+
 Read these files for context:
 - CLAUDE.md
 - CURRENT_PHASE.md
 - modules/game-rules.md   (MANDATORY)
-- DECISIONS_LOG.md
-- handoff/MASTER_HANDOFF_01.md  (scan Sessions 12-14)
-- analysis/scripts/encode_rules.py  (current rule chain — 7 strategies)
-- trainer/src/explain.py            (rule-chain-grounded feedback)
-- trainer/src/buyout_eval.py        (signature + soft buyout signals)
+- DECISIONS_LOG.md  (latest entry: Session 15 methodology decision)
+- handoff/MASTER_HANDOFF_01.md  (scan Sessions 13-15)
+- analysis/scripts/encode_rules.py  (current rule chain — 9 strategies including overlays)
+- analysis/scripts/dt_phase1.py     (Phase D ceiling-curve script — NOT YET RUN)
+- analysis/scripts/test_strategy_v3_golden.py
+- analysis/scripts/test_overlays_golden.py
 
-State of the project (end of Session 14):
-- Production rule chain = `strategy_v3` (encode_rules.py).
-  56.16% shape-agreement vs multiway-robust on full 6M.
-  Per-profile: MFSA 55.7%, Omaha 45.9%, TopDef 46.3%, RandomWeighted 62.0%.
-- Buyout signature shipped in trainer with both signature + soft signals.
-- Self-play regret: v3 BEATS all 4 profiles on average; gap to solver-optimal
-  is +0.14 to +0.40 EV/hand — solidly competitive, not Nash.
-- explain.py rewritten to compare USER vs CHAIN vs SOLVER with category-
-  level rule-chain accuracy framing.
-- v4 weight rebalance attempted (DS/conn weights bumped) — no gain (-0.04pp).
-  60% on multiway-robust appears at the ceiling for an opponent-agnostic
-  7-rule chain; further gains require per-profile overlays.
+State of the project (end of Session 15):
+- Production rule chain = `strategy_v3` (56.16% multiway-robust shape-agreement on 6M).
+- Per-profile overlays shipped (omaha_overlay 54.69% vs br_omaha;
+  topdef_overlay 50.14% vs br_topdef).
+- Trainer is profile-aware via strategy_for_profile dispatcher.
+- All goldens locked. 74 python tests + 124 rust tests green.
+- Project goal: 5-10 rule chain at ≥95% multiway-robust shape-agreement
+  on 6M canonical hands. v3 is 39pp short.
 
-Possible directions for Session 15:
+Methodology agreed with Gemini 2.5 Pro for Phase D:
+1. ESTABLISH CEILING: train sklearn DecisionTreeClassifier on
+   (27 hand_features, multiway_robust setting_index) at depths
+   {3, 5, 7, 10, 15, 20, None}. 3-fold CV on 1M subsample for depth
+   selection; full 6M fit for final reporting. Score by shape-equivalence.
+2. PICK BUDGET: choose depth at the agreement-curve knee within "human
+   memorizable" (5-10 rules ≈ depth 4-7).
+3. EXTRACT: sklearn export_text → translate to Python if/elif → verify
+   byte-identical predictions across all 6M.
+4. EV BACKTEST: 5-10K random hands × 4 profiles × 1000 MC samples;
+   compute mean EV-loss = (BR_ev - chain_ev) per profile; compare v3,
+   overlays, learned tree.
+5. SHIP: strategy_v5_dt in encode_rules.py; golden tests; markdown export.
 
-1. **Per-profile rule overlays.** The biggest gap is OmahaFirst & TopDefensive
-   (~46% each). Build a small rule chain SPECIFIC to each profile, surface in
-   the trainer when the user picks that profile. Could reach 70%+ per-profile.
+IMMEDIATE NEXT ACTION: run `python3 analysis/scripts/dt_phase1.py` from
+the project root. Output is a 7-row depth-vs-agreement table:
+  depth  leaves   cv_acc  cv_shape  full_acc  full_shape  fit_s
+The unbounded (None) depth is the structural ceiling for our feature set.
+This determines whether the 95% target is reachable.
 
-2. **Trainer accuracy tracking** (Sprint 5b). Persist user submissions, track
-   accuracy by hand category, build a "drill weak categories" mode.
-
-3. **Decision-tree extraction** for publication. The current rule chain is in
-   Python; a published "GTO Taiwanese Poker strategy guide" needs the rules
-   in a decision-tree format a human can memorize. Build a Markdown export
-   from `encode_rules.py::strategy_v3`.
-
-4. **Tighter buyout signature.** Current is precision 26%, recall 47%. Try
-   adding new feature buckets (e.g., "very low quads + isolated high"
-   doesn't fire current rule but is buyout 30% of the time?). Probe required.
-
-5. **Rule chain unit tests.** Lock in the current strategy_v3 behavior with
-   golden-hand tests so future sessions can refactor without regression risk.
+Was BLOCKED last session by macOS TCC permission glitch (transient,
+caused by SIGKILL during heavy compute). User toggled python3 + Terminal
+in System Settings → Privacy & Security → App Management and Cmd+Q'd
+Terminal between sessions, which restored access.
 
 PRIORITY FROM USER:
-- 5-10 rules max. Compression non-negotiable.
-- Current chain = 7 rules + 2 two_pair conditionals + buyout signature = 10
-  rules. AT BUDGET. Adding more requires removing one.
-- Use SHAPE agreement, NOT literal.
-
-Suggested starting point: depends on user direction. Trainer UX → priority 2
-(accuracy tracking). Publication-ready → priority 3 (decision-tree export).
-Robustness against tougher opponents → priority 1 (per-profile overlays).
+- The METHOD must be testable, repeatable, and provable.
+- EV/$ backtest across 6M hands is the ground-truth metric (shape-
+  agreement is the cheap proxy used for training).
+- Don't iterate by hand-engineering rules — let the data speak.
+- 5-10 rule budget; tree depth 4-7 is the sweet spot.
+- Use SHAPE agreement, NOT literal setting_index.
 ```
 
 ---
