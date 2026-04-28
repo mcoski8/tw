@@ -1244,3 +1244,186 @@ Apply the 4-step doctrine for any hypothesis BEFORE running new MC:
 4. Test Cheaply (in silico / analytical proxy)
 Then act.
 ```
+
+---
+
+### Session 18 — 2026-04-28 — Sprint 7 Phase D: high_only mining + 3 augmented features (path (a) executed)
+
+**Scope:** Session 17's recommended path (a) — mine the high_only category (12.6% of v3 EV-loss; second-largest cohort after single-pair) and add routing-aware features mirroring the Decision 034 pattern. **Result: full-6M ceiling 63.76% → 65.20% (+1.44pp); high_only 3-of-4 slice 39.64% → 48.92% (+9.28pp); depth-15 knee 62.0% → 62.86% / 60.71% → 61.59% cv-shape.**
+
+#### Step 1-3 — high_only leaf mining (`analysis/scripts/mine_high_only_leaves.py`)
+
+- Filtered feature_table to (mode_count==3 AND category=='high_only') → 463,547 hands (7.71% of full 6M).
+- Trained depth=None DT on slice with the 27 baseline features. Slice ceiling: **39.64% / 4,544 leaves.** Much lower than the single-pair 74.23% — confirms Session 13's "high_only is opponent-dependent" finding.
+- Miss concentration: top-10 leaves cover 4.4% of misses; top-50 = 15.5%; top-100 = 24.7%. Diffuse across 4,176 miss-leaves (vs single-pair's 22,031), but the dominant top-15 leaves are unambiguously about bot-suit-profile-per-routing.
+- Recurring pattern: under NAIVE_104 the bot is 3-suited (3 of the 4 lowest cards share a suit). BR demotes a same-suit broadway pair from mid → bot to repair the bot to DS. Example leaf-1 hand `2c 3c 6c 7d Jh Qh Ks` → NAIVE bot `2c 3c 6c 7d` = 3 clubs (NOT DS); BR routes Q-J→bot, mid=7-6, bot=`Qh Jh 3c 2c` = 2h+2c → DS.
+
+#### Step 4 — three-feature design (`high_only_aug_features.py`)
+
+- Module exposes `compute_high_only_aug_for_hand(hand)` (scalar) + `compute_high_only_aug_batch(hands, slice_mask)` (vectorised). Vacuous on non-high_only hands (returns 0).
+- Features:
+  1. `default_bot_is_ds_high` — bool. NAIVE_104 bot is DS (2,2)?
+  2. `n_mid_choices_yielding_ds_bot` — 0-15. Top fixed at byte[6]; count of C(6,2) mid choices yielding DS bot.
+  3. `best_ds_bot_mid_max_rank` — 0 or 4-14. Top fixed at byte[6]; among DS-bot-yielding mid choices, the maximum rank that can appear in mid. Encodes the "rank-cost of routing-for-DS-bot".
+- 5 spot-checks pass against hand-picked cases from the leaf dump (per Session 17 lesson). f3=12 on the Leaf-5 hand correctly identifies that Q can stay in mid with a DS bot — the precise tradeoff the DT needs to encode.
+
+#### Step 4a — odds-ratio signal check (`analysis/scripts/signal_or_high_only.py`)
+
+| Feature | OR | Direction |
+|---|---|---|
+| `default_bot_is_ds_high` (vs BR=NAIVE) | 6.38x | + (P(=NAIVE | F1=1)=57.32% vs P(=NAIVE | F1=0)=17.40%) |
+| `best_ds_bot_mid_max_rank` 4-8 vs 0 | — | 10.29% NAIVE (vs 36.09%) — clean U-shape |
+| `best_ds_bot_mid_max_rank` 13-14 vs 4-8 | — | 42.36% NAIVE — broadway K/A in mid retains NAIVE |
+| F1 × F2 cross-tab | — | F1=1 cells: 53-68% NAIVE; F1=0 cells: 12-36% NAIVE |
+
+The U-shape on F3 is exactly the "tradeoff cost" signal: when F3 is high (broadway can stay in mid AND DS-bot), BR uses NAIVE; when F3 is low (DS-bot only with sacrifice), BR deviates; when F3 is 0 (no DS-bot achievable), BR settles for NAIVE. Strong, interpretable, non-redundant signal — signal magnitude high enough to justify training compute.
+
+#### Step 5 — augmented-feature DT ceiling on multiple subsets (`analysis/scripts/dt_high_only_aug_ceiling.py`)
+
+depth=None DT comparison across 4 feature sets × 4 subsets:
+
+| Subset | Baseline (27) | + Pair-aug (30) | + High-aug (30) | All Aug (33) |
+|---|---|---|---|---|
+| HIGH_ONLY 3-of-4 (slice) | 39.64% | 39.64% (vacuous ✓) | **48.92%** | 48.92% |
+| HIGH_ONLY full (1.23M) | 30.87% | 30.87% (vacuous ✓) | **37.89%** | 37.89% |
+| 3-of-4 majority (2.43M) | 70.01% | 72.61% | 71.78% | **74.38%** |
+| Full 6M (6.01M) | 61.74% | 63.76% | 63.17% | **65.20%** |
+
+**Key result:** Full 6M ceiling lifts from 63.76% (Session 17 pair-aug-only) to **65.20% (+1.44pp)** with high_only-aug added. 3-of-4 majority ceiling lifts from 72.61% to **74.38% (+1.77pp)**. The high_only-aug features lift the high_only sub-population by +7-9pp, propagating to +1.4-1.8pp on the broader sets.
+
+Drop-out ablation on slice (depth=None):
+- Drop `default_bot_is_ds_high`: −3.15pp
+- Drop `n_mid_choices_yielding_ds_bot`: −1.19pp
+- Drop `best_ds_bot_mid_max_rank`: −4.78pp ← LARGEST (matches Decision 034's pattern: F3 had weaker individual OR than F1, but contributes most in drop-out)
+- Drop any pair-aug feature: 0.00pp (vacuous on slice ✓)
+
+All three high_only-aug features are non-redundant. Pair-aug features are correctly inert on this slice.
+
+#### Step 6 — full-6M depth curve with all 33 features (`analysis/scripts/dt_phase1_aug2.py`)
+
+Identical methodology to dt_phase1_aug.py (3-fold CV on 1M subsample, full-6M fit at chosen depth) with the union 33-feature set.
+
+| depth | leaves | cv_acc | cv_shape | full_acc | full_shape |
+|---|---|---|---|---|---|
+| 3 | 8 | 30.69% | 32.31% | 30.63% | 32.13% |
+| 5 | 32 | 39.94% | 42.01% | 39.97% | 42.27% |
+| 7 | 125 | 46.99% | 48.98% | 47.16% | 49.15% |
+| 10 | 939 | 54.42% | 56.51% | 54.72% | 56.74% |
+| **15** | **18,354** | **59.17%** | **61.59%** | **60.44%** | **62.86%** |
+| 20 | 122,596 | 57.75% | 60.11% | 62.56% | 64.68% |
+| None | 229,271 | 56.10% | 58.60% | 63.12% | 65.20% |
+
+**Depth-15 with 33 features (62.86% full / 61.59% cv) lifts the Session 17 depth-15 knee (62.0% / 60.7%) by +0.86pp / +0.92pp — and now sits +6.7pp over v3 production (56.16%).** Depth-15 remains the chain-extraction candidate (smallest cv-full gap; same leaf-count tier as Session 17). The lift is consistent across all bounded depths ≥10.
+
+#### Augmented-feature persistence (`analysis/scripts/persist_high_only_aug.py`)
+
+- `data/feature_table_high_only_aug.parquet` — 18.75 MB, joins `feature_table.parquet` on `canonical_id`.
+- Distributions: `default_bot_is_ds_high` 1: 185,328 / 0: 5,823,831; `n_mid_choices_yielding_ds_bot` {0:5.06M, 1:309K, 3:515K, 6:77K, 9:51K} (discrete due to suit-profile symmetries); `best_ds_bot_mid_max_rank` ranges 0 (5.06M, no DS-bot) and 3-13 distributed across the rest.
+- Compute is 43.2s on the 1.23M high_only sub-population. Future sessions read the parquet directly.
+
+## Files added this session
+
+- `analysis/scripts/mine_high_only_leaves.py` — Step 1-3 mining + leaf-rank dump
+- `analysis/scripts/high_only_aug_features.py` — feature module (scalar + batch + 5 spot-check cases)
+- `analysis/scripts/signal_or_high_only.py` — Step 4a OR + cross-tab signal test
+- `analysis/scripts/dt_high_only_aug_ceiling.py` — Step 5 cross-subset comparison + drop-out ablation
+- `analysis/scripts/dt_phase1_aug2.py` — Step 6 depth curve on full 6M with all 33 features
+- `analysis/scripts/persist_high_only_aug.py` — parquet persistence
+- `data/feature_table_high_only_aug.parquet` — 18.75 MB augmented features (high_only only)
+
+## Files modified this session
+
+- `CURRENT_PHASE.md` — rewritten
+- `DECISIONS_LOG.md` — appended Decision 035
+- `handoff/MASTER_HANDOFF_01.md` — appended this Session 18 entry
+
+## Verified
+
+- Rust: `cargo test --release` 124/124 pass.
+- Python: 74/74 tests pass (24 features + 11 settings + 9 canonical + 9 cross_model + 13 v3_golden + 8 overlays_golden).
+
+## Gotchas + lessons
+
+- **Slice ceiling of 39.64% on high_only is genuinely low — but the ceiling rises +9.28pp with the right features.** Session 13's "single deterministic rule cannot exceed ~50% on high_only because right answer is opponent-dependent" was empirical against rule-based strategies. A DT with routing-aware features pushes the slice ceiling to 48.92% — within 1pp of that empirical cap. The remaining gap is the intrinsic opponent-dependence; further features here will hit diminishing returns.
+- **Diffuse miss concentration ≠ no signal.** high_only miss-leaves are spread across 4,176 with top-100 covering only 24.7% (vs single-pair's tighter top-50 cluster). But the dominant top-15 leaves all share the same structural pattern (bot-suit-under-default-routing). Diffuseness in the leaf graph does not contradict a clean structural signal — the features lift the floor across many small leaves uniformly.
+- **F3 (best_ds_bot_mid_max_rank) is again the largest contributor — and again has the weakest stand-alone signal.** Repeating Decision 034's lesson: signal magnitude ≠ contribution magnitude. The single OR was modest (no clean +/- direction; U-shape across bins). But it captures the rank-cost-of-DS-bot tradeoff that the DT alone cannot derive. Always run drop-out ablation; never trust signal magnitude as a contribution proxy.
+- **Pair-aug features are correctly vacuous on the high_only slice.** Drop-out delta = 0pp on all three pair-aug features when measured on the high_only slice. Confirms feature isolation by design (each augmented family fires only on its target category) and validates the additive composition: total full-6M lift +3.46pp ≈ pair-aug +2.02pp + high-aug +1.44pp.
+- **Augment compute scales with slice size, not full N.** `compute_high_only_aug_batch` iterates `np.where(slice_mask)[0]` only — 43s for the 1.23M high_only rows. Future category-aug modules should follow the same pattern.
+
+## Carry-forward for Session 19
+
+The path forks again. Choose:
+
+(a) **Continue mining other categories.** two_pair (24% of EV-loss; the largest remaining cohort after single-pair); trips_pair (small but high-density). Same template: leaf mining → routing-aware features → OR-test → spot-check → ablation → persist parquet → depth curve. Likely +0.5-1.5pp full-6M ceiling per category.
+
+(b) **Extract chain from depth-15 aug-33 tree.** 18,354 leaves; 62.86% full / 61.59% cv; +6.7pp over v3. Refit → sklearn `export_text` → translate to Python if/elif → byte-identical parity check on full 6M. Then `v3_evloss_baseline.py --strategy v5_dt --hands 2000 --save` and compare to v3 on per-profile absolute EV + $/1000 hands at $10/EV-pt. **This is the chain-shipping path.**
+
+The reframe (Decision 033) favours continued mining until the feature ceiling stops moving. Session 18 added +1.44pp at depth=None and +0.86pp at depth=15 — clear signal that more category-mining still has runway. Recommended: (a) for two_pair next; (b) once the augmented-feature lift plateaus.
+
+## Decisions added this session
+
+- **Decision 035** — Three high_only augmented features added to the production feature set (default_bot_is_ds_high, n_mid_choices_yielding_ds_bot, best_ds_bot_mid_max_rank). Lifts: +9.28pp on target slice, +1.44pp on full 6M, +1.77pp on 3-of-4 majority.
+
+## Resume prompt (next session)
+
+```
+Resume Session 19 of the Taiwanese Poker Solver project at
+/Users/michaelchang/Documents/claudecode/taiwanese.
+
+Read these files for context:
+- CLAUDE.md
+- CURRENT_PHASE.md (rewritten end of Session 18)
+- modules/game-rules.md (MANDATORY)
+- DECISIONS_LOG.md (latest: Decision 035 — high_only augmented features)
+- handoff/MASTER_HANDOFF_01.md (scan Sessions 16-18 since the goal reframe)
+- analysis/scripts/encode_rules.py (current rule chain — strategy_v3 is production)
+- analysis/scripts/pair_aug_features.py + high_only_aug_features.py (feature modules)
+- analysis/scripts/dt_phase1_aug2.py (Session 18 depth curve, full 6M, 33 features)
+- data/feature_table.parquet, data/feature_table_aug.parquet,
+  data/feature_table_high_only_aug.parquet (joined on canonical_id)
+
+State of the project (end of Session 18):
+- Two augmented-feature families now live: pair-aug (Session 17) + high_only-aug (Session 18).
+  Combined, they lift the full-6M depth=None ceiling from 61.74% (baseline) to 65.20% (+3.46pp)
+  and the depth-15 knee from 61.96% to 62.86% / 61.59% cv-shape.
+- v3 production: 56.16% (unchanged). Augmented depth-15 is +6.7pp over v3.
+- High_only 3-of-4 slice ceiling lifted 39.64% → 48.92% (+9.28pp) — within ~1pp of the
+  Session 13 empirical "opponent-dependent" cap.
+- 124 Rust + 74 Python tests green.
+
+User priorities (re-confirmed):
+- Discovery mode, not production commitment.
+- Data/ML/AI drives discovery — let the leaves speak; don't anchor on speculation.
+- Rule-count cap is soft.
+- Track results as $/1000 hands at $10/EV-point.
+- Always report BOTH absolute EV per profile AND EV-loss vs BR.
+
+IMMEDIATE NEXT ACTIONS (pick one):
+
+(a) RECOMMENDED — Continue mining: two_pair next.
+    1. Filter feature_table.parquet to (mode_count == 3 AND category == 'two_pair')
+       — 24% of v3 EV-loss; the largest remaining cohort.
+    2. Mine impure leaves with the existing 33 features (pair-aug fires partially
+       — n_pairs==2 not 1, so feature semantics may need adapting; check first).
+    3. Hypothesise 1-3 two_pair-specific features (likely: which-pair-on-bot,
+       broadway-pair-vs-low-pair routing, pair-suit-coupling).
+    4. OR-test → spot-check → batch + ablation → persist → depth curve.
+    5. Optional: trips_pair after two_pair.
+
+(b) Alternative — Extract chain from current augmented depth-15 tree (33 features).
+    1. Refit depth=15 DT on full 6M with all 33 features.
+    2. sklearn `export_text` → translate to Python if/elif chain.
+    3. Verify byte-identical predictions on full 6M.
+    4. Run v3_evloss_baseline.py --strategy v5_dt and compare to v3 on
+       per-profile absolute EV + $/1000 hands at $10/EV-pt.
+
+(a) is more discovery before commitment; (b) ships a chain.
+The reframe favours (a) until the feature ceiling stops moving.
+
+Apply the 4-step doctrine for any hypothesis BEFORE running new MC:
+1. Hypothesize (qualitative observation)
+2. Measure Signal (odds ratio on representative sample)
+3. Measure Impact (EV-loss share)
+4. Test Cheaply (in silico / analytical proxy)
+Then act.
+```

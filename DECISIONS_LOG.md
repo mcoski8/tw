@@ -411,3 +411,30 @@
   3. `analysis/scripts/dt_phase1_aug.py` is the canonical depth-curve harness with augmented features. Replaces dt_phase1.py for Phase D ceiling work.
   4. **Depth-15 with these features is the chain-extraction candidate.** 18,330 leaves; 62.0% full / 60.7% cv shape; matches baseline unbounded ceiling. Whether to ship this or continue mining other categories is the Session 18 fork.
   5. Feature naming convention locked: `<routing>_bot_<property>` for bot-property-per-routing features. Future categories (high_only, two_pair) will follow.
+
+
+## Decision 035 — Three high_only augmented features added to the production feature set
+**Date:** 2026-04-28 (Session 18)
+**Question:** With Decision 034's pair-aug features the full-6M ceiling reached 63.76% (depth=None) / 62.0% (depth=15 knee). high_only is the second-largest miss-cohort by EV-loss share (12.6%). What features close that gap?
+**Options considered:**
+  - (a) Continue with the pair-aug features only and extract the depth-15 chain. Refuted by the discovery doctrine — there's a clean miss-pattern that further mining can address before chain commitment.
+  - (b) Add bot-suit-profile-per-routing features for high_only (mirroring Decision 034's pattern). Mined from the leaf dump (`mine_high_only_leaves.py`): the structural blind spot is the suit profile of the SPECIFIC 4 cards in the bot under each (top, mid) routing, which the existing `suit_max/suit_2nd/can_make_ds_bot` features only see at the 7-card level.
+  - (c) Per-suit per-position vectors. Same overfit concern as Decision 034.
+**Choice:** (b) — three minimal features, vacuous on non-high_only hands:
+  1. `default_bot_is_ds_high` (bool) — under NAIVE_104 (top=byte[6], mid=bytes(4,5), bot=bytes(0..3)), is bot DS (2,2)?
+  2. `n_mid_choices_yielding_ds_bot` (0-15) — fix top=highest. Count of C(6,2) mid-pair choices from the remaining 6 that yield a DS bot.
+  3. `best_ds_bot_mid_max_rank` (0 or 4-14) — fix top=highest. Among mid choices yielding DS bot, the maximum rank that can appear in mid. Encodes the rank-cost of routing-for-DS-bot.
+**Why** (signal + impact + cheap-test confirmed before commit, per Decision 033's 4-step doctrine):
+  1. **Mining produced the hypothesis.** `mine_high_only_leaves.py` (slice ceiling 39.64% / 4,544 leaves on 463K hands) showed the recurring pattern in the top-15 miss-leaves: under NAIVE_104 the bot is 3-suited (3 of the 4 lowest cards share a suit), and BR demotes a same-suit broadway pair from mid → bot to repair the bot to DS. Example: hand `2c 3c 6c 7d Jh Qh Ks` → NAIVE bot `2c 3c 6c 7d` = 3 clubs (NOT DS); BR routes Q-J→bot, mid=7-6, bot=`Qh Jh 3c 2c` = 2h+2c → DS.
+  2. **Odds ratios confirm signal direction and magnitude.** `default_bot_is_ds_high` OR=6.38x: P(BR=NAIVE | F1=1)=57.32% vs P(=NAIVE | F1=0)=17.40%. `best_ds_bot_mid_max_rank` shows a clean U-shape — 36% NAIVE when no DS-bot achievable; 10% NAIVE when DS-bot only via low-mid (4-8); 42% NAIVE when broadway K/A can stay in mid with DS-bot. Exactly the "tradeoff cost" decision the DT needs to encode.
+  3. **Drop-out ablation confirms all three are non-redundant.** Slice (high_only 3-of-4) ceiling: 48.92% (full aug) → 45.76% (−default_bot_is_ds_high, −3.15pp) / 47.73% (−n_mid_choices_yielding_ds_bot, −1.19pp) / 44.13% (−best_ds_bot_mid_max_rank, −4.78pp). F3 is the largest contributor — same pattern as Decision 034 where the OR-magnitude-weakest feature contributed most.
+  4. **Cheap-test outcome:** depth=None lifts (high_only 3-of-4 slice: +9.28pp / 39.64% → 48.92%; full 6M: +1.44pp / 63.76% → 65.20%). Slice ceiling approaches the empirical ~50% "single deterministic rule cap on opponent-dependent high_only" finding from Session 13. The pair-aug features stay vacuous on the high_only slice (drop-out delta = 0pp on all three) confirming feature isolation by design.
+  5. **Vacuous on non-high_only hands by design.** Compute is high_only only (7 distinct ranks). Other categories will get their own augmented features. Feature naming convention from Decision 034 followed: `default_bot_is_ds_high` / `n_mid_choices_yielding_ds_bot` / `best_ds_bot_mid_max_rank`. The `_high` suffix disambiguates from the pair-aug `default_bot_is_ds`.
+  6. **Spot-check ≥4 hand-picked cases passed before batch.** Per Session 17 lesson: `high_only_aug_features.py.__main__` includes 5 spot-check cases (Leaf-1 miss, Leaf-1 alt-DS-bot, Leaf-5 miss, Default-DS sample, Monosuit). All match expected feature values, including non-trivial f3=12 on Leaf-5 (Q achievable in mid with DS-bot).
+**Consequence:**
+  1. `analysis/scripts/high_only_aug_features.py` is the production feature module. `compute_high_only_aug_for_hand(hand)` is the scalar primitive; `compute_high_only_aug_batch(hands, slice_mask)` is the vectorised version.
+  2. `data/feature_table_high_only_aug.parquet` (18.75 MB) joins `feature_table.parquet` on `canonical_id`. Future runs read this file instead of recomputing the 43s Python-loop augment over the high_only sub-population.
+  3. `analysis/scripts/dt_phase1_aug2.py` is the canonical depth-curve harness with all 33 augmented features (27 baseline + 3 pair-aug + 3 high_only-aug). Supersedes `dt_phase1_aug.py` for Phase D ceiling work.
+  4. **Depth-15 with all 33 features is the new chain-extraction candidate.** 18,354 leaves; 62.86% full / 61.59% cv shape; +0.86pp full / +0.92pp cv over the Session 17 knee. v3 production at 56.16% means depth-15 aug-33 is +6.7pp over v3.
+  5. Slice ceiling on high_only 3-of-4 is now 48.92% (vs Session 13's empirical ~50% opponent-dependent cap). The remaining 1pp suggests the high_only feature ceiling is approached for a DT on this target. Future high_only gains likely require a different target (per-profile chains, weighted ensemble, or accepting the multiway-robust target's intrinsic ambiguity on this category).
+  6. Pattern reusable for two_pair (24% of EV-loss) and trips_pair (small but high-density) in Session 19+. Same template: filter slice → mine leaves → hypothesise routing-aware features → OR-test → spot-check → batch + ablation → persist parquet → re-run depth curve.
