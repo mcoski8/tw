@@ -361,3 +361,27 @@
   2. Future `strategy_v5_dt` in `encode_rules.py` will be the learned chain.
   3. EV-loss reporting becomes a standard validation artifact alongside shape-agreement.
   4. If sklearn DT output is convoluted (e.g., many splits on continuous features that don't map to clean poker concepts), fall back to RuleFit / SkopeRules. Decision deferred to Phase D execution.
+
+
+## Decision 033 — 95% shape-agreement target retired; absolute EV per profile is the new headline; rule-count cap is soft
+**Date:** 2026-04-27 (Session 16)
+**Question:** Phase D ceiling-curve experiment showed the 27-feature decision-tree ceiling is 61.74% on full 6M (well below the project's headline "≥95% shape-agreement on multiway-robust target"). Subsequent EV-loss baseline showed v3 LOSES money against strong opponents (-0.78 EV/hand vs MFSuitAware, -0.89 vs TopDef) despite scoring 56.16% shape. Two surgical-fix hypotheses (fall-through, +5 Ace-bonus removal) were empirically refuted. What's the right project goal given this?
+**Options:**
+  - (a) Hold the 95% line; pursue feature engineering iteratively until reachable.
+  - (b) Reframe to "≥95% on unanimous-only hands" (covers 26.68% of data).
+  - (c) Drop shape-agreement as headline; use per-profile absolute EV (+ $/1000 hands at $10/EV-pt) as primary metric, EV-loss vs BR as diagnostic.
+  - (d) Combination: directional EV-loss reduction (no hard %) + non-negative absolute EV against all 4 profiles.
+**Choice:** (d) — the directional reframe.
+**Why:**
+  1. **Empirical infeasibility of 95% shape on the current target.** The 27-feature ceiling caps at 61.74% on the full 6M and 70.01% on the 3-of-4 majority subset (clear-majority signal). Even unbounded depth and 151K leaves cannot break through the feature representation. Pursuing 95% on shape-agreement is chasing a number anchored to a defunct (single-BR) target definition, not the multiway-robust-mode target we adopted in Decision 030.
+  2. **Shape-agreement is a noisy proxy that hides whether the strategy profits.** The user's reframe ($10/EV-point over 1000 hands — does the rule chain profit?) revealed v3 is profitable vs weak opponents (Omaha +$10K, Weighted +$3.7K per 1000) but LOSES money against strong ones (MFSuitAware -$7.7K, TopDef -$8.8K per 1000). EV-loss alone never surfaced this. Absolute EV per profile is the strategically meaningful metric.
+  3. **Hand-engineered surgical patches don't work.** Two consecutive hypotheses were refuted by data: (i) fall-through to setting 102/104 (OR=1.09 — not a signal), (ii) +5 Ace-on-top bias removal (net total loss INCREASED +93 EV, the +5 was load-bearing for non-Ace pair hands). v3's hand-engineered architecture is at its structural ceiling for what 9-rule dispatch with single-component scoring can express. Components interact non-trivially.
+  4. **User's "discovery phase" stance.** User is non-technical, called the project a "nuanced and new discovery phase," and explicitly pushed back: *"these ultra tight goals is begging for failure."* Hard percentage targets are inappropriate before we know what's achievable; directional reduction below v3's 1.63 baseline is achievable, measurable, and avoids the failure-by-numerical-target trap.
+  5. **The rule-count cap (5-10 rules) is also soft.** User stated explicitly: *"realistically im thinking we even go more than 10 named heuristics if need be to get us better EV (in a significant way)."* Memorability has a cost, but that cost must be justified by real EV improvement — not enforced as an arbitrary cap. Realistic landing zone: ~10-15 named heuristics with internal nesting, total ~150-300 decision paths, depth-7 to depth-10 in tree terms.
+  6. **Methodology doctrine adopted alongside.** Every hypothesis must go through 4 steps before any compute is spent: Hypothesize → Measure Signal (odds ratio on representative sample, NOT visual inspection) → Measure Impact (EV-loss share) → Test Cheaply (in silico/analytical proxy) → only then act. Two consecutive wrong hypotheses in this session would have been killed in 30s by an in silico test instead of costing 9-18 minutes of MC compute. Locked in.
+**Consequence:**
+  1. CLAUDE.md headline section may need an update reflecting the new goal framing (deferred to Session 17 — not blocking).
+  2. CURRENT_PHASE.md updated with the new headline and Session 17 starting action.
+  3. `analysis/scripts/v3_evloss_baseline.py` is the canonical evaluation harness. Future rule chains tested via `--strategy <name> --hands 2000 --save data/<name>_records.parquet` for apples-to-apples comparison at fixed seed=42.
+  4. **Reporting standard:** every rule-chain candidate must report (a) per-profile absolute mean EV, (b) per-profile EV-loss vs BR, (c) $/1000 hands at $10/EV-pt for non-technical legibility. Both metrics; absolute EV is the headline.
+  5. Path forward: data-driven distillation, not surgical patches. Category-specific miss-driven feature mining starting with single-pair hands (47% of total EV-loss).

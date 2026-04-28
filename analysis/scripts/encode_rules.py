@@ -625,6 +625,106 @@ def strategy_v3(hand: np.ndarray) -> int:
 
 
 # ----------------------------------------------------------------------
+# EXPERIMENT: V3 with the +5 highest-singleton "top_pref" bonus dropped.
+#
+# Empirical motivation (Session 16, 2026-04-27): EV-loss baseline showed
+# every Ace-singleton cohort has 30-86% higher mean loss than its non-Ace
+# counterpart. v3's `_score_top_choice_for_locked_mid` gives +5.0 to the
+# highest singleton, which mechanically routes the Ace to top whenever
+# present. This experiment removes that bonus to test the hypothesis
+# that the bias systematically over-prefers Ace-on-top.
+#
+# Implementation: drop the highest-singleton `+5.0` while keeping the
+# pair-breaking penalty (-10.0). Top selection then becomes structural —
+# bot DS / connectivity / rank tiebreaker drive it.
+# ----------------------------------------------------------------------
+
+def _score_top_choice_no_top_bias(d: dict, top: int, mid: tuple[int, int]) -> float:
+    suits = d["suits"]
+    ranks = d["ranks"]
+    bot_pos = tuple(p for p in range(7) if p != top and p not in mid)
+    bot_ds = _bot_is_double_suited_at(suits, bot_pos)
+    bot_ranks_sorted = sorted(int(ranks[p]) for p in bot_pos)
+    bot_conn = _max_run_in_ranks(bot_ranks_sorted)
+
+    sing_positions = [p for (_, p) in d["singletons"]]
+    if top in sing_positions:
+        top_pref = 0.0  # NO +5 highest-singleton bonus
+    else:
+        top_pref = -10.0  # still strongly disprefer breaking a pair
+
+    score = top_pref
+    if bot_ds:
+        score += 3.0
+    if bot_conn >= 4:
+        score += 1.0
+    score += int(ranks[top]) / 100.0
+    return score
+
+
+def _best_top_for_locked_mid_no_bias(d: dict, mid: tuple[int, int]) -> int:
+    candidates = [p for p in range(7) if p not in mid]
+    best_top = candidates[0]
+    best_score = -1e18
+    for t in candidates:
+        s = _score_top_choice_no_top_bias(d, t, mid)
+        if s > best_score:
+            best_score = s
+            best_top = t
+    return best_top
+
+
+def strategy_v3_no_top_bias(hand: np.ndarray) -> int:
+    """v3 with the highest-singleton +5 bonus removed."""
+    d = hand_decompose(hand)
+    pairs_desc = d["pairs"]
+    trips_desc = d["trips"]
+    quads_desc = d["quads"]
+
+    if quads_desc:
+        quad_rank, qpos = quads_desc[0]
+        mid = (qpos[0], qpos[1])
+        top = _best_top_for_locked_mid_no_bias(d, mid)
+        return positions_to_setting_index(top, mid)
+    if trips_desc and pairs_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        top = _best_top_for_locked_mid_no_bias(d, mid)
+        return positions_to_setting_index(top, mid)
+    if trips_desc:
+        trip_rank, tpos = trips_desc[0]
+        mid = (tpos[0], tpos[1])
+        top = _best_top_for_locked_mid_no_bias(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    if len(pairs_desc) == 2:
+        (high_rank, hpos), (low_rank, lpos) = pairs_desc[0], pairs_desc[1]
+        if high_rank == 14 and low_rank == 13:
+            mid = (lpos[0], lpos[1])
+            top = _best_top_for_locked_mid_no_bias(d, mid)
+            return positions_to_setting_index(top, mid)
+        if high_rank <= 5:
+            singletons_desc = d["singletons"]
+            top_pos = singletons_desc[0][1]
+            mid_a, mid_b = singletons_desc[1][1], singletons_desc[2][1]
+            return positions_to_setting_index(top_pos, (mid_a, mid_b))
+        mid = (hpos[0], hpos[1])
+        top = _best_top_for_locked_mid_no_bias(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    if pairs_desc:
+        pair_rank, ppos = pairs_desc[0]
+        mid = (ppos[0], ppos[1])
+        top = _best_top_for_locked_mid_no_bias(d, mid)
+        return positions_to_setting_index(top, mid)
+
+    # high_only branch: leave the existing _hi_only_pick search intact.
+    # That search has its own scoring; the +5 top_pref isn't the same path.
+    top_pos, mid = _hi_only_pick(d)
+    return positions_to_setting_index(top_pos, mid)
+
+
+# ----------------------------------------------------------------------
 # Strategy 6: V4 — V3 + rebalanced bot weights for pair/two_pair/quads
 # top selection AND for the high_only mid+bot search.
 #

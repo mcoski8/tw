@@ -918,3 +918,147 @@ DEFERRED: per-tier EV decomposition, naive-distance metric, category bucketing f
 5. **Ship** as `strategy_v5_dt`. Add golden tests. Generate Markdown export of the tree as the publishable strategy artifact. Update `CHAIN_AGREEMENT_BY_PROFILE` in explain.py.
 
 **Session conclusion:** Per-profile overlays delivered (Phase C/C+) for the trainer side. The strategic pivot — recognised mid-session — is that the published guide is the multiway-robust 95% target, and decision-tree extraction is the right methodology. Pipeline is designed and saved; one TCC-permission restart away from execution.
+
+---
+
+# Session 16 (2026-04-27) — Phase D ceiling-curve + EV-loss reframe
+
+**Headline:** The 95% shape-agreement target is RETIRED. Replaced with a directional EV-loss reduction goal grounded in absolute profitability per opponent profile. v3 was empirically shown to LOSE money against strong opponents (-0.78 EV/hand vs MFSuitAware, -0.89 vs TopDef) despite being competitive on shape-agreement. Surgical patches (fall-through hypothesis, +5 Ace-on-top bias removal) were tested and refuted with empirical data.
+
+## What was completed
+
+1. **Phase D ceiling-curve** (`analysis/scripts/dt_phase1.py` executed):
+   - Full 6M depth=None ceiling: **61.74% full / 57.24% CV shape**. Far below Gemini's earlier 83.2% napkin estimate.
+   - Generalization peaks at depth 15 (cv_shape 59.57%), overfits beyond.
+   - **The 27-feature set is structurally insufficient for the 95% target** — depth alone cannot break the ceiling.
+   - v3 (56.16%) is competitive with depth-10 unified DT (56.29%), confirming hand-built per-category dispatch outperforms greedy Gini at low rule budgets.
+
+2. **3-of-4 majority subset diagnostic** (`analysis/scripts/dt_phase1_3of4.py`):
+   - Filtered to 2,432,648 hands where mode_count == 3 (clear-majority answer key, non-trivial).
+   - Ceiling: **70.01% full / 65.86% CV** at depth=None. Even on unambiguous-but-non-trivial hands, features cap at ~70%.
+   - Confirms feature set is the bottleneck, not target ambiguity (since this subset has unambiguous answers).
+
+3. **v3 EV-loss baseline harness** (`analysis/scripts/v3_evloss_baseline.py`):
+   - Reuses `trainer/src/engine.py` subprocess pattern (Decision 029).
+   - 2000 random hands × 4 profiles × 1000 MC samples per setting; ~9-min wall.
+   - Optional `--save data/<name>_records.parquet` persists per-hand records for downstream analysis.
+   - `--strategy v3 | v3_no_top_bias` flag for variant comparisons.
+   - Records saved: `data/v3_evloss_records.parquet` (v3 ground truth, seed=42), `data/v3_no_top_bias_records.parquet` (refuted patch).
+
+4. **Per-profile EV-loss results (v3, N=2000)**:
+   - mfsuitaware mean 1.37, omaha 1.15, topdef 1.44, weighted 1.22. Total max-loss across hands: 3,266 EV. Mean 1.63 per hand. 33.3% of hands are "blunders" (max-loss > 2.0).
+
+5. **Absolute EV per profile (the actually important reframe — user's contribution)**:
+   - **MFSuitAware: v3 mean EV = -0.78** → loses **$7,779/1000 hands** at $10/EV-pt
+   - **TopDef: v3 mean EV = -0.89** → loses **$8,846/1000 hands**
+   - Omaha: v3 mean +1.01 → wins +$10,117/1000 hands
+   - Weighted: v3 mean +0.38 → wins +$3,779/1000 hands
+   - **v3 is profitable vs weak opponents but LOSES money vs strong ones.** 72% of hands v3 loses money on against MFSuitAware. BR (optimal) is profitable vs all 4 profiles (+0.55 to +2.16 mean EV).
+
+6. **Blunder analysis** (`analysis/scripts/v3_blunder_analysis.py`, Gemini's 3-test methodology):
+   - Test 1 (isolate): 666 blunders / 2000, mean blunder loss 3.09 EV.
+   - Test 2 (fall-through hypothesis): **OR=1.09, refuted.** v3 picks setting 102/104 at the same rate in blunders as non-blunders (36.9% vs 34.9%). My pre-inspection from the worst-15 list was confirmation bias.
+   - Test 3 (multi-pair-with-Ace pattern): OR=2.54 for two_pair/three_pair + Ace singleton (real but narrow), OR=1.90 for trips_pair + Ace.
+   - **Bonus EV-loss share**: Multi-pair-with-Ace cluster I focused on accounts for only 9.5% of total loss. **Ace-singleton across ALL categories accounts for 45.5%** — every Ace-cohort has 30-86% higher mean loss than its non-Ace counterpart. But structurally diffuse.
+
+7. **+5 Ace-on-top bias patch test** (`strategy_v3_no_top_bias`):
+   - Hypothesis: removing the `+5` highest-singleton bonus in `_score_top_choice_for_locked_mid` would close the Ace-singleton EV-loss.
+   - Result: **net total loss INCREASED by +93 EV (3% worse)**. Only `pair + ace` cohort improved (-0.065 EV/hand). All other cohorts regressed (e.g., `pair (no ace)` got 0.119 EV/hand worse).
+   - Interpretation: the +5 bonus is *load-bearing for non-Ace pair hands*. The Ace-singleton EV-loss problem is structurally diffuse — distributed across dispatch architecture, pair-breaking penalty, top-scoring logic. **Surgical patch path is dead.**
+
+8. **Project goal officially RETIRED + reframed**:
+   - Old: "5-10 rule chain ≥95% shape-agreement on multiway-robust target"
+   - New: "Rule chain achieves directional reduction below v3's 1.63 EV-loss baseline AND non-negative absolute mean EV against all 4 opponent profiles." Memorable measurement: *"$10/EV-point over 1000 hands — does the rule chain profit?"*
+   - User accepted reframe AND opened the rule-count cap: more than 10 named heuristics is OK if EV gain is significant.
+
+9. **Methodology doctrine locked in (4-step process for any future hypothesis)**:
+   - Step 1: Hypothesize from qualitative observation
+   - Step 2: Measure signal on representative sample (odds ratio, NOT visual inspection of worst-list)
+   - Step 3: Measure impact (EV-loss share — does the pattern matter in aggregate?)
+   - Step 4: Test cheaply (in silico/analytical proxy) BEFORE running new MC
+   - Then act
+   - Lesson: I burned 9 min of MC compute on the +5 patch hypothesis. An in silico test (Gemini's exact prescription) would have killed it in 30 seconds. **Don't repeat.**
+
+## Files added this session
+
+- `analysis/scripts/dt_phase1_3of4.py` — 3-of-4 majority subset diagnostic
+- `analysis/scripts/v3_evloss_baseline.py` — EV-loss harness, supports `--strategy` flag and `--save` parquet
+- `analysis/scripts/v3_blunder_analysis.py` — Gemini's 3 hypothesis tests + bonus EV-loss share computation
+- `data/v3_evloss_records.parquet` — v3 baseline records (seed=42, N=2000)
+- `data/v3_no_top_bias_records.parquet` — patch experiment records (seed=42, N=2000)
+
+## Files modified this session
+
+- `analysis/scripts/encode_rules.py` — added `_score_top_choice_no_top_bias`, `_best_top_for_locked_mid_no_bias`, `strategy_v3_no_top_bias` (refuted experimental variant; left in tree as a cautionary tale, not for production use)
+- `CURRENT_PHASE.md` — rewritten
+
+## Verified
+
+- Rust: 124/124 tests pass. `cargo build --release` clean.
+- Python: 74/74 tests pass.
+
+## Gotchas + lessons
+
+- **Confirmation bias from worst-list inspection cost 9 min of compute.** The visible pattern in worst-15 hands (all setting 104) didn't generalize to the full blunder population (OR 1.09). **Always use odds ratio over a representative sample, never eyeball the tail.**
+- **Single-component heuristic patches don't work.** v3's `_score_top_choice_for_locked_mid` has interacting components: pair-break penalty (-10), highest-singleton bonus (+5), rank/100 tiebreaker, bot DS bonus (+3), bot connectivity bonus (+1). Removing one creates regressions elsewhere. The architecture is at its hand-engineered ceiling.
+- **EV-loss alone hides whether a strategy profits.** Always report absolute EV per profile alongside EV-loss vs BR. The user's $10/point framing surfaced that v3 is actively losing money vs strong opponents — a fact the EV-loss-only view obscured.
+- **Gemini correction**: Earlier I told Gemini "mode_count ≥ 3 = 90.4%" — that figure from Decision 030 was wrong. Actual: 4-of-4 = 26.68%, 3-of-4 = 40.48%, total ≥3 = 67.16%. Genuinely-ambiguous tie-break pool is 12.19% (2-2 + 1-1-1-1), not 73% as my earlier framing implied.
+
+## Carry-forward for Session 17 (data-driven feature mining proper)
+
+The path: pure data-driven distillation, no more surgical patches.
+
+1. **Category-specific miss-driven mining on single-pair hands** (47% of total EV-loss, the largest cohort). Filter `data/feature_table.parquet` to `mode_count == 3 AND category == 'pair'`. Train depth=None DT on that slice with current 27 features. Mine impure leaves to find the structural patterns features can't distinguish.
+2. **Engineer 2-3 new interaction features** from those clusters (likely candidates from manual inspection of worst hands: suited-broadway-pair flag, conditional-top-on-bot-DS-feasibility, multi-pair-rank-distribution features — but DON'T anchor on speculation; let the leaves drive it).
+3. **Re-run Phase D ceiling** on the augmented feature set. Specifically the 3-of-4 ceiling — target lift from 70% toward 80%+.
+4. **Repeat per category** for high_only (12.6% of loss), two_pair (24% of loss), trips_pair (small but high density).
+5. **Train final depth-10 to depth-15 DT** on full 6M with augmented features, extract via sklearn `export_text`, translate to Python if/elif chain, byte-identical parity check.
+6. **Re-baseline EV-loss** with `v3_evloss_baseline.py --strategy v5_dt`. Compare to v3 on identical hands at identical seed. Headline: per-profile absolute EV + $/1000 hands at $10/EV-pt.
+
+**Discovery mode, not commitment.** Use the 4-step doctrine (signal → impact → in silico → act) for every hypothesis before running new MC.
+
+## Decisions added this session
+
+- **Decision 033** — 95% shape-agreement target retired; absolute EV per profile is the new headline; rule-count cap is soft.
+
+## Resume prompt (next session)
+
+```
+Resume Session 17 of the Taiwanese Poker Solver project.
+
+Read these files for context:
+- CLAUDE.md
+- CURRENT_PHASE.md (rewritten end of Session 16)
+- modules/game-rules.md (MANDATORY)
+- DECISIONS_LOG.md (latest: Decision 033)
+- handoff/MASTER_HANDOFF_01.md (scan Sessions 13-16; Session 16 is the most consequential)
+- analysis/scripts/encode_rules.py (current rule chain — strategy_v3 is production)
+- analysis/scripts/v3_evloss_baseline.py (canonical evaluation harness)
+- analysis/scripts/v3_blunder_analysis.py (3-test methodology)
+- data/v3_evloss_records.parquet (ground-truth baseline records, seed=42)
+
+State of the project (end of Session 16):
+- 95% shape-agreement target RETIRED.
+- New headline: per-profile absolute EV (does v3 profit?) AND mean EV-loss reduction below v3 baseline 1.63.
+- v3 LOSES money vs strong opponents (MFSA -0.78, TopDef -0.89), profits vs weak (Omaha +1.01, Weighted +0.38).
+- 27-feature DT ceiling is 61.74% on full 6M, 70.01% on 3-of-4 majority. Features ARE the bottleneck.
+- Two surgical-fix hypotheses tested and refuted (fall-through: OR=1.09; +5 Ace-bonus removal: net loss +93 EV).
+- All 124 Rust + 74 Python tests green.
+
+User priorities (re-confirmed Session 16):
+- Discovery mode, not production commitment. Don't set ultra-tight goals.
+- Data/ML/AI drives discovery — user's example heuristics are arbitrary illustrations, not constraints or features to encode literally.
+- Rule-count cap is soft — more than 10 named heuristics OK if EV gain is significant.
+- Track results as $/1000 hands at $10/EV-point — non-technical-friendly framing.
+
+IMMEDIATE NEXT ACTION:
+Begin category-specific miss-driven feature mining on single-pair hands (47% of v3 EV-loss).
+Steps:
+1. Filter feature_table.parquet to (mode_count == 3) AND (category == 'pair').
+2. Train depth=None DT on that slice with current 27 features.
+3. Inspect impure leaves — what hand structures cluster there?
+4. Engineer 2-3 new interaction features from the patterns; don't speculate.
+5. Re-run 3-of-4 ceiling with augmented features. Target lift toward 80%+.
+
+Apply the 4-step methodology doctrine for any hypothesis: signal (OR) → impact (EV-loss share) → in silico → only then run new MC.
+```
