@@ -1,168 +1,241 @@
-# Current: Sprint 7 Phase D — ceiling-curve executed, EV-loss baseline established, project goal RETIRED + reframed. Session 16 closed; data-driven feature mining begins next session.
+# Current: Sprint 7 Phase D — single-pair augmented features unlock +5.85pp slice ceiling, +2.02pp full-6M ceiling. First feature-engineering win since the goal reframe. Session 17 closed.
 
-> **🔥 IMMEDIATE NEXT ACTION (Session 17):** Begin category-specific miss-driven feature mining on **single-pair hands** (47% of v3 total EV-loss). Filter `data/feature_table.parquet` to `mode_count == 3 AND category == 'pair'`. Train depth=None DT on that slice with current 27 features. Mine impure leaves to discover what hand structures the features can't distinguish. Engineer 2-3 new interaction features from the patterns. Re-run 3-of-4 ceiling on augmented feature set; target lift from 70% → 80%+.
+> **🔥 IMMEDIATE NEXT ACTION (Session 18):** EITHER (a) repeat the mining-and-augment loop on **high_only** (12.6% of v3 EV-loss) to add 2-3 more features, OR (b) extract a depth-15 chain from the augmented full-6M tree (18,330 leaves, full_shape 61.96%) → translate to Python if/elif → byte-identical parity check → EV-loss baseline vs v3. (b) is the chain-shipping path; (a) is more discovery before commitment. Recommended: (a) first to lift the ceiling further, then (b) once the augmented-feature set has stabilised.
 
-> **🚫 RETIRED (Decision 033):** "≥95% shape-agreement on multiway-robust target." Replaced with directional reduction below v3's 1.63 EV-loss baseline AND non-negative absolute mean EV against all 4 opponent profiles. Reportable metric: $/1000 hands at $10/EV-pt.
+> **🚫 RETIRED (Decision 033, Session 16):** "≥95% shape-agreement on multiway-robust target." Replaced with directional reduction below v3's 1.63 EV-loss baseline AND non-negative absolute mean EV against all 4 opponent profiles. Reportable metric: $/1000 hands at $10/EV-pt.
 
-> Updated: 2026-04-27 (end of Session 16)
+> Updated: 2026-04-28 (end of Session 17)
 
 ---
 
-## Headline state at end of Session 16
+## Headline state at end of Session 17
 
-**Project goal officially reframed.** Old: "5-10 rule chain ≥95% multiway-robust shape-agreement." New: "rule chain that achieves directional EV-loss reduction below v3's 1.63 baseline AND positive mean EV against all 4 opponent profiles." Discovery-phase framing — no hard percentages, dollar-grounded reporting at $10/EV-pt over 1000 hands.
+**First feature-engineering win since the Session 16 reframe.** Three new
+single-pair-only features encode bot-suit-profile per strategic routing —
+information the original 27-feature set could not see. They lift the
+DT-ceiling on the largest miss cohort (single-pair, 47% of EV-loss) by
++5.85pp; the lift propagates to +2.02pp on the full 6M.
 
-### v3 production rule chain — the new full picture
+### New features (single-pair only; vacuous on non-pair hands)
 
-| | Shape (legacy) | Mean EV-loss | **Absolute mean EV** | $/1000 hands at $10/pt |
-|---|---|---|---|---|
-| vs MFSuitAware | (n/a per profile) | 1.37 | **−0.78** | **−$7,779** ❌ |
-| vs Omaha | | 1.15 | +1.01 | +$10,117 ✅ |
-| vs TopDef | | 1.44 | **−0.89** | **−$8,846** ❌ |
-| vs Weighted | | 1.22 | +0.38 | +$3,779 ✅ |
-| Multiway-robust shape | **56.16%** | (1.63 mean) | (mixed) | (mixed) |
+1. `default_bot_is_ds` — bool. Is the bot double-suited under v3-default
+   routing (mid=pair, top=highest singleton, bot=4 lowest non-pair)?
+2. `n_top_choices_yielding_ds_bot` — 0-5. How many of the 5 non-pair
+   singleton positions yield a DS bot if used as top? (Captures
+   "pair-on-mid is fine but top must be repaired" pattern.)
+3. `pair_to_bot_alt_is_ds` — bool. Under alternative routing
+   (pair→bot, mid=top-2 singletons, top=3rd-highest singleton), is bot DS?
 
-**v3 is profitable against weak opponents but LOSES money against strong ones.** 72% of hands v3 loses money on against MFSuitAware. BR (optimal solver play) is profitable vs all 4 (+0.55 to +2.16 mean EV).
+### DT shape-agreement ceilings (depth=None, full data fit)
 
-### Phase D ceiling-curve results (the structural diagnosis)
+| Subset | Baseline (27 feat) | Augmented (30 feat) | Lift |
+|---|---|---|---|
+| Single-pair 3-of-4 (target slice, 1.08M) | 74.23% | **80.08%** | **+5.85pp** |
+| Single-pair full (2.80M) | 68.49% | 72.83% | +4.34pp |
+| 3-of-4 majority (2.43M) | 70.01% | 72.61% | +2.60pp |
+| **Full 6M** | **61.74%** | **63.76%** | **+2.02pp** |
 
-| | Full 6M | 3-of-4 majority subset (2.43M) |
+### Full-6M depth curve (augmented features)
+
+| depth | leaves | cv_acc | cv_shape | full_acc | full_shape |
+|---|---|---|---|---|---|
+| 3 | 8 | 30.7% | 32.3% | 30.6% | 32.1% |
+| 5 | 32 | 39.9% | 42.0% | 40.0% | 42.3% |
+| 7 | 125 | 47.1% | 49.1% | 47.2% | 49.3% |
+| 10 | 939 | 54.2% | 56.5% | 54.5% | 56.8% |
+| **15** | **18,330** | **58.3%** | **60.7%** | **59.6%** | **62.0%** |
+| 20 | 118,723 | 56.8% | 59.2% | 61.3% | 63.4% |
+| None | 208,740 | 55.4% | 58.0% | 61.7% | 63.8% |
+
+**The depth-15 augmented tree (62.0% full / 60.7% cv) MATCHES the baseline
+unbounded-depth tree (61.7% full / 57.2% cv) at 9× fewer leaves AND with
+better generalization (+3.5pp cv-shape).** Depth-15 is the clear knee
+candidate for chain extraction.
+
+v3 production rule chain: 56.16% — depth-10 augmented (56.8%) is barely
+above v3 with only 939 leaves; depth-15 augmented (62.0%) is +5.8pp over v3.
+
+### Drop-out ablation on the slice (depth=None)
+
+| Drop one feature | Slice shape | Δ from full aug |
 |---|---|---|
-| Depth=None ceiling (full) | **61.74%** | **70.01%** |
-| Depth=None ceiling (CV) | 57.24% | 65.86% |
-| CV peak depth | 15 (cv_shape 59.57%) | 15 (cv_shape 67.48%) |
+| (full augmented — 30 features) | 80.08% | — |
+| − default_bot_is_ds | 78.04% | −2.04pp |
+| − n_top_choices_yielding_ds_bot | 78.71% | −1.37pp |
+| − pair_to_bot_alt_is_ds | 77.24% | −2.85pp |
 
-**The 27-feature set is structurally insufficient for the 95% target.** Even unbounded-depth trees with 151K leaves cap at 62% on full data and 70% on clear-majority hands. Feature engineering is the lever — depth alone cannot break through.
+All three features contribute. `pair_to_bot_alt_is_ds` is the largest
+single contributor — it captures the strategic family (low-pair → bot,
+broadway-singletons → mid) the existing features cannot represent.
 
-### What was tested and refuted this session
+### Signal odds ratios (slice-level, vs "BR uses v3-default routing")
 
-1. **Fall-through hypothesis** ("v3 falls through to setting 102/104 on blunders"): OR=1.09 across 666 blunders / 1334 non-blunders → **refuted by representative-sample odds ratio**. The visual pattern in worst-15 list was confirmation bias.
-2. **+5 Ace-on-top bias is the surgical bug** (`_score_top_choice_for_locked_mid` line 480): empirically tested as `strategy_v3_no_top_bias`, **refuted** — net total EV-loss INCREASED +93 EV (3% worse). The +5 bonus is load-bearing for non-Ace pair hands. Surgical-patch path is dead.
+| Feature | OR | Direction |
+|---|---|---|
+| `default_bot_is_ds` | 4.39 | + (BR uses default when its bot is DS) |
+| `n_top_choices_yielding_ds_bot ≥ 1` | 0.90 | ≈ neutral (composite signal) |
+| `n_top_choices_yielding_ds_bot ≥ 3` | 1.15 | weak + |
+| `pair_to_bot_alt_is_ds` | 0.56 | − (BR shifts AWAY from default when alt is DS) |
 
-### What was learned about miss patterns
-
-- 33.3% of hands are blunders (max-loss > 2.0).
-- **Ace-singleton accounts for 45.5% of total EV-loss** across all hand categories — every Ace-cohort has 30-86% higher mean loss than its non-Ace counterpart. Real signal but **structurally diffuse**.
-- Category-specific densities (highest mean loss per hand among n≥30 cohorts):
-  1. two_pair + ace: 2.90 EV/hand (98 hands, 8.7% of loss)
-  2. trips + ace: 2.07 (32 hands, 2.0%)
-  3. pair + ace: 1.83 (382 hands, **21.4%** of loss)
-  4. trips_pair: 1.82 (34 hands, 1.9%)
-  5. high_only + ace: 1.75 (235 hands, **12.6%** of loss)
-- Single-pair hands are 47% of total loss by sheer count (987 hands, OR ~0.9 — at baseline rate). Largest cohort to attack.
+The OR sign on `pair_to_bot_alt_is_ds` is exactly what the model needs
+to learn the alternative routing.
 
 ---
 
-## What was completed this session (Session 16)
+## What was completed this session (Session 17)
 
-### Phase D Step 1 — ceiling-curve
+### Step 1-3 — single-pair leaf mining (`mine_pair_leaves.py`)
 
-- `analysis/scripts/dt_phase1.py` ran cleanly (~5 min CPU). Produced full 6M ceiling: 61.74% / 57.24%.
-- `analysis/scripts/dt_phase1_3of4.py` (NEW) — 3-of-4 majority subset (2,432,648 hands). Ceiling 70.01% / 65.86%.
+- Filtered feature_table to (mode_count==3 AND category=='pair') →
+  1,078,223 hands (17.94% of full 6M).
+- Trained depth=None DT on slice with the 27 baseline features. Slice
+  ceiling: **74.23% / 26,238 leaves**.
+- Ranked terminal leaves by absolute shape-miss count. Top-50 leaves
+  cover only 3.5% of slice misses — misses are highly diffuse across
+  22,031 leaves.
+- Recurring structural blind spot identified: bot suit profile under
+  specific routings. Existing `suit_2nd ≥ 2` only sees "some DS-bot is
+  achievable from 7 cards"; cannot see "the SPECIFIC bot-4 chosen by a
+  given (top, mid) is DS".
 
-### EV-loss baseline harness (NEW)
+### Step 4 — three-feature design (`pair_aug_features.py`)
 
-- `analysis/scripts/v3_evloss_baseline.py` — random-hand sampler, subprocess to `mc --tsv`, per-profile absolute EV + EV-loss + per-cohort distributions. Supports `--strategy` flag (v3, v3_no_top_bias) and `--save data/<name>_records.parquet`.
-- `data/v3_evloss_records.parquet` — v3 ground-truth baseline (seed=42, N=2000). 197KB.
-- `data/v3_no_top_bias_records.parquet` — refuted-patch comparison records.
+- Module exposes `compute_pair_aug_for_hand(hand)` (scalar) and
+  `compute_pair_aug_batch(hands, slice_mask)` (vectorised).
+- Spot-checked on hand-picked cases from the leaf dump.
+- Vacuous on non-pair hands (returns 0); design choice keeps the rest of
+  the population unaffected.
 
-### Blunder analysis (Gemini's 3-test methodology)
+### Step 4a — odds-ratio signal check (per 4-step doctrine, before MC)
 
-- `analysis/scripts/v3_blunder_analysis.py` — Tests 1/2/3 + bonus EV-loss share computation + worst-15 dump. Used to refute fall-through hypothesis and quantify multi-pair-with-Ace cluster (9.5% of loss only, not the dominant pattern I'd suggested).
+- Computed via `dt_pair_aug_ceiling.py` — confirmed signal direction and
+  magnitude before training a tree. No MC compute spent on dead hypothesis.
 
-### Ace-bias patch experiment
+### Step 5 — augmented-feature DT ceiling (`dt_pair_aug_ceiling.py`,
+`dt_phase1_3of4_aug.py`)
 
-- `strategy_v3_no_top_bias` added to `encode_rules.py` (lines ~626-720). Drops the `+5` highest-singleton bonus while keeping the `-10` pair-breaking penalty. Empirically refuted; left in tree as cautionary marker.
+- depth=None DT comparison across 4 subsets (full / 3-of-4 / single-pair
+  full / single-pair 3-of-4). Lift table above.
+- Per-feature drop-out ablation confirms all three features contribute.
 
-### Methodology doctrine locked in
+### Step 6a — full-6M depth curve (`dt_phase1_aug.py`)
 
-- 4-step process for any hypothesis: **Signal (OR) → Impact (EV-loss share) → in silico → only then run new MC.** Two consecutive wrong hypotheses in this session would have been killed in 30s by an in silico instead of 18 min of MC compute.
+- Depths {3, 5, 7, 10, 15, 20, None}. Identical methodology to dt_phase1.py
+  (3-fold CV on 1M subsample, full-6M fit at chosen depth).
+- Depth-15 is the new knee. CV peak shifts up: 60.71% (was 59.57%, +1.14pp).
 
-### Goal reframe (Decision 033)
+### Augmented-feature persistence (`persist_aug_features.py`)
 
-- 95% shape-agreement target retired.
-- Absolute EV per profile is the new headline.
-- Rule-count cap is soft (>10 named heuristics OK if EV gain is significant).
-- $/1000 hands at $10/EV-pt for non-technical legibility.
+- `data/feature_table_aug.parquet` — 18.87 MB, joins on canonical_id.
+- Future sessions can read this directly instead of re-running the 51s
+  Python-loop `compute_pair_aug_batch` over 6M hands.
 
 ---
 
 ## Files added this session
 
-- `analysis/scripts/dt_phase1_3of4.py`
-- `analysis/scripts/v3_evloss_baseline.py`
-- `analysis/scripts/v3_blunder_analysis.py`
-- `data/v3_evloss_records.parquet` (197KB)
-- `data/v3_no_top_bias_records.parquet`
+- `analysis/scripts/mine_pair_leaves.py` — Step 1-3 mining with leaf-rank dump
+- `analysis/scripts/pair_aug_features.py` — feature module (scalar + batch)
+- `analysis/scripts/dt_pair_aug_ceiling.py` — Step 4 + ablation
+- `analysis/scripts/dt_phase1_3of4_aug.py` — Step 5 cross-subset comparison
+- `analysis/scripts/dt_phase1_aug.py` — Step 6a depth curve on full 6M
+- `analysis/scripts/persist_aug_features.py` — parquet persistence
+- `data/feature_table_aug.parquet` — 18.87 MB, single-pair augmented features
 
 ## Files modified this session
 
-- `analysis/scripts/encode_rules.py` — added experimental `_score_top_choice_no_top_bias`, `_best_top_for_locked_mid_no_bias`, `strategy_v3_no_top_bias` (refuted variant; left in tree)
 - `CURRENT_PHASE.md` — rewritten
-- `DECISIONS_LOG.md` — appended Decision 033
-- `handoff/MASTER_HANDOFF_01.md` — appended Session 16 entry
+- `DECISIONS_LOG.md` — appended Decision 034
+- `handoff/MASTER_HANDOFF_01.md` — appended Session 17 entry
 
 ## Verified
 
 - Rust: `cargo build --release` clean. `cargo test --release` 124/124 pass.
-- Python: 74/74 tests pass (24 features + 11 settings + 9 canonical + 9 cross_model + 13 v3_golden + 8 overlays_golden).
+- Python: 74/74 tests pass (24 features + 11 settings + 9 canonical +
+  9 cross_model + 13 v3_golden + 8 overlays_golden).
 
 ## Gotchas + lessons
 
-- **Confirmation bias from worst-list inspection cost 9 min of MC.** The visible pattern in 15 worst hands (all setting 104) didn't generalize — OR was 1.09 across the full blunder population. **Always odds ratio over a representative sample, never eyeball the tail.**
-- **Single-component patches don't work in v3.** `_score_top_choice_for_locked_mid` has interacting components (-10 pair penalty, +5 highest-singleton, +3 bot DS, +1 bot conn, rank/100). Tweaking one breaks others. Architecture is at its hand-engineered ceiling.
-- **EV-loss alone hides whether a strategy profits.** Always report absolute EV per profile alongside EV-loss vs BR. The user's $10/point reframe surfaced that v3 actively loses money vs strong opponents — a fact the loss-only view obscured.
-- **Decision 030 had a small numerical error.** It claimed mode_count ≥ 3 = 90.4%. Actual: 67.16% (4-of-4 = 26.68%, 3-of-4 = 40.48%). The genuinely-arbitrary tie-break pool (2-2 + 1-1-1-1) is 12.19%, not 73% as my earlier framing implied. Doesn't change strategic conclusions — just numerical precision.
+- **First feature mental-model was wrong.** Initial `default_bot_is_ds`
+  candidate computed routing assuming top = highest non-pair card; that's
+  the v3 default. But in the leaf dump, BR was using top=lowest (k=4 in
+  the 5-singleton enumeration), not top=highest. I caught this by
+  spot-checking 4 hand-picked cases against the leaf dump. The fix:
+  `n_top_choices_yielding_ds_bot` (0-5) — count, not "which".
+  **Lesson: spot-check candidate features against ≥4 hand-picked cases
+  from the source observation BEFORE running batch.**
+- **Per-feature drop-out is essential.** `pair_to_bot_alt_is_ds` looked
+  weakest by signal OR magnitude (0.56 inverse), but contributed +2.85pp
+  in drop-out — the largest of the three. **Signal magnitude is not
+  contribution magnitude.** Always run drop-out ablation when claiming
+  multiple features add up.
+- **Augment compute is Python-loop bound.** 51s on 6M is the cost of
+  per-hand bot-position enumeration. Acceptable as a once-per-session cost,
+  but persist to parquet for downstream chain-extraction work.
+- **Depth-15 generalization improves.** With augmented features, the
+  bounded-depth-15 tree achieves 62.0% / 60.7% (full / cv), beating the
+  baseline depth=None ceiling on full data while halving the cv-shape gap.
+  This is the right depth for chain extraction.
 
-## Resume Prompt (Session 17)
+## Resume Prompt (Session 18)
 
 ```
-Resume Session 17 of the Taiwanese Poker Solver project.
+Resume Session 18 of the Taiwanese Poker Solver project at
+/Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context:
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of Session 16)
+- CURRENT_PHASE.md (rewritten end of Session 17)
 - modules/game-rules.md (MANDATORY)
-- DECISIONS_LOG.md (latest: Decision 033 — 95% target retired)
-- handoff/MASTER_HANDOFF_01.md (scan Sessions 13-16; Session 16 is the most consequential)
+- DECISIONS_LOG.md (latest: Decision 034 — single-pair augmented features)
+- handoff/MASTER_HANDOFF_01.md (scan Sessions 13-17; Session 17 is the most consequential since the reframe)
 - analysis/scripts/encode_rules.py (current rule chain — strategy_v3 is production)
-- analysis/scripts/v3_evloss_baseline.py (canonical evaluation harness)
-- analysis/scripts/v3_blunder_analysis.py (3-test methodology + EV-loss share)
-- data/v3_evloss_records.parquet (ground-truth baseline records, seed=42)
+- analysis/scripts/pair_aug_features.py (Session 17 features module)
+- analysis/scripts/dt_phase1_aug.py (Session 17 depth curve, full 6M)
+- data/feature_table.parquet, data/feature_table_aug.parquet (joined on canonical_id)
 
-State of the project (end of Session 16):
-- 95% shape-agreement target RETIRED (Decision 033).
-- New headline: per-profile absolute EV (does v3 profit?) AND mean EV-loss reduction below v3 baseline 1.63.
-- v3 LOSES money vs strong opponents (MFSA −0.78, TopDef −0.89), profits vs weak (Omaha +1.01, Weighted +0.38).
-- 27-feature DT ceiling: 61.74% on full 6M, 70.01% on 3-of-4 majority. Features ARE the bottleneck.
-- Two surgical-fix hypotheses tested and refuted (fall-through OR=1.09; +5 Ace-bonus removal: net loss +93 EV).
+State of the project (end of Session 17):
+- Single-pair augmented features delivered +5.85pp on the target slice (74.23% → 80.08%)
+  and +2.02pp on full 6M (61.74% → 63.76%) at depth=None.
+- Depth-15 augmented tree: 62.0% full / 60.7% cv shape — matches baseline depth=None
+  ceiling at 9× fewer leaves and +3.5pp better cv-shape generalization.
+- v3 production: 56.16% (unchanged). Augmented depth-15 is +5.8pp over v3.
 - 124 Rust + 74 Python tests green.
 
-User priorities (re-confirmed Session 16):
-- Discovery mode, not production commitment. Don't set ultra-tight goals.
-- Data/ML/AI drives discovery — user's example heuristics are arbitrary illustrations, NOT constraints or features to encode literally.
-- Rule-count cap is soft — more than 10 named heuristics OK if EV gain is significant.
-- Track results as $/1000 hands at $10/EV-point — non-technical-friendly framing.
+User priorities (re-confirmed):
+- Discovery mode, not production commitment.
+- Data/ML/AI drives discovery — let the leaves speak; don't anchor on speculation.
+- Rule-count cap is soft.
+- Track results as $/1000 hands at $10/EV-point.
+- Always report BOTH absolute EV per profile AND EV-loss vs BR.
 
-IMMEDIATE NEXT ACTION:
-Begin category-specific miss-driven feature mining on single-pair hands (47% of v3 EV-loss).
-Steps:
-1. Filter feature_table.parquet to (mode_count == 3) AND (category == 'pair') — should be ~1.2M hands.
-2. Train depth=None DT on that slice with current 27 features. Report shape ceiling on this slice.
-3. Inspect the 50 most-impure leaves of the depth=None tree. Dump the cards in those leaves. What hand structures cluster there?
-4. Engineer 2-3 new interaction features from the visible patterns; don't speculate.
-5. Re-run 3-of-4 ceiling with augmented feature set. Target lift toward 80%+.
-6. If lift is real, train depth-10 to depth-15 DT on FULL 6M with augmented features, extract via export_text → Python if/elif → byte-identical parity check.
-7. Re-baseline EV-loss with v3_evloss_baseline.py --strategy <new_chain>. Compare absolute EV per profile to v3.
+IMMEDIATE NEXT ACTIONS (pick one):
 
-Apply the 4-step methodology doctrine for any hypothesis:
+(a) RECOMMENDED — Continue mining other categories.
+    1. Filter feature_table.parquet to (mode_count == 3 AND category == 'high_only')
+       — 12.6% of v3 EV-loss; the second-largest cohort.
+    2. Train depth=None DT on slice with augmented 30 features. Report ceiling.
+    3. Mine impure leaves; engineer 1-3 high_only-specific features.
+    4. Re-run depth curve on full 6M with all features. Lift?
+    5. Repeat for two_pair (24% of EV-loss) and trips_pair if budget allows.
+
+(b) Alternative — Extract chain from current augmented depth-15 tree.
+    1. Refit depth=15 DT on full 6M with the 30 features.
+    2. Use sklearn `export_text` → translate to Python if/elif chain.
+    3. Verify byte-identical predictions on full 6M.
+    4. Run v3_evloss_baseline.py --strategy v5_dt and compare to v3 on
+       per-profile absolute EV + $/1000 hands at $10/EV-pt.
+
+(a) is more discovery before commitment; (b) ships a chain. The reframe
+favours (a) until the feature ceiling stops moving — but (b) gives an
+EV-loss measurement that's the actual KPI.
+
+Apply the 4-step doctrine for any hypothesis BEFORE running new MC:
 1. Hypothesize (qualitative observation)
-2. Measure Signal (odds ratio on representative sample — NOT eyeballing worst-list)
-3. Measure Impact (EV-loss share — does the pattern matter in aggregate?)
-4. Test Cheaply (in silico / analytical proxy BEFORE running new MC)
+2. Measure Signal (odds ratio on representative sample)
+3. Measure Impact (EV-loss share)
+4. Test Cheaply (in silico / analytical proxy)
 Then act.
-
-Don't repeat session 16's mistake of jumping from "Ace-singleton 45% of loss" to "+5 bonus is the bug" without an in silico — that cost 9 min of MC for a refuted hypothesis.
 ```
 
 ---

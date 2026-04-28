@@ -385,3 +385,29 @@
   3. `analysis/scripts/v3_evloss_baseline.py` is the canonical evaluation harness. Future rule chains tested via `--strategy <name> --hands 2000 --save data/<name>_records.parquet` for apples-to-apples comparison at fixed seed=42.
   4. **Reporting standard:** every rule-chain candidate must report (a) per-profile absolute mean EV, (b) per-profile EV-loss vs BR, (c) $/1000 hands at $10/EV-pt for non-technical legibility. Both metrics; absolute EV is the headline.
   5. Path forward: data-driven distillation, not surgical patches. Category-specific miss-driven feature mining starting with single-pair hands (47% of total EV-loss).
+
+
+## Decision 034 — Three single-pair augmented features added to the production feature set
+**Date:** 2026-04-28 (Session 17)
+**Question:** The 27-feature DT ceiling on full 6M (61.74%) and on (mode_count==3, category=='pair') (74.23%) is structurally insufficient for the rule-chain target. Which features close the gap?
+**Options considered:**
+  - (a) Continue hand-engineering rule logic in encode_rules.py. Refuted in Session 16 — the v3 architecture is at its hand-engineered ceiling.
+  - (b) Add bot-suit-profile-per-routing features. Mined from the leaf dump (mine_pair_leaves.py): the structural blind spot is "the suit profile of the SPECIFIC 4 cards that end up in the bot under a given (top, mid) choice", which the existing `suit_max/suit_2nd/can_make_ds_bot` features only see at the 7-card level.
+  - (c) Add full per-suit per-position vectors (e.g., 28 booleans). High variance, overfit risk, large rule chains.
+**Choice:** (b) — three minimal features:
+  1. `default_bot_is_ds` (bool) — bot is DS under v3-default routing.
+  2. `n_top_choices_yielding_ds_bot` (0-5) — count of pair-on-mid routings yielding DS bot.
+  3. `pair_to_bot_alt_is_ds` (bool) — alt routing (pair→bot, mid=top-2 singletons) yields DS bot.
+**Why** (signal + impact + cheap-test confirmed before commit, per Decision 033's 4-step doctrine):
+  1. **Mining produced the hypothesis.** mine_pair_leaves.py top-50 leaves showed two clusters: (A) v3-default bot has a 3-of-a-suit problem → BR moves a non-default singleton to top to repair the bot, (B) low pair + 2 high singletons + DS-feasible-on-pair-route → BR routes pair→bot. The features encode exactly these two routings + the default's status.
+  2. **Odds ratios confirm signal direction.** `default_bot_is_ds` OR=4.39 vs "BR uses v3-default routing" (positive); `pair_to_bot_alt_is_ds` OR=0.56 (negative — BR shifts AWAY from default when alt is DS). Both directions match the leaf observations.
+  3. **Drop-out ablation confirms all three are non-redundant.** Slice depth=None ceiling: 80.08% (full aug) → 78.04% (−default_bot_is_ds, −2.04pp) / 78.71% (−n_top_choices_yielding_ds_bot, −1.37pp) / 77.24% (−pair_to_bot_alt_is_ds, −2.85pp). `pair_to_bot_alt_is_ds` is the largest contributor — counter-intuitive given its inverse OR magnitude, and a reminder that signal strength ≠ contribution magnitude.
+  4. **Cheap-test outcome:** depth=None lifts (single-pair 3-of-4: +5.85pp; full 6M: +2.02pp). Depth-15 augmented tree (62.0% full / 60.7% cv) **matches the baseline depth=None ceiling at 9× fewer leaves and +3.5pp better cv-shape generalization** — the strongest signal that the lift is real, not overfit.
+  5. **Vacuous on non-pair hands by design.** Compute is single-pair only (n_pairs==1, no trips, no quads). Other categories will get their own augmented features in Session 18+. Non-pair rows in the augmented columns are 0 and the DT learns to ignore them via category_id splits.
+  6. **Spot-check methodology lesson.** First feature design (computed only the v3-default routing's DS status) was wrong — caught by manually checking 4 hand-picked cases from the leaf dump against expected behavior. Re-designed `n_top_choices_yielding_ds_bot` as a count, not a "which", since the DT can't pick the specific top from a single boolean. **Spot-check ≥4 hand-picked cases against the source observation BEFORE batch.**
+**Consequence:**
+  1. `analysis/scripts/pair_aug_features.py` is the production feature module. `compute_pair_aug_for_hand(hand)` is the scalar primitive; `compute_pair_aug_batch(hands, slice_mask)` is the vectorised version.
+  2. `data/feature_table_aug.parquet` (18.87 MB) joins `feature_table.parquet` on `canonical_id`. Future runs read this file instead of recomputing the 51s Python-loop augment over 6M.
+  3. `analysis/scripts/dt_phase1_aug.py` is the canonical depth-curve harness with augmented features. Replaces dt_phase1.py for Phase D ceiling work.
+  4. **Depth-15 with these features is the chain-extraction candidate.** 18,330 leaves; 62.0% full / 60.7% cv shape; matches baseline unbounded ceiling. Whether to ship this or continue mining other categories is the Session 18 fork.
+  5. Feature naming convention locked: `<routing>_bot_<property>` for bot-property-per-routing features. Future categories (high_only, two_pair) will follow.

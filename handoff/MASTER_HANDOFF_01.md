@@ -1062,3 +1062,185 @@ Steps:
 
 Apply the 4-step methodology doctrine for any hypothesis: signal (OR) → impact (EV-loss share) → in silico → only then run new MC.
 ```
+
+---
+
+# Session 17 (2026-04-27 → 2026-04-28) — Single-pair augmented features: first feature-engineering win since the goal reframe
+
+**Headline:** Three new single-pair-only features encode bot-suit-profile per strategic routing — information the original 27-feature set could not see. They lift the DT shape ceiling on the largest miss cohort (single-pair, 47% of EV-loss) by **+5.85pp** (74.23% → 80.08% on the (mode_count==3, category=='pair') slice). The lift propagates: full-6M ceiling 61.74% → 63.76% (+2.02pp), 3-of-4 majority subset 70.01% → 72.61% (+2.60pp). Depth-15 augmented tree (62.0% full / 60.7% cv) matches the baseline unbounded ceiling at 9× fewer leaves and with +3.5pp better cv-shape generalization.
+
+## What was completed
+
+### Step 1-3 — single-pair leaf mining (`analysis/scripts/mine_pair_leaves.py`)
+
+- Filtered `data/feature_table.parquet` to (mode_count==3 AND category=='pair') → **1,078,223 hands** (17.94% of full 6M).
+- Trained depth=None DT on the slice with the 27 baseline features. Slice ceiling: **74.23% / 26,238 leaves** (vs the 70.01% subset-wide 3-of-4 ceiling — single-pair is structurally easier than the average).
+- Ranked terminal leaves by absolute shape-miss count. Top-50 leaves cover only **3.5% of slice misses**; **22,031 leaves have ≥1 miss**. Misses are highly diffuse — no single dominant pattern.
+- Identified the recurring blind spot from the top-10 miss-leaves: the bot-suit profile under specific routings. The 27-feature set can see `suit_2nd ≥ 2` ("some DS-bot is achievable from 7 cards") but cannot see "the SPECIFIC 4 cards that end up in the bot under a given (top, mid) choice".
+- Patterns observed: (A) v3-default bot has a 3-of-a-suit problem → BR moves a non-default singleton to top to repair the bot; (B) low pair + 2 high singletons + DS-feasible-on-pair-route → BR routes pair→bot, mid=top-2 singletons.
+
+### Step 4 — three-feature design (`analysis/scripts/pair_aug_features.py`)
+
+Three features, all vacuous (0) on non-pair hands by design:
+1. `default_bot_is_ds` (bool) — under v3-default routing (mid=pair, top=highest singleton, bot=4 lowest non-pair), is the bot DS?
+2. `n_top_choices_yielding_ds_bot` (0-5) — out of 5 non-pair singletons used as top (pair on mid), how many yield a DS bot?
+3. `pair_to_bot_alt_is_ds` (bool) — under alternative routing (pair→bot, mid=top-2 singletons, top=3rd-highest singleton), is the bot DS?
+
+Spot-checked on 4 hand-picked cases from the leaf dump before batch.
+
+### Step 4a — odds-ratio signal check (`analysis/scripts/dt_pair_aug_ceiling.py`)
+
+Per the Session 16 4-step doctrine: signal-check before training. Outcome variable: "BR (multiway_robust) uses v3-default routing".
+
+| Feature | OR | a (feat=1, BR=def) | b (feat=1, BR≠def) |
+|---|---|---|---|
+| `default_bot_is_ds` | 4.39 | 92,562 | 11,063 |
+| `n_top_choices_yielding_ds_bot ≥ 1` | 0.90 | 321,330 | 161,668 |
+| `n_top_choices_yielding_ds_bot ≥ 3` | 1.15 | 95,656 | 40,095 |
+| `pair_to_bot_alt_is_ds` | 0.56 | 93,446 | 71,842 |
+
+Signal direction matches mining observations.
+
+### Step 5 — augmented-feature DT ceiling on multiple subsets (`analysis/scripts/dt_phase1_3of4_aug.py`)
+
+depth=None DT comparison (baseline 27 features vs augmented 30 features):
+
+| Subset | Baseline | Augmented | Lift |
+|---|---|---|---|
+| Single-pair 3-of-4 (target slice) | 74.23% | **80.08%** | **+5.85pp** |
+| Single-pair full (2.80M) | 68.49% | 72.83% | +4.34pp |
+| 3-of-4 majority (2.43M) | 70.01% | 72.61% | +2.60pp |
+| Full 6M | 61.74% | 63.76% | +2.02pp |
+
+Drop-out ablation on slice (depth=None):
+- Drop `default_bot_is_ds`: −2.04pp
+- Drop `n_top_choices_yielding_ds_bot`: −1.37pp
+- Drop `pair_to_bot_alt_is_ds`: −2.85pp
+
+All three features contribute. `pair_to_bot_alt_is_ds` is the largest contributor in drop-out, despite its weaker OR magnitude (0.56). **Signal magnitude ≠ contribution magnitude.**
+
+### Step 6a — full-6M depth curve (`analysis/scripts/dt_phase1_aug.py`)
+
+Identical methodology to Session 16's dt_phase1.py (3-fold CV on 1M subsample, full-6M fit at chosen depth) with the augmented 30-feature set.
+
+| depth | leaves | cv_acc | cv_shape | full_acc | full_shape |
+|---|---|---|---|---|---|
+| 3 | 8 | 30.69% | 32.31% | 30.63% | 32.13% |
+| 5 | 32 | 39.94% | 42.01% | 39.97% | 42.27% |
+| 7 | 125 | 47.06% | 49.10% | 47.22% | 49.26% |
+| 10 | 939 | 54.21% | 56.48% | 54.51% | 56.76% |
+| **15** | **18,330** | **58.30%** | **60.71%** | **59.60%** | **61.96%** |
+| 20 | 118,723 | 56.75% | 59.17% | 61.27% | 63.39% |
+| None | 208,740 | 55.44% | 57.99% | 61.69% | 63.76% |
+
+CV peak shifts from depth=15 cv_shape 59.57% (baseline) to depth=15 cv_shape 60.71% (augmented). **Depth-15 augmented (62.0% full / 60.7% cv) matches the baseline depth=None ceiling at 9× fewer leaves and +3.5pp better cv-shape generalization.** Depth-15 is the chain-extraction candidate.
+
+### Augmented-feature persistence (`analysis/scripts/persist_aug_features.py`)
+
+- `data/feature_table_aug.parquet` — 18.87 MB, joins `feature_table.parquet` on `canonical_id`.
+- Distributions: `default_bot_is_ds` 1: 432,432 / 0: 5,576,727; `n_top_choices_yielding_ds_bot` 0/1/3: 4,670,679 / 926,640 / 411,840; `pair_to_bot_alt_is_ds` 1: 370,656.
+- Future sessions read this directly instead of recomputing the 51s Python-loop augment over 6M.
+
+## Files added this session
+
+- `analysis/scripts/mine_pair_leaves.py` — Step 1-3 mining + leaf-rank dump
+- `analysis/scripts/pair_aug_features.py` — feature module (scalar + batch)
+- `analysis/scripts/dt_pair_aug_ceiling.py` — Step 4 + ablation
+- `analysis/scripts/dt_phase1_3of4_aug.py` — Step 5 cross-subset comparison
+- `analysis/scripts/dt_phase1_aug.py` — Step 6a depth curve on full 6M
+- `analysis/scripts/persist_aug_features.py` — parquet persistence
+- `data/feature_table_aug.parquet` — 18.87 MB augmented features (single-pair only)
+
+## Files modified this session
+
+- `CURRENT_PHASE.md` — rewritten
+- `DECISIONS_LOG.md` — appended Decision 034
+- `handoff/MASTER_HANDOFF_01.md` — appended this Session 17 entry
+
+## Verified
+
+- Rust: `cargo build --release` clean. `cargo test --release` 124/124 pass.
+- Python: 74/74 tests pass (24 features + 11 settings + 9 canonical + 9 cross_model + 13 v3_golden + 8 overlays_golden).
+
+## Gotchas + lessons
+
+- **First feature mental-model was wrong.** Initial `default_bot_is_ds` candidate was the only feature, and it computed only the v3-default routing's DS status. But in the leaf dump, BR was using top=lowest (k=4 in the 5-singleton enumeration), not top=highest, for many hands. I caught this by manually checking 4 hand-picked cases from the leaf dump against expected feature values. Fixed by adding `n_top_choices_yielding_ds_bot` (0-5) — count, not "which" — so the DT can split on "≥1 routing yields DS" and learn the alternative-top patterns. **Lesson: spot-check ≥4 hand-picked cases against the source observation BEFORE batch.**
+- **Per-feature drop-out is essential.** `pair_to_bot_alt_is_ds` looked weakest by OR magnitude (0.56 inverse), but contributed +2.85pp in drop-out — the largest of the three. **Signal magnitude is not contribution magnitude.** Always run drop-out ablation when claiming multiple features add up.
+- **Augment compute is Python-loop bound.** 51s on 6M is the cost of per-hand bot-position enumeration. Acceptable as a once-per-session cost, but persist to parquet for downstream chain-extraction work.
+- **Depth-15 generalization improves.** With augmented features, the bounded-depth-15 tree achieves 62.0% / 60.7% (full / cv), beating the baseline depth=None ceiling on full data while halving the cv-shape gap. This is the right depth for chain extraction.
+- **The 3.5% top-50-leaf coverage of misses is itself diagnostic.** Misses are diffuse — no single dominant cluster. The augmented features don't fix any one cluster, they lift the *floor* across many clusters at once. Future feature ideas should be evaluated by aggregate lift (drop-out delta), not by visible inspection of any single leaf.
+
+## Carry-forward for Session 18
+
+The path forks. Choose:
+
+(a) **RECOMMENDED — Continue mining other categories.** high_only (12.6% of EV-loss), two_pair (24% of EV-loss), trips_pair (small but high-density). Each category likely has its own bot-suit/strategic-routing features waiting to be mined. Bring full-6M ceiling toward 70%+ before extracting a chain. The augmented features module pattern is established and reusable.
+
+(b) **Alternative — Extract chain from current augmented depth-15 tree.** Refit depth=15 DT on full 6M with the 30 features. sklearn `export_text` → translate to Python if/elif chain → byte-identical parity check on full 6M. Then run `analysis/scripts/v3_evloss_baseline.py --strategy v5_dt --hands 2000 --save data/v5_dt_records.parquet` and compare to v3 on per-profile absolute EV + $/1000 hands at $10/EV-pt.
+
+(a) is more discovery before commitment; (b) gives an EV-loss measurement (the actual KPI). The reframe (Decision 033) favours (a) until the feature ceiling stops moving.
+
+## Decisions added this session
+
+- **Decision 034** — Three single-pair augmented features added to the production feature set (default_bot_is_ds, n_top_choices_yielding_ds_bot, pair_to_bot_alt_is_ds). Lifts: +5.85pp on target slice, +2.02pp on full 6M.
+
+## Resume prompt (next session)
+
+```
+Resume Session 18 of the Taiwanese Poker Solver project at
+/Users/michaelchang/Documents/claudecode/taiwanese.
+
+Read these files for context:
+- CLAUDE.md
+- CURRENT_PHASE.md (rewritten end of Session 17)
+- modules/game-rules.md (MANDATORY)
+- DECISIONS_LOG.md (latest: Decision 034 — single-pair augmented features)
+- handoff/MASTER_HANDOFF_01.md (scan Sessions 13-17; Session 17 is the most consequential since the reframe)
+- analysis/scripts/encode_rules.py (current rule chain — strategy_v3 is production)
+- analysis/scripts/pair_aug_features.py (Session 17 features module)
+- analysis/scripts/dt_phase1_aug.py (Session 17 depth curve, full 6M)
+- data/feature_table.parquet, data/feature_table_aug.parquet (joined on canonical_id)
+
+State of the project (end of Session 17):
+- Single-pair augmented features delivered +5.85pp on the target slice (74.23% → 80.08%)
+  and +2.02pp on full 6M (61.74% → 63.76%) at depth=None.
+- Depth-15 augmented tree: 62.0% full / 60.7% cv shape — matches baseline depth=None
+  ceiling at 9× fewer leaves and +3.5pp better cv-shape generalization.
+- v3 production: 56.16% (unchanged). Augmented depth-15 is +5.8pp over v3.
+- 124 Rust + 74 Python tests green.
+
+User priorities (re-confirmed):
+- Discovery mode, not production commitment.
+- Data/ML/AI drives discovery — let the leaves speak; don't anchor on speculation.
+- Rule-count cap is soft.
+- Track results as $/1000 hands at $10/EV-point.
+- Always report BOTH absolute EV per profile AND EV-loss vs BR.
+
+IMMEDIATE NEXT ACTIONS (pick one):
+
+(a) RECOMMENDED — Continue mining other categories.
+    1. Filter feature_table.parquet to (mode_count == 3 AND category == 'high_only')
+       — 12.6% of v3 EV-loss; the second-largest cohort.
+    2. Train depth=None DT on slice with augmented 30 features. Report ceiling.
+    3. Mine impure leaves; engineer 1-3 high_only-specific features.
+    4. Re-run depth curve on full 6M with all features. Lift?
+    5. Repeat for two_pair (24% of EV-loss) and trips_pair if budget allows.
+
+(b) Alternative — Extract chain from current augmented depth-15 tree.
+    1. Refit depth=15 DT on full 6M with the 30 features.
+    2. Use sklearn `export_text` → translate to Python if/elif chain.
+    3. Verify byte-identical predictions on full 6M.
+    4. Run v3_evloss_baseline.py --strategy v5_dt and compare to v3 on
+       per-profile absolute EV + $/1000 hands at $10/EV-pt.
+
+(a) is more discovery before commitment; (b) ships a chain. The reframe
+favours (a) until the feature ceiling stops moving — but (b) gives an
+EV-loss measurement that's the actual KPI.
+
+Apply the 4-step doctrine for any hypothesis BEFORE running new MC:
+1. Hypothesize (qualitative observation)
+2. Measure Signal (odds ratio on representative sample)
+3. Measure Impact (EV-loss share)
+4. Test Cheaply (in silico / analytical proxy)
+Then act.
+```
