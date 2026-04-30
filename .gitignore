@@ -13,6 +13,7 @@ data/pilot/
 data/*.json
 data/session*/*.json
 data/*.parquet
+data/*.npz
 data/*.log
 
 # Python

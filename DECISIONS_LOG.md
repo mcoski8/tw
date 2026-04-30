@@ -470,3 +470,62 @@
      - producing depth=None lifts of +5-9pp on their target slice.
   6. **Continue mining vs ship the chain.** The +0.88pp depth-15 / +1.67pp depth=None lift over Session 18 means there is still runway for additional category mining (trips_pair next, or non-3-of-4 cohorts), but the marginal lift per session is now ~+1pp on full-6M depth=None. Recommended Session 20 fork: (a) one more mining pass on trips_pair to confirm the lift plateau; OR (b) extract the depth-15 aug-37 chain via sklearn `export_text` and run `v3_evloss_baseline.py --strategy v5_dt --hands 2000 --save` for the actual EV-loss measurement against v3. The reframe (Decision 033) favours (a) until lift goes <0.5pp, but (b) is the deliverable the user is ultimately tracking ($/1000 hands at $10/EV-pt).
 
+---
+
+## Decision 037 — Halt trips_pair augmented-feature mining (Session 20)
+
+**Date:** 2026-04-30
+**Status:** Settled (halt)
+**Question:** Should Session 20 mine trips_pair miss-leaves, design + persist a 4th augmented-feature family, and refit the depth-15 DT to 40 features?
+**Choice:** **HALT at Step 4 of the 4-step doctrine.** No feature module, no parquet, no depth curve. The data says trips_pair cannot move the headline metric.
+**Why** (the 4-step doctrine in action — measure BEFORE design):
+  1. **Step 2 (signal — slice ceiling):** baseline DT on (mode_count==3 AND category=='trips_pair') slice ceiling at depth=None = **86.18% / 17,503 leaves on 54,163 hands.** vs two_pair's 79.47%, single-pair ~74%, high_only 39.64%. trips_pair's baseline is already strong, leaving only **13.82pp of slice headroom** (vs two_pair's 20.53pp).
+  2. **Step 3 (impact — EV-loss share):** trips_pair share of total v3 EV-loss = **2.5%** (n=39 of 2000 in `data/v3_evloss_records.parquet`, sum of `loss_weighted` per cohort). Compare:
+       - pair: 48.6%
+       - two_pair: 26.1%
+       - high_only: 16.6%
+       - trips: 4.3%
+       - **trips_pair: 2.5%**
+       - three_pair: 1.4%
+       - quads: 0.5%
+     Population share matches: trips_pair = 178,464 / 6,009,159 = 2.97% of full 6M (vs two_pair's 22.27%). **trips_pair is the 5th-largest cohort, not a load-bearing miss bucket.**
+  3. **Step 4 (cheap test — pre-mining math):** for trips_pair to add ≥+0.5pp on full-6M shape (the user's halt threshold from the resume prompt), the cohort must lift by **0.5 / 0.0297 = +16.8pp on the full trips_pair sub-population.** Session 19's two_pair full lift was +7.50pp (from 1.34M cohort, projecting +1.67pp full-6M). +16.8pp on a smaller cohort with a higher baseline ceiling is unprecedented. Even if we matched Session 19's slice lift exactly (+5.90pp slice / +7.50pp full), full-6M projection is **0.075 × 0.0297 = +0.22pp.** Below threshold.
+  4. **Mining produced the qualitative pattern but the lift envelope cannot rescue it.** `mine_trips_pair_leaves.py` ran. Top-10 miss-leaves cover **1.2% of misses** (vs two_pair's 0.5% = even more diffuse), top-100 = 8.1%. 4,778 distinct leaves carry at least one miss. The recurring pattern in top miss-leaves is "trip-on-bot vs pair-on-bot" — same routing-decision shape as two_pair's "high-pair-on-mid vs high-pair-on-bot", with the 28 baseline features missing the per-routing bot suit profile. The pattern is real; we just can't extract enough EV from a 2.5%-share cohort to move the user's deliverable metric.
+  5. **The discovery phase has plateaued for additional cohorts.** Three augmented-feature families (pair / high_only / two_pair) covered 91.3% of v3 EV-loss share. The remaining 8.7% is split across trips (4.3%), three_pair (1.4%), quads (0.5%) and the 2.5% trips_pair cohort. None of these alone can clear the +0.5pp halt threshold; even combined they project to <+1pp. The right pivot is target-reframing (per-profile EV) rather than another cohort mine.
+**Consequence:**
+  1. `analysis/scripts/mine_trips_pair_leaves.py` is preserved as the diagnostic. No `trips_pair_aug_features.py` module created. No `data/feature_table_trips_pair_aug.parquet` persisted.
+  2. The **3-family aug set** (pair + high_only + two_pair = 9 features added to the 28-baseline = 37 total) is the FINAL aug set for the discovery phase. Future sessions: pivot the training target, do NOT add a 4th cohort.
+  3. The 4-step doctrine demonstrably saved a session of work. ~12 minutes of mining + math vs the alternative of designing 3 trips_pair features, OR-testing them, computing the depth=None ceiling, persisting the parquet, refitting depth-15, then discovering full-6M lift was <0.5pp. Per the methodology, this halt is a SUCCESS.
+  4. The remaining cohorts (trips, three_pair, quads) all have smaller EV-loss share than trips_pair and worse population coverage. They are similarly out of scope for Phase D.
+
+---
+
+## Decision 038 — Extract depth-15 chain (`strategy_v5_dt`) and quantify the shape-vs-EV gap (Session 20)
+
+**Date:** 2026-04-30
+**Status:** Settled. Chain shipped; mismatch quantified.
+**Question:** Does the depth-15 augmented DT (37 features, 18,399 leaves, +7.58pp shape over v3) actually win in dollars at $10/EV-pt?
+**Choice:** **No.** Extracted the chain into a portable artifact (`data/v5_dt_model.npz`, 133 KB) + production strategy callable (`analysis/scripts/strategy_v5_dt.py`). Ran `v3_evloss_baseline.py --strategy v5_dt --hands 2000 --samples 1000 --seed 42` (same hands as v3 baseline, identical RNG). Result: **net mean EV-loss across 4 profiles INCREASED by +0.0172 pts/hand vs v3 = −$172/1000h at $10/EV-pt.** The chain is a NET EV LOSS in dollars on the user's headline metric.
+**Why:**
+  1. **Per-profile EV deltas (positive = v5 ahead, negative = v5 behind):**
+     | Profile      | v3 mean loss | v5_dt mean loss | Δ EV       | $/1000h         |
+     |--------------|--------------|-----------------|------------|-----------------|
+     | mfsuitaware  | 1.3692       | 1.3283          | +0.0409    | **+$409.31**    |
+     | omaha        | **1.1514**   | **1.3315**      | **−0.1801**| **−$1,800.89**  |
+     | topdef       | 1.4385       | 1.3688          | +0.0697    | +$697.44        |
+     | weighted     | 1.2221       | 1.2212          | +0.0009    | +$8.82          |
+     | **mean**     | 1.2953       | 1.3125          | −0.0172    | **−$171.83**    |
+  2. **Shape-agreement is NOT EV.** v5_dt has **+7.57pp shape lift over v3** on the full 6M (63.73% vs 56.16%) but loses money on average. The mismatch is concentrated against the omaha-first profile, where v5_dt sacrifices −$1,801/1000h. v3's hand-tuned rule chain (and `strategy_v3_no_top_bias`) was designed knowing omaha is the highest-variance profile; the DT, trained on `multiway_robust` (mode-of-4-profiles), has no such asymmetry built in.
+  3. **The training target is the root cause.** `multiway_robust` is the per-hand most-popular setting across the 4 BR profiles. When all 4 profiles agree, it equals the mode = the single BR setting. When profiles split (especially when omaha's BR pick differs from the others), `multiway_robust` picks the modal setting — which can be +EV on 3 profiles and significantly −EV on omaha. v3's rule chain happened to favor settings that don't trade away omaha-EV; the DT didn't inherit that intuition.
+  4. **This is what Decision 033 was designed to catch.** The reframe explicitly retired ≥95% shape-agreement as a goal because shape-target is a poor proxy for EV. Session 20 measured the gap empirically: **a +7.57pp shape lift can correspond to a NET MONEY LOSS.** The user's reframe was correct.
+  5. **Parity is locked in 3 places.** (a) `extract_v5_dt.py`: sklearn vs manual-walk on full 6M = 0 diffs / 6,009,159. (b) `verify_v5_dt_parity.py`: parquet-features vs from-hand-bytes-features on 50K random rows = 0 cell diffs / 1.85M cells. (c) `verify_v5_dt_parity.py`: tree-walk on parquet-features vs tree-walk on from-hand-features = 0 prediction diffs / 50,000.
+**Consequence:**
+  1. **`data/v5_dt_model.npz` is the production tree artifact.** 133 KB, gzip'd npz. Tree arrays + `feature_columns` + `cat_map`. Loadable with `np.load(..., allow_pickle=True)`.
+  2. **`analysis/scripts/strategy_v5_dt.py` is the production strategy callable.** `strategy_v5_dt(hand) -> int` — drop-in replacement for `strategy_v3`. Computes 37 features from raw 7-byte hand, walks the saved tree, returns setting_index. Cached load_model. ~50µs per hand.
+  3. **`analysis/scripts/v3_evloss_baseline.py` now supports `--strategy v5_dt`.** `STRATEGIES` dict extended. Same CLI as before; `--save` produces a per-hand × per-profile parquet identical-shape to `data/v3_evloss_records.parquet`.
+  4. **The chain is preserved as a benchmark, not a deployment.** Future sessions can compare new strategies against v5_dt's recorded EV envelope without re-running the 8.5-minute MC sweep. `data/v5_dt_records.parquet` is the apples-to-apples baseline.
+  5. **Session 21+ should pivot the target.** Three sub-paths: (A.1) DT regression on per-profile or `ev_mean` directly; (A.2) per-profile DT ensemble; (B) profile-aware hybrid (v5_dt where profiles agreed, v3+overlays where they split). The user's metric is dollars in MC at $10/EV-pt; the training target must match.
+  6. **Two from-hand correctness gotchas captured for future inference work:**
+     - **Aug-call gating.** `compute_high_only_aug_for_hand` does NOT early-return on non-high_only hands; the persist scripts apply a category mask. Strategy modules MUST gate each aug call by category string to be byte-identical with persisted parquets.
+     - **Category-id alphabetical vs natural-order.** `dt_phase1_aug3.py` uses `sorted(unique(category))` which produces a different ordering than `tw_analysis.features.CATEGORY_TO_ID`. Strategy modules saved their own `cat_map` to remap. If a future cleanup pass moves to a single canonical mapping, this can be removed.
+

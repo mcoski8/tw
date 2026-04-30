@@ -39,10 +39,12 @@ for p in (str(SRC), str(SCRIPTS), str(TRAINER_SRC)):
         sys.path.insert(0, p)
 
 from encode_rules import strategy_v3, strategy_v3_no_top_bias  # noqa: E402
+from strategy_v5_dt import strategy_v5_dt  # noqa: E402
 
 STRATEGIES = {
     "v3": strategy_v3,
     "v3_no_top_bias": strategy_v3_no_top_bias,
+    "v5_dt": strategy_v5_dt,
 }
 from engine import (  # noqa: E402
     PROFILES,

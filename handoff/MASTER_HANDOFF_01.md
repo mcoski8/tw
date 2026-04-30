@@ -1615,3 +1615,45 @@ Apply the 4-step doctrine for any hypothesis BEFORE running new MC:
 4. Test Cheaply (in silico / analytical proxy)
 Then act.
 ```
+
+---
+
+### Session 20 — 2026-04-30 — Sprint 7 Phase E (chain extraction + EV-loss measurement; trips_pair halt)
+
+**User directive at session open:** "go to documents > claudecode > taiwanese and find out where we are" → "lets do a [trips_pair mining] first and then extract the chian". So: Path (a) trips_pair mining FIRST, then path (b) chain extraction.
+
+**Halt decision on path (a) — trips_pair (Decision 037):** ran the 4-step doctrine BEFORE designing features.
+- **Step 2 (signal):** baseline DT on slice (28 features) ceiling = 86.18% / 17,503 leaves on 54,163 hands. trips_pair's baseline is already strong, leaving 13.82pp slice headroom (vs two_pair's 20.53pp).
+- **Step 3 (impact):** trips_pair share of v3 EV-loss = 2.5% (n=39 of 2000 in v3_evloss_records, sum of `loss_weighted` per cohort). Population share 2.97% of full 6M.
+- **Step 4 (cheap test):** miss-leaf concentration top-10 = 1.2%, top-50 = 4.7%, top-100 = 8.1% across 4,778 distinct miss-leaves — even more diffuse than two_pair (0.5/3.4/—). For trips_pair to add ≥+0.5pp full-6M shape (the user's halt threshold), the cohort must lift +16.8pp on full — unprecedented. Even at Session 19 magnitude (+7.5pp full-cohort), full-6M projects to +0.22pp.
+- Recurring qualitative pattern in top miss-leaves IS visible (trip-on-bot vs pair-on-bot routing decision, mirroring two_pair's high-pair-on-mid vs high-pair-on-bot), but the cohort is too small to move the headline metric. **HALTED at Step 4. No feature module written.** ~12 minutes saved a session of work.
+
+**Path (b) — chain extraction + EV-loss baseline (Decision 038):**
+
+Step 1 — `extract_v5_dt.py`: trained depth=15 DT on full 6M with all 37 features (28 baseline + 3 pair-aug + 3 high_only-aug + 3 two_pair-aug). Fit time 14.5s. n_leaves = 18,399 (matches Session 19). Saved sklearn tree arrays to `data/v5_dt_model.npz` (133 KB, gzip'd npz): `children_left`, `children_right`, `feature`, `threshold`, `value_argmax`, `classes`, plus `feature_columns` and `cat_map`. Vectorised manual numpy tree-walk on full 6M: **0 diffs vs sklearn `dt.predict(X)` across 6,009,159 rows.**
+
+Step 2 — `strategy_v5_dt.py`: production strategy callable. `strategy_v5_dt(hand: np.ndarray) -> int` mirrors `strategy_v3` interface. Computes 37 features from raw 7-byte hand using `tw_analysis.features.hand_features_scalar` for baseline + 3 aug compute functions, then walks the saved tree. ~50µs per hand. Two correctness gotchas captured in DECISIONS_LOG (Decision 038 §6):
+1. **Category-id alphabetical vs natural-order.** `dt_phase1_aug3.py` uses `cat_map = sorted(unique(category))` (alphabetical: high_only=0/pair=1/quads=2/three_pair=3/trips=4/trips_pair=5/two_pair=6) — this differs from `tw_analysis.features.CATEGORY_TO_ID` (high_only=0/pair=1/two_pair=2/three_pair=3/trips=4/trips_pair=5/quads=6). Strategy module saves and loads its own cat_map.
+2. **Aug-call gating.** Each `persist_*_aug.py` script uses a `category == 'X'` mask; out-of-category rows are zero. The aug compute functions don't all early-return on out-of-category hands (notably `compute_high_only_aug_for_hand`). First parity attempt failed with 69,234 cell diffs concentrated in the 3 high_only-aug columns. Fix: gate each aug call by category string in the strategy module.
+
+Step 3 — `verify_v5_dt_parity.py`: full-pipeline parity check on 50K random canonical hands. Built parquet-derived feature matrix (extract_v5_dt logic) and from-hand-bytes feature matrix (strategy_v5_dt logic) for the same indices. **0 cell diffs across 37 features × 50K = 1.85M cells. 0 prediction diffs after walking the tree.** Shape-agreement on the 50K sample = **63.73%**, matching Session 19's depth-15 reference of 63.74% within sampling noise. v3 production at 56.16% means **v5_dt is +7.57pp over v3 on shape**.
+
+Step 4 — `v3_evloss_baseline.py --strategy v5_dt --hands 2000 --samples 1000 --seed 42 --save data/v5_dt_records.parquet`: registered `strategy_v5_dt` in the `STRATEGIES` dict, ran 2000 hands × 4 profiles. Total time 527.6s (4.0 hands/sec). Hand overlap with v3 baseline: 2000 of 2000 (same RNG seed produces same deal sequence).
+
+**Headline numbers (the deliverable the user has been tracking):**
+
+| Profile      | v3 mean loss | v5_dt mean loss | Δ EV       | $/1000h at $10/pt |
+|--------------|--------------|-----------------|------------|---------------------|
+| mfsuitaware  | 1.3692       | 1.3283          | +0.0409    | +$409.31            |
+| **omaha**    | **1.1514**   | **1.3315**      | **−0.1801**| **−$1,800.89**      |
+| topdef       | 1.4385       | 1.3688          | +0.0697    | +$697.44            |
+| weighted     | 1.2221       | 1.2212          | +0.0009    | +$8.82              |
+| **mean**     | **1.2953**   | **1.3125**      | **−0.0172**| **−$171.83**        |
+
+**Headline finding: shape-target trained DT is a NET EV LOSS in dollars.** v5_dt has +7.57pp shape lift over v3 but loses $172/1000h on average. The loss is concentrated on the omaha-first profile (−$1,801/1000h), where v5_dt sacrifices the omaha-favored setting in favor of the multiway-mode setting (which is right for 3 of 4 profiles but wrong for omaha). Decision 033's reframe was empirically validated: shape-agreement and EV are not the same thing.
+
+**Files added:** `analysis/scripts/mine_trips_pair_leaves.py`, `analysis/scripts/extract_v5_dt.py`, `analysis/scripts/strategy_v5_dt.py`, `analysis/scripts/verify_v5_dt_parity.py`, `data/v5_dt_model.npz`, `data/v5_dt_records.parquet`. **Files modified:** `analysis/scripts/v3_evloss_baseline.py` (added v5_dt to STRATEGIES dict), `CURRENT_PHASE.md` (rewritten), `DECISIONS_LOG.md` (Decisions 037 + 038), this file.
+
+**Tests:** Rust 124/124 ✓ (88 + 15 + 15 + 6, unchanged), Python 74/74 ✓ (24 + 11 + 9 + 9 + 13 + 8, unchanged).
+
+**Session 21 fork:** **(A) pivot training target to per-profile EV-aware** is the recommended path. Either A.1 (DT regression on `ev_mean` or `ev_omaha` directly, then argmax over 105 settings at inference) or A.2 (per-profile DT ensemble, profile-conditioned at inference). The chain is shippable as the shape-target benchmark; the next iteration must change the target to match the user's dollar metric.

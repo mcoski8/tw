@@ -1,165 +1,157 @@
-# Current: Sprint 7 Phase D — two_pair augmented features unlock +5.90pp slice lift and +1.67pp full-6M lift. Third feature-engineering win since the goal reframe. Session 19 closed.
+# Current: Sprint 7 Phase E — chain extracted; shape-target → EV mismatch quantified. trips_pair mining halted at Step 3 (4-step doctrine). Session 20 closed.
 
-> **🔥 IMMEDIATE NEXT ACTION (Session 20):** EITHER (a) one more mining pass on **trips_pair** to confirm the lift plateau, OR (b) extract the depth-15 aug-37 chain (18,399 leaves, full_shape 63.74%, cv_shape 62.44%) → translate to Python if/elif → byte-identical parity check → EV-loss baseline vs v3. The reframe favours (a) until per-session lift drops below 0.5pp on full-6M, but (b) is the deliverable the user is ultimately tracking ($/1000 hands at $10/EV-pt). Recommendation: (b) is now competitive — three augmented-feature families have each contributed; the next mining pass is likely <+1pp on full-6M.
+> **🔥 IMMEDIATE NEXT ACTION (Session 21):** Pivot the training target from `multiway_robust` (mode-of-4-profiles) to per-profile EV-aware. The depth-15 chain (37 features, 18,399 leaves, +7.57pp shape over v3) **loses money** in dollars at $10/EV-pt: −$1,801/1000h vs omaha-first profile while gaining only +$409 / +$697 / +$9 against the other three. Net mean across 4 profiles: **−$172/1000h**. Two paths: (i) train DT on regression target = per-profile EV (or mean EV) instead of classification target = mode-setting; or (ii) ensemble = pick the profile-conditioned setting at inference time given a known opponent. The user's reframe (Decision 033) explicitly retired shape-agreement as the goal — Session 20 confirmed empirically that shape-agreement and EV are not the same thing.
 
-> **🚫 RETIRED (Decision 033, Session 16):** "≥95% shape-agreement on multiway-robust target." Replaced with directional reduction below v3's 1.63 EV-loss baseline AND non-negative absolute mean EV against all 4 opponent profiles. Reportable metric: $/1000 hands at $10/EV-pt.
+> **🚫 RETIRED (Decision 033, Session 16):** "≥95% shape-agreement on multiway-robust target." Replaced with directional reduction below v3's EV-loss baseline AND non-negative absolute mean EV against all 4 opponent profiles. Reportable metric: $/1000 hands at $10/EV-pt.
 
-> Updated: 2026-04-28 (end of Session 19)
+> **🚫 HALTED (Decision 037, Session 20):** trips_pair augmented-feature mining. Population share 2.97% × max realistic slice lift cannot exceed +0.5pp full-6M (the user's halt threshold).
 
----
-
-## Headline state at end of Session 19
-
-**Third feature-engineering win since the Session 16 reframe.** Three new two_pair-aug features mirror the Session 17/18 pattern (bot-suit-profile per strategic routing). They lift the DT-ceiling on the two_pair category (24% of v3 EV-loss; the largest remaining cohort) by +5.90pp on the target slice and +7.50pp on the full two_pair sub-population. Combined with Sessions 17/18 features the lift propagates to **+1.67pp on the full 6M (65.20% → 66.87%)** at depth=None and **+0.88pp at the depth-15 knee (62.86% → 63.74%)**.
-
-### New features (two_pair only; vacuous on non-two_pair hands)
-
-1. `default_bot_is_ds_tp` — bool. Under (mid=high-pair, top=highest-singleton, bot=low-pair+2-lowest-singletons), is bot DS (2,2)?
-2. `n_routings_yielding_ds_bot_tp` — 0-6. Over the 6 intact-pair routings (2 mid-pair × 3 top-singleton choices), count those yielding DS bot.
-3. `swap_high_pair_to_bot_ds_compatible` — bool. Among the DS-bot routings, does ANY have HIGH pair on bot (mid=low-pair, bot=high-pair+2 singletons)?
-
-### DT shape-agreement ceilings (depth=None, full data fit)
-
-| Subset | Baseline (27) | + Pair (30) | + High (30) | + 2P (30) | + Pair+High (33) | + ALL (36) | Lift over baseline |
-|---|---|---|---|---|---|---|---|
-| TWO_PAIR 3-of-4 (slice, 675K) | 79.47% | 79.47% | 79.47% | **85.37%** | 79.47% | 85.37% | **+5.90pp** |
-| TWO_PAIR full (1.34M) | 68.29% | 68.29% | 68.29% | **75.79%** | 68.29% | 75.79% | +7.50pp |
-| 3-of-4 majority (2.43M) | 70.01% | 72.61% | 71.78% | 71.65% | 74.38% | **76.02%** | +6.01pp |
-| **Full 6M** | **61.74%** | 63.76% | 63.17% | 63.41% | 65.20% | **66.87%** | **+5.13pp** |
-
-The three augmented-feature families correctly compose additively on the full 6M (within rounding): 61.74 + 2.02 (pair) + 1.43 (high) + 1.67 (2p) = 66.86 ≈ 66.87% — confirming the "vacuous on out-of-category hands" property holds across all three families.
-
-### Full-6M depth curve (all 37 augmented features)
-
-| depth | leaves | cv_acc | cv_shape | full_acc | full_shape | Δ over Session 18 (33) |
-|---|---|---|---|---|---|---|
-| 3 | 8 | 30.69% | 32.31% | 30.63% | 32.13% | +0.00pp |
-| 5 | 32 | 39.94% | 42.02% | 39.97% | 42.27% | +0.00pp |
-| 7 | 125 | 47.00% | 49.00% | 47.17% | 49.16% | +0.01pp |
-| 10 | 932 | 54.58% | 56.69% | 54.92% | 56.95% | +0.21pp |
-| **15** | **18,399** | **60.02%** | **62.44%** | **61.32%** | **63.74%** | **+0.88pp / +0.85pp cv** |
-| 20 | 136,191 | 59.08% | 61.55% | 64.01% | 66.12% | +1.44pp |
-| None | 288,218 | 57.28% | 59.87% | 64.80% | 66.87% | +1.67pp |
-
-**Depth-15 with all 37 features (63.74% full / 62.44% cv) is the new chain-extraction candidate.** Same leaf-count tier as Session 17/18 knees (~18K leaves), best cv-full gap of any depth (-1.30pp). v3 production at 56.16% means depth-15 aug-37 is **+7.58pp over v3** (was +6.7pp at end of Session 18).
-
-The 2p-aug features primarily lift bounded depths ≥10 and depth=None. Depths 3-7 are unaffected — too shallow to use the new features.
-
-### Drop-out ablation on the slice (depth=None)
-
-| Drop one feature | Slice shape | Δ from full aug |
-|---|---|---|
-| (full augmented — 36 features) | 85.37% | — |
-| − default_bot_is_ds_tp | 83.53% | −1.84pp |
-| − n_routings_yielding_ds_bot_tp | 83.70% | −1.67pp |
-| − swap_high_pair_to_bot_ds_compatible | 83.44% | **−1.93pp** ← largest |
-| − any pair-aug feature | 85.37% | 0.00pp (vacuous on slice ✓) |
-| − any high-aug feature | 85.37% | 0.00pp (vacuous on slice ✓) |
-
-All three 2p-aug features are non-redundant. Unlike Sessions 17/18 where one feature dominated (-2.85pp / -4.78pp), the three 2p-aug drops are within 0.26pp of each other — F3 edges out F1 by 0.09pp. The structural-symmetry feature (swap-high-pair-to-bot-DS-compatible) is the largest single contributor, mirroring the "least-OR-but-largest-drop" pattern from Sessions 17/18.
-
-### Signal odds ratios (slice-level, vs "BR = baseline-DT prediction")
-
-| Feature | OR | Direction |
-|---|---|---|
-| `default_bot_is_ds_tp` (vs BR=baseline-DT) | 1.14x | Very weak +; P=81.17% vs 79.13% |
-| `swap_high_pair_to_bot_ds_compatible` | 0.65x | Inverse; P=74.17% vs 81.48% |
-| `n_routings_yielding_ds_bot_tp` cross-tab | — | Clean U: 83.51 / 70.23 / 74.50 / 88.04% across {0/1/2/4} |
-
-Individual signal magnitudes are weaker than Sessions 17/18, but the combined cross-tab spread (88.04 − 70.23 = 17.81pp on F2) is comparable to high_only-aug, and the literal-agreement lift on slice (+5.95pp adding all 3) exceeds Sessions 17/18 individual feature ORs would predict. Three weak features collectively map cleanly onto the "default-vs-swap × n-routings × kicker-rank" decision the DT can split on.
+> Updated: 2026-04-30 (end of Session 20)
 
 ---
 
-## What was completed this session (Session 19)
+## Headline state at end of Session 20
 
-### Step 1-3 — two_pair leaf mining (`mine_two_pair_leaves.py`)
+**The depth-15 augmented DT chain is live as `strategy_v5_dt`, byte-identical to the trained sklearn DT on the full 6M.** Shape-agreement on full 6M = 63.21% literal / **63.73% shape (+7.57pp over v3's 56.16%)**. EV-loss baseline at hands=2000, samples=1000, seed=42 (same hands as v3 baseline, identical RNG):
 
-- Filtered feature_table to (mode_count==3 AND category=='two_pair') → 675,624 hands (11.24% of full 6M).
-- Trained depth=None DT on slice with the 28 baseline features. Slice ceiling: **79.47% / 39,677 leaves.**
-- Miss concentration: top-10 = 0.5% of misses, top-50 = 1.9%, top-100 = 3.4% — much more diffuse than single-pair (top-10 = 11%) or high_only (top-10 = 4.4%). 30,413 leaves have at least one miss.
-- Recurring pattern: dominant top miss-leaves involve "high-pair-on-mid (DT-default, settings 14/44) vs high-pair-on-bot (BR-swap routing)". The within-leaf discriminator is suit-coupling under each routing — not visible to the 28 baseline features which see only 7-card suit profiles.
+| Profile      | v3 mean loss | v5_dt mean loss | Δ EV       | $/1000h at $10/pt |
+|--------------|--------------|-----------------|------------|---------------------|
+| mfsuitaware  | 1.3692       | 1.3283          | +0.0409    | +$409.31            |
+| **omaha**    | **1.1514**   | **1.3315**      | **−0.1801**| **−$1,800.89**      |
+| topdef       | 1.4385       | 1.3688          | +0.0697    | +$697.44            |
+| weighted     | 1.2221       | 1.2212          | +0.0009    | +$8.82              |
+| **mean**     | **1.2953**   | **1.3125**      | **−0.0172**| **−$171.83**        |
 
-### Step 4 — three-feature design (`two_pair_aug_features.py`)
+Absolute mean EV per profile (positive = v5 ahead, negative = v5 behind):
 
-- Module exposes `compute_two_pair_aug_for_hand(hand)` (scalar) + `compute_two_pair_aug_batch(hands, slice_mask)` (vectorised). Vacuous on non-two_pair hands (early-return if n_pairs != 2).
-- 6 spot-checks pass against hand-picked cases from the leaf dump (per Session 17/18 lesson). Leaf-1 hand `2c 6c Jd Kh Ks Ac Ad` returns f1=0 (default 3-suited bot), f2=2 (2 of 6 routings yield DS-bot, both via mid=KK swap), f3=1 (the swap routing IS DS-compatible).
+| Profile      | v3 EV    | v5_dt EV | Δ        | BR EV   |
+|--------------|----------|----------|----------|---------|
+| mfsuitaware  | −0.7779  | −0.7369  | +0.0409  | +0.5913 |
+| omaha        | +1.0117  | +0.8316  | −0.1801  | +2.1632 |
+| topdef       | −0.8846  | −0.8149  | +0.0697  | +0.5539 |
+| weighted     | +0.3779  | +0.3788  | +0.0009  | +1.6000 |
 
-### Step 4a — odds-ratio + cross-tab signal check (`signal_or_two_pair.py`)
+**Headline: shape-target trained DT is a net EV loss in dollars.** v5_dt picked up shape-agreement on three profiles by sacrificing the omaha-first-profile setting where the four-way mode disagreed. v3 was hand-tuned with stronger omaha-favoring rules (its no_top_bias variant was created exactly for this asymmetry); the DT inherited none of that bias. Session 20 confirmed empirically what Decision 033 asserted in theory: **shape-agreement and EV are not the same thing.**
 
-- F1 OR=1.14x (weak); F3 OR=0.65x (inverse); F2 cross-tab spread 17.81pp (clean U-shape). Individual ORs much weaker than Sessions 17/18, but the combined depth=None DT literal-agreement on slice lifts +5.95pp (79.34% → 85.29%). Signal magnitude justified training compute despite weak individual ORs.
+### Session 19 → Session 20 deltas
 
-### Step 5 — augmented-feature DT ceiling (`dt_two_pair_aug_ceiling.py`)
+- **chain extracted:** `data/v5_dt_model.npz` (133 KB, gzip'd npz). Tree arrays — `children_left`, `children_right`, `feature`, `threshold`, `value_argmax`, `classes`, plus `feature_columns` and `cat_map` for from-hand feature compute.
+- **byte-identical parity (sklearn vs manual walk):** 0 diffs across all 6,009,159 canonical hands.
+- **byte-identical from-hand parity:** 0 cell diffs across 50K random rows × 37 features (50,000 × 37 = 1.85M cells); 0 prediction diffs after walking the tree.
+- **trips_pair mining halted:** slice ceiling 86.18% (vs two_pair 79.47%), miss-leaf concentration top-10 = 1.2% (more diffuse than two_pair's 0.5%), population share 2.97%, EV-loss share 2.5%. Even +7.50pp full-cohort lift (Session 19 magnitude) projects to +0.22pp full-6M — below halt threshold.
 
-- depth=None DT comparison: 6 feature sets × 4 subsets. Slice lift +5.90pp; two_pair-full lift +7.50pp; 3-of-4 majority lift +1.64pp on top of pair+high; full-6M lift +1.67pp on top of pair+high.
-- Per-feature drop-out ablation on slice confirms all three 2p-aug features contribute non-redundantly. Pair-aug + high_only-aug features correctly inert (drop = 0pp). All three families' isolation-by-design property is now triple-validated.
+---
 
-### Step 6 — full-6M depth curve (`dt_phase1_aug3.py`)
+## What was completed this session (Session 20)
 
-- Depths {3, 5, 7, 10, 15, 20, None}. Identical methodology to Session 16/17/18 (3-fold CV on 1M subsample, full-6M fit at chosen depth).
-- Depth-15 remains the knee. cv-shape 62.44% (was 61.59%, +0.85pp). Full-shape 63.74% (was 62.86%, +0.88pp). 18,399 leaves (vs 18,354) — same tier.
+### Step 0 — 4-step doctrine on trips_pair (Decision 037)
 
-### Augmented-feature persistence (`persist_two_pair_aug.py`)
+Before designing features, ran Steps 2-3-4 of the 4-step hypothesis doctrine on trips_pair as a sanity check:
 
-- `data/feature_table_two_pair_aug.parquet` — 18.89 MB, joins on canonical_id.
-- Compute is 26s on the 1.34M two_pair sub-population. Future sessions read the parquet directly.
+- **Step 2 (signal):** baseline DT on slice (28 features) ceiling = 86.18% — the baseline is already strong, leaving only 13.82pp of headroom on the slice. Compare to two_pair's 79.47% / 20.53pp room.
+- **Step 3 (impact):** trips_pair share of v3 EV-loss = **2.5%** (n=39 of 2000 in `v3_evloss_records.parquet`, `loss_weighted` weighted). Population share 2.97% (178K of 6M). Pre-mining math: even a +7.5pp full-cohort lift (Session 19 magnitude on two_pair) projects to +0.22pp full-6M shape — **below the +0.5pp halt threshold from the resume prompt.**
+- **Step 4 (cheap test):** miss-leaf concentration top-10 = 1.2%, top-50 = 4.7%, top-100 = 8.1% across 4,778 distinct miss-leaves — even more diffuse than two_pair (0.5/3.4/—). Top miss-leaves recurringly show the "trip-on-bot vs pair-on-bot" routing decision the 28 baseline features can't see, mirroring the two_pair structural blind spot. The pattern exists but the cohort is too small for the chain-extraction to benefit.
+
+**Decision: HALT mining at Step 4.** No feature module written for trips_pair. Discovery phase has plateaued for additional cohorts.
+
+### Step 1 — Chain extraction (`extract_v5_dt.py`)
+
+- Trained depth=15 DT on full 6M with all 37 augmented features (28 baseline + 3 pair-aug + 3 high_only-aug + 3 two_pair-aug). Fit time: 14.5s. n_leaves: 18,399. n_nodes: 36,797.
+- Saved sklearn tree arrays as `data/v5_dt_model.npz`: `children_left`, `children_right`, `feature`, `threshold`, `value_argmax`, `classes`, plus metadata (`feature_columns`, `cat_map`, `depth`, `n_leaves`).
+- Vectorised manual tree-walk (numpy chunked, ≤20 levels deep) on the full 6M produced byte-identical predictions to `dt.predict(X)` — **0 diffs across 6,009,159 rows.**
+- Literal-agreement on full 6M: 61.32% (matches Session 19 depth-15 reference).
+
+### Step 2 — From-hand strategy module (`strategy_v5_dt.py`)
+
+- `strategy_v5_dt(hand: np.ndarray) -> int` — drop-in replacement for `strategy_v3` callable. Computes the 37 features from raw hand bytes, walks the saved tree, returns setting_index in 0..104.
+- Feature compute uses `tw_analysis.features.hand_features_scalar` for 28 baseline features, plus the 3 aug compute functions. Two correctness gotchas captured:
+  1. **Category-id remapping.** `dt_phase1_aug3.py` builds `cat_map = sorted(unique(category))` (alphabetical: high_only=0, pair=1, quads=2, three_pair=3, trips=4, trips_pair=5, two_pair=6) — this differs from the natural `CATEGORY_TO_ID` ordering in `tw_analysis.features` (high_only=0, pair=1, two_pair=2, three_pair=3, trips=4, trips_pair=5, quads=6). The strategy module overrides via the saved `cat_map`.
+  2. **Aug-call gating.** Each `persist_*_aug.py` script applies a `category == 'X'` mask; out-of-category rows are zero. The aug compute functions don't all early-return on out-of-category hands (notably `compute_high_only_aug_for_hand` assumes the caller filters). The strategy module gates each aug call by category string (`pa = compute_pair_aug_for_hand(hand) if cat_str == CATEGORY_PAIR else (0,0,0)`, etc.) to be byte-identical with the persisted parquets.
+
+### Step 3 — Full-pipeline parity check (`verify_v5_dt_parity.py`)
+
+- Sampled 50,000 random canonical hands. Built parquet-derived feature matrix (extract_v5_dt logic) and from-hand-bytes feature matrix (strategy_v5_dt logic) for the same indices.
+- **Byte-identical: 0 cell-level diffs across all 37 features × 50K rows = 1.85M cells.**
+- **0 prediction diffs after walking the tree on both matrices.**
+- Shape-agreement on the 50K sample: **63.73%** — matches Session 19's depth-15 reference of 63.74% within sampling noise. v3 production at 56.16% means **v5_dt is +7.57pp over v3.**
+
+### Step 4 — EV-loss baseline (`v3_evloss_baseline.py --strategy v5_dt`)
+
+- Registered `strategy_v5_dt` in the `STRATEGIES` dict alongside `v3` and `v3_no_top_bias`.
+- Ran `--hands 2000 --samples 1000 --seed 42 --save data/v5_dt_records.parquet`. Total time: 527.6s (4.0 hands/sec, 4 profiles per hand × 1000 MC samples).
+- Same 2000 hands as `data/v3_evloss_records.parquet` (verified by hand_str overlap = 2000 of 2000). Apples-to-apples comparison across the four profiles plus the average.
+
+### Step 5 — Test suites
+
+- Rust: `cargo test --release` → **124/124 pass** (88 + 15 + 15 + 6, unchanged from Session 19).
+- Python: pytest on six test files → **74/74 pass** (24 features + 11 settings + 9 canonical + 9 cross_model + 13 v3_golden + 8 overlays_golden, unchanged).
 
 ---
 
 ## Files added this session
 
-- `analysis/scripts/mine_two_pair_leaves.py` — Step 1-3 mining + leaf-rank dump
-- `analysis/scripts/two_pair_aug_features.py` — feature module (scalar + batch + 6 spot-check cases)
-- `analysis/scripts/signal_or_two_pair.py` — Step 4a OR + cross-tab signal test
-- `analysis/scripts/dt_two_pair_aug_ceiling.py` — Step 5 cross-subset comparison + drop-out ablation
-- `analysis/scripts/dt_phase1_aug3.py` — Step 6 depth curve on full 6M with all 37 features
-- `analysis/scripts/persist_two_pair_aug.py` — parquet persistence
-- `data/feature_table_two_pair_aug.parquet` — 18.89 MB, two_pair augmented features (gitignored)
+- `analysis/scripts/mine_trips_pair_leaves.py` — Step 1-3 trips_pair mining (slice ceiling, leaf-rank dump). Confirmed halt decision.
+- `analysis/scripts/extract_v5_dt.py` — fit depth-15 DT on full 6M with 37 features, save tree arrays + metadata to `data/v5_dt_model.npz`, run sklearn-vs-manual-walk parity check on full 6M.
+- `analysis/scripts/strategy_v5_dt.py` — `strategy_v5_dt(hand)` callable, `compute_feature_vector(hand, model)` from-hand feature compute, `predict_many_from_hands(hands)` for batch parity work, plus 5 hand-picked smoke tests in `__main__`.
+- `analysis/scripts/verify_v5_dt_parity.py` — full-pipeline parity check on 50K random canonical hands. Asserts byte-identical features, byte-identical predictions, reports shape-agreement.
+- `data/v5_dt_model.npz` — 0.13 MB. Tree arrays + feature column order + cat_map. Loaded once by `strategy_v5_dt` and cached.
+- `data/v5_dt_records.parquet` — 2000-hand × 4-profile EV records under `strategy_v5_dt`. Same schema as `data/v3_evloss_records.parquet` (column names retain `v3_*` prefixes from the report-style; values are v5_dt's choices).
 
 ## Files modified this session
 
-- `CURRENT_PHASE.md` — rewritten
-- `DECISIONS_LOG.md` — appended Decision 036
-- `handoff/MASTER_HANDOFF_01.md` — appended Session 19 entry
+- `analysis/scripts/v3_evloss_baseline.py` — added `from strategy_v5_dt import strategy_v5_dt` + registered in `STRATEGIES` dict.
+- `CURRENT_PHASE.md` — rewritten.
+- `DECISIONS_LOG.md` — appended Decision 037 (trips_pair halt) + Decision 038 (chain extraction + EV-loss measurement).
+- `handoff/MASTER_HANDOFF_01.md` — appended Session 20 entry.
 
 ## Verified
 
 - Rust: `cargo test --release` 124/124 pass.
-- Python: 74/74 tests pass (24 features + 11 settings + 9 canonical + 9 cross_model + 13 v3_golden + 8 overlays_golden).
+- Python: 74/74 tests pass.
+- `verify_v5_dt_parity.py`: 0 feature diffs / 0 prediction diffs on 50K random rows.
+- `extract_v5_dt.py`: 0 diffs sklearn-vs-manual-walk on full 6M.
 
 ## Gotchas + lessons
 
-- **Diffuse miss-leaves are NOT a contraindication.** two_pair top-10 miss-leaves cover only 0.5% of misses (vs single-pair 11%, high_only 4.4%). Initial worry was "no signal." But the +5.90pp slice lift confirms the structural pattern is real and spread uniformly across small leaves. Diffuseness in the leaf graph and feature lift are orthogonal — one decision axis can be tested across many small leaves and have aggregated impact.
-- **Weak individual ORs don't preclude strong combined lift.** F1 OR=1.14x and F3 OR=0.65x are dramatically weaker than Sessions 17/18 (4.39x, 6.38x). But all three combined lifted the slice depth=None DT +5.90pp (shape) — comparable to single-pair's +5.85pp. Three features that each weakly discriminate one axis can collectively map onto a multi-dimensional decision the DT can exploit. Lesson: do the cheap feature-add sanity check (ceiling lift) before deciding whether weak ORs justify continuing.
-- **The three drop-outs are within 0.26pp of each other (1.67-1.93pp range).** Unlike Sessions 17/18 where one feature dominated (-2.85pp / -4.78pp), here all three 2p-aug features carry near-equal load. F3 (`swap_high_pair_to_bot_ds_compatible`) is the largest by a hair. Each captures a different facet of the same routing decision; remove any one and the DT loses ~10% of the lift. This balanced contribution profile probably reflects the more symmetric two_pair structure (two pairs + 3 singletons vs single-pair's asymmetric 1 pair + 5 singletons).
-- **The "27 baseline" label is actually 28 features.** Counting the list shows 28; X.shape outputs (e.g., `(675624, 28)`, `(6009159, 37)`) confirm. The Sessions 17/18 docs all label it "27", an off-by-one inherited from earlier scoping. Session 19 docs continue the "27" labelling for cross-session compatibility but note this in passing. The error has zero impact on results — only the column labels are mismatched.
-- **Three-family additive composition holds within rounding.** 61.74 (baseline) + 2.02 (pair) + 1.44 (high) + 1.67 (2p) = 66.87% — exactly the all-aug full-6M ceiling. Each family's vacuous-on-out-of-category property continues to behave as designed. Future families (trips_pair etc.) should land at similar vacuous boundaries.
+- **Shape-agreement is NOT EV.** v5_dt has +7.57pp shape lift over v3 but loses $172/1000h on average (driven by $1,801 loss against omaha-first). The gap exists because v5_dt was trained to predict the **mode** of the 4 BR profiles, which can disagree with any single profile. v3 was hand-tuned to favor omaha because that profile produces the largest EV swings. Lesson confirmed: Decision 033's reframe was correct — the deliverable metric must be EV in dollars, not shape-agreement.
+- **The "27 baseline" label is actually 28 features (still).** Session 20 carries the off-by-one forward unchanged. X.shape outputs in `extract_v5_dt.py` confirm 37 columns total = 28 + 3 + 3 + 3.
+- **Aug-call gating must be enforced at inference.** First parity attempt failed with 69,234 cell diffs because `compute_high_only_aug_for_hand` does not early-return on non-high_only hands (the function assumes the caller filters). Strategy module must gate each aug call by category string to match what the persisted parquets did. Saved as a hard rule in the strategy module.
+- **Category-id alphabetical vs natural-order.** `dt_phase1_aug3.py`'s `cat_map = sorted(unique(category))` differs from `tw_analysis.features.CATEGORY_TO_ID`. The strategy module saves and loads its own `cat_map` rather than relying on the in-tree mapping. If a future session moves to a per-feature-pipeline canonical mapping, this can be removed.
+- **trips_pair mining was a productive halt, not a failure.** The 4-step doctrine surfaced "this cohort cannot reach the halt threshold even with peak prior-session lift" before any feature design / OR test / batch persist. ~12 minutes of mining + math vs the alternative of designing and building 3 features then discovering the lift is too small.
+- **The DT chain itself is portable.** `data/v5_dt_model.npz` is 133 KB. The strategy module needs only numpy + the existing aug feature modules. No sklearn at inference time. Future deployments to the trainer or to a non-Python frontend can re-implement the tree walk in any language.
 
-## Resume Prompt (Session 20)
+---
+
+## Resume Prompt (Session 21)
 
 ```
-Resume Session 20 of the Taiwanese Poker Solver project at
+Resume Session 21 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context:
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of Session 19)
+- CURRENT_PHASE.md (rewritten end of Session 20)
 - modules/game-rules.md (MANDATORY)
-- DECISIONS_LOG.md (latest: Decision 036 — two_pair augmented features)
-- handoff/MASTER_HANDOFF_01.md (scan Sessions 16-19 since the goal reframe)
-- analysis/scripts/encode_rules.py (current rule chain — strategy_v3 is production)
-- analysis/scripts/pair_aug_features.py + high_only_aug_features.py + two_pair_aug_features.py
-  (3 augmented-feature modules)
-- analysis/scripts/dt_phase1_aug3.py (Session 19 depth curve, full 6M, 37 features)
-- data/feature_table.parquet, data/feature_table_aug.parquet,
-  data/feature_table_high_only_aug.parquet, data/feature_table_two_pair_aug.parquet
-  (all joined on canonical_id)
+- DECISIONS_LOG.md (latest: Decisions 037 + 038 — trips_pair halt + chain extraction)
+- handoff/MASTER_HANDOFF_01.md (scan Sessions 16-20 since the goal reframe)
+- analysis/scripts/strategy_v5_dt.py (production strategy callable)
+- analysis/scripts/extract_v5_dt.py (tree training + extraction harness)
+- analysis/scripts/verify_v5_dt_parity.py (parity test for any future re-extract)
+- analysis/scripts/v3_evloss_baseline.py (now supports --strategy v5_dt)
+- data/v5_dt_model.npz (frozen tree at end of Session 20)
+- data/v5_dt_records.parquet vs data/v3_evloss_records.parquet
+  (apples-to-apples 2000-hand × 4-profile EV records)
 
-State of the project (end of Session 19):
-- Three augmented-feature families now live: pair-aug (Session 17), high_only-aug (Session 18),
-  two_pair-aug (Session 19). Combined, they lift the full-6M depth=None ceiling from
-  61.74% (baseline) to 66.87% (+5.13pp) and the depth-15 knee from 61.96% to 63.74% / 62.44% cv-shape.
-- v3 production: 56.16% (unchanged). Augmented depth-15 is +7.58pp over v3.
-- Two_pair 3-of-4 slice ceiling lifted 79.47% → 85.37% (+5.90pp); two_pair full +7.50pp.
+State of the project (end of Session 20):
+- v5_dt chain LIVE: depth-15 DT, 18,399 leaves, 37 features, byte-identical parity
+  with sklearn at full 6M and at 50K from-hand-bytes sample.
+- v5_dt shape-agreement: 63.73% (full 6M) — +7.57pp over v3's 56.16%.
+- v5_dt EV-loss vs v3 (mean of 4 profiles): −$172/1000h at $10/EV-pt.
+  - mfsuitaware: +$409/1000h
+  - omaha:       −$1,801/1000h ← the killer
+  - topdef:      +$697/1000h
+  - weighted:    +$9/1000h
+- trips_pair mining halted at Step 3 of the 4-step doctrine. No feature module written.
 - 124 Rust + 74 Python tests green.
 
 User priorities (re-confirmed):
@@ -171,27 +163,33 @@ User priorities (re-confirmed):
 
 IMMEDIATE NEXT ACTIONS (pick one):
 
-(a) Continue mining: trips_pair next.
-    1. Filter feature_table.parquet to (mode_count == 3 AND category == 'trips_pair')
-       — small but high-density cohort.
-    2. Mine impure leaves with the existing 37 features (all 3 aug-families likely vacuous
-       on trips_pair due to n_pairs==1 + n_trips==1 mismatch with their slice predicates).
-    3. If signal magnitude is weak, halt and pivot to (b). The per-session lift is now ~+1pp
-       on full-6M; if trips_pair adds <0.5pp the discovery phase has plateaued.
-    4. OR-test → spot-check → batch + ablation → persist → depth curve.
+(A) Pivot training target from `multiway_robust` to per-profile EV-aware.
+    The clearest signal from Session 20: training on mode-of-4-profiles loses
+    money against the profile with the most extreme EV swings (omaha). Two
+    sub-paths:
+      A.1 — train DT REGRESSION on `ev_mean` (or per-profile `ev_omaha`) and
+            pick the setting with highest predicted EV. Higher inference cost
+            (105 settings × predict per hand) but directly optimises the
+            user's metric.
+      A.2 — train one DT per profile on its own BR target, ensemble at
+            inference: pick per-profile setting if profile is known, or
+            averaged-EV setting if not. Closer in spirit to v3+overlays.
 
-(b) RECOMMENDED — Extract chain from current augmented depth-15 tree (37 features).
-    1. Refit depth=15 DT on full 6M with all 37 features.
-    2. sklearn `export_text` → translate to Python if/elif chain.
-    3. Verify byte-identical predictions on full 6M.
-    4. Run v3_evloss_baseline.py --strategy v5_dt --hands 2000 --save data/v5_dt_records.parquet
-       and compare to v3 on per-profile absolute EV + $/1000 hands at $10/EV-pt.
-    5. This is the chain-shipping path. Three augmented-feature families have each contributed;
-       the next mining pass is likely <+1pp. Time to measure the actual EV-loss deliverable.
+(B) Reconcile the omaha asymmetry without retraining. Inspect WHY v5_dt's
+    omaha-loss is concentrated. Compare v3's strategy_omaha_overlay choices
+    on the worst-omaha hands to v5_dt's choices. Possibly hybrid: use v5_dt
+    when all 4 profiles' BR agrees (the 'mode' was unanimous); fall back to
+    v3 + overlays when profiles split.
 
-The reframe (Decision 033) favours continued mining until the feature ceiling stops moving.
-Session 19 added +1.67pp at depth=None and +0.88pp at depth=15 — still meaningful but
-diminishing. Recommended Session 20 fork: (b) — extract the chain and measure.
+(C) Re-target the chain at depth=20 or depth=None (vs current depth=15).
+    Session 19 showed depth=None at 66.87% / 64.80% literal — +1.67pp shape
+    over depth=15. If shape-target HAD correlated with EV, going deeper
+    would have helped. Given Session 20's finding that shape ≠ EV, this is
+    likely diminishing returns, but the measurement is cheap (~30 min).
+
+The user has previously chosen (a)-paths over (b/c)-style hybrid work. (A) is
+recommended for Session 21. The 4-step doctrine still applies — measure
+signal + impact + cheap test BEFORE training.
 
 Apply the 4-step doctrine for any hypothesis BEFORE running new MC:
 1. Hypothesize (qualitative observation)
