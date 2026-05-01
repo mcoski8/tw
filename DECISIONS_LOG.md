@@ -616,3 +616,101 @@
   5. **Alternative (cheap):** path B hybrid — at inference, use v5_dt as the default and switch to a different setting only when 4 per-profile DTs are unanimous BUT v5_dt picks a different setting (i.e. trust unanimity). Or use v3+overlays where v6's 2-2 tiebreak triggered. Both are testable in <1 hour and might recoup a portion of the cheap-test gap with no new MC.
   6. **The 4-step doctrine continues to pay.** ~1 hour total cost to produce a clean null result for path A.2 (training + 8.3-min MC + diagnostic) — vs the alternative of guessing it would work and committing 14 hours of MC to A.1 first. Null results that close off cheap paths cleanly are a doctrine win.
 
+
+## Decision 041 — CRITICAL str-sort bug discovered + fixed (Session 22)
+
+**Date:** 2026-05-01
+**Status:** Settled. Bugfix shipped (commit 39a4528). All sessions 16-21 EV claims invalidated and re-verified post-fix.
+**Question:** What was the root cause of v3 appearing to lose money to v5_dt despite v5_dt having higher shape-agreement?
+**Answer:** A long-standing bug in `trainer/src/engine.py` `evaluate_hand()` used Python's `tuple(sorted(hand_strs))` which is STRING-SORT. Every strategy callable, persisted parquet, and BR `.bin` file uses BYTE-SORT. The two orderings disagree for any hand containing both digit-rank cards (2-9) AND broadway cards (T,J,Q,K,A) — **~94% of random hands**. Setting_index 99 meant "top=Ac" in Python (byte-sort) but "top=Qs" in the engine MC (str-sort) for the same hand, evaluating the WRONG setting against MC.
+**Discovery story:**
+  1. User pushed back on v3's rule for hand `Ks Qs 8h 8d 7d 5h Ac` saying the EV-optimal play is "top=Ac, mid=Ks-Qs, bot=8h-8d-7d-5h" — exactly what v3 *intends* to do.
+  2. Tracing `strategy_v3` confirmed it returns setting_index 99 with byte-sort interpretation = top=Ac.
+  3. Running cargo eval directly showed setting 99 in the engine's input-order space = top=Qs.
+  4. Source of mismatch: `evaluate_hand_cached(tuple(sorted(hand_key)))` re-sorts as strings before passing to the engine.
+**Fix:** sort by canonical card byte-value via `_card_byte()` rather than Python str-sort. One-line change in `trainer/src/engine.py` line 222.
+**Impact magnitude:**
+  - v3 grand mean EV pre-fix: −0.068 (across 4 profiles, 2000-hand baseline). Post-fix: +0.985 (50K-hand tournament).
+  - Apparent v3-to-BR-ceiling gap pre-fix: $13,941/1000h. Post-fix: $2,542/1000h.
+  - v3 vs argmax_mean choice agreement pre-fix: 14% (v3 looked completely wrong). Post-fix: 59% (v3 is actually close to the hedge optimum).
+  - Sessions 16-21 EV-loss baselines (`v3_evloss_records.parquet`, `v5_dt_records.parquet`, `v6_ensemble_records.parquet`) all evaluated the wrong setting on ~94% of hands. All re-run post-fix; buggy versions archived as `*_buggy.parquet`.
+**Why this went unnoticed:**
+  - test_strategy_v3_golden.py (13 cases) tested strategy_v3's setting_index OUTPUT, not the round-trip through MC eval.
+  - Sessions 16-21's narrative ("v5_dt loses money but has higher shape") was self-consistent under the buggy framework — the negative result reinforced the apparent finding (Decision 033's reframe) so no one questioned the eval pipeline.
+  - The EV-loss baseline numbers were anchored to BR per profile (also computed in str-sort space), so internal consistency held even though the strategy comparisons were broken.
+**Consequence:**
+  1. New project memory: `project_taiwanese_strsort_bug.md` records the bug pattern + fix.
+  2. Need a "round-trip test": for any hand, the (top, mid, bot) corresponding to strategy_v3(hand) via positions_to_setting_index should equal mc.settings[strategy_v3(hand)] reports. Add to test suite next session.
+  3. **All published EV claims pre-2026-05-01 are SUSPECT** — verify against post-fix records or re-run before relying on them.
+  4. The 4-step doctrine should add a "verify the eval pipeline matches the strategy convention" check before chasing apparent shape-vs-EV gaps. Lesson: when a counterintuitive negative result holds across multiple sessions, audit the measurement before re-architecting around it.
+
+
+## Decision 042 — v7_regression beats v3 (post-fix); v8_hybrid is the new champion (Session 22)
+
+**Date:** 2026-05-01
+**Status:** Settled. v8_hybrid promoted to "best deterministic strategy" pending Session 23+ refinements.
+**Question:** With the str-sort bug fixed (Decision 041), does the path A.1 (DT regression on per-setting EV) approach actually beat v3?
+**Choice:** **Yes by +$445/1000h**. v8_hybrid (v7 + v3-fallback for high_only/pair) extends to **+$478/1000h** with much better per-opponent balance. Both are the FIRST learned strategies to beat v3 since the project began.
+**Why** (50K-hand tournament results, all in 4-profile MC at $10/EV-pt):
+
+  Per-profile mean EV (positive = winning):
+
+  | Strategy | mfsuit | omaha | topdef | weighted | grand |
+  |----------|--------|-------|--------|----------|-------|
+  | v3       | +0.350 | +1.713 | +0.241 | +1.390  | +0.924 |
+  | v5_dt    | +0.378 | +1.510 | +0.312 | +1.357  | +0.889 |
+  | v6_ens   | +0.379 | +1.497 | +0.313 | +1.361  | +0.887 |
+  | **v7**   | +0.389 | +1.775 | +0.307 | +1.401  | **+0.968** |
+  | **v8_hybrid** | +0.398 | +1.757 | +0.289 | +1.442 | **+0.971** |
+  | oracle_argmax_mean | +0.498 | +1.849 | +0.415 | +1.500 | +1.066 |
+  | oracle_BR (cheats) | +0.538 | +2.124 | +0.503 | +1.546 | +1.178 |
+
+  $/1000h vs v3 per-opponent:
+
+  | Strategy | mfsuit | omaha | topdef | weighted | grand |
+  |----------|--------|-------|--------|----------|-------|
+  | v7       | +$384 | +$618 | +$665 | +$113 | +$445 |
+  | v8_hybrid | +$477 | +$438 | +$479 | +$518 | +$478 |
+
+  **v8_hybrid is more balanced** — every opponent ≥ +$438, vs v7's lopsided +$113-$665 range.
+
+**Categorical decomposition** (50K, $/1000h × share-of-hands × population):
+
+  | Category | n share | v7 vs v3 $/1000h | weighted contribution |
+  |----------|---------|------------------|----------------------|
+  | trips | 4.5% | +$3,575 | +$163 |
+  | two_pair | 20.9% | +$739 | +$155 |
+  | trips_pair | 1.9% | +$4,030 | +$79 |
+  | three_pair | 2.2% | +$1,470 | +$33 |
+  | high_only | 20.8% | **−$203** | **−$42** ← v7 worse |
+  | pair | 49.4% | **−$50** | **−$24** ← v7 mildly worse |
+  | quads | 0.2% | +$7,372 | +$18 |
+
+  **The +$381 (2000-hand) / +$445 (50K-hand) v7 win comes ENTIRELY from multi-pair routing decisions** (trips, two_pair, trips_pair). v7 is actually worse than v3 on the most common cases (high_only, pair).
+
+**v8_hybrid logic:** if hand is AAKK → use v3 (Decision 042 §A); else if high_only or one_pair → use v3; else → use v7. This isolates v7 to where it actually adds value (multi-pair structures) and falls back to v3 for the simple cases v3 already handles well.
+
+**Pair-to-bot pattern discovered (mining the 50K grid):**
+
+  | pair_rank | % oracle routes pair → BOT |
+  |-----------|---------------------------|
+  | 22 | 32.4% |
+  | 33-55 | 24% |
+  | 66 | 16% |
+  | 77 | 9% |
+  | 88+ | < 5% |
+
+  **For pair_rank ≤ 5, routing pair-to-bot is the EV-correct play 24-32% of the time.** Neither v3, v5_dt, v6, nor v7 captures this. Estimated headroom for a v9 that adds pair-to-bot triggering rule: **+$50-150/1000h on top of v8_hybrid**.
+
+**Why v7 wins where it wins, loses where it loses:**
+  - Wins on multi-pair structures because the 37 features (especially the 9 augmented features from Sessions 17-19) DO capture suit-profile-per-routing for pair / high_only / two_pair-aware structures. The DT learns these well.
+  - Loses on high_only because v3's hand-coded "search for top + DS-bot bonus" preserves bot-Omaha equity that v7's tree can't reproduce as cleanly. Setting 99 (top=hi, mid=middle-2, bot=mixed-with-highs) is what v3 captures and v7 missed.
+  - Loses on AAKK because that exception (KK-to-mid) is a hand-coded special case; v7 chose AA-to-mid in 4 of 5 sample AAKK hands. Patched in v7_patched / v8_hybrid via direct override.
+
+**Consequence:**
+  1. `data/oracle_grid_50k.npz` is the canonical evaluation harness. Per-strategy tournament runs in ~12 seconds via `tournament_50k.py` (no new MC required).
+  2. `strategy_v8_hybrid.py` is the best deterministic strategy as of 2026-05-01. Drop-in replacement for `strategy_v7_regression`.
+  3. v3 is NOT retired — it's the fallback inside v8_hybrid for high_only + pair + AAKK. Removing v3 from the project would lose the +$66/1000h gain.
+  4. Pre-fix sessions' DECISIONS_LOG entries (030-040) are factually accurate about the algorithms tried, but their *EV NUMBERS* are bug-affected. Audit any specific number quoted before relying on it.
+  5. Session 23 priorities: (a) mine WHEN pair-to-bot fires (low pair × suit profile × connectivity), build v9 with explicit rule; (b) attempt distillation of v7's high-impact paths for memorable rules; (c) consider expanding training MC beyond 50K for better v7 fidelity.
+

@@ -1704,3 +1704,97 @@ All 4 byte-identical sklearn-vs-manual-walk parity (0 diffs / 6,009,159 rows eac
 **Tests:** Rust 124/124 ✓ (88 + 15 + 15 + 6, unchanged), Python 74/74 ✓ (24 + 11 + 9 + 9 + 13 + 8, unchanged).
 
 **Session 22 fork:** **(A.1)** DT regression on per-setting EV is the recommended path. The cheap-test ceiling is real; the gap is in target type and feature representation, not training algorithm. Cost: ~14 hours overnight MC for a 50K-hand × 105×4 EV training grid (extension of `cheap_test_oracle_hedges.py`). Apply the 4-step doctrine: run a 5K-hand pilot first (~1.4 hours), evaluate, then commit to the 50K scale only if pilot shows positive EV gain. **Alternative (B):** asymmetric hybrid that trusts ensemble unanimity but defaults to v5_dt on splits — testable in <1 hour with no new MC. **Alternative (C):** 2000-hand cheap-test for tighter ceiling estimate AND starter training set (~33 min) before committing to A.1's 50K scale.
+
+
+---
+
+### Session 22 — 2026-05-01 — CRITICAL str-sort BUGFIX + v7_regression beats v3 + v8_hybrid champion + pair-to-bot pattern discovery
+
+**This session has two narrative beats. The first re-frames everything from sessions 16-21. The second produces the first deterministic strategy that actually beats v3.**
+
+**Beat 1 — str-sort bug discovered (Decision 041):** during user pushback on v3's "pair → mid" rule, traced strategy_v3 on hand `Ks Qs 8h 8d 7d 5h Ac` and found v3 returns setting_index 99 with byte-sort interpretation = "top=Ac, mid=88, bot=KsQs7d5h" (correct!). But the engine MC reports setting 99 = "top=Qs, mid=88, bot=AcKs7d5h" — a completely different setting. Root cause: `trainer/src/engine.py` `evaluate_hand()` did `tuple(sorted(hand_strs))` which is Python str-sort, not byte-sort. Setting_index space differed for ~94% of random hands.
+
+Fix: 1-line change in `trainer/src/engine.py` line 222 (commit `39a4528`). Sort by `_card_byte()` instead of str.
+
+Impact:
+- v3 grand mean EV pre-fix: −0.068. Post-fix: +0.985 (50K-hand tournament).
+- Apparent v3-to-BR-ceiling gap shrunk from $13,941/1000h to $2,542/1000h.
+- v3 vs argmax_mean choice agreement jumped from 14% to 59%.
+- Sessions 16-21 EV claims all need re-verification. Buggy records archived as `*_buggy.parquet`. All four strategies (v3, v5_dt, v6_ensemble, v7_regression) re-run post-fix.
+
+**Beat 2 — v7_regression baseline + v8_hybrid champion (Decision 042):** with the bug fixed, the previously-killed overnight chain re-launched. 50K MC sweep (~3.5h) + train v7 multi-output regression DT + run v7 baseline at 2000-hand seed=42.
+
+Tournament results (50K hands, all 4 profiles):
+
+| Strategy | mfsuit | omaha | topdef | weighted | grand | $/1000h vs v3 |
+|----------|--------|-------|--------|----------|-------|----------------|
+| v3 | +0.350 | +1.713 | +0.241 | +1.390 | +0.924 | 0 |
+| v5_dt | +0.378 | +1.510 | +0.312 | +1.357 | +0.889 | −$344 |
+| v6_ensemble | +0.379 | +1.497 | +0.313 | +1.361 | +0.887 | −$363 |
+| **v7_regression** | +0.389 | +1.775 | +0.307 | +1.401 | +0.968 | **+$445** |
+| **v8_hybrid** | +0.398 | +1.757 | +0.289 | +1.442 | **+0.971** | **+$478** |
+| oracle_argmax_mean | +0.498 | +1.849 | +0.415 | +1.500 | +1.066 | +$1,421 |
+| oracle_BR (cheats) | +0.538 | +2.124 | +0.503 | +1.546 | +1.178 | +$2,542 |
+
+v7_regression is the FIRST learned strategy to beat v3 since the project began. v8_hybrid (v7 + v3 fallback for high_only and one_pair categories) extends the win and is much more opponent-balanced (every cell ≥ +$438/1000h).
+
+**Categorical decomposition of v7 vs v3:**
+
+| Category | n share | $/1000h | weighted contribution |
+|----------|---------|---------|----------------------|
+| trips | 4.5% | +$3,575 | +$163 |
+| two_pair | 20.9% | +$739 | +$155 |
+| trips_pair | 1.9% | +$4,030 | +$79 |
+| high_only | 20.8% | −$203 | **−$42** ← v7 worse |
+| pair | 49.4% | −$50 | **−$24** ← v7 worse |
+| trips_pair, three_pair, quads | rare | +$1,470 to +$7,372 | +$130 |
+
+The v7 win comes entirely from multi-pair routing. v8_hybrid keeps that, swaps back to v3 on high_only + pair, gains +$66/1000h.
+
+**AAKK patch (v7_patched):** v3's hand-coded AAKK rule (KK-to-mid, AA-to-bot, low singleton on top) ties the oracle on test hand `Ac Ad Kc Kh 7s 5d 2h` at +3.366 EV/hand. v7 missed it (picked AA-to-mid for +3.330). Patch is correct but rare hand (~0.2%) so impact at 50K-scale is −$4/1000h (noise). Kept inside v8_hybrid.
+
+**Pair-to-bot pattern discovered:** mining the 50K oracle grid showed:
+
+| pair_rank | % oracle routes pair → BOT |
+|-----------|---------------------------|
+| 22 | 32.4% |
+| 33-55 | ~24% |
+| 66 | 16% |
+| 77 | 9% |
+| 88+ | < 5% |
+
+For pair_rank ≤ 5 (the lowest 4 ranks of pair), routing pair-to-bot is EV-correct ~25% of the time. Targeted MC on `Jd Td 9c 4h 2c 2d 6s` showed all of v3, v7 pick "top=Jd, mid=22, bot=T-9-6-4" (-$1.732 mean EV) but the oracle picks "top=Jd, mid=6-4 (junk!), bot=T-9-2-2" (-$1.395 mean EV). Same mean-EV gain on `22 + Ah Kc unsuited highs`: +$4,124/1000h.
+
+**Estimated headroom for v9 that adds pair-to-bot trigger rule: +$50-150/1000h on top of v8_hybrid.**
+
+**Files added (commit `40f60b0`):**
+- `analysis/scripts/strategy_v7_patched.py`
+- `analysis/scripts/strategy_v8_hybrid.py` (champion)
+- `analysis/scripts/tournament_50k.py` (per-strategy × per-profile leaderboard)
+- `analysis/scripts/inspect_v7_tree.py`
+- `analysis/scripts/distill_v7.py` (depth-5 distillation only 57% v7-agreement)
+- `analysis/scripts/where_v7_beats_v3.py`
+- `analysis/scripts/mine_pair_to_bot_50k.py`
+- `analysis/scripts/probe_high_only_misses.py`
+- `analysis/scripts/probe_low_pair_vs_connectors.py`
+- `analysis/scripts/probe_user_hand.py` (extended with v7)
+- `data/oracle_grid_50k.npz` (50K-hand × 4-profile × 105-setting grid; replaces post-bugfix)
+- `data/v7_regression_model.npz`, `data/v7_regression_records.parquet`
+- All buggy v3/v5_dt/v6_ensemble records archived as `*_buggy.parquet`
+
+**Files modified:**
+- `trainer/src/engine.py` (str-sort bugfix)
+- `analysis/scripts/v3_evloss_baseline.py` (registered v7_patched + v8 hybrids)
+- `CURRENT_PHASE.md` (rewritten)
+- `DECISIONS_LOG.md` (Decisions 041 + 042)
+- this file
+
+**Tests:** Rust 124/124 ✓ (88 + 15 + 15 + 6, unchanged), Python 74/74 ✓ (24 + 11 + 9 + 9 + 13 + 8, unchanged).
+
+**Doctrine update:** future verification step before chasing a counterintuitive negative result — audit the eval pipeline matches the strategy convention. The str-sort bug went unnoticed for 5+ sessions because the negative result reinforced the project's stated direction (Decision 033 reframe), not because any test caught it.
+
+**Session 23 priorities:**
+1. **Mine pair-to-bot trigger conditions** — for pair_rank ≤ 5 hands, what combination of features (suit profile, connectivity, broadway count) discriminates "oracle picks pair-to-bot" vs "oracle picks pair-to-mid"? Target: +$50-150/1000h v9 strategy.
+2. **Attempt v7's "high-impact path" distillation** — extract the leaves where v7 differs from v3 AND the v7-pick is significantly better. Aggregate into ~5-10 new memorable rules to add to v3.
+3. **Tournament expansion** — re-run tournament_50k with new strategies as they're built.
+4. **Round-trip test** — add an automated check that strategy_v3(hand)'s setting_index, when looked up via mc.settings, returns the (top, mid, bot) cards strategy_v3 intended. Will catch any future str-sort-class regression.
