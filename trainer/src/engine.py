@@ -203,6 +203,31 @@ def evaluate_hand_cached(
     )
 
 
+_RANKS_FOR_SORT = "23456789TJQKA"
+_SUITS_FOR_SORT = "cdhs"
+
+
+def _card_byte(card_str: str) -> int:
+    """Engine canonical sort key: card byte = (rank-2)*4 + suit.
+
+    NOTE (Session 22 bugfix): we previously used Python's str-sort on
+    card strings here, which produces DIFFERENT positional ordering than
+    the byte-sort used by every strategy callable in encode_rules.py /
+    strategy_v5_dt.py / strategy_v6_ensemble.py / strategy_v7_regression.py.
+    Because all strategies return setting_index in BYTE-sort space and the
+    Rust engine builds setting indices from the order of the input hand
+    array, the previous str-sort caused setting_index 99 (for example) to
+    mean "top=Ac" in Python and "top=Qs" in the engine for any hand
+    containing both digit-rank cards (2-9) and broadway cards (T,J,Q,K,A)
+    that interleaved differently between byte and str sort. ~94% of
+    random hands hit this. EVERY EV measurement before this fix was
+    evaluating the wrong setting for ~94% of hands.
+    """
+    rank = _RANKS_FOR_SORT.index(card_str[0]) + 2
+    suit = _SUITS_FOR_SORT.index(card_str[1])
+    return (rank - 2) * 4 + suit
+
+
 def evaluate_hand(
     hand: List[str],
     samples: int = 1000,
@@ -214,13 +239,15 @@ def evaluate_hand(
     """
     Evaluate a 7-card hand across all 105 settings.
 
-    Cached per (hand, opponent, samples, seed). Sort the hand before caching
-    so different card orderings of the same 7 cards share a cache entry.
+    Cached per (hand, opponent, samples, seed). Hand is sorted by ENGINE
+    BYTE order (matching strategy callables) before caching, so different
+    card orderings of the same 7 cards share a cache entry AND the
+    setting_index space matches what strategies return.
     """
     if len(hand) != 7:
         raise ValueError(f"hand must have 7 cards, got {len(hand)}")
     return evaluate_hand_cached(
-        tuple(sorted(hand)),
+        tuple(sorted(hand, key=_card_byte)),
         samples,
         opponent,
         mix_base,
