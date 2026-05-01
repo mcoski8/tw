@@ -1,157 +1,164 @@
-# Current: Sprint 7 Phase E — chain extracted; shape-target → EV mismatch quantified. trips_pair mining halted at Step 3 (4-step doctrine). Session 20 closed.
+# Current: Sprint 7 Phase E — path-A target pivot tested. Cheap-test confirms +$13K hedge ceiling; per-profile ensemble (A.2) is a NULL RESULT. Session 21 closed.
 
-> **🔥 IMMEDIATE NEXT ACTION (Session 21):** Pivot the training target from `multiway_robust` (mode-of-4-profiles) to per-profile EV-aware. The depth-15 chain (37 features, 18,399 leaves, +7.57pp shape over v3) **loses money** in dollars at $10/EV-pt: −$1,801/1000h vs omaha-first profile while gaining only +$409 / +$697 / +$9 against the other three. Net mean across 4 profiles: **−$172/1000h**. Two paths: (i) train DT on regression target = per-profile EV (or mean EV) instead of classification target = mode-setting; or (ii) ensemble = pick the profile-conditioned setting at inference time given a known opponent. The user's reframe (Decision 033) explicitly retired shape-agreement as the goal — Session 20 confirmed empirically that shape-agreement and EV are not the same thing.
+> **🔥 IMMEDIATE NEXT ACTION (Session 22):** Path A.1 — DT regression on per-setting EV. The cheap-test (Decision 039) showed argmax_mean has +$12,949/1000h headroom over v5_dt at $10/EV-pt. Path A.2 (per-profile DT vote-ensemble, Decision 040) was a clean null: 90.25% choice-agreement with v5_dt and −$81/1000h on the mean. The hedge ceiling is real but a 105-class classifier on 37 features can't reach it. To capture the gap we need a per-setting EV regression target — which requires generating a new MC dataset (~50K hands × 105×4 EVs ≈ 14 hours overnight via the existing `cheap_test_oracle_hedges.py` harness). After that: train regression DTs, predict EV per setting at inference, argmax over 105.
 
 > **🚫 RETIRED (Decision 033, Session 16):** "≥95% shape-agreement on multiway-robust target." Replaced with directional reduction below v3's EV-loss baseline AND non-negative absolute mean EV against all 4 opponent profiles. Reportable metric: $/1000 hands at $10/EV-pt.
 
-> **🚫 HALTED (Decision 037, Session 20):** trips_pair augmented-feature mining. Population share 2.97% × max realistic slice lift cannot exceed +0.5pp full-6M (the user's halt threshold).
+> **🚫 HALTED (Decision 037, Session 20):** trips_pair augmented-feature mining. Population share 2.97% × max realistic slice lift cannot exceed +0.5pp full-6M.
 
-> Updated: 2026-04-30 (end of Session 20)
+> **🚫 NULL RESULT (Decision 040, Session 21):** path A.2 per-profile DT ensemble. 90.25% choice-agreement with v5_dt; net −$81/1000h vs v5_dt and −$252/1000h vs v3. Voting 4 weak per-profile DTs (58–65% literal accuracy) cannot approximate oracle_argmax_mean.
 
----
-
-## Headline state at end of Session 20
-
-**The depth-15 augmented DT chain is live as `strategy_v5_dt`, byte-identical to the trained sklearn DT on the full 6M.** Shape-agreement on full 6M = 63.21% literal / **63.73% shape (+7.57pp over v3's 56.16%)**. EV-loss baseline at hands=2000, samples=1000, seed=42 (same hands as v3 baseline, identical RNG):
-
-| Profile      | v3 mean loss | v5_dt mean loss | Δ EV       | $/1000h at $10/pt |
-|--------------|--------------|-----------------|------------|---------------------|
-| mfsuitaware  | 1.3692       | 1.3283          | +0.0409    | +$409.31            |
-| **omaha**    | **1.1514**   | **1.3315**      | **−0.1801**| **−$1,800.89**      |
-| topdef       | 1.4385       | 1.3688          | +0.0697    | +$697.44            |
-| weighted     | 1.2221       | 1.2212          | +0.0009    | +$8.82              |
-| **mean**     | **1.2953**   | **1.3125**      | **−0.0172**| **−$171.83**        |
-
-Absolute mean EV per profile (positive = v5 ahead, negative = v5 behind):
-
-| Profile      | v3 EV    | v5_dt EV | Δ        | BR EV   |
-|--------------|----------|----------|----------|---------|
-| mfsuitaware  | −0.7779  | −0.7369  | +0.0409  | +0.5913 |
-| omaha        | +1.0117  | +0.8316  | −0.1801  | +2.1632 |
-| topdef       | −0.8846  | −0.8149  | +0.0697  | +0.5539 |
-| weighted     | +0.3779  | +0.3788  | +0.0009  | +1.6000 |
-
-**Headline: shape-target trained DT is a net EV loss in dollars.** v5_dt picked up shape-agreement on three profiles by sacrificing the omaha-first-profile setting where the four-way mode disagreed. v3 was hand-tuned with stronger omaha-favoring rules (its no_top_bias variant was created exactly for this asymmetry); the DT inherited none of that bias. Session 20 confirmed empirically what Decision 033 asserted in theory: **shape-agreement and EV are not the same thing.**
-
-### Session 19 → Session 20 deltas
-
-- **chain extracted:** `data/v5_dt_model.npz` (133 KB, gzip'd npz). Tree arrays — `children_left`, `children_right`, `feature`, `threshold`, `value_argmax`, `classes`, plus `feature_columns` and `cat_map` for from-hand feature compute.
-- **byte-identical parity (sklearn vs manual walk):** 0 diffs across all 6,009,159 canonical hands.
-- **byte-identical from-hand parity:** 0 cell diffs across 50K random rows × 37 features (50,000 × 37 = 1.85M cells); 0 prediction diffs after walking the tree.
-- **trips_pair mining halted:** slice ceiling 86.18% (vs two_pair 79.47%), miss-leaf concentration top-10 = 1.2% (more diffuse than two_pair's 0.5%), population share 2.97%, EV-loss share 2.5%. Even +7.50pp full-cohort lift (Session 19 magnitude) projects to +0.22pp full-6M — below halt threshold.
+> Updated: 2026-04-30 (end of Session 21)
 
 ---
 
-## What was completed this session (Session 20)
+## Headline state at end of Session 21
 
-### Step 0 — 4-step doctrine on trips_pair (Decision 037)
+**Two artifacts shipped, one positive, one negative:**
 
-Before designing features, ran Steps 2-3-4 of the 4-step hypothesis doctrine on trips_pair as a sanity check:
+1. **(positive) `cheap_test_oracle_hedges.py` quantified the hedge ceiling** at +$12,949/1000h vs v5_dt and +$14,074/1000h vs v3. The 4-step doctrine confirmed path A is empirically justified. `data/cheap_test_oracle_grid_200.npz` (218 KB) is the persisted 105×4×200 EV grid for re-analysis.
+2. **(negative) `strategy_v6_ensemble` is a null result.** Despite training 4 strong per-profile DTs (each 58-65% literal-agreement on its target, byte-identical sklearn-vs-walk parity), the vote-ensemble has 90.25% choice-overlap with v5_dt and is slightly worse on every profile. Path A.2 is closed.
 
-- **Step 2 (signal):** baseline DT on slice (28 features) ceiling = 86.18% — the baseline is already strong, leaving only 13.82pp of headroom on the slice. Compare to two_pair's 79.47% / 20.53pp room.
-- **Step 3 (impact):** trips_pair share of v3 EV-loss = **2.5%** (n=39 of 2000 in `v3_evloss_records.parquet`, `loss_weighted` weighted). Population share 2.97% (178K of 6M). Pre-mining math: even a +7.5pp full-cohort lift (Session 19 magnitude on two_pair) projects to +0.22pp full-6M shape — **below the +0.5pp halt threshold from the resume prompt.**
-- **Step 4 (cheap test):** miss-leaf concentration top-10 = 1.2%, top-50 = 4.7%, top-100 = 8.1% across 4,778 distinct miss-leaves — even more diffuse than two_pair (0.5/3.4/—). Top miss-leaves recurringly show the "trip-on-bot vs pair-on-bot" routing decision the 28 baseline features can't see, mirroring the two_pair structural blind spot. The pattern exists but the cohort is too small for the chain-extraction to benefit.
+EV-loss baseline at hands=2000, samples=1000, seed=42 (same hands as v3 + v5_dt baselines):
 
-**Decision: HALT mining at Step 4.** No feature module written for trips_pair. Discovery phase has plateaued for additional cohorts.
+| Profile     | v3 mean loss | v5_dt mean loss | v6_ensemble mean loss | $/1000h v6 vs v3 | $/1000h v6 vs v5 |
+|-------------|--------------|-----------------|-----------------------|------------------|------------------|
+| mfsuitaware | 1.3692       | 1.3283          | 1.3339                | +$353            | −$56             |
+| **omaha**   | **1.1514**   | **1.3315**      | **1.3483**            | **−$1,969**      | **−$168**        |
+| topdef      | 1.4385       | 1.3688          | 1.3739                | +$647            | −$51             |
+| weighted    | 1.2221       | 1.2212          | 1.2259                | −$38             | −$47             |
+| **mean**    | **1.2953**   | **1.3125**      | **1.3205**            | **−$252**        | **−$81**         |
 
-### Step 1 — Chain extraction (`extract_v5_dt.py`)
+Absolute mean EV per profile (positive = winning, negative = losing money):
 
-- Trained depth=15 DT on full 6M with all 37 augmented features (28 baseline + 3 pair-aug + 3 high_only-aug + 3 two_pair-aug). Fit time: 14.5s. n_leaves: 18,399. n_nodes: 36,797.
-- Saved sklearn tree arrays as `data/v5_dt_model.npz`: `children_left`, `children_right`, `feature`, `threshold`, `value_argmax`, `classes`, plus metadata (`feature_columns`, `cat_map`, `depth`, `n_leaves`).
-- Vectorised manual tree-walk (numpy chunked, ≤20 levels deep) on the full 6M produced byte-identical predictions to `dt.predict(X)` — **0 diffs across 6,009,159 rows.**
-- Literal-agreement on full 6M: 61.32% (matches Session 19 depth-15 reference).
+| Profile      | v3 EV    | v5_dt EV | v6_ensemble EV | BR-omniscient EV |
+|--------------|----------|----------|----------------|------------------|
+| mfsuitaware  | −0.7779  | −0.7369  | −0.7426        | +0.5913          |
+| omaha        | +1.0117  | +0.8316  | +0.8148        | +2.1632          |
+| topdef       | −0.8846  | −0.8149  | −0.8200        | +0.5539          |
+| weighted     | +0.3779  | +0.3788  | +0.3741        | +1.6000          |
+| **mean**     | **−0.0682** | **−0.0853** | **−0.0934** | **+1.2271**     |
 
-### Step 2 — From-hand strategy module (`strategy_v5_dt.py`)
+**Headline:** the EV ceiling we're chasing is +$13K/1000h. Path A.2 captured 0% of it. Path A.1 (regression on per-setting EV) is the recommended next attempt.
 
-- `strategy_v5_dt(hand: np.ndarray) -> int` — drop-in replacement for `strategy_v3` callable. Computes the 37 features from raw hand bytes, walks the saved tree, returns setting_index in 0..104.
-- Feature compute uses `tw_analysis.features.hand_features_scalar` for 28 baseline features, plus the 3 aug compute functions. Two correctness gotchas captured:
-  1. **Category-id remapping.** `dt_phase1_aug3.py` builds `cat_map = sorted(unique(category))` (alphabetical: high_only=0, pair=1, quads=2, three_pair=3, trips=4, trips_pair=5, two_pair=6) — this differs from the natural `CATEGORY_TO_ID` ordering in `tw_analysis.features` (high_only=0, pair=1, two_pair=2, three_pair=3, trips=4, trips_pair=5, quads=6). The strategy module overrides via the saved `cat_map`.
-  2. **Aug-call gating.** Each `persist_*_aug.py` script applies a `category == 'X'` mask; out-of-category rows are zero. The aug compute functions don't all early-return on out-of-category hands (notably `compute_high_only_aug_for_hand` assumes the caller filters). The strategy module gates each aug call by category string (`pa = compute_pair_aug_for_hand(hand) if cat_str == CATEGORY_PAIR else (0,0,0)`, etc.) to be byte-identical with the persisted parquets.
+### Session 20 → Session 21 deltas
 
-### Step 3 — Full-pipeline parity check (`verify_v5_dt_parity.py`)
+- **Cheap-test harness shipped.** `analysis/scripts/cheap_test_oracle_hedges.py` evaluates a 200-hand sample against all 4 profiles to get the full 105×4 EV grid, then computes 7 oracle strategies' grand-mean EV. Verifies the +$13K ceiling in ~50s wall time.
+- **4 per-profile DTs trained and extracted.** `data/v6_per_profile_dts.npz` (0.55 MB) holds depth-15 DTs (18.3K-19.9K leaves each) for `br_mfsuitaware / br_omaha / br_topdef / br_weighted`. Byte-identical sklearn-vs-manual-walk parity on full 6M for all 4. `analysis/scripts/extract_v6_per_profile_dts.py` is the training + parity harness.
+- **Ensemble strategy callable.** `strategy_v6_ensemble(hand)` walks 4 trees and votes (mode + mfsuitaware tiebreak). Wired into `STRATEGIES` dict in `v3_evloss_baseline.py`. Drop-in callable like `strategy_v3` and `strategy_v5_dt`.
+- **EV-loss baseline run on 2000 hands.** `data/v6_ensemble_records.parquet` (apples-to-apples with v3 and v5_dt records) at hands=2000, samples=1000, seed=42. Total time 493.9s (4.05 hands/sec, slightly faster than v5_dt's 4.0 hands/sec because feature compute is shared and the 4 tree walks are cache-warm).
+- **Side-by-side compare harness.** `analysis/scripts/compare_v3_v5_v6.py` reads the 3 records parquets and emits the absolute-EV / EV-loss / $/1000h tables shown above.
+- **Disagreement diagnostic.** `analysis/scripts/diag_v5_v6_disagreement.py` shows that on the 9.75% of hands where v5_dt and v6 differ, v6 loses 61% / wins 39% of the time. Worst-10 and best-10 hand-by-hand tables saved as reference for Session 22 hybrid attempts.
 
-- Sampled 50,000 random canonical hands. Built parquet-derived feature matrix (extract_v5_dt logic) and from-hand-bytes feature matrix (strategy_v5_dt logic) for the same indices.
-- **Byte-identical: 0 cell-level diffs across all 37 features × 50K rows = 1.85M cells.**
-- **0 prediction diffs after walking the tree on both matrices.**
-- Shape-agreement on the 50K sample: **63.73%** — matches Session 19's depth-15 reference of 63.74% within sampling noise. v3 production at 56.16% means **v5_dt is +7.57pp over v3.**
+---
 
-### Step 4 — EV-loss baseline (`v3_evloss_baseline.py --strategy v5_dt`)
+## What was completed this session (Session 21)
 
-- Registered `strategy_v5_dt` in the `STRATEGIES` dict alongside `v3` and `v3_no_top_bias`.
-- Ran `--hands 2000 --samples 1000 --seed 42 --save data/v5_dt_records.parquet`. Total time: 527.6s (4.0 hands/sec, 4 profiles per hand × 1000 MC samples).
-- Same 2000 hands as `data/v3_evloss_records.parquet` (verified by hand_str overlap = 2000 of 2000). Apples-to-apples comparison across the four profiles plus the average.
+### Step 0 — Cheap-test for the path-(A) target pivot (Decision 039)
+
+Per the user's "Discovery + 4-step doctrine" stance from Decision 033, started with cheap-test before any training. `cheap_test_oracle_hedges.py` does:
+1. Sample N hands using the same seed=42 RNG as v3_evloss_baseline.
+2. For each hand, call `evaluate_all_profiles` once per profile (4 calls) to get all 105 EVs.
+3. Compute grand-mean EV for 9 strategies: v3, v5_dt, oracle_BR_per_profile, oracle_argmax_mean (A.1 ceiling), oracle_minimax_loss, oracle_argmax_<each profile>.
+
+Headline at N=200: oracle_argmax_mean grand mean = **+1.172** vs v5_dt **−0.123** = **+1.295 EV/hand** = **+$12,949 / 1000 hands** at $10/EV-pt. Profile-known ceiling (oracle_BR_per_profile) is +1.285, so the hedge that's blind to profile recovers 92% of profile-known headroom.
+
+Margin diagnostics (cheap test): argmax_mean median margin (1st vs 2nd setting by mean-EV) = 0.245 EV/hand. Only 15% of hands have margin <0.05 — the argmax is well-defined and learnable in principle.
+
+Choice-agreement diagnostics: argmax_mean overlaps with v3 only **14.5%** and with v5_dt only **14.0%** — both production strategies are FAR from the optimum. Per-profile-BR overlaps with argmax_mean: mfsuit 77.5% / omaha 49.5% / topdef 68.5% / weighted 77.0% (this last set was the warning sign that A.2 ensemble would not be sufficient).
+
+### Step 1 — Per-profile DT extraction (`extract_v6_per_profile_dts.py`)
+
+Trained 4 sklearn DecisionTreeClassifiers at depth=15 on full 6M canonical hands with the same 37 features as v5_dt but per-profile br_<profile> as the target. Per-profile literal-agreement: 60.78% / 63.81% / 58.07% / 64.74%. Saved tree arrays + metadata to `data/v6_per_profile_dts.npz` (0.55 MB). Vectorised manual-walk parity check on full 6M = 0 diffs vs sklearn `predict()` for all 4 trees.
+
+Vote-distribution sample (100K rows): 22.94% all 4 unanimous, 50.79% 2 distinct votes, 23.31% 3 distinct votes, 2.97% 4 distinct votes. So 50% of hands have a 2-distinct-vote pattern that includes both 3-1 and 2-2 splits.
+
+### Step 2 — Ensemble strategy (`strategy_v6_ensemble.py`)
+
+`strategy_v6_ensemble(hand: np.ndarray) -> int` reuses `compute_feature_vector` from `strategy_v5_dt.py` (same 37 features), walks all 4 trees, votes mode-of-4. Tiebreak: 2-2 split or 4 distinct → fall back to mfsuitaware DT's vote (the most-common-profile-of-record per Decision 005, and the highest single-profile overlap with oracle_argmax_mean per the cheap test). Wired into `STRATEGIES` dict in `v3_evloss_baseline.py`.
+
+### Step 3 — EV-loss baseline + side-by-side compare (Decision 040)
+
+`v3_evloss_baseline.py --strategy v6_ensemble --hands 2000 --samples 1000 --seed 42 --save data/v6_ensemble_records.parquet`. Total time 493.9s. Same 2000 hands as v3 and v5_dt baselines (verified by hand_str overlap).
+
+Result: v6 mean loss 1.3205 > v5_dt 1.3125 > v3 1.2953. **v6 is worse than both v5_dt and v3 on grand mean.** Per-profile losses on every profile are slightly worse than v5_dt; omaha is the single biggest absolute hit (−$168/1000h).
+
+### Step 4 — Disagreement diagnostic (`diag_v5_v6_disagreement.py`)
+
+The killer diagnostic: **v5_dt and v6_ensemble agree on 90.25% of the 2000 hands.** Of the 195 (9.75%) disagreement hands:
+- v6 wins (lower mean loss):  76 (39.0%)
+- v6 loses (higher mean loss): 119 (61.0%)
+
+Worst-10 disagreement hands show patterns where v5_dt picks the right setting (e.g. setting 90 for `2d 3c 3s 4c 8h 9d 9h`) and v6 picks something significantly worse (setting 5, +1.79 mean loss delta). The mfsuitaware tiebreak is biased toward mfsuit-style settings even when omaha-style would be EV-better.
 
 ### Step 5 — Test suites
 
-- Rust: `cargo test --release` → **124/124 pass** (88 + 15 + 15 + 6, unchanged from Session 19).
+- Rust: `cargo test --release` → **124/124 pass** (88 + 15 + 15 + 6, unchanged from Session 20).
 - Python: pytest on six test files → **74/74 pass** (24 features + 11 settings + 9 canonical + 9 cross_model + 13 v3_golden + 8 overlays_golden, unchanged).
 
 ---
 
 ## Files added this session
 
-- `analysis/scripts/mine_trips_pair_leaves.py` — Step 1-3 trips_pair mining (slice ceiling, leaf-rank dump). Confirmed halt decision.
-- `analysis/scripts/extract_v5_dt.py` — fit depth-15 DT on full 6M with 37 features, save tree arrays + metadata to `data/v5_dt_model.npz`, run sklearn-vs-manual-walk parity check on full 6M.
-- `analysis/scripts/strategy_v5_dt.py` — `strategy_v5_dt(hand)` callable, `compute_feature_vector(hand, model)` from-hand feature compute, `predict_many_from_hands(hands)` for batch parity work, plus 5 hand-picked smoke tests in `__main__`.
-- `analysis/scripts/verify_v5_dt_parity.py` — full-pipeline parity check on 50K random canonical hands. Asserts byte-identical features, byte-identical predictions, reports shape-agreement.
-- `data/v5_dt_model.npz` — 0.13 MB. Tree arrays + feature column order + cat_map. Loaded once by `strategy_v5_dt` and cached.
-- `data/v5_dt_records.parquet` — 2000-hand × 4-profile EV records under `strategy_v5_dt`. Same schema as `data/v3_evloss_records.parquet` (column names retain `v3_*` prefixes from the report-style; values are v5_dt's choices).
+- `analysis/scripts/cheap_test_oracle_hedges.py` — 200-hand cheap-test harness; computes 9 oracle strategies' grand-mean EV from full 105×4 EV grid; saves grid + choices to .npz.
+- `analysis/scripts/extract_v6_per_profile_dts.py` — trains 4 depth-15 DTs on br_<profile> targets; saves `data/v6_per_profile_dts.npz`; runs sklearn-vs-walk parity check on full 6M for each tree.
+- `analysis/scripts/strategy_v6_ensemble.py` — `strategy_v6_ensemble(hand)` callable; mode-of-4 vote with mfsuitaware tiebreak.
+- `analysis/scripts/compare_v3_v5_v6.py` — reads v3 / v5_dt / v6_ensemble records parquets; prints absolute-EV / EV-loss / $/1000h tables.
+- `analysis/scripts/diag_v5_v6_disagreement.py` — 90.25% agreement diagnostic; worst-10 / best-10 disagreement-hand tables; per-profile EV impact split.
+- `data/cheap_test_oracle_grid_200.npz` — 218 KB. Full 105×4×200 EV grid + v3/v5_dt choices + per-hand argmax_mean / minimax_loss / per-profile BRs.
+- `data/v6_per_profile_dts.npz` — 0.55 MB. 4 sklearn-tree arrays + cat_map + feature_columns + literal_acc per profile.
+- `data/v6_ensemble_records.parquet` — 2000 hands × 4 profiles EV records under `strategy_v6_ensemble`. Same schema as v3 and v5_dt records.
 
 ## Files modified this session
 
-- `analysis/scripts/v3_evloss_baseline.py` — added `from strategy_v5_dt import strategy_v5_dt` + registered in `STRATEGIES` dict.
+- `analysis/scripts/v3_evloss_baseline.py` — added `from strategy_v6_ensemble import strategy_v6_ensemble` + registered in `STRATEGIES`.
 - `CURRENT_PHASE.md` — rewritten.
-- `DECISIONS_LOG.md` — appended Decision 037 (trips_pair halt) + Decision 038 (chain extraction + EV-loss measurement).
-- `handoff/MASTER_HANDOFF_01.md` — appended Session 20 entry.
+- `DECISIONS_LOG.md` — appended Decision 039 (cheap-test) + Decision 040 (A.2 null result).
+- `handoff/MASTER_HANDOFF_01.md` — appended Session 21 entry.
 
 ## Verified
 
 - Rust: `cargo test --release` 124/124 pass.
 - Python: 74/74 tests pass.
-- `verify_v5_dt_parity.py`: 0 feature diffs / 0 prediction diffs on 50K random rows.
-- `extract_v5_dt.py`: 0 diffs sklearn-vs-manual-walk on full 6M.
+- `extract_v6_per_profile_dts.py`: 0 diffs sklearn-vs-manual-walk on full 6M for all 4 trees.
+- `compare_v3_v5_v6.py`: hand_str overlap = 2000 of 2000 across v3/v5_dt/v6 records (apples-to-apples comparison confirmed).
+- `diag_v5_v6_disagreement.py`: literal-agreement on agreement subset = 100.00% (Δ EV = 0.0000 across all 4 profiles, sanity check on the EV grid).
 
 ## Gotchas + lessons
 
-- **Shape-agreement is NOT EV.** v5_dt has +7.57pp shape lift over v3 but loses $172/1000h on average (driven by $1,801 loss against omaha-first). The gap exists because v5_dt was trained to predict the **mode** of the 4 BR profiles, which can disagree with any single profile. v3 was hand-tuned to favor omaha because that profile produces the largest EV swings. Lesson confirmed: Decision 033's reframe was correct — the deliverable metric must be EV in dollars, not shape-agreement.
-- **The "27 baseline" label is actually 28 features (still).** Session 20 carries the off-by-one forward unchanged. X.shape outputs in `extract_v5_dt.py` confirm 37 columns total = 28 + 3 + 3 + 3.
-- **Aug-call gating must be enforced at inference.** First parity attempt failed with 69,234 cell diffs because `compute_high_only_aug_for_hand` does not early-return on non-high_only hands (the function assumes the caller filters). Strategy module must gate each aug call by category string to match what the persisted parquets did. Saved as a hard rule in the strategy module.
-- **Category-id alphabetical vs natural-order.** `dt_phase1_aug3.py`'s `cat_map = sorted(unique(category))` differs from `tw_analysis.features.CATEGORY_TO_ID`. The strategy module saves and loads its own `cat_map` rather than relying on the in-tree mapping. If a future session moves to a per-feature-pipeline canonical mapping, this can be removed.
-- **trips_pair mining was a productive halt, not a failure.** The 4-step doctrine surfaced "this cohort cannot reach the halt threshold even with peak prior-session lift" before any feature design / OR test / batch persist. ~12 minutes of mining + math vs the alternative of designing and building 3 features then discovering the lift is too small.
-- **The DT chain itself is portable.** `data/v5_dt_model.npz` is 133 KB. The strategy module needs only numpy + the existing aug feature modules. No sklearn at inference time. Future deployments to the trainer or to a non-Python frontend can re-implement the tree walk in any language.
+- **Voting 4 weak classifiers is not enough to reach the hedge ceiling.** Each per-profile DT achieves only 58-65% literal accuracy on its own target. The modal vote often equals `multiway_robust` (because mode-of-4 ≈ mode-of-mode in shape distribution), so v6 mostly reproduces v5_dt's choice. The 50% of hands with a 2-2 tie pattern push v6 to the mfsuitaware fallback, which is biased away from omaha-favoring settings — and omaha is where v3 was already winning by hand-tuned overlay.
+- **The cheap-test SAW the warning.** argmax_mean overlap with each per-profile BR ranged 49.5%-77.5%. We weighted this correctly as "per-profile DTs vote should ≈ argmax_mean," but the empirical result is closer to "per-profile DT votes ≈ multiway_robust" because of (a) DT noise compounding across 4 weak classifiers, and (b) the tiebreak heuristic biasing toward a single profile. The lesson: weak-classifier voting cannot reach an oracle ceiling that is structurally far from any single classifier's training target.
+- **The 4-step doctrine continues to be a session-saver.** ~1 hour of total work (training + 8.3-min MC + diagnostics) produced a clean negative result for A.2. Without the doctrine, we might have committed the 14-hour MC to A.1 first based on the cheap-test alone, when A.2 was the cheaper test that could have been done first. The order — cheap-test → cheap-train → expensive-MC if needed — is the right cadence.
+- **Choice-agreement is a leading indicator of EV impact.** v5_dt vs v6 = 90.25% literal-agreement → at most ~10% of EV impact is reachable by changing the rest. This is a useful heuristic for future strategy candidates: if a candidate has >85% choice-overlap with v5_dt, the maximum EV impact is bounded by what the candidate can do on the small disagreement subset.
 
 ---
 
-## Resume Prompt (Session 21)
+## Resume Prompt (Session 22)
 
 ```
-Resume Session 21 of the Taiwanese Poker Solver project at
+Resume Session 22 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context:
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of Session 20)
+- CURRENT_PHASE.md (rewritten end of Session 21)
 - modules/game-rules.md (MANDATORY)
-- DECISIONS_LOG.md (latest: Decisions 037 + 038 — trips_pair halt + chain extraction)
-- handoff/MASTER_HANDOFF_01.md (scan Sessions 16-20 since the goal reframe)
-- analysis/scripts/strategy_v5_dt.py (production strategy callable)
-- analysis/scripts/extract_v5_dt.py (tree training + extraction harness)
-- analysis/scripts/verify_v5_dt_parity.py (parity test for any future re-extract)
-- analysis/scripts/v3_evloss_baseline.py (now supports --strategy v5_dt)
-- data/v5_dt_model.npz (frozen tree at end of Session 20)
-- data/v5_dt_records.parquet vs data/v3_evloss_records.parquet
-  (apples-to-apples 2000-hand × 4-profile EV records)
+- DECISIONS_LOG.md (latest: Decisions 039 + 040 — cheap-test + A.2 null result)
+- handoff/MASTER_HANDOFF_01.md (Session 21 entry just added)
+- analysis/scripts/cheap_test_oracle_hedges.py (oracle hedge harness)
+- analysis/scripts/strategy_v5_dt.py (production v5_dt callable)
+- analysis/scripts/strategy_v6_ensemble.py (null-result A.2 ensemble — for reference only)
+- analysis/scripts/compare_v3_v5_v6.py (side-by-side comparison harness)
+- data/cheap_test_oracle_grid_200.npz (105×4×200 EV grid)
+- data/v3_evloss_records.parquet, data/v5_dt_records.parquet,
+  data/v6_ensemble_records.parquet (apples-to-apples baselines)
 
-State of the project (end of Session 20):
-- v5_dt chain LIVE: depth-15 DT, 18,399 leaves, 37 features, byte-identical parity
-  with sklearn at full 6M and at 50K from-hand-bytes sample.
-- v5_dt shape-agreement: 63.73% (full 6M) — +7.57pp over v3's 56.16%.
-- v5_dt EV-loss vs v3 (mean of 4 profiles): −$172/1000h at $10/EV-pt.
-  - mfsuitaware: +$409/1000h
-  - omaha:       −$1,801/1000h ← the killer
-  - topdef:      +$697/1000h
-  - weighted:    +$9/1000h
-- trips_pair mining halted at Step 3 of the 4-step doctrine. No feature module written.
+State of the project (end of Session 21):
+- Cheap-test confirmed argmax_mean ceiling = +$12,949/1000h vs v5_dt at $10/EV-pt.
+- v6_ensemble (path A.2 per-profile DT vote) is a NULL RESULT:
+  - 90.25% choice-agreement with v5_dt.
+  - −$81/1000h vs v5_dt, −$252/1000h vs v3.
+  - 4 per-profile DTs at 58-65% literal accuracy are too weak for voting.
 - 124 Rust + 74 Python tests green.
 
 User priorities (re-confirmed):
@@ -163,33 +170,42 @@ User priorities (re-confirmed):
 
 IMMEDIATE NEXT ACTIONS (pick one):
 
-(A) Pivot training target from `multiway_robust` to per-profile EV-aware.
-    The clearest signal from Session 20: training on mode-of-4-profiles loses
-    money against the profile with the most extreme EV swings (omaha). Two
-    sub-paths:
-      A.1 — train DT REGRESSION on `ev_mean` (or per-profile `ev_omaha`) and
-            pick the setting with highest predicted EV. Higher inference cost
-            (105 settings × predict per hand) but directly optimises the
-            user's metric.
-      A.2 — train one DT per profile on its own BR target, ensemble at
-            inference: pick per-profile setting if profile is known, or
-            averaged-EV setting if not. Closer in spirit to v3+overlays.
+(A.1) DT regression on per-setting EV. The cheap-test ceiling is real; the
+      gap is in target type, not training algorithm. Path:
+        1. Generate a per-setting × per-profile EV training set via MC. The
+           existing cheap_test_oracle_hedges.py harness does this — extend
+           it from 200 hands to 50K hands. Cost: ~14 hours overnight.
+        2. Train 4 per-profile regression DTs (sklearn DecisionTreeRegressor)
+           on (hand_features, setting_index) → ev_per_profile. At inference,
+           predict EV for each of 105 settings × 4 profiles, average across
+           profiles, argmax over 105.
+        3. Evaluate via v3_evloss_baseline.py --strategy v7_regression
+           --hands 2000 --samples 1000 --seed 42.
+      Apply the 4-step doctrine BEFORE committing to the 14-hour MC: do a
+      pilot at 5K hands (~1.4 hours), train, evaluate. If pilot shows EV
+      gain over v5_dt, scale to 50K. Else pivot.
 
-(B) Reconcile the omaha asymmetry without retraining. Inspect WHY v5_dt's
-    omaha-loss is concentrated. Compare v3's strategy_omaha_overlay choices
-    on the worst-omaha hands to v5_dt's choices. Possibly hybrid: use v5_dt
-    when all 4 profiles' BR agrees (the 'mode' was unanimous); fall back to
-    v3 + overlays when profiles split.
+(B) Hybrid + EV-aware tiebreak. Cheaper than A.1 but smaller upside.
+      1. For each canonical hand, compute the 4-DT ensemble prediction.
+         If unanimous AND v5_dt agrees → keep v5_dt.
+         If unanimous BUT v5_dt disagrees → switch to ensemble.
+         If split → keep v5_dt.
+      The asymmetric "trust unanimity, distrust 2-2 ties" rule could
+      capture a portion of the +$13K ceiling without retraining.
+      Estimated cost: ~1 hour implementation + 9-min MC.
 
-(C) Re-target the chain at depth=20 or depth=None (vs current depth=15).
-    Session 19 showed depth=None at 66.87% / 64.80% literal — +1.67pp shape
-    over depth=15. If shape-target HAD correlated with EV, going deeper
-    would have helped. Given Session 20's finding that shape ≠ EV, this is
-    likely diminishing returns, but the measurement is cheap (~30 min).
+(C) Larger cheap-test (1000 or 2000 hands) to reduce variance. The 200-hand
+      argmax_mean estimate of +$12,949/1000h has SE ~ ±$1,500 at the noise
+      level we're working with. A 2000-hand grid (cost ~33 min MC) would
+      tighten the band to ±$500 and could verify whether the ceiling at
+      scale exceeds Session 20's omaha asymmetry of −$1,801. ALSO this
+      grid would be useful as a starter training set for path A.1.
 
-The user has previously chosen (a)-paths over (b/c)-style hybrid work. (A) is
-recommended for Session 21. The 4-step doctrine still applies — measure
-signal + impact + cheap test BEFORE training.
+The user has previously chosen (A)-paths and is in discovery mode. Path (A.1)
+is recommended for Session 22, with the staged 5K-pilot-then-50K cadence
+to honor the 4-step doctrine. Path (C) is a useful stepping stone — running
+2000-hand cheap-test grid first gives both a tighter ceiling estimate AND
+a starter training set, before committing to the 14-hour 50K MC.
 
 Apply the 4-step doctrine for any hypothesis BEFORE running new MC:
 1. Hypothesize (qualitative observation)
@@ -197,6 +213,9 @@ Apply the 4-step doctrine for any hypothesis BEFORE running new MC:
 3. Measure Impact (EV-loss share)
 4. Test Cheaply (in silico / analytical proxy)
 Then act.
+
+Session-end protocol (mandatory): commit + push to origin/main per
+session-end-prompt.md. Push is pre-authorized per persistent memory.
 ```
 
 ---

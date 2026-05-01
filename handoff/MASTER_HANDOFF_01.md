@@ -1657,3 +1657,50 @@ Step 4 — `v3_evloss_baseline.py --strategy v5_dt --hands 2000 --samples 1000 -
 **Tests:** Rust 124/124 ✓ (88 + 15 + 15 + 6, unchanged), Python 74/74 ✓ (24 + 11 + 9 + 9 + 13 + 8, unchanged).
 
 **Session 21 fork:** **(A) pivot training target to per-profile EV-aware** is the recommended path. Either A.1 (DT regression on `ev_mean` or `ev_omaha` directly, then argmax over 105 settings at inference) or A.2 (per-profile DT ensemble, profile-conditioned at inference). The chain is shippable as the shape-target benchmark; the next iteration must change the target to match the user's dollar metric.
+
+
+---
+
+### Session 21 — 2026-04-30 — Sprint 7 Phase E (path-A target pivot tested; A.2 per-profile ensemble is a NULL RESULT)
+
+**User directive at session open:** Resume prompt from Session 20 picked path (A) target-pivot as recommended. User in "discovery mode" + "data drives discovery" + 4-step doctrine before new MC.
+
+**Step 0 — cheap-test of the path-(A) hedge ceiling (Decision 039):** before training anything, ran `analysis/scripts/cheap_test_oracle_hedges.py` on 200 random hands (seed=42, samples=1000). Each hand evaluates against all 4 profiles via existing `evaluate_all_profiles`, capturing the FULL 105×4 EV grid. 50s total wall time. Computed grand-mean EV for 9 candidate strategies including 7 oracles. Headline: **oracle_argmax_mean grand mean = +1.172 vs v5_dt −0.123 = +$12,949/1000h ceiling at $10/EV-pt.** Profile-known ceiling (oracle_BR_per_profile) is +1.285, so the hedge captures 92% of profile-known headroom with no profile knowledge. Choice-overlap with each per-profile BR: mfsuit 77.5% / omaha 49.5% / topdef 68.5% / weighted 77.0% (the latter set was the warning sign that A.2 ensemble would not be sufficient — but A.2 was still cheaper to test than A.1, so we ran it first).
+
+**Step 1 — train 4 per-profile DTs (Decision 040 setup):** `analysis/scripts/extract_v6_per_profile_dts.py` trains 4 sklearn DecisionTreeClassifiers at depth=15 on full 6M canonical hands with the same 37 features as v5_dt, but per-profile br_<profile> targets:
+- br_mfsuitaware: 60.78% literal (18,282 leaves)
+- br_omaha: 63.81% literal (19,936 leaves)
+- br_topdef: 58.07% literal (18,551 leaves)
+- br_weighted: 64.74% literal (18,605 leaves)
+
+All 4 byte-identical sklearn-vs-manual-walk parity (0 diffs / 6,009,159 rows each). Saved tree arrays + metadata to `data/v6_per_profile_dts.npz` (0.55 MB). Vote-distribution sample on 100K rows: 22.94% / 50.79% / 23.31% / 2.97% across 1/2/3/4-distinct-vote bins.
+
+**Step 2 — strategy_v6_ensemble:** `analysis/scripts/strategy_v6_ensemble.py` reuses `compute_feature_vector` from `strategy_v5_dt.py`, walks all 4 trees, votes mode-of-4. Tiebreak (2-2 split or 4 distinct → mfsuitaware DT's vote). Wired into `STRATEGIES` dict in `v3_evloss_baseline.py`.
+
+**Step 3 — EV-loss baseline (Decision 040):** `v3_evloss_baseline.py --strategy v6_ensemble --hands 2000 --samples 1000 --seed 42`. Total time 493.9s (4.05 hands/sec, slightly faster than v5_dt's 4.0 hands/sec). Results:
+
+| Profile     | v3 mean loss | v5_dt mean loss | v6_ensemble mean loss | $/1000h v6 vs v3 | $/1000h v6 vs v5 |
+|-------------|--------------|-----------------|-----------------------|------------------|------------------|
+| mfsuitaware | 1.3692       | 1.3283          | 1.3339                | +$353            | −$56             |
+| **omaha**   | **1.1514**   | **1.3315**      | **1.3483**            | **−$1,969**      | **−$168**        |
+| topdef      | 1.4385       | 1.3688          | 1.3739                | +$647            | −$51             |
+| weighted    | 1.2221       | 1.2212          | 1.2259                | −$38             | −$47             |
+| **mean**    | **1.2953**   | **1.3125**      | **1.3205**            | **−$252**        | **−$81**         |
+
+**Headline finding: v6_ensemble is a NULL RESULT.** Worse than both v5_dt and v3 on grand mean. Per-profile losses on every profile are slightly worse than v5_dt; omaha is the single biggest absolute hit (−$168/1000h). Decision 040 closes off path A.2.
+
+**Step 4 — disagreement diagnostic (`diag_v5_v6_disagreement.py`):** the killer diagnostic. **v5_dt vs v6_ensemble = 90.25% choice-agreement on the 2000 hands.** Of the 195 (9.75%) disagreement hands: v6 wins 76 (39%), loses 119 (61%). The 4-DT vote-ensemble is essentially v5_dt with a 9.75% noise overlay. Worst-10 disagreement-hand table preserved in script output for future reference. The mfsuitaware tiebreak biases against omaha-style settings, which is exactly where v3 was previously winning by hand-tuned overlay (Decision 032).
+
+**Step 5 — side-by-side compare:** `analysis/scripts/compare_v3_v5_v6.py` reads the 3 records parquets and emits absolute-EV / EV-loss / $/1000h tables. Hand_str overlap = 2000 of 2000 across all three (apples-to-apples confirmed).
+
+**Why the null result (lessons):**
+1. Each per-profile DT achieves only 58-65% literal accuracy on its own br target. When 4 such weak classifiers vote, the modal vote often equals `multiway_robust` (the mode-of-4 target v5_dt was trained on) — so v6 mostly reproduces v5_dt's choice.
+2. The 50% of hands with a 2-distinct-vote pattern (3-1 splits + 2-2 ties combined) push v6 to the mfsuitaware fallback, which is biased away from omaha-favoring settings. The ensemble cannot reach the hedge ceiling because the tiebreak heuristic concentrates loss on the highest-EV-variance profile.
+3. The cheap-test SAW the warning: argmax_mean overlap with each per-profile BR ranged 49.5%-77.5%. A weak-classifier vote can't reach an oracle ceiling that's structurally far from any single classifier's training target.
+4. Choice-agreement (90.25%) is a leading indicator of EV impact: at most ~10% of EV impact is reachable by changing only the 9.75% disagreement hands. This is a useful heuristic for future strategy candidates.
+
+**Files added:** `analysis/scripts/cheap_test_oracle_hedges.py`, `analysis/scripts/extract_v6_per_profile_dts.py`, `analysis/scripts/strategy_v6_ensemble.py`, `analysis/scripts/compare_v3_v5_v6.py`, `analysis/scripts/diag_v5_v6_disagreement.py`, `data/cheap_test_oracle_grid_200.npz`, `data/v6_per_profile_dts.npz`, `data/v6_ensemble_records.parquet`. **Files modified:** `analysis/scripts/v3_evloss_baseline.py` (added v6_ensemble to STRATEGIES dict), `CURRENT_PHASE.md` (rewritten), `DECISIONS_LOG.md` (Decisions 039 + 040), this file.
+
+**Tests:** Rust 124/124 ✓ (88 + 15 + 15 + 6, unchanged), Python 74/74 ✓ (24 + 11 + 9 + 9 + 13 + 8, unchanged).
+
+**Session 22 fork:** **(A.1)** DT regression on per-setting EV is the recommended path. The cheap-test ceiling is real; the gap is in target type and feature representation, not training algorithm. Cost: ~14 hours overnight MC for a 50K-hand × 105×4 EV training grid (extension of `cheap_test_oracle_hedges.py`). Apply the 4-step doctrine: run a 5K-hand pilot first (~1.4 hours), evaluate, then commit to the 50K scale only if pilot shows positive EV gain. **Alternative (B):** asymmetric hybrid that trusts ensemble unanimity but defaults to v5_dt on splits — testable in <1 hour with no new MC. **Alternative (C):** 2000-hand cheap-test for tighter ceiling estimate AND starter training set (~33 min) before committing to A.1's 50K scale.
