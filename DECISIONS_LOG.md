@@ -714,3 +714,72 @@
   4. Pre-fix sessions' DECISIONS_LOG entries (030-040) are factually accurate about the algorithms tried, but their *EV NUMBERS* are bug-affected. Audit any specific number quoted before relying on it.
   5. Session 23 priorities: (a) mine WHEN pair-to-bot fires (low pair × suit profile × connectivity), build v9 with explicit rule; (b) attempt distillation of v7's high-impact paths for memorable rules; (c) consider expanding training MC beyond 50K for better v7 fidelity.
 
+
+## Decision 043 — Methodology pivot: heuristic mining → Full Oracle Grid + Query Harness (Session 23)
+
+**Date:** 2026-05-01
+**Status:** Settled. v9 heuristic-mining track paused (NOT deleted). New primary track is brute-force computation of the full canonical-hand EV grid against a realistic-human opponent mixture.
+**Question:** After 7 sprints of heuristic mining, is the next move another rule (v9 = pair-to-bot for low pairs + trips-broadway top-routing + DS preservation) or a structural change in approach?
+**Choice:** **Structural change.** Drop heuristic mining as the primary track. Compute the full Oracle Grid at canonical-hand scale (~20M hands × 105 settings × 1 mixture profile), then build a Query Harness that lets the user pose direct poker-domain questions to the data. Rules emerge from confirmed patterns in the grid, not from hand-coded intuition + tournament.
+
+**Why** (multi-round dialogue with `gemini-3-pro-preview` via PAL MCP, plus user pushback):
+
+1. **The cheap path was always available.** Each session, "mine another v_n+1 rule" was the lowest-friction next step. Output looked like progress (small EV gain over previous version) while the foundational solver track stayed deferred. The course-correction came when the user asked, in his words, *"if you had free reign... what would you do? Why aren't we doing that? It seems like we're just finding random nuances and expecting ME to do more thinking..."*
+
+2. **CFR considered and rejected.** Gemini's verdict was direct: *"CFR is the wrong mathematical tool for his specific goal."* Reasons:
+   - Nash equilibrium is a defensive posture against a perfectly optimal adversary. The user's actual opponents are humans with exploitable leaks.
+   - This game is simultaneous-move (single setting decision per hand, no betting rounds) — CFR isn't even the standard tool for that game class. Fictitious Play / Best Response to a population distribution is.
+   - Nash play sometimes underperforms vs humans because it balances against threats humans don't pose.
+   - Bucketing/abstraction risk: 4-8 sessions of engineering before any data, with the possibility that wrong abstraction caps EV permanently.
+
+3. **The mining-from-mixture grid is fundamentally limited.** All EV claims pre-Session 23 are against a fixed 4-profile mixture (mfsuitaware / omaha / topdef / weighted). The "$1,420/1000h ceiling" we kept quoting is the ceiling against THAT mixture, not a true game ceiling. v8_hybrid captures 34% of that mixture-ceiling. Further mining can only get us closer to 100% of a possibly-wrong target.
+
+4. **The user's actual goal is empirical question-answering, not bot-vs-bot.** Quote: *"I want to see across EVERY hand, see what creates the largest money/hand. See what the commonalities are. ...is double-suited unconnected (think 48JK double-suited) vs JT98 no suits or single-suited JsTd9s8c which is better? Are we generally favoring DS hands on bottom vs connected hands without suits or with a single suit?"* These are queryable empirical questions over a full EV grid, not "what's the next rule" questions.
+
+**The new architecture:**
+
+1. **Realistic-human mixture profile = 70% `mfsuit_top_locked` + 25% `topdef` + 5% `omaha`.**
+   - `mfsuit_top_locked` is a NEW custom profile (not yet built). Spec from user observation:
+     * Pair of QQ or KK kept together AND placed in MID (never split, never to bot, except in rare circumstances).
+     * Ace singleton goes on top.
+     * No Ace? Optimize Omaha bot first; top gets the leftover.
+   - 25% topdef captures the "won't sacrifice top" tendency in real-human play.
+   - 5% omaha captures the rare full-sacrifice player.
+   - Single-column grid, not multi-profile diagnostics — get answers in 12-30h instead of 36-90h.
+
+2. **Suit canonicalization** to reduce 133M unique deals → ~15-25M canonical equivalence classes via suit-permutation invariance. `engine/src/bucketing.rs` has partial scaffolding.
+
+3. **Full Oracle Grid compute.** Canonical hands × 105 settings × mixture profile, MC at N=1000 samples per cell. Estimated 12-30h on a 16-core Mac, parallelized via rayon. Persisted to disk as a single artifact.
+
+4. **Query Harness.** Python module loaded with the grid. API:
+   ```
+   query.compare(setting_filter_a, setting_filter_b, hand_filter=None)
+     → ΔEV, frequency, significance, sample hands
+   ```
+   Direct empirical answers to the user's poker-domain questions (DS-unconnected vs connected-unsuited bot, etc.).
+
+5. **Discovery as a downstream operation.** Once grid + harness exist, use Decision Trees as DISCOVERY tools (find highest information-gain splits) not as PLAYING strategies. Bring findings to the user; he validates via the harness.
+
+**Why this isn't another premature compression:**
+- Grid is ground truth — no abstraction loss between hand and EV. Distillation is post-hoc, not pre-emptive.
+- The user is the poker-domain expert posing questions; Claude Code is the engineer providing precise empirical answers. This flips the dynamic from "Claude proposes rule, user validates" to "user proposes question, Claude answers from data."
+
+**What was retired this session:**
+- v9 = pair-to-bot rule (Session 22's plan). Pre-test confirmed the empirical signal but was no longer the primary deliverable.
+- v9 = trips-broadway top-routing rule. Same status.
+- v9 = high_only re-routing rule. Same status.
+- "$/1000h vs v3 against the 4-profile mixture" as the headline metric. New headline: EV per hand vs the realistic-human mixture, in dollars per 1000 hands at $10/EV-pt.
+- The "30-second human-memorizable rules" target as the design constraint. Memorizable rules may emerge from distillation of the equilibrium-grid; they are no longer the design driver.
+
+**What remains valid from prior decisions:**
+- All hand-evaluation, scoring, MC machinery (Sprints 0-2). Production-grade.
+- v3, v5_dt, v6_ensemble, v7_regression, v8_hybrid all stay as comparison baselines. v8_hybrid is the production champion against the 4-profile mixture; the new mixture's champion is unknown until the Oracle Grid runs.
+- The 50K oracle grid and `tournament_50k.py` remain as the smaller-scale benchmark; not deleted.
+- Pre-test findings (`pretest_v3_bleed_zones.py`, parquet records) are valid discovery inputs to inform what questions to ask the harness once it's built.
+
+**Consequence:**
+1. **Session 24 work order:** code `mfsuit_top_locked` → define mixture sampling → finish suit canonicalization → kick off full grid compute (overnight) → build query harness scaffolding in parallel.
+2. **Time horizon:** 1 session of engineering + overnight compute → first oracle grid + harness queries in Session 25.
+3. **Compute decision deferred:** if 16-core Mac compute is too slow for full N=1000, fall back to N=200 pilot at 100K canonical hands first, validate, then scale.
+4. **The `mfsuit_top_locked` spec needs one final user confirmation before code is written.** User has clarified the rule once; Session 24 should restate the spec and confirm before committing 12-30h of compute.
+

@@ -1798,3 +1798,75 @@ For pair_rank ≤ 5 (the lowest 4 ranks of pair), routing pair-to-bot is EV-corr
 2. **Attempt v7's "high-impact path" distillation** — extract the leaves where v7 differs from v3 AND the v7-pick is significantly better. Aggregate into ~5-10 new memorable rules to add to v3.
 3. **Tournament expansion** — re-run tournament_50k with new strategies as they're built.
 4. **Round-trip test** — add an automated check that strategy_v3(hand)'s setting_index, when looked up via mc.settings, returns the (top, mid, bot) cards strategy_v3 intended. Will catch any future str-sort-class regression.
+
+
+---
+
+## Session 23 — 2026-05-01 — Methodology pivot: heuristic mining → Full Oracle Grid + Query Harness
+
+**Headline.** After 7 sprints of heuristic mining (v3 → v8_hybrid), the project pivoted methodology. CFR was considered and rejected. The new primary track is **brute-force computation of the full canonical-hand EV grid against a realistic-human opponent mixture**, plus a **Query Harness** that lets the user pose direct poker-domain questions to the data. v8_hybrid remains the production champion against the existing 4-profile mixture; no v9 was built this session.
+
+**Driver.** The user pushed back: *"if you had free reign... what would you do? Why aren't we doing that? It seems like we are just finding random nuances and expecting ME to do more thinking..."* Correct critique. The cheap path (mine another rule, propose another v_n+1, ask user to pick) had displaced the foundational solver track.
+
+**Decision sequence (this session).**
+
+1. **Pre-test produced.** `analysis/scripts/pretest_v3_bleed_zones.py` quantified where v3 bleeds money across the 50K oracle grid. Findings:
+   - $1,420.9/1000h total v3-vs-oracle gap (matches headline ceiling).
+   - v3 == oracle on 59% of hands (already optimal).
+   - Top-5% of hands hold 34% of all bleed; top-10% hold 54%.
+   - Trap-zone hypothesis empirically confirmed: 58% of top-5% bleed hands are "small local Δ + large global Δ" (v3's mid choice locally fine, the cascade into bot is what bled).
+   - 67% of top-5% bleed = v3 leaving a worse bot suit profile than oracle does (DS broken to single-suited or rainbow).
+   - Pair-rank gradient is monotonic with inflection at rank 7-8: pair-to-bot is oracle-correct 32% at pair_rank=2, 24% at 3-5, dropping to <1% by Q+. AA-to-mid is universal (oracle 99.7%).
+   - Top routing-change archetype: trips-A/K/Q with 2-mid-1-bot → 2-mid-1-top (10.5% / 5.6% / 2.0% of top-5% bleed).
+
+2. **Three rounds of dialogue with `gemini-3-pro-preview` via PAL MCP.** Topics:
+   - Whether the "30-second human-memorizable rules" target was premature compression.
+   - Trap-zone refinement (Δ_local vs Δ_global, cascading effects).
+   - Methodology choice: CFR vs full-grid brute-force.
+   - Verdict: kill CFR. The user's game is simultaneous-move with no betting rounds, so CFR isn't even the standard tool. Best response to a realistic-human population distribution is what maximizes win rate vs humans. Nash is overkill and may underperform vs humans because it balances against threats they don't pose.
+
+3. **User's empirical observation about real-human play.** Locked-in spec for the new realistic profile:
+   - Pair of QQ or KK is NEVER broken up. Always kept together, almost always placed in MID (not bot, except in extremely rare circumstances).
+   - Ace singleton always goes on top.
+   - No Ace? Player optimizes Omaha bot first; top gets the leftover.
+   - AA-to-bot: extremely rare, only when DS + decent pair available for top tier.
+   - Full top/mid sacrifice: extremely rare, ~5% of population.
+
+4. **Final mixture decision: 70% `mfsuit_top_locked` + 25% `topdef` + 5% `omaha`.** Single column (one profile, not multi-profile diagnostics) — get answers in 12-30h instead of 36-90h.
+
+5. **Documentation pivot.** CURRENT_PHASE.md rewritten. Decision 043 appended. Session 23 entry added to this file.
+
+**Files added (this session, before commit):**
+- `analysis/scripts/pretest_v3_bleed_zones.py` — bleed-zone analysis script.
+- `data/v3_bleed_zones.parquet` (gitignored) — 50K-hand records with v3 / oracle picks, bleed magnitude, routing changes, bot-suit-profile changes.
+
+**Files modified:**
+- `CURRENT_PHASE.md` — rewritten.
+- `DECISIONS_LOG.md` — Decision 043 appended.
+- this file — Session 23 entry appended.
+
+**Tests:** Rust 124/124 ✓, Python 74/74 ✓.
+
+**What was NOT built this session:**
+- v9 pair-to-bot rule. Pre-test confirmed the empirical signal but the rule was deferred along with all other heuristic mining.
+- v9 trips-broadway top-routing.
+- v9 high_only re-routing.
+- The `mfsuit_top_locked` profile itself. Spec is locked in pending one final user confirmation in Session 24.
+- Suit canonicalization. `engine/src/bucketing.rs` has partial scaffolding from earlier sprints.
+- The Oracle Grid compute itself.
+- The Query Harness.
+
+**Session 24 priorities:**
+1. Code `mfsuit_top_locked` in `engine/src/opp_models.rs`. Confirm spec with user one more time before committing.
+2. Define mixture sampling (70/25/5 weighted draw per MC sample).
+3. Suit canonicalization — review/finish/rebuild `engine/src/bucketing.rs`.
+4. Full Oracle Grid compute kickoff (overnight, ~12-30h, N=1000 MC samples per cell). Persist to disk.
+5. Query Harness scaffolding in parallel.
+6. Initial harness queries when grid lands (Session 25):
+   - DS unconnected (48JK-DS) vs connected unsuited (JT98-rainbow) bot.
+   - DS unconnected vs single-suited connected (JsTd9s8c) bot.
+   - General DS-vs-connectivity preference.
+   - When does pair-to-mid become a blunder for bot DS preservation?
+
+**Doctrine update:** Methodology choice itself is a domain call. CFR's default position as "the optimal solver" doesn't hold for simultaneous-move games or for vs-human use cases. Future sessions should validate methodology against the user's actual goal (max EV vs realistic humans, not Nash unexploitability) before committing to a multi-session build.
+
