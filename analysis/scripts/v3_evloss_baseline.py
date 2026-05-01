@@ -42,6 +42,7 @@ from encode_rules import strategy_v3, strategy_v3_no_top_bias  # noqa: E402
 from strategy_v5_dt import strategy_v5_dt  # noqa: E402
 from strategy_v6_ensemble import strategy_v6_ensemble  # noqa: E402
 from strategy_v7_regression import strategy_v7_regression  # noqa: E402
+from strategy_v7_patched import strategy_v7_patched  # noqa: E402
 
 STRATEGIES = {
     "v3": strategy_v3,
@@ -49,6 +50,7 @@ STRATEGIES = {
     "v5_dt": strategy_v5_dt,
     "v6_ensemble": strategy_v6_ensemble,
     "v7_regression": strategy_v7_regression,
+    "v7_patched": strategy_v7_patched,
 }
 from engine import (  # noqa: E402
     PROFILES,

@@ -28,6 +28,7 @@ for p in (str(SCRIPTS), str(SRC), str(TRAINER_SRC)):
 
 from encode_rules import strategy_v3  # noqa: E402
 from strategy_v5_dt import strategy_v5_dt  # noqa: E402
+from strategy_v7_regression import strategy_v7_regression  # noqa: E402
 from engine import PROFILES, evaluate_all_profiles, find_setting_index  # noqa: E402
 
 _RANK = {"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,
@@ -65,6 +66,7 @@ def main() -> int:
 
     v3_idx = int(strategy_v3(hand_bytes))
     v5_idx = int(strategy_v5_dt(hand_bytes))
+    v7_idx = int(strategy_v7_regression(hand_bytes))
 
     # MC against all 4 profiles. evaluate_all_profiles is cached per
     # (hand, profile, samples, seed); fresh hand → fresh MC.
@@ -103,6 +105,7 @@ def main() -> int:
     candidates = [
         ("v3 (production)", v3_idx),
         ("v5_dt (DT shape)", v5_idx),
+        ("v7_regression (NEW)", v7_idx),
         (f"oracle_argmax_mean (hedge)", int(argmax_mean)),
     ]
     for pi, pid in enumerate(profile_ids):
