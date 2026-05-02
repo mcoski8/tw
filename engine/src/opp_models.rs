@@ -694,6 +694,157 @@ fn balanced_setting_score(s: &HandSetting) -> f64 {
     top_score * 2.0 + mid_score * 4.0 + bot_score * 2.5
 }
 
+// --- Model 8: MfsuitTopLocked (Decision 043, Session 23) -------------------
+
+/// Realistic-human "mfsuit-style with top defense" strategy with two hard
+/// constraints derived from user observation of the actual playing population:
+///
+///   1. **Pocket pair from {AA, KK, QQ} → MID, never broken.** Highest takes
+///      priority (AA > KK > QQ). The empirical Session-23 finding "AA-pair-to-mid
+///      is essentially universal (oracle agrees 99.7%)" extends this rule to AA.
+///   2. **Ace singleton → TOP.** Always — a lone Ace is never wasted in the bot.
+///   3. **No Ace? → Omaha-bot first.** Pick the 4-card bot by `omaha_bot_score`,
+///      top = highest singleton of remaining 3, mid = the other 2.
+///
+/// AA-to-bot ("rare exception, only with DS + decent pair available") and full
+/// top/mid sacrifice ("~5% of population") are NOT modelled here — those cases
+/// are covered by the 25% TopDefensive + 5% OmahaFirst slices of the realistic
+/// mixture (`OpponentModel::RealisticHumanMixture`).
+pub fn opp_mfsuit_top_locked(hand: [Card; 7]) -> HandSetting {
+    // Rank counts.
+    let mut rc = [0u8; 15];
+    for c in &hand {
+        rc[c.rank() as usize] += 1;
+    }
+
+    // 1. Highest pocket pair from {AA, KK, QQ} → mid.
+    let mid_anchor_rank: Option<u8> = if rc[14] >= 2 {
+        Some(14)
+    } else if rc[13] >= 2 {
+        Some(13)
+    } else if rc[12] >= 2 {
+        Some(12)
+    } else {
+        None
+    };
+
+    if let Some(rank) = mid_anchor_rank {
+        // Take the two lowest-index cards of that rank for mid (deterministic).
+        let mut chosen: Vec<usize> = (0..7).filter(|&i| hand[i].rank() == rank).collect();
+        chosen.sort_unstable();
+        let (mi, mj) = (chosen[0], chosen[1]);
+
+        // Build rem5 and a parallel original-index map for the top selector.
+        let mut rem5 = [Card(0); 5];
+        let mut k = 0;
+        for i in 0..7 {
+            if i != mi && i != mj {
+                rem5[k] = hand[i];
+                k += 1;
+            }
+        }
+
+        // Top rule: Ace singleton in rem5 → top.
+        // (When mid_anchor_rank is 14 (AA), rem5 contains at most 1 ace if rc[14] == 3.)
+        let mut rem5_rc = [0u8; 15];
+        for c in &rem5 {
+            rem5_rc[c.rank() as usize] += 1;
+        }
+        let top_i = if rem5_rc[14] == 1 {
+            (0..5).find(|&i| rem5[i].rank() == 14).unwrap()
+        } else {
+            // Fallback: highest-rank singleton in rem5 (TopDefensive-style).
+            pick_top_from_rem5(&rem5)
+        };
+
+        let top = rem5[top_i];
+        let mut bot = [Card(0); 4];
+        let mut bk = 0;
+        for i in 0..5 {
+            if i != top_i {
+                bot[bk] = rem5[i];
+                bk += 1;
+            }
+        }
+        bot.sort_unstable_by(|a, b| b.index().cmp(&a.index()));
+
+        let mut mid = [hand[mi], hand[mj]];
+        if mid[1].index() > mid[0].index() {
+            mid.swap(0, 1);
+        }
+        return HandSetting { top, mid, bot };
+    }
+
+    // 2. No AA/KK/QQ pair anchor.
+    // If hand has an Ace singleton (rc[14] == 1), top = Ace, then optimize
+    // Omaha bot from rem6, mid = the leftover 2.
+    if rc[14] == 1 {
+        let top_i = (0..7).find(|&i| hand[i].rank() == 14).unwrap();
+        let mut rem6 = [Card(0); 6];
+        let mut k = 0;
+        for i in 0..7 {
+            if i != top_i {
+                rem6[k] = hand[i];
+                k += 1;
+            }
+        }
+
+        // Best 4-of-6 by omaha_bot_score, lex tiebreak.
+        let mut best_bot = [0usize, 1, 2, 3];
+        let mut best_score = i32::MIN;
+        for a in 0..6 {
+            for b in (a + 1)..6 {
+                for c in (b + 1)..6 {
+                    for d in (c + 1)..6 {
+                        let bot = [rem6[a], rem6[b], rem6[c], rem6[d]];
+                        let s = omaha_bot_score(&bot);
+                        if s > best_score
+                            || (s == best_score
+                                && (a, b, c, d) < (best_bot[0], best_bot[1], best_bot[2], best_bot[3]))
+                        {
+                            best_score = s;
+                            best_bot = [a, b, c, d];
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut bot = [
+            rem6[best_bot[0]],
+            rem6[best_bot[1]],
+            rem6[best_bot[2]],
+            rem6[best_bot[3]],
+        ];
+        bot.sort_unstable_by(|a, b| b.index().cmp(&a.index()));
+
+        // Mid = the 2 of rem6 not in best_bot.
+        let mut mid_cards = [Card(0); 2];
+        let mut mk = 0;
+        for i in 0..6 {
+            if !best_bot.contains(&i) {
+                mid_cards[mk] = rem6[i];
+                mk += 1;
+            }
+        }
+        let mut mid = mid_cards;
+        if mid[1].index() > mid[0].index() {
+            mid.swap(0, 1);
+        }
+
+        return HandSetting {
+            top: hand[top_i],
+            mid,
+            bot,
+        };
+    }
+
+    // 3. No mid anchor + no Ace singleton (the "No Ace?" branch).
+    // "Optimizes Omaha bot first; top gets the leftover." This is exactly the
+    // OmahaFirst behaviour, so delegate.
+    opp_omaha_first(hand)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -988,5 +1139,123 @@ mod tests {
         // Either AA or KK should be in the middle (both are premium pairs).
         let mid_is_pair = s.mid[0].rank() == s.mid[1].rank();
         assert!(mid_is_pair, "balanced should pick a pocket pair for mid on AAKK hand");
+    }
+
+    // --- MfsuitTopLocked (Decision 043) --------------------------------------
+
+    #[test]
+    fn locked_kk_with_ace_singleton_puts_kk_mid_ace_top() {
+        // KK + Ace singleton + 4 junk → KK mid, A top, 4 junk bot.
+        let hand = seven("Ks Kh Ad 9c 7s 4h 2c");
+        let s = opp_mfsuit_top_locked(hand);
+        uses_all_7(&s, hand);
+        assert_eq!(s.mid[0].rank(), 13);
+        assert_eq!(s.mid[1].rank(), 13);
+        assert_eq!(s.top.rank(), 14, "Ace singleton must go to top");
+    }
+
+    #[test]
+    fn locked_qq_with_ace_singleton_puts_qq_mid_ace_top() {
+        let hand = seven("Qs Qh Ad Jc 7s 4h 2c");
+        let s = opp_mfsuit_top_locked(hand);
+        uses_all_7(&s, hand);
+        assert_eq!(s.mid[0].rank(), 12);
+        assert_eq!(s.mid[1].rank(), 12);
+        assert_eq!(s.top.rank(), 14);
+    }
+
+    #[test]
+    fn locked_aa_kk_puts_aa_mid_kk_split() {
+        // AA > KK priority — AA goes mid, KK splits between top/bot.
+        // (Session 23 finding: AA-to-mid is empirically near-universal.)
+        let hand = seven("As Ah Kd Kc 7s 4h 2c");
+        let s = opp_mfsuit_top_locked(hand);
+        uses_all_7(&s, hand);
+        assert_eq!(s.mid[0].rank(), 14, "AA wins priority over KK for mid anchor");
+        assert_eq!(s.mid[1].rank(), 14);
+        // No Ace singleton in rem5 → top picked by topdef-style fallback (highest singleton = 7).
+        assert_eq!(s.top.rank(), 7, "top from highest singleton in rem5");
+    }
+
+    #[test]
+    fn locked_kk_qq_puts_kk_mid_qq_split() {
+        // KK > QQ priority. With both, KK to mid, QQ disperses.
+        let hand = seven("Ks Kh Qd Qc 9s 4h 2c");
+        let s = opp_mfsuit_top_locked(hand);
+        uses_all_7(&s, hand);
+        assert_eq!(s.mid[0].rank(), 13);
+        assert_eq!(s.mid[1].rank(), 13);
+        // No ace singleton in rem5 (rem5 = QQ957 essentially with suits) — top by highest singleton.
+        // Singletons in rem5 are 9, 4, 2. Highest = 9.
+        assert_eq!(s.top.rank(), 9, "top must be highest singleton (9), not a Q (paired)");
+    }
+
+    #[test]
+    fn locked_no_pair_no_ace_falls_through_to_omaha() {
+        // No AKQ pair, no ace at all → behaves like OmahaFirst.
+        let hand = seven("Ks Td 9c 8s 7h 5d 3c");
+        let s = opp_mfsuit_top_locked(hand);
+        let s_omaha = opp_omaha_first(hand);
+        uses_all_7(&s, hand);
+        assert_eq!(s, s_omaha, "no anchor + no ace → identical to OmahaFirst");
+    }
+
+    #[test]
+    fn locked_ace_singleton_no_pair_optimizes_bot_then_mid() {
+        // Ace singleton, no AKQ pair → top = A, optimize bot from rem6.
+        let hand = seven("As Ts 9c 8h 7d 5c 3h");
+        let s = opp_mfsuit_top_locked(hand);
+        uses_all_7(&s, hand);
+        assert_eq!(s.top.rank(), 14, "lone Ace must be on top");
+        // 7 in mid+bot is fine — just check determinism.
+        let s2 = opp_mfsuit_top_locked(hand);
+        assert_eq!(s, s2, "must be deterministic");
+    }
+
+    #[test]
+    fn locked_kk_no_ace_picks_topdef_style_top() {
+        // KK + no ace → KK mid, top from rem5 by highest singleton (TopDefensive style).
+        let hand = seven("Ks Kh Td 9c 7s 4h 2c");
+        let s = opp_mfsuit_top_locked(hand);
+        uses_all_7(&s, hand);
+        assert_eq!(s.mid[0].rank(), 13);
+        assert_eq!(s.mid[1].rank(), 13);
+        // rem5 = T 9 7 4 2 — all singletons; highest = T.
+        assert_eq!(s.top.rank(), 10, "top should be the T (highest singleton in rem5)");
+    }
+
+    #[test]
+    fn locked_aa_no_kkqq_no_ace_singleton_keeps_aa_mid() {
+        // AA + 5 non-A non-KQ cards. Even without an Ace singleton, AA stays mid.
+        let hand = seven("As Ad 9h 7c 5s 3d 2h");
+        let s = opp_mfsuit_top_locked(hand);
+        uses_all_7(&s, hand);
+        assert_eq!(s.mid[0].rank(), 14);
+        assert_eq!(s.mid[1].rank(), 14);
+        // No Ace singleton in rem5 → top = highest singleton = 9.
+        assert_eq!(s.top.rank(), 9);
+    }
+
+    #[test]
+    fn locked_is_deterministic() {
+        let hand = seven("As Kh Qd Jc Ts 9h 2d");
+        let s1 = opp_mfsuit_top_locked(hand);
+        let s2 = opp_mfsuit_top_locked(hand);
+        assert_eq!(s1, s2);
+    }
+
+    #[test]
+    fn locked_handles_trips_of_kings() {
+        // KKK + 4 junk: mid takes 2 Ks, third K is loose.
+        let hand = seven("Ks Kh Kd 9c 7s 4h 2c");
+        let s = opp_mfsuit_top_locked(hand);
+        uses_all_7(&s, hand);
+        assert_eq!(s.mid[0].rank(), 13);
+        assert_eq!(s.mid[1].rank(), 13);
+        // The third K must be in top or bot. With no ace singleton, rem5 = K + 4 junk;
+        // pick_top_from_rem5 picks the highest-rank singleton (one of 9, 7, 4, 2; the K is
+        // not a singleton in rem5? wait — only 1 K in rem5, so it IS a singleton). The
+        // K is the highest singleton → top.
+        assert_eq!(s.top.rank(), 13, "lone third K should go top as highest singleton");
     }
 }

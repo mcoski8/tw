@@ -39,11 +39,16 @@ use crate::setting::{all_settings, HandSetting};
 ///   5. `TopDefensive`         — highest non-pair-member on top; preserves pairs
 ///   6. `RandomWeighted`       — uniform over "reasonable" filtered settings
 ///   7. `BalancedHeuristic`    — weighted multi-tier scoring across all 105
+///   8. `MfsuitTopLocked`      — Decision 043 realistic-human profile (AA/KK/QQ
+///                               pair-locked to mid, Ace singleton locked to top)
 ///
-/// Plus a wrapper:
+/// Plus two wrappers:
 ///   `HeuristicMixed { base, p_heuristic }` — with prob p uses `base`, else Random.
-/// The 20 % Random tail (Gemini's recommendation, Decision 019) prevents the
-/// solver from finding brittle exploits that only work vs one deterministic line.
+///     The 20 % Random tail (Gemini's recommendation, Decision 019) prevents the
+///     solver from finding brittle exploits that only work vs one deterministic line.
+///   `RealisticHumanMixture` — Decision 043 realistic-human mixture: per MC sample,
+///     draws 70% MfsuitTopLocked / 25% TopDefensive / 5% OmahaFirst. The single
+///     opponent profile used for the Full Oracle Grid compute (Session 24).
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum OpponentModel {
     Random,
@@ -53,7 +58,9 @@ pub enum OpponentModel {
     TopDefensive,
     RandomWeighted,
     BalancedHeuristic,
+    MfsuitTopLocked,
     HeuristicMixed { base: MixedBase, p_heuristic: f32 },
+    RealisticHumanMixture,
 }
 
 /// Which deterministic heuristic a `HeuristicMixed` variant wraps.
@@ -266,6 +273,7 @@ fn opp_pick(
         OpponentModel::TopDefensive => opp_top_defensive(hand),
         OpponentModel::RandomWeighted => opp_random_weighted(hand, rng),
         OpponentModel::BalancedHeuristic => opp_balanced_heuristic(hand),
+        OpponentModel::MfsuitTopLocked => opp_mfsuit_top_locked(hand),
         OpponentModel::HeuristicMixed { base, p_heuristic } => {
             if rng.gen::<f32>() < p_heuristic {
                 match base {
@@ -277,6 +285,21 @@ fn opp_pick(
                 }
             } else {
                 random_setting(hand, rng)
+            }
+        }
+        OpponentModel::RealisticHumanMixture => {
+            // 70 % MfsuitTopLocked, 25 % TopDefensive, 5 % OmahaFirst.
+            // Per Decision 043: locked profile is the dominant style; topdef
+            // captures real-human top-defense tendency; omaha tail catches the
+            // rare full-sacrifice player so the Oracle Grid doesn't assume the
+            // bot is always weak.
+            let r = rng.gen::<f32>();
+            if r < 0.70 {
+                opp_mfsuit_top_locked(hand)
+            } else if r < 0.95 {
+                opp_top_defensive(hand)
+            } else {
+                opp_omaha_first(hand)
             }
         }
     }

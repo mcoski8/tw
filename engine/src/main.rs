@@ -17,9 +17,11 @@ use tw_engine::{
     all_settings,
     best_response::{BrHeader, BrWriter, BR_VERSION},
     bytes_to_hand, category_name, count_canonical_hands, enumerate_canonical_hands, eval_middle,
-    eval_omaha, eval_top, mc_evaluate_all_settings, mc_evaluate_all_settings_par, parse_hand,
-    read_best_response_file, read_canonical_hands, solve_one, solve_range,
-    write_canonical_hands, Card, Evaluator, HandSetting, McSummary, MixedBase, OpponentModel,
+    eval_omaha, eval_top, mc_evaluate_all_settings, mc_evaluate_all_settings_par,
+    oracle_grid::{OgHeader, OgWriter, OG_VERSION},
+    parse_hand, read_best_response_file, read_canonical_hands, solve_grid_range, solve_one,
+    solve_range, write_canonical_hands, Card, Evaluator, HandSetting, McSummary, MixedBase,
+    OpponentModel,
 };
 
 #[derive(Parser, Debug)]
@@ -234,6 +236,59 @@ enum Command {
         hand: String,
     },
 
+    /// Decision 043 Full Oracle Grid: for every canonical hand in `--canonical`,
+    /// run MC over all 105 settings against `--opponent` (default: realistic
+    /// human mixture) and persist the FULL 105-EV vector — not just the argmax.
+    /// Output is the substrate for Session 24's Query Harness.
+    ///
+    /// Resumes from whatever is already in `--out`. At N=1000 samples and
+    /// 6.0M canonical hands, the full run is ~24h on a 16-core Mac; pilot
+    /// at small `--limit` first to validate the new opponent profile.
+    OracleGrid {
+        #[arg(long, default_value = "../data/canonical_hands.bin")]
+        canonical: PathBuf,
+
+        #[arg(long, default_value = "../data/oracle_grid_full_realistic.bin")]
+        out: PathBuf,
+
+        #[arg(long, default_value = "../data/lookup_table.bin")]
+        lookup: PathBuf,
+
+        /// Monte Carlo samples per (hand, setting) cell.
+        #[arg(long, default_value_t = 1000)]
+        samples: u32,
+
+        /// Base seed; per-hand stream is derived as in best_response::solve_one.
+        #[arg(long, default_value_t = 0xC0FFEE_u64)]
+        seed: u64,
+
+        /// Opponent profile. Decision 043 default = `realistic` (the 70/25/5
+        /// mixture). `locked` runs the deterministic mfsuit-top-locked profile
+        /// alone (useful for diagnostics).
+        #[arg(long, value_enum, default_value_t = Opp::Realistic)]
+        opponent: Opp,
+
+        /// For --opponent mixed: base heuristic to wrap.
+        #[arg(long, value_enum, default_value_t = MixBaseCli::Mfsuitaware)]
+        mix_base: MixBaseCli,
+
+        /// For --opponent mixed: fraction of samples that use the heuristic.
+        #[arg(long, default_value_t = 0.8)]
+        mix_p: f32,
+
+        /// Canonical hands per rayon block. Each block flushes to disk; smaller
+        /// blocks = tighter checkpoints, slightly more syscall overhead.
+        /// Default 1000 ≈ a few-second checkpoint cadence at N=1000.
+        #[arg(long, default_value_t = 1000)]
+        block_size: usize,
+
+        /// Optional cap: process at most this many canonical hands from the
+        /// resume offset. Use for pilot runs (e.g. --limit 100000 at
+        /// --samples 200 for the Session 24 sanity check).
+        #[arg(long)]
+        limit: Option<usize>,
+    },
+
     /// Print a summary + the first `--show` records from a best-response
     /// file alongside the canonical hand they correspond to.
     SpotCheck {
@@ -265,6 +320,12 @@ enum Opp {
     Weighted,
     /// Weighted multi-tier scorer over all 105 settings.
     Balanced,
+    /// Decision 043 realistic-human profile: AA/KK/QQ pair-locked to mid,
+    /// Ace singleton locked to top, otherwise Omaha-first bot.
+    Locked,
+    /// Decision 043 realistic-human mixture: 70% locked / 25% topdef / 5% omaha.
+    /// The single profile used for the Full Oracle Grid compute.
+    Realistic,
     /// Mixed wrapper: --mix-base with prob --mix-p, else Random.
     Mixed,
 }
@@ -300,6 +361,8 @@ fn resolve_opp(o: Opp, mix_p: f32, mix_base: MixBaseCli) -> OpponentModel {
         Opp::Topdef => OpponentModel::TopDefensive,
         Opp::Weighted => OpponentModel::RandomWeighted,
         Opp::Balanced => OpponentModel::BalancedHeuristic,
+        Opp::Locked => OpponentModel::MfsuitTopLocked,
+        Opp::Realistic => OpponentModel::RealisticHumanMixture,
         Opp::Mixed => OpponentModel::HeuristicMixed {
             base: mix_base.into(),
             p_heuristic: mix_p,
@@ -311,6 +374,8 @@ fn resolve_opp(o: Opp, mix_p: f32, mix_base: MixBaseCli) -> OpponentModel {
 ///   0        Random
 ///   1..=5    MiddleFirstNaive, MiddleFirstSuitAware, OmahaFirst, TopDefensive, BalancedHeuristic
 ///   6        RandomWeighted
+///   7        MfsuitTopLocked (Decision 043)
+///   8        RealisticHumanMixture — 70 / 25 / 5 (Decision 043)
 ///   1_xyz    HeuristicMixed — x ∈ {1..=5} for base kind, yz ∈ 00..=99 for round(p*100)
 fn opp_tag_from_model(m: OpponentModel) -> u32 {
     match m {
@@ -321,6 +386,8 @@ fn opp_tag_from_model(m: OpponentModel) -> u32 {
         OpponentModel::TopDefensive => 4,
         OpponentModel::BalancedHeuristic => 5,
         OpponentModel::RandomWeighted => 6,
+        OpponentModel::MfsuitTopLocked => 7,
+        OpponentModel::RealisticHumanMixture => 8,
         OpponentModel::HeuristicMixed { base, p_heuristic } => {
             let base_digit = match base {
                 MixedBase::MiddleFirstNaive => 1,
@@ -401,6 +468,27 @@ fn main() -> ExitCode {
             seed,
         } => run_validate_model(&canonical, &lookup, model, num_hands, samples, seed),
         Command::ShowOppPicks { hand } => run_show_opp_picks(&hand),
+        Command::OracleGrid {
+            canonical,
+            out,
+            lookup,
+            samples,
+            seed,
+            opponent,
+            mix_base,
+            mix_p,
+            block_size,
+            limit,
+        } => run_oracle_grid(
+            &canonical,
+            &out,
+            &lookup,
+            samples,
+            seed,
+            resolve_opp(opponent, mix_p, mix_base),
+            block_size,
+            limit,
+        ),
         Command::SpotCheck {
             canonical,
             out,
@@ -716,6 +804,117 @@ fn run_solve(
             println!(
                 "  id={next_id:>10}  wrote={written_so_far}/{total_target}  \
                  block={block_elapsed:>7.2?}  ETA={:>7.1}s",
+                eta_secs
+            );
+        },
+    )?;
+    let elapsed = t0.elapsed();
+    println!(
+        "Done in {:.2?}. Wrote {} records to {}.",
+        elapsed,
+        target,
+        out.display()
+    );
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn run_oracle_grid(
+    canonical_path: &std::path::Path,
+    out: &std::path::Path,
+    lookup_path: &std::path::Path,
+    samples: u32,
+    seed: u64,
+    model: OpponentModel,
+    block_size: usize,
+    limit: Option<usize>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if samples == 0 {
+        return Err("--samples must be > 0".into());
+    }
+    if block_size == 0 {
+        return Err("--block-size must be > 0".into());
+    }
+
+    println!("Loading 5-card lookup table from {} ...", lookup_path.display());
+    let ev = Evaluator::load_or_build(lookup_path)?;
+
+    println!("Loading canonical hands from {} ...", canonical_path.display());
+    let canonical = read_canonical_hands(canonical_path)?;
+    println!("  {} canonical hands.", canonical.len());
+
+    let header = OgHeader {
+        version: OG_VERSION,
+        samples,
+        base_seed: seed,
+        canonical_total: canonical.len() as u64,
+        opp_model_tag: opp_tag_from_model(model),
+        reserved: 0,
+    };
+
+    let mut writer = OgWriter::open_or_create(out, header)?;
+    let resume_from = writer.resume_from as usize;
+    if resume_from > canonical.len() {
+        return Err(format!(
+            "existing output has {} records but canonical list has only {}",
+            resume_from,
+            canonical.len()
+        )
+        .into());
+    }
+    if resume_from > 0 {
+        println!("Resuming at canonical_id={} (file already has that many records).", resume_from);
+    }
+
+    let remaining = canonical.len() - resume_from;
+    let target = match limit {
+        Some(l) => l.min(remaining),
+        None => remaining,
+    };
+    if target == 0 {
+        println!("Nothing to do — file is complete (or --limit 0).");
+        return Ok(());
+    }
+
+    let slice_end = resume_from + target;
+    let slice = &canonical[resume_from..slice_end];
+    println!(
+        "Computing oracle grid: {} hands (ids {}..{}), samples={}, opp={:?}, block_size={}.",
+        target, resume_from, slice_end, samples, model, block_size
+    );
+    println!(
+        "  estimated record count after this run: {} of {} canonical total",
+        slice_end,
+        canonical.len()
+    );
+
+    let t0 = Instant::now();
+    let total_target = target as u64;
+    solve_grid_range(
+        &ev,
+        slice,
+        resume_from as u32,
+        samples as usize,
+        seed,
+        model,
+        block_size,
+        &mut writer,
+        |next_id, written_so_far, block_elapsed| {
+            let progress = written_so_far as f64 / total_target as f64;
+            let eta_secs = if written_so_far > 0 {
+                let elapsed = t0.elapsed().as_secs_f64();
+                elapsed / progress - elapsed
+            } else {
+                f64::INFINITY
+            };
+            let throughput = if t0.elapsed().as_secs_f64() > 0.0 {
+                written_so_far as f64 / t0.elapsed().as_secs_f64()
+            } else {
+                0.0
+            };
+            println!(
+                "  id={next_id:>10}  wrote={written_so_far}/{total_target}  \
+                 block={block_elapsed:>7.2?}  rate={throughput:>6.1} hands/s  ETA={:>7.1}s",
                 eta_secs
             );
         },
