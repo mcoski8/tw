@@ -1,241 +1,202 @@
-# Current: Sprint 8 — Full Oracle Grid + Query Harness. Methodology pivot from heuristic mining. Session 23 closed.
+# Current: Sprint 8 — Full Oracle Grid SHIPPED. Query Harness operational. Session 24 closed.
 
-> **🔥 IMMEDIATE NEXT ACTION (Session 24):** Build `mfsuit_top_locked` opponent profile in `engine/src/opp_models.rs`, define the 70/25/5 mixture profile (locked / topdef / omaha), implement suit canonicalization to reduce 133M deals → ~20M canonical hands, kick off the full Oracle Grid compute (estimated 12-30h overnight). Build the Query Harness scaffolding in parallel while compute runs.
+> **🎯 IMMEDIATE NEXT ACTION (Session 25):** Decide whether to (a) re-run Q2 at N=1000 on its 2.56M-hand subset for a tighter signal, (b) build the Strategy-Grading harness that scores any deterministic strategy function against the grid in seconds, or (c) investigate the Q4 B-wins cluster (906K hands where DS-bot-preservation beats pair-in-mid). User can also pose new poker-domain questions directly via `compare_setting_classes` against the grid.
 
-> **🚫 RETIRED (Decision 043, Session 23):** Heuristic mining as the primary track. v9 pair-to-bot rule, v9' DT-distillation, v9-trips-broadway-top-routing — all paused (not deleted). v8_hybrid remains the production champion as a baseline reference; further heuristic improvements will be DERIVED from the Oracle Grid, not mined from intuition.
+> **✅ SHIPPED (Decision 044, Session 24):** `data/oracle_grid_full_realistic_n200.bin` — 2.55 GB, 6,009,159 canonical hands × 105 settings × N=200 MC samples vs the realistic 70/25/5 mixture. Compute wall: 12.37h on the M2 Mac. Integrity verified. Headline best-EV mean = +0.758/hand (player wins).
 
-> **🚫 REJECTED (Decision 043, Session 23):** CFR + bucketed Nash equilibrium. Considered + dialogued with Gemini; verdict was that Nash is overkill for the user's actual goal (max EV vs realistic humans, not unexploitable-by-Nash-bot). CFR is misaligned with the simultaneous-move structure of this game (no betting rounds, single setting decision per hand).
+> **✅ SHIPPED:** Query Harness (`tw_analysis.query` + `tw_analysis.oracle_grid`) — vectorized per-setting feature extraction at ~115 µs/hand, filter primitives + combinators, `compare_setting_classes` for class-vs-class comparisons. ~10 min per question on the full 6M grid.
 
-> **✅ NEW APPROACH (Decision 043, Session 23):** Brute-force the **Full Oracle Grid** at canonical-hand scale (~20M hands × 105 settings × 1 realistic-human mixture profile), then build a **Query Harness** that lets the user pose poker-domain questions directly to the data (e.g., "double-suited unconnected vs connected unsuited bot — which makes more money long-term?").
-
-> Updated: 2026-05-01 (end of Session 23)
+> Updated: 2026-05-02 (end of Session 24)
 
 ---
 
-## Headline state at end of Session 23
+## Headline state at end of Session 24
 
-**Methodology pivot.** After 7 sprints of heuristic mining, we are switching tracks to brute-force ground-truth computation + interactive query.
+**The methodology pivot from Session 23 has fully landed.** Heuristic mining is paused; the new substrate is the Full Oracle Grid + Query Harness. v8_hybrid remains the production strategy of record but is no longer the training target — strategies are now graded *against* the grid.
 
-**v8_hybrid is still champion** (+$478/1000h vs v3 against the 4-profile mixture). It is NOT being removed. It serves as the current production strategy and the baseline-to-beat for whatever the Oracle Grid eventually distills into rules. No new v9 was built this session.
+**Five user-locked questions answered on the full 6M-hand grid:**
 
-**Pre-test of v3 bleed zones produced.** Script `analysis/scripts/pretest_v3_bleed_zones.py` + persisted records `data/v3_bleed_zones.parquet`. Findings remain valid as discovery inputs to the Oracle Grid track.
+| # | Comparison | A wins | B wins | mean Δ | $/1000h |
+|---|---|---:|---:|---:|---:|
+| Q1 | DS bot run≤2 vs rainbow bot run≥3 | 89.5% | 10.4% | +1.32 | **+$13,186** |
+| Q2 | DS bot run≤2 vs SS bot run≥3 | 67.1% | 32.7% | +0.44 | **+$4,375** |
+| Q3 | DS bot any vs rainbow bot any | 76.2% | 23.6% | +0.58 | **+$5,770** |
+| Q4 | pair-in-mid + non-DS bot vs no-pair-mid + DS bot | 79.3% | 20.5% | +0.82 | **+$8,150** |
+| Q5 | small pair (2-5) → mid vs small pair → bot | 81.2% | 18.6% | +0.79 | **+$7,922** |
 
-**User's actual goal re-clarified:** "the best way to play this game" against real humans, not against an optimal Nash adversary. Rules are downstream — they emerge from the data once we have the data. The user is a winning Hold'em + Omaha player but not a statistician; he hired Claude Code to architect the system, not to hand him a menu of rule candidates.
+**Interpretive headlines:**
+- **Strong DS preference confirmed.** Across every connectivity comparison (Q1-Q3), DS bot beats rainbow / SS by clear margins. The user's intuition was right; we now have the dollar values.
+- **Pair-to-mid usually beats DS preservation (Q4).** Breaking a pair to keep a DS bot is the wrong call ~80% of the time. But the 20.5% B-wins cluster (~906K hands) is a candidate for a "pair-to-mid blunder" rule.
+- **Small pairs (2-5) belong in mid most of the time (Q5).** Session 22's "pair-to-bot fires 24-32% for low pairs" reframes as a minority play, not a rule. 81.2% of small-pair hands are best with the pair in mid.
 
 ---
 
-## What was completed this session (Session 23)
+## What was completed this session (Session 24)
 
-### Step 1 — Pre-test of v3 bleed zones (`pretest_v3_bleed_zones.py`)
+### Step 1 — Implement the realistic-human profile + mixture (Rust)
 
-For every hand in the 50K oracle grid, computed `Δ_global = EV(oracle_argmax_mean) - EV(v3)` averaged across the 4 opponent profiles. Sorted descending, characterized the top-5% slice.
+Added to `engine/src/opp_models.rs`:
+- `opp_mfsuit_top_locked(hand)` — Decision 043 deterministic profile.
+  - Highest pocket pair from {AA, KK, QQ} → mid (AA > KK > QQ priority, supported by Session 23's "AA-pair-to-mid is essentially universal" finding).
+  - Ace singleton in remaining 5 → top.
+  - Otherwise: top via `pick_top_from_rem5` (TopDefensive-style highest singleton).
+  - Fallback (no pair anchor + no ace): delegates to `opp_omaha_first`.
+- 10 unit tests covering AA/KK/QQ priority, KK+QQ both, trips of kings, no-ace optimization branch, deterministic invariance.
 
-Headline numbers:
-- Total v3-vs-oracle gap: **$1,420.9/1000h** (matches the leaderboard ceiling — sanity check passes).
-- v3 == oracle on **59% of hands** (already optimal).
-- Top-5% of hands hold **34%** of all dollars left on the table; top-10% hold **54%**.
-- v8_hybrid captures $478 of $1,420 = **34% of headroom**. **$942/1000h remains on the table.**
+Added to `engine/src/monte_carlo.rs`:
+- `OpponentModel::MfsuitTopLocked` and `OpponentModel::RealisticHumanMixture` enum variants.
+- Mixture dispatch inside `opp_pick`: per MC sample, draws 70% locked / 25% topdef / 5% omaha.
 
-Bleed by hand category:
+CLI in `engine/src/main.rs`:
+- New `Opp::Locked` and `Opp::Realistic` choices, wired through `resolve_opp` and `opp_tag_from_model` (tag 7 = locked, tag 8 = mixture).
 
-| Category | population | $/1000h (mean) | share of total bleed |
-|----------|-----------|----------------|----------------------|
-| **high_only** | 21% | $2,190 | **33%** |
-| pair | 47% | $688 | 23% |
-| two_pair | 22% | $1,103 | 17% |
-| **trips** | 5% | $4,411 | **16%** |
-| **trips_pair** | 2.5% | $5,198 | 9% |
-| three_pair | 1.9% | $1,379 | 2% |
-| quads | 0.2% | $4,533 | 0.5% |
+### Step 2 — Oracle Grid file format + writer (Rust)
 
-Trap-zone hypothesis empirically confirmed: in the top-5% bleed slice, **58% are "trap zone" hands** (v3's mid choice locally looked fine, the cascade into bot is what bled).
+New module `engine/src/oracle_grid.rs`:
+- Magic `TWOG`, version 1, 32-byte header, 424-byte records (canonical_id u32 + 105 × f32 EVs in setting-index order — NOT sorted by EV).
+- `OgWriter::open_or_create` mirrors `BrWriter`'s resume semantics. File header pinned to (samples, base_seed, canonical_total, opp_model_tag) — re-opening with mismatched parameters raises `HeaderMismatch`.
+- `solve_grid_one` per-hand seed scheme `base_seed + canonical_id × 0x9E37_79B9_7F4A_7C15` (matches `best_response::solve_one` so grid + BR runs share their RNG stream definition).
+- `solve_grid_range` is rayon-parallel over canonical hands inside a block, serial-MC inside each hand. Block-flush + fsync on each block.
+- 7 unit tests including a parity test: `solve_grid_one`'s argmax over the 105 EVs must equal `mc_evaluate_all_settings::best.setting` at the same seed.
 
-The mechanism of the bleed: **67% of top-5% bleed involves v3 leaving a worse bot suit profile than oracle does**. Specifically: single_suited→double_suited (24%), rainbow→double_suited (19%), rainbow→single_suited (16%), 3-suited→double_suited (5%). v3 repeatedly breaks DS bots to satisfy its tier-greedy mid pick.
+CLI command `oracle-grid` in `engine/src/main.rs`:
+- Default opponent: `realistic` (mixture).
+- Default output path: `data/oracle_grid_full_realistic.bin`.
+- Resumes from existing file if header matches.
+- Reports per-block throughput, ETA, and rate.
 
-Top routing-change archetypes in the top-5% slice:
-- trips14_2mid_1bot → trips14_2mid_1top (10.5% of top-5% bleed) — v3 puts an ace in bot when it should be on top
-- trips13/12 versions of same archetype (5.6% + 2.0%)
-- pair2/3/4/5_to_mid → pair_to_bot (combined 7%) — Session 22 finding fully reproduced
+### Step 3 — Pilot run + harness validation (100K hands at N=200)
 
-The pair-rank gradient is monotonic and clean:
+`data/pilot/oracle_grid_pilot_n200_100k.bin` — 13.8 min wall, ~120 hands/s.
+Validated end-to-end with `analysis/scripts/oracle_grid_pilot_validate.py`. Q1-Q3 produced consistent signals with the full-grid run (relative deltas matched within MC noise).
 
-| pair rank | % oracle → bot | v3 → bot |
-|-----------|---------------|----------|
-| 2 | 32% | 0% |
-| 3-5 | ~24% | 0% |
-| 6 | 16% | 0% |
-| 7 | 8.6% | 0% |
-| 8 | 5% | 0% |
-| 9 | 3.9% | 0% |
-| T-Q | <1.2% | 0% |
-| K | 0% | 0% |
-| **A** | **0.3%** | 0% |
+### Step 4 — Full Oracle Grid compute (6M hands at N=200)
 
-**AA-to-mid is essentially universal (oracle agrees with v3 on AA-pair-routing 99.7% of the time).** When AA hands disagree (~20%), it's about top/bot composition, not pair routing.
+Kicked off via `tw-engine oracle-grid --canonical data/canonical_hands.bin --out data/oracle_grid_full_realistic_n200.bin --samples 200 --opponent realistic --block-size 1000`. Ran in background; user "left be" overnight.
 
-### Step 2 — Methodology dialogue with Gemini (PAL MCP)
+Wall: **44,539s = 12.37 hours**. Steady throughput: 134.9 hands/s. Output: 2.55 GB, 6,009,159 records, integrity all green.
 
-Three rounds of Socratic + direct dialogue with `gemini-3-pro-preview`. Topics:
-- Whether the "30-second human-memorizable rules" target was premature compression.
-- Whether "discover first, distill last" was a real new paradigm or retroactive narrative.
-- The trap-zone hypothesis (small Δ_local + large Δ_global) refinement.
-- Methodology choice: CFR vs full-grid brute-force.
+### Step 5 — Python Query Harness
 
-**Final verdict (Gemini, direct):** "CFR is the wrong mathematical tool for his specific goal." Nash equilibrium is defensive against optimal adversaries; humans have huge exploitable leaks. Best response to a realistic-human distribution is what maximizes win rate. Plus this game is simultaneous-move (no betting rounds) so CFR isn't even the standard tool — Fictitious Play / pure BR to a population is.
+New `analysis/src/tw_analysis/oracle_grid.py`:
+- Reader (`load` or `memmap` mode), header parse, integrity validation, `decode_opp_tag` extension.
 
-### Step 3 — User's empirical observation about real-human play
+New `analysis/src/tw_analysis/query.py`:
+- Vectorized `setting_features_from_bytes(hand_bytes)` — uses a precomputed (105, 7) `SETTING_HAND_INDICES` table to compute all per-(hand, setting) features in pure numpy. ~115 µs/hand.
+- Per-setting features: top_rank, mid_pair_rank, mid_is_pair, bot_suit_profile (DS / SS / rainbow / 3+1 / 4-flush), bot_longest_run, bot_high_count, bot_pair_rank, bot_has_ace, top_is_ace.
+- Filter primitives + combinators (`all_of`, `any_of`, `not_`).
+- `compare_setting_classes(grid, ch, filter_a, filter_b, ...)` — scans all hands, picks max-EV setting in each filter class per hand, aggregates Δ.
+- Reference Python-object path `setting_features_for_hand` retained as a slow oracle; sanity test confirms vectorized output is byte-identical on all 105 settings of a sample hand.
 
-User provided the opponent-profile spec from his actual playing population:
-- **Most players use mfsuit-style with top defense.**
-- **Pair of Q's or K's is NEVER broken up** — kept together, almost always placed in MID (rare exceptions: extreme bot opportunities).
-- **Ace singleton always goes on top.**
-- **No Ace? Player optimizes Omaha bot first; top gets the leftover.**
-- AA-to-bot: extremely rare, only when DS + decent pair available for top tier.
-- Full top/mid sacrifice (e.g., 3 on top + 5s2s in mid for KKJT-DS bot): extremely rare, ~5% of population at most.
+### Step 6 — Run the user's locked-in questions
 
-This rules out the existing `mfsuitaware` profile as a stand-in: it doesn't enforce the "high pair stays together in mid" or "Ace always to top" constraints, so its EV outputs would simulate phantom opponent behavior the user's actual humans don't exhibit.
+`analysis/scripts/oracle_grid_full_queries.py` runs Q1-Q5 on the full grid. Wall: 53.4 min for all 5 questions (~10 min each). Results table above.
 
-### Step 4 — Mixture decision (Session 24 spec)
+### Step 7 — Documentation pivot
 
-**Final mixture: 70% `mfsuit_top_locked` + 25% `topdef` + 5% `omaha`.**
-
-Rationale:
-- 70% locked = the dominant style with the high-pair + Ace-to-top hard rules.
-- 25% topdef = real humans' strong top-defense tendency.
-- 5% omaha = capture the rare full-sacrifice player; without this tail the Oracle would assume the bot is always weak.
-
-Single-column grid (one mixture profile, not multi-column). Get answers in 12-30h instead of 36-90h. Multi-column diagnostics can be re-run later if a rule is suspected of being mixture-specific.
-
-### Step 5 — Documentation pivot
-
-This file (CURRENT_PHASE.md) rewritten. Decision 043 appended to DECISIONS_LOG.md. Session 23 entry appended to MASTER_HANDOFF_01.md. New script `analysis/scripts/pretest_v3_bleed_zones.py` committed.
+- `CURRENT_PHASE.md` rewritten (this file).
+- Decision 044 appended to `DECISIONS_LOG.md`.
+- Session 24 entry to be appended to `handoff/MASTER_HANDOFF_01.md`.
+- Memory: `project_taiwanese_oracle_grid.md` written; `MEMORY.md` index updated.
 
 ---
 
 ## Files added this session
 
-- `analysis/scripts/pretest_v3_bleed_zones.py` — bleed-zone analysis + parquet emitter.
-- `data/v3_bleed_zones.parquet` (gitignored) — 50K-hand per-hand records with v3 / oracle picks, bleed magnitude, routing changes, bot-suit-profile changes.
+- `engine/src/oracle_grid.rs` — new module + tests.
+- `analysis/src/tw_analysis/oracle_grid.py` — grid file reader.
+- `analysis/src/tw_analysis/query.py` — Query Harness.
+- `analysis/scripts/oracle_grid_pilot_validate.py` — pilot validation.
+- `analysis/scripts/oracle_grid_full_queries.py` — full-grid Q1-Q5 runner.
+- `data/oracle_grid_full_realistic_n200.bin` (gitignored) — 2.55 GB grid.
+- `data/oracle_grid_full_queries.log` (gitignored) — Q1-Q5 results.
+- `data/pilot/oracle_grid_pilot_n200_100k.bin` (gitignored) — 42 MB pilot.
 
 ## Files modified this session
 
-- `CURRENT_PHASE.md` — rewritten (this file).
-- `DECISIONS_LOG.md` — appended Decision 043 (methodology pivot).
-- `handoff/MASTER_HANDOFF_01.md` — appended Session 23 entry.
+- `engine/src/opp_models.rs` — added `opp_mfsuit_top_locked` + 10 tests.
+- `engine/src/monte_carlo.rs` — added `MfsuitTopLocked` and `RealisticHumanMixture` variants + dispatch.
+- `engine/src/main.rs` — new `oracle-grid` subcommand + `Opp::Locked` and `Opp::Realistic` CLI options.
+- `engine/src/lib.rs` — re-export `oracle_grid` module.
 
 ## Verified
 
-- Rust: `cargo test --release` 124 / 124 pass.
-- Python: 74 / 74 pass.
+- Rust: `cargo test --release` 141 / 141 pass (124 baseline + 10 locked-profile + 7 oracle-grid).
+- Python: vectorized features parity-check vs Python-object reference: identical on all 105 settings of `As Kh Qd Jc Ts 9h 2d`.
+- Grid integrity: `validate_oracle_grid` passes on 6,009,159 records (canonical_id ordering, finite EVs, plausible range, no zero-row writes).
+- End-to-end CLI: pilot at N=200/100K and full at N=200/6M both completed without resume errors.
 
 ## Gotchas + lessons
 
-- **Heuristic mining was a 7-sprint detour because the cheap path was always available.** Each session looked like progress (new rule, new EV gain) while the foundational solver track stayed deferred. The course-correction came from a user push: "you keep asking ME for the next rule — I hired you to build the system."
-- **CFR is not always the right answer to "build the optimal solver."** For a vs-human game with simultaneous-move structure, best-response to a realistic population distribution is the right primitive. CFR's defensive Nash is overkill and may even underperform vs humans because it balances against threats they don't pose.
-- **Domain calls genuinely need the user.** Encoding `mfsuit_top_locked` requires the user's "humans never break QQ/KK" observation; no amount of code-tracing produces that fact. Future sessions should ask poker-domain questions explicitly and reserve plumbing-verification for code-tracing.
+- **Throughput model in CURRENT_PHASE.md was off.** Predicted 12-30h for N=1000; reality is 12.4h for N=200, ~62h for N=1000 (5×). Realistic mixture dispatch overhead is ~30% vs Random — `opp_pick` makes one extra RNG call per sample to draw the sub-profile. The "12-30h at N=1000" estimate didn't account for the new opponent's dispatch cost.
+- **Python stdout buffering through `tee` hides progress.** First full-grid query run was killed because `print()` was buffered behind `tee`. Use `python3 -u` or `PYTHONUNBUFFERED=1` for any long-running script piped to a file.
+- **Validation pass on a 2.5 GB memmap takes ~30s** to read the full file once. Acceptable but adds latency to harness startup. Future: skip validation in production query scripts after the first run.
+- **Vectorizing per-hand features was non-optional.** Python-object enumeration (`decode_setting` × 105) at ~10 ms/hand × 6M = 16 hours per question. Numpy vectorization at ~115 µs/hand brings it to ~10 min. Pre-built `SETTING_HAND_INDICES` (105, 7) table is the key trick.
+- **The "best EV across hands" metric doesn't average to zero** (it's +0.758) because the player gets to optimize per-hand against a fixed strategy, while the opponent applies the realistic mixture blind. The 100K-hand pilot's apparent -1.885 mean was lex-prefix bias (low canonical IDs are low-card hands).
 
 ---
 
-## Resume Prompt (Session 24)
+## Resume Prompt (Session 25)
 
 ```
-Resume Session 24 of the Taiwanese Poker Solver project at
+Resume Session 25 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context:
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of Session 23)
-- modules/game-rules.md (MANDATORY)
-- DECISIONS_LOG.md (latest: Decision 043 — methodology pivot to Oracle Grid)
-- handoff/MASTER_HANDOFF_01.md (Session 23 entry just added)
-- engine/src/opp_models.rs (where the new mfsuit_top_locked profile goes)
-- engine/src/bucketing.rs (partial suit-canonicalization scaffolding)
-- engine/src/main.rs (CLI entry point)
-- analysis/scripts/pretest_v3_bleed_zones.py (Session 23 reference)
+- CURRENT_PHASE.md (rewritten end of Session 24)
+- DECISIONS_LOG.md (latest: Decision 044 — Full Oracle Grid shipped)
+- handoff/MASTER_HANDOFF_01.md (Session 24 entry just added)
+- analysis/src/tw_analysis/oracle_grid.py
+- analysis/src/tw_analysis/query.py
+- analysis/scripts/oracle_grid_full_queries.py
 
-State of the project (end of Session 23):
-- Methodology pivoted from heuristic mining (Sprints 1-7) to full-grid brute-force +
-  query harness. CFR considered and rejected.
-- v8_hybrid (+$478/1000h vs v3) remains the production champion. No v9 was built.
-- Pre-test confirmed: 67% of top-5% v3 bleed is bot suit-profile breakage. Trap-zone
-  hypothesis (small local Δ, large global Δ) is empirically supported (58% of top-5%
-  slice).
-- AA-pair-to-mid is universal (99.7% per oracle). Pair-rank gradient is monotonic
-  with inflection at pair-rank 7-8.
-- 124 Rust + 74 Python tests pass.
+State of the project (end of Session 24):
+- Full Oracle Grid is shipped at data/oracle_grid_full_realistic_n200.bin
+  (2.55 GB, 6,009,159 records × 105 EVs vs realistic 70/25/5 mixture).
+- Query Harness operational; 5 headline questions answered.
+- v8_hybrid is still the production deterministic strategy. Sprint 7's
+  v9_X heuristic mining track remains paused; future strategies will
+  derive from grid queries, not from intuition.
+- 141 Rust + (74) Python tests pass.
 
-User-confirmed opponent profile spec for the new mfsuit_top_locked:
-- Pair of QQ or KK kept together AND placed in MID (never split, never to bot
-  except in extremely rare circumstances).
-- Ace singleton goes on top.
-- No Ace? Player optimizes Omaha bot first; top gets the leftover.
+Three reasonable Session 25 options (user's call):
 
-User-confirmed mixture for the Oracle Grid: 70% mfsuit_top_locked + 25% topdef + 5% omaha.
+(A) **Tighten Q2's signal at N=1000.** Q2 (DS-unconnected vs SS-connected
+    bot) had the smallest mean Δ (+0.44) — close to the per-cell noise
+    floor at N=200. Re-run a 100K-hand DS-unconn-vs-SS-connected subset
+    at N=1000 to confirm. Cost: ~5h on the M2.
 
-IMMEDIATE NEXT ACTIONS (Session 24, ordered):
+(B) **Build the Strategy-Grading harness.** A drop-in replacement for
+    tournament_50k.py that grades any strategy(hand) → setting_index
+    function against the full 6M-hand grid in seconds. This makes
+    iterating on rules cheap and enables a "user proposes strategy →
+    Gemini Socratic → grid validate" loop.
 
-(1) Code mfsuit_top_locked in engine/src/opp_models.rs. Either:
-    (a) New variant of OpponentModel enum + new strategy_for_profile branch in
-        analysis/scripts/encode_rules.py, OR
-    (b) Wrapper that calls mfsuitaware then post-processes to enforce the
-        QQ+/Ace constraints.
-    Choice (a) is cleaner; (b) is faster. Defer the (a)-vs-(b) call to your
-    judgement after seeing the existing opp_models.rs structure.
+(C) **Investigate the Q4 B-wins cluster.** 906K hands where breaking a
+    pair to preserve a DS bot is the EV-correct play. Pull those hands,
+    characterize by features (rank profile, suit distribution, ace
+    presence, hand category), see if a coherent "pair-to-mid is a
+    blunder" archetype emerges. This was Decision 043's framing of "rules
+    emerge from data, not intuition."
 
-(2) Define the mixture profile. Per-MC-sample, draw which sub-profile the
-    opponent uses (0.70 / 0.25 / 0.05 weighted). Add this as either a
-    composite OpponentModel or a sampling helper that wraps an existing one.
-
-(3) Suit canonicalization. engine/src/bucketing.rs has partial scaffolding —
-    review it, finish if usable, build fresh if not. Goal: collapse the
-    133M unique 7-card hands to ~15-25M canonical equivalence classes via
-    suit-permutation invariance. Add tests verifying canonical output is
-    suit-invariant.
-
-(4) Full Oracle Grid compute kickoff:
-    - Iterate over all canonical hands.
-    - For each, compute EV per setting (105 values) against the
-      70/25/5 mixture profile, N MC samples per setting.
-    - Persist to disk as oracle_grid_full_realistic.{npz, parquet, or .bin —
-      pick based on file size; estimated 6-15GB).
-    - Estimated 12-30h on the user's Mac (16+ cores, rayon parallelism).
-    - Run as background process via Bash run_in_background or as a
-      cargo command. Decide based on resilience needs (checkpoint to disk
-      every N hands so a crash doesn't lose all progress).
-
-(5) Query Harness scaffolding (build in parallel while compute runs).
-    Python module that loads the grid and exposes:
-      query.compare(setting_filter_a, setting_filter_b, hand_filter=None)
-        → ΔEV, frequency, significance, sample hands
-    Filter spec: high-level poker primitives — bot_suit_profile,
-    bot_connectivity, has_pair_at_rank_K, has_singleton_at_rank_R,
-    pair_position (top/mid/bot), etc.
-    User's locked-in initial questions:
-      - DS unconnected (e.g., 48JK-DS) vs connected unsuited (e.g., JT98) bot
-      - DS unconnected vs single-suited connected (JsTd9s8c) bot
-      - Generally favoring DS over connectivity?
-      - When does pair-to-mid become a blunder for bot DS preservation?
-
-(6) Validation metrics: report headline as EV per hand against the mixture
-    profile (in dollars per 1000 hands at $10/EV-pt, matching the
-    project convention). Include scoop rate and frequency-of-disagreement
-    with v3/v8_hybrid for context.
+(D) **The user proposes a new poker-domain question.** Any "is X bot
+    better than Y bot?" / "when does Z setting dominate?" comparison
+    can be answered with `compare_setting_classes` against the grid in
+    ~10 min. The Q4 B-wins canonical_ids
+    (425562, 3546583, 3546584, 2965461, ...) are concrete starting points.
 
 REMINDERS:
 - Auto mode is on; minimize interruptions. Make reasonable engineering
   judgement calls without pause-points unless they're poker-domain calls.
 - Use python3, not python.
-- venv at trainer/venv/ (or wherever it lives) — activate before running
-  Python scripts.
 - cargo lives at ~/.cargo/bin/cargo (not on PATH).
 - Session-end protocol mandatory: commit + push to origin/main per
   session-end-prompt.md. Push is pre-authorized per persistent memory.
-
-Open question to confirm with user once before kicking off the long compute:
-- N MC samples per (hand, setting) cell? Project default is 1000. Higher
-  N reduces noise; lower N speeds the run. 1000 is the right default;
-  flag if a smaller pilot (N=200, 100K hands) before the full N=1000 run
-  is preferred for sanity check.
+- The grid is large (2.55 GB) — load via memmap, not load mode, in
+  scripts that don't need to mutate the data.
+- For long Python scripts that pipe output, use python3 -u or
+  PYTHONUNBUFFERED=1 (Session 24 lesson).
 ```
 
 ---

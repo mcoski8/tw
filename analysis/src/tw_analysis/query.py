@@ -47,6 +47,120 @@ from tw_analysis.settings import (
     all_settings as enumerate_settings,
 )
 
+# --- Setting-enumeration index table (vectorized features) ----------------
+
+def _build_setting_hand_indices() -> np.ndarray:
+    """Precompute, for every setting_index 0..104, the 7 hand-index positions
+    that make up that setting in [top, mid_a, mid_b, bot_a, bot_b, bot_c, bot_d]
+    order (no within-tier sort applied — features below are sort-independent).
+
+    Mirrors the enumeration in ``settings.decode_setting``.
+    """
+    table = np.empty((NUM_SETTINGS, 7), dtype=np.uint8)
+    mid_pairs = [(a, b) for a in range(6) for b in range(a + 1, 6)]
+    for idx in range(NUM_SETTINGS):
+        top_i, mid_combo_i = divmod(idx, 15)
+        a, b = mid_pairs[mid_combo_i]
+        remaining = [j for j in range(7) if j != top_i]
+        mid_a = remaining[a]
+        mid_b = remaining[b]
+        bot = [remaining[j] for j in range(6) if j != a and j != b]
+        table[idx] = [top_i, mid_a, mid_b, *bot]
+    return table
+
+
+SETTING_HAND_INDICES: np.ndarray = _build_setting_hand_indices()
+assert SETTING_HAND_INDICES.shape == (NUM_SETTINGS, 7)
+
+
+def setting_features_from_bytes(hand_bytes: np.ndarray) -> "SettingFeatures":
+    """Vectorized feature extraction for a single 7-card hand.
+
+    ``hand_bytes`` is a (7,) uint8 array of packed card indices in the
+    canonical-hand order. Returns the same SettingFeatures dataclass as
+    ``setting_features_for_hand`` but computed entirely with numpy ops —
+    ~100x faster than the Python-object path.
+    """
+    if hand_bytes.shape != (7,):
+        raise ValueError(f"hand_bytes must be (7,), got {hand_bytes.shape}")
+    permuted = hand_bytes[SETTING_HAND_INDICES]  # (105, 7) uint8
+
+    top_byte = permuted[:, 0]
+    mid_bytes = permuted[:, 1:3]
+    bot_bytes = permuted[:, 3:]
+
+    top_rank = (top_byte // 4 + 2).astype(np.int8)
+    mid_ranks = (mid_bytes // 4 + 2).astype(np.int8)
+    bot_ranks = (bot_bytes // 4 + 2).astype(np.int8)
+    bot_suits = bot_bytes & 0b11
+
+    mid_is_pair_arr = mid_ranks[:, 0] == mid_ranks[:, 1]
+    mid_pair_rank = np.where(mid_is_pair_arr, mid_ranks[:, 0], 0).astype(np.int8)
+    top_is_ace = (top_rank == 14)
+    bot_has_ace = (bot_ranks == 14).any(axis=1)
+
+    # Bot suit profile: count suits, sort descending, classify the (max, 2nd) pair.
+    suit0 = (bot_suits == 0).sum(axis=1)
+    suit1 = (bot_suits == 1).sum(axis=1)
+    suit2 = (bot_suits == 2).sum(axis=1)
+    suit3 = (bot_suits == 3).sum(axis=1)
+    counts_stacked = np.stack([suit0, suit1, suit2, suit3], axis=1)
+    sorted_desc = -np.sort(-counts_stacked, axis=1)
+    top1 = sorted_desc[:, 0]
+    top2 = sorted_desc[:, 1]
+    profile = np.full(NUM_SETTINGS, -1, dtype=np.int8)
+    profile[(top1 == 2) & (top2 == 2)] = SUIT_PROFILE_DS
+    profile[(top1 == 2) & (top2 == 1)] = SUIT_PROFILE_SS
+    profile[(top1 == 1) & (top2 == 1)] = SUIT_PROFILE_RAINBOW
+    profile[(top1 == 3) & (top2 == 1)] = SUIT_PROFILE_THREE_ONE
+    profile[(top1 == 4) & (top2 == 0)] = SUIT_PROFILE_FOUR_FLUSH
+    if (profile == -1).any():
+        # Defensive: should never hit a non-classifiable distribution.
+        idx = int((profile == -1).argmax())
+        raise ValueError(
+            f"unclassifiable bot suit distribution at setting {idx}: "
+            f"{counts_stacked[idx]}"
+        )
+
+    # Bot longest run of consecutive distinct ranks. Vectorized via a
+    # presence vector across rank slots 2..14 (13 ranks).
+    presence = np.zeros((NUM_SETTINGS, 13), dtype=np.uint8)
+    for k in range(4):
+        np.add.at(presence, (np.arange(NUM_SETTINGS), bot_ranks[:, k] - 2), 1)
+    binary_presence = (presence > 0).astype(np.int8)
+    # Walk the 13 columns, accumulating run lengths; reset on zero.
+    longest = np.zeros(NUM_SETTINGS, dtype=np.int8)
+    cur = np.zeros(NUM_SETTINGS, dtype=np.int8)
+    for r in range(13):
+        col = binary_presence[:, r]
+        cur = np.where(col == 1, cur + 1, 0)
+        longest = np.maximum(longest, cur)
+    bot_longest_run = longest
+
+    # Bot high-card count (rank >= 10).
+    bot_high_count = (bot_ranks >= 10).sum(axis=1).astype(np.int8)
+
+    # Bot pair rank: highest rank with count >= 2 in bot.
+    pair_mask = presence >= 2  # (105, 13)
+    # Multiply by rank value (rank = col + 2), then take max along axis=1.
+    rank_lookup = np.arange(2, 15, dtype=np.int8)  # ranks 2..14
+    pair_rank_per_col = np.where(pair_mask, rank_lookup, 0)
+    bot_pair_rank = pair_rank_per_col.max(axis=1).astype(np.int8)
+
+    return SettingFeatures(
+        top_rank=top_rank,
+        mid_pair_rank=mid_pair_rank,
+        mid_is_pair=mid_is_pair_arr,
+        bot_suit_profile=profile,
+        bot_longest_run=bot_longest_run,
+        bot_high_count=bot_high_count,
+        bot_pair_rank=bot_pair_rank,
+        bot_top_pair_rank=bot_pair_rank,
+        bot_has_ace=bot_has_ace,
+        top_is_ace=top_is_ace,
+    )
+
+
 # --- Per-setting feature codes ---------------------------------------------
 
 # Bot suit-profile codes. Higher number = "tighter" Omaha 2+3 fit.
@@ -321,12 +435,13 @@ def compare_setting_classes(
             raise ValueError(
                 f"row {row_pos} has canonical_id {canonical_id} (file order broken)"
             )
-        hand_bytes = hands_arr[canonical_id]
-        hand = [Card(int(b)) for b in hand_bytes]
-        if hand_filter is not None and not hand_filter(hand):
-            continue
+        hand_bytes = np.asarray(hands_arr[canonical_id], dtype=np.uint8)
+        if hand_filter is not None:
+            hand = [Card(int(b)) for b in hand_bytes]
+            if not hand_filter(hand):
+                continue
         n_seen += 1
-        feats = setting_features_for_hand(hand)
+        feats = setting_features_from_bytes(hand_bytes)
         mask_a = filter_a(feats)
         mask_b = filter_b(feats)
         evs = evs_arr[row_pos]

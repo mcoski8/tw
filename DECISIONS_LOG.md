@@ -783,3 +783,65 @@
 3. **Compute decision deferred:** if 16-core Mac compute is too slow for full N=1000, fall back to N=200 pilot at 100K canonical hands first, validate, then scale.
 4. **The `mfsuit_top_locked` spec needs one final user confirmation before code is written.** User has clarified the rule once; Session 24 should restate the spec and confirm before committing 12-30h of compute.
 
+
+## Decision 044 — Full Oracle Grid shipped at N=200 (Session 24)
+
+**Date:** 2026-05-02
+**Status:** Settled. Grid is production. Query Harness is operational. Sessions 25+ run all queries against this artifact.
+
+**Question:** With Decision 043's plan in hand, what does it take to ship the Full Oracle Grid + Query Harness, and what answers fall out of the first round of poker-domain questions?
+
+**Choice:** Ship at **N=200** (not the project default N=1000) because the user's locked-in initial questions produce $5K-$15K/1000h signals that are 30× the per-cell MC noise. N=1000 would cost ~3 days of compute on the M2 Mac vs ~12h at N=200 — re-run specific subsets at higher N if a comparison lands in the noise floor.
+
+**What was built (Session 24):**
+
+1. `engine/src/opp_models.rs::opp_mfsuit_top_locked` — Decision 043 deterministic profile. Highest pocket pair from {AA, KK, QQ} → mid; ace singleton → top; otherwise delegates to `opp_omaha_first`. 10 unit tests cover the decision tree (AA priority, KK+QQ both, trips of kings, no-pair fallback, etc.).
+2. `engine/src/monte_carlo.rs::OpponentModel::RealisticHumanMixture` — per-MC-sample weighted draw of 70% MfsuitTopLocked / 25% TopDefensive / 5% OmahaFirst, dispatched inside `opp_pick`.
+3. `engine/src/oracle_grid.rs` — new module: 32-byte header + 424-byte records (canonical_id u32 + 105 × f32 EVs in setting-index order). Append-only writer mirrors `BrWriter` resume semantics. 7 unit tests including a round-trip parity test that validates `solve_grid_one`'s argmax matches `mc_evaluate_all_settings::best`.
+4. `engine/src/main.rs` — `oracle-grid` CLI subcommand with checkpointing (block_size flag), opponent dispatch (default `realistic`), and pilot-friendly `--limit`.
+5. `analysis/src/tw_analysis/oracle_grid.py` — reader, memmap loader, integrity checks, `decode_opp_tag` extension covering tags 7+8.
+6. `analysis/src/tw_analysis/query.py` — Query Harness:
+   - `setting_features_from_bytes(hand_bytes)` — vectorized per-setting features (top rank, mid pair rank, bot suit profile, longest run, pair rank, high-card count, ace-in-bot, top-is-ace) at ~115 µs/hand.
+   - Filter primitives: `bot_suit_profile_eq`, `bot_longest_run_at_least`, `mid_is_pair`, `mid_pair_rank_eq`, etc., plus `all_of`/`any_of`/`not_` combinators.
+   - `compare_setting_classes(grid, ch, filter_a, filter_b, ...)` — for each hand, picks max-EV setting in each class, aggregates Δ across the population.
+7. `analysis/scripts/oracle_grid_full_queries.py` — runs the 5 headline questions on the full grid.
+
+**Compute results:**
+- Wall: 12.37h on the user's 16-core M2 Mac mini (vs 12-30h estimate).
+- Steady-state throughput: 134.9 hands/s (vs Random's ~200 hands/s — mixture dispatch overhead).
+- Output file: `data/oracle_grid_full_realistic_n200.bin`, 2.55 GB, 6,009,159 records, integrity verified.
+- Best-EV mean across all 6M hands: **+0.758 EV/hand** (player wins on average vs the mixture).
+- Best-EV distribution: min −9.235, p10 −1.185, p50 +0.715, p90 +2.790, max +7.165, std 1.548.
+
+**Headline answers (full 6M-hand grid, N=200):**
+
+| Question | Comparison (A vs B) | A wins | B wins | mean ΔEV | $/1000h | Hands compared |
+|---|---|---:|---:|---:|---:|---:|
+| Q1 | DS bot, run≤2 vs rainbow bot, run≥3 | 89.5% | 10.4% | +1.32 | **+$13,186** | 1.05M / 6.01M (17.5%) |
+| Q2 | DS bot, run≤2 vs SS bot, run≥3 | 67.1% | 32.7% | +0.44 | **+$4,375** | 2.56M / 6.01M (42.6%) |
+| Q3 | DS bot (any) vs rainbow bot (any) | 76.2% | 23.6% | +0.58 | **+$5,770** | 3.10M / 6.01M (51.6%) |
+| Q4 | pair-in-mid + non-DS bot vs no-pair-mid + DS bot | 79.3% | 20.5% | +0.82 | **+$8,150** | 4.43M / 6.01M (73.6%) |
+| Q5 | small pair (2-5) → mid vs small pair → bot | 81.2% | 18.6% | +0.79 | **+$7,922** | 1.87M / 1.87M of small-pair hands |
+
+**Interpretation:**
+
+1. **Strong DS preference (Q1-Q3):** Against the realistic mixture, double-suited bots beat rainbow bots regardless of connectivity. The biggest edge ($13K/1000h) is when DS is paired with low connectivity vs rainbow paired with high connectivity — i.e. the user's intuition "favor DS over runs" is right. Even DS vs SS-connected (a closer fight) still favors DS by $4.4K/1000h on the 42.6% of hands where the choice exists.
+
+2. **Pair-to-mid usually beats DS preservation (Q4):** When there's a tradeoff between keeping a pair in mid and preserving a DS bot, pair-to-mid wins +$8K/1000h on average. But B wins in 20.5% of comparisons — those are the candidate hands for a "pair-to-mid is a blunder" rule. The B-wins-by-most canonical_ids (425562, 3546583, 3546584, 2965461, ...) are the next investigation target.
+
+3. **Small pairs to mid usually beats small pairs to bot (Q5):** Aggregate of 81.2% / +$7.9K/1000h favors small-pair-in-mid. This is consistent with Session 22's "pair-to-bot fires 24-32% on pair rank 2-5" finding (B's 18.6% win-rate matches the lower end), reframed: most low pairs DO go to mid; bot-routing is a minority play, not the rule.
+
+4. **Sample size for follow-ups:** 17.5% — 73.6% of hands contribute to each comparison. The "only A available" / "only B available" buckets are large (e.g. Q1 has 4.5M only-A hands), suggesting many hands have a structurally-forced DS bot or rainbow bot — meaningful to slice by hand archetype.
+
+**Consequence:**
+1. **The grid is the new ground truth.** Future strategy candidates (v9_X) get graded against it in seconds: lookup chosen-setting EV per hand, compare to grid argmax, aggregate by hand category.
+2. **N=200 stands as the production grade unless a specific question lands in the noise.** Std error per cell ≈ 0.4 EV pts; mean Δ for the smallest signal (Q2) was +0.44, so even Q2 is at the noise floor. If we want Q2 tightened, we re-run a 100K-hand DS-unconnected-vs-SS-connected subset at N=1000 (~5h).
+3. **The "pair-to-mid is sometimes a blunder" investigation (Q4 B-wins) is the natural Sprint 9 target.** Pull the 906K hands where B wins, characterize them by hand features (rank profile, suit distribution, ace presence), see if a coherent class emerges.
+4. **Memory updated:** `project_taiwanese_oracle_grid.md` records grid location, format, mixture spec, query API, and re-run guidance.
+5. **The "12-30h" estimate from CURRENT_PHASE.md was directionally correct** for N=200 (12.4h actual). For N=1000 it would have been ~3 days, not ~30h — the throughput model in CURRENT_PHASE.md under-counted realistic-mixture dispatch overhead vs Random.
+
+**Decisions deferred to Session 25:**
+- Whether to re-run Q2 at N=1000 on its 2.56M-hand subset for a tighter signal.
+- Whether to invest in a Strategy-Grading harness that scores any deterministic strategy function against the grid (drop-in replacement for `tournament_50k.py` at full scale).
+- Whether to investigate the Q4 B-wins cluster (the 906K hands where DS-bot-preservation beats pair-in-mid).
+

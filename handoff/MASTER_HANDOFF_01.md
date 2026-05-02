@@ -1870,3 +1870,62 @@ For pair_rank ≤ 5 (the lowest 4 ranks of pair), routing pair-to-bot is EV-corr
 
 **Doctrine update:** Methodology choice itself is a domain call. CFR's default position as "the optimal solver" doesn't hold for simultaneous-move games or for vs-human use cases. Future sessions should validate methodology against the user's actual goal (max EV vs realistic humans, not Nash unexploitability) before committing to a multi-session build.
 
+
+# Session 24 (2026-05-02) — Full Oracle Grid SHIPPED + Query Harness operational
+
+**Headline:** Decision 043's plan executed end-to-end. The Full Oracle Grid is on disk (2.55 GB, 6.0M canonical hands × 105 settings × N=200 vs the realistic 70/25/5 mixture). Query Harness answers any class-vs-class poker-domain question in ~10 min on the full grid.
+
+## What got built
+
+1. **`opp_mfsuit_top_locked` (Rust)** — Decision 043 deterministic profile. Highest pocket pair from {AA, KK, QQ} → mid; ace singleton → top; otherwise `opp_omaha_first` fallback. 10 unit tests.
+2. **`OpponentModel::RealisticHumanMixture` (Rust)** — per-MC-sample weighted draw of 70% locked / 25% topdef / 5% omaha, dispatched in `opp_pick`.
+3. **`oracle_grid.rs` (Rust)** — new module with file format (32-byte header + 424-byte records: canonical_id u32 + 105 × f32 EVs in setting-index order), append-only writer mirroring `BrWriter` resume semantics, parallel `solve_grid_range`. 7 unit tests including the parity round-trip.
+4. **`oracle-grid` CLI subcommand** — defaults to `--opponent realistic`, supports `--limit` for pilots, `--block-size` for checkpoint cadence.
+5. **`tw_analysis.oracle_grid` (Python)** — reader, memmap loader, integrity check, opp-tag decoder.
+6. **`tw_analysis.query` (Python)** — Query Harness: vectorized `setting_features_from_bytes` (~115 µs/hand), filter primitives, `compare_setting_classes`. Reference Python-object path retained for parity testing.
+7. **Two analysis scripts** — `oracle_grid_pilot_validate.py` (100K-hand validation) and `oracle_grid_full_queries.py` (5 headline questions on the full grid).
+
+## Compute results
+
+- Pilot run: 100K hands at N=200 in 13.8 min (~120 hands/s).
+- Full run: **6,009,159 hands at N=200 in 12.37h** (~134.9 hands/s steady).
+- Output: `data/oracle_grid_full_realistic_n200.bin`, 2.55 GB, integrity all green.
+- Best-EV mean across 6M hands: **+0.758 EV/hand** vs the realistic mixture.
+
+## Headline answers (full 6M-hand grid, N=200)
+
+| # | Comparison | A wins | B wins | mean Δ | $/1000h |
+|---|---|---:|---:|---:|---:|
+| Q1 | DS bot run≤2 vs rainbow bot run≥3 | 89.5% | 10.4% | +1.32 | **+$13,186** |
+| Q2 | DS bot run≤2 vs SS bot run≥3 | 67.1% | 32.7% | +0.44 | **+$4,375** |
+| Q3 | DS bot any vs rainbow bot any | 76.2% | 23.6% | +0.58 | **+$5,770** |
+| Q4 | pair-mid + non-DS bot vs no-pair-mid + DS bot | 79.3% | 20.5% | +0.82 | **+$8,150** |
+| Q5 | small pair (2-5) → mid vs → bot | 81.2% | 18.6% | +0.79 | **+$7,922** |
+
+## Interpretation
+
+- **DS preference is real and large.** DS bot beats rainbow / SS by clear margins across all three connectivity comparisons. The user's intuition was right; the grid quantifies it.
+- **Pair-to-mid usually beats DS preservation.** 79.3% / +$8,150 favors keeping the pair in mid. The 20.5% B-wins cluster (~906K hands) is a candidate "pair-to-mid is a blunder" archetype to investigate next.
+- **Small pairs in mid is the rule, not the exception.** 81.2% of small-pair hands (rank 2-5) prefer mid over bot. Session 22's "24-32% pair-to-bot fires" finding reframes as a minority play.
+
+## Verified
+
+- Rust: 141/141 tests pass (124 baseline + 10 locked-profile + 7 oracle-grid).
+- Python: vectorized features parity-check vs Python-object reference: identical on all 105 settings.
+- Grid integrity: all 6,009,159 records pass `validate_oracle_grid` (canonical_id ordering, finite EVs, plausible range).
+
+## Gotchas + lessons
+
+- **Throughput model in CURRENT_PHASE.md was off.** Predicted 12-30h for N=1000; reality is 12.4h for N=200, ~62h for N=1000. Realistic-mixture dispatch overhead is ~30% vs Random.
+- **Python stdout buffering through `tee` hides progress.** First full-grid query run was killed because `print()` was buffered. Use `python3 -u` or `PYTHONUNBUFFERED=1` for any long-running script piped to a file.
+- **Vectorizing per-hand features was non-optional.** Python-object enumeration (`decode_setting` × 105) at ~10 ms/hand × 6M = 16h per question. Numpy vectorization: ~10 min.
+- **Pilot mean EV (-1.885) was lex-prefix bias.** First 100K canonical hands skew low-card; full-grid mean is +0.758.
+
+## Session 25 priorities (deferred to user)
+
+1. **Tighten Q2 at N=1000** on its 2.56M-hand subset (~5h compute) — Q2's mean Δ of +0.44 is close to the per-cell noise floor at N=200.
+2. **Build the Strategy-Grading harness** — drop-in replacement for `tournament_50k.py` that grades any deterministic strategy against the full 6M-hand grid in seconds. Enables a "propose strategy → Gemini Socratic → grid validate" loop.
+3. **Investigate the Q4 B-wins cluster** — 906K hands where breaking a pair to preserve a DS bot is the EV-correct play. Pull, characterize, see if a coherent archetype emerges.
+4. **User-driven follow-up questions** — any class-vs-class comparison answers in ~10 min via `compare_setting_classes`.
+
+**Doctrine update (Session 24):** Vectorize before scaling. The Python-object reference path was useful for parity checking but unusable at full scale. For any future grid-scan harness, prefer numpy-from-bytes over object enumeration. Sanity-check vectorized output against the slow reference once, then use the fast path everywhere.
