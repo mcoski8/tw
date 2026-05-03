@@ -845,3 +845,79 @@
 - Whether to invest in a Strategy-Grading harness that scores any deterministic strategy function against the grid (drop-in replacement for `tournament_50k.py` at full scale).
 - Whether to investigate the Q4 B-wins cluster (the 906K hands where DS-bot-preservation beats pair-in-mid).
 
+
+## Decision 045 — v9.1 (pair-to-bot-DS, tightened) is the new champion (Session 25)
+
+**Date:** 2026-05-02
+**Status:** Settled. v9.1 is the new production deterministic strategy of record. v8_hybrid remains as baseline. Session 25 also shipped the Strategy-Grading harness that enables this loop.
+
+**Question:** Decision 044 deferred three Session 25 options (A) tighten Q2, (B) build the Strategy-Grading harness, (C) investigate the Q4 B-wins cluster. The user picked all three in appropriate order, with the explicit goal of "find out why" pair-to-mid is sometimes a blunder for DS preservation.
+
+**What got built (Session 25 in order):**
+
+1. **Strategy-Grading harness** (`tw_analysis.grade_strategy`):
+   - `grade_strategy(strategy_fn, grid, canonical_hands, label)` scores any deterministic `strategy(hand_bytes) → setting_index` function against the full 6M-hand grid, returning per-hand-category regret breakdowns and `pct_optimal` (frac matching grid argmax).
+   - `categorize_hands` vectorizes the high_only / pair / two_pair / trips / trips_pair / three_pair / quads classification used by `tournament_50k.py`'s legacy harness.
+   - Wall: ~4 min per strategy on the full 6M grid (single-threaded Python; the strategy callback is the bottleneck).
+
+2. **v3 + v8_hybrid baseline** (`analysis/scripts/grade_strategies_full_grid.py`):
+   - v3:        $3,321/1000h vs ceiling, 35.38% pct_optimal
+   - v8_hybrid: $3,153/1000h vs ceiling, 36.70% pct_optimal (the +$168/1000h gain v8 captured over v3 on the OLD 4-profile mixture survives at +$168 vs the realistic mixture)
+   - Both leave $3K+/1000h on the table — the headroom v9 has to capture.
+   - Worst categories: trips_pair ($5.8K), trips ($4.1K), composite ($10.9K), quads ($9.7K).
+
+3. **Top-10 B-wins inspection** (`q4_inspect_top10.py`): every one of the top-10 most-egregious B-wins hands in Q4 had the SAME archetype — non-premium pair (rank ≤ Q) + Ace singleton + structural DS-bot-with-pair-as-anchor — with B beating A by $26-28K/1000h per hand. The oracle's pick on these hands is a stereotyped pair-to-bot-DS arrangement.
+
+4. **Wider Q4 B-wins characterization** (`q4_characterize_b_wins.py`, full 6M-hand pass):
+   - Total B-wins: 907,797 hands
+   - 78% of B-wins are 'pair' category, 13% two_pair, 6% trips, 2% trips_pair
+   - Of the broad hypothesis class (single pair rank 2-12 + Ace singleton + DS-feasible): 1,261,975 hands; only **24.54% are B-wins**, 75.27% are A-wins. **The naive rule (always pair-to-bot when archetype matches) over-fires by 3:1.**
+   - Mean Δ (A − B) on hypothesis hands: **+0.745 → $7,450/1000h favoring A** on AGGREGATE.
+
+5. **Discriminator diagnostic** (`q4_discriminator_diagnostic.py`, sampled 200K hands):
+   - **Pair rank shows a U-shaped pattern:**
+     - Pair 2-5: pair-to-bot wins by $1.1K–$2.6K/1000h
+     - Pair 6-9: pair-to-MID wins by $0.3K–$1.7K/1000h (don't fire here)
+     - Pair T-Q: pair-to-bot wins by $0.3K–$2.4K/1000h
+   - **Kicker symmetry matters:**
+     - (n_a=1, n_b=1): pair-to-bot wins +$1.1K/1000h
+     - (n_a=2, n_b=2): pair-to-bot wins **+$8.3K/1000h** (strongest signal)
+     - (n_a=2, n_b=1) / (1,2): pair-to-MID wins -$1.4K/1000h
+   - The 6-9 zone hypothesis: pair is "good enough" in mid (Hold'em pair) without being so high that opponents are likely to have higher pairs that demand DS bot strength.
+
+6. **v9 (loose) — gates: single pair 2-12 + Ace singleton + DS-feasible**:
+   - Full-grid grade: **−$37/1000h vs v8_hybrid** (v9.0 over-fires per the discriminator).
+
+7. **v9.1 (tight) — gates: pair in {2,3,4,5,T,J,Q} + Ace singleton + (n_a, n_b) symmetric in {(1,1), (2,2)}**:
+   - Full-grid grade: **+$24/1000h vs v8_hybrid**, **+0.26 pp pct_optimal**.
+   - First v8-beating strategy since v8 was crowned in Session 22.
+
+**Why pair-to-mid is a blunder (the user's "find out why" question, answered):**
+
+For low pairs (2-5): the pair is structurally weak in mid (~67% of Hold'em hands beat a pair of 4s on the river), so its mid value is small. Moving it to bot doesn't sacrifice much, and gaining DS bot equity (+~$1-3K/1000h) more than compensates.
+
+For high non-anchor pairs (J-Q): mid pair is strong in Hold'em (~85% win rate on the river vs random), but bot pair-anchored DS is even stronger (it's a guaranteed Omaha pair PLUS flush draws). The choice trades a strong mid for a stronger bot — and against the realistic mixture (which often has high cards in mid via the locked profile), the bot strength matters more.
+
+For mid pairs (6-9): in the "Goldilocks zone" — strong enough in mid to win Hold'em frequently against the locked profile's mid cards, not weak enough to need bot relocation. Pair-to-mid is correct.
+
+The kicker symmetry rule is structural: when (n_a, n_b) is asymmetric, the v9 rule's chosen "leftover for mid" is two cards of mismatched suits with no Hold'em synergy. When symmetric (1,1) or (2,2), the leftover-mid has natural Hold'em strength (e.g., (2,2) means mid is two cards of the OUTSIDE two suits, giving its own pseudo-DS structure).
+
+**Consequence:**
+
+1. **v9.1 is the new strategy-of-record** for grading any further candidates. v8_hybrid is retained as the comparison baseline. v9_loose (now an alias for the unrefined version) is kept in the codebase as a "what NOT to ship" reference.
+2. **The Strategy-Grading harness is the new validation gate** for any v10+ candidate. Any new rule gets a 4-minute grade vs the full 6M grid before being considered for production.
+3. **The grid + Socratic + grade loop the user proposed (yesterday's session-end conversation) is now operational.** Today's session went: hypothesis (top-10 inspection) → wider validation (characterize) → discriminator analysis (find the gate) → v9.1 candidate → grade-and-confirm. End-to-end < 1 hour from hypothesis to validated rule.
+4. **Session 25 worth-the-effort score:** $24/1000h × ~$10/EV-pt × 1000 hands = $240 per 10K hands. Modest in absolute dollars but massive in process: this is the first deterministic rule that beat its predecessor without requiring 14h of new MC compute. It validates the methodology pivot from Session 23.
+5. **Still ~$3,129/1000h to ceiling.** v10+ candidates can target:
+   - Two-pair archetype (13% of B-wins were two-pair hands — a similar pair-to-bot rule with two pairs)
+   - Trips routing on quads ($9.7K/1000h gap on quads — biggest per-hand bleed)
+   - Composite hands ($10.9K/1000h on the 0.2% of hands that are trips+pair+quads etc.)
+   - The (2,1) asymmetric kicker subset (currently a v9.1 NO-fire — but the discriminator showed it's actually a $1.4K/1000h LOSS-zone for pair-to-bot, so v9.1's exclusion is correct)
+
+**Open questions for Session 26+:**
+- Whether the prefix-grid run at N=1000 (currently in progress, ~5h compute, ~500K-hand high-fidelity prefix) will tighten or change the v9.1 numbers significantly. Re-grade v9.1 against it when it lands.
+- Whether a two-pair-to-bot variant (v10) captures the 13% two-pair share of Q4 B-wins.
+- Whether the (2,2) symmetric-kicker sub-class deserves its own LOUDER rule (it had a $8.3K signal vs the (1,1) class's $1.1K).
+
+
+
