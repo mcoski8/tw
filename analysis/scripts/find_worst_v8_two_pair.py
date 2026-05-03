@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""For every two_pair canonical hand, compute v8_hybrid's regret vs the
-oracle argmax. Print the top-N hands with the biggest regret — these are
-the archetypes a v10 'two_pair' rule should target.
+"""For every canonical hand of a given hand category, compute v8_hybrid's
+(or any other strategy's) regret vs the oracle argmax. Print the top-N
+hands with the biggest regret — these are the archetypes the next rule
+should target.
 
 Same first-step methodology as Session 25's q4_inspect_top10.py, but
-generalized to look at v8's misses directly (not Q4's filtered class
-comparison).
+generalized via --category and --strategy flags.
+
+Usage:
+    python3 -u analysis/scripts/find_worst_v8_two_pair.py --category high_only
+    python3 -u analysis/scripts/find_worst_v8_two_pair.py --category trips --strategy v10
 """
 from __future__ import annotations
 
@@ -29,25 +33,46 @@ from tw_analysis.settings import Card, decode_setting
 GRID_PATH = REPO / "data" / "oracle_grid_full_realistic_n200.bin"
 CANON_PATH = REPO / "data" / "canonical_hands.bin"
 
-CATEGORY_TO_FIND = "two_pair"
+DEFAULT_CATEGORY = "two_pair"
+DEFAULT_STRATEGY = "v8"
 TOP_N = 15
 
 
+def _resolve_strategy(name: str):
+    if name == "v8":
+        from strategy_v8_hybrid import strategy_v8_hybrid as fn
+        return ("v8_hybrid", fn)
+    if name == "v9.1":
+        from strategy_v9_1_pair_to_bot_ds import strategy_v9_1_pair_to_bot_ds as fn
+        return ("v9.1", fn)
+    if name == "v10":
+        from strategy_v10_two_pair_no_split import strategy_v10_two_pair_no_split as fn
+        return ("v10", fn)
+    raise ValueError(f"unknown strategy: {name}")
+
+
 def main() -> int:
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--category", default=DEFAULT_CATEGORY,
+                        choices=CATEGORY_NAMES)
+    parser.add_argument("--strategy", default=DEFAULT_STRATEGY)
+    parser.add_argument("--top-n", type=int, default=TOP_N)
+    args = parser.parse_args()
+
     grid = read_oracle_grid(GRID_PATH, mode="memmap")
     ch = read_canonical_hands(CANON_PATH, mode="memmap")
     n = len(grid)
 
     print(f"Categorizing all {n:,} canonical hands ...")
     cats = categorize_hands(np.asarray(ch.hands, dtype=np.uint8))
-    target_code = CATEGORY_NAMES.index(CATEGORY_TO_FIND)
+    target_code = CATEGORY_NAMES.index(args.category)
     target_mask = cats == target_code
-    print(f"  {CATEGORY_TO_FIND}: {int(target_mask.sum()):,} hands")
+    print(f"  {args.category}: {int(target_mask.sum()):,} hands")
 
-    from strategy_v8_hybrid import strategy_v8_hybrid
-
+    strat_label, strat_fn = _resolve_strategy(args.strategy)
     target_indices = np.flatnonzero(target_mask)
-    print(f"\nGrading v8_hybrid on {len(target_indices):,} {CATEGORY_TO_FIND} hands ...")
+    print(f"\nGrading {strat_label} on {len(target_indices):,} {args.category} hands ...")
 
     regrets = np.empty(len(target_indices), dtype=np.float32)
     v8_picks = np.empty(len(target_indices), dtype=np.int16)
@@ -56,7 +81,7 @@ def main() -> int:
     for k, i in enumerate(target_indices):
         hb = np.asarray(ch.hands[int(i)], dtype=np.uint8)
         ev_row = grid.evs[int(i)]
-        v8_idx = int(strategy_v8_hybrid(hb))
+        v8_idx = int(strat_fn(hb))
         oracle_idx = int(ev_row.argmax())
         v8_picks[k] = v8_idx
         oracle_picks[k] = oracle_idx
@@ -68,8 +93,8 @@ def main() -> int:
 
     # Top-N by regret
     order = np.argsort(-regrets)
-    print(f"\nTop-{TOP_N} {CATEGORY_TO_FIND} hands where v8_hybrid bleeds the most:\n")
-    for rank, k in enumerate(order[:TOP_N], start=1):
+    print(f"\nTop-{args.top_n} {args.category} hands where {strat_label} bleeds the most:\n")
+    for rank, k in enumerate(order[:args.top_n], start=1):
         i = int(target_indices[k])
         hb = np.asarray(ch.hands[i], dtype=np.uint8)
         hand = [Card(int(b)) for b in hb]
@@ -91,11 +116,11 @@ def main() -> int:
         print(f"#{rank}  canonical_id {i}  regret = {float(regrets[k]):+.3f}  ≈ ${float(regrets[k])*10*1000:+,.0f}/1000h")
         print(f"   hand: {' '.join(str(c) for c in hand)}")
         print(f"   pairs: {pairs}   suits (♣♦♥♠): {tuple(suit_counts)}")
-        print(f"   v8_hybrid: setting {v8_idx}  EV={float(grid.evs[i][v8_idx]):+.3f}")
+        print(f"   {strat_label}: setting {v8_idx}  EV={float(grid.evs[i][v8_idx]):+.3f}")
         print(f"     {v8_setting}")
-        v8_profile = int(feats.bot_suit_profile[v8_idx])
-        v8_mid_pair = bool(feats.mid_is_pair[v8_idx])
-        print(f"     bot suit: {SUIT_PROFILE_LABELS.get(v8_profile, '?')}, mid_is_pair={v8_mid_pair}, top_rank={int(feats.top_rank[v8_idx])}")
+        sprof = int(feats.bot_suit_profile[v8_idx])
+        smp = bool(feats.mid_is_pair[v8_idx])
+        print(f"     bot suit: {SUIT_PROFILE_LABELS.get(sprof, '?')}, mid_is_pair={smp}, top_rank={int(feats.top_rank[v8_idx])}")
         print(f"   ORACLE:    setting {oracle_idx}  EV={float(grid.evs[i][oracle_idx]):+.3f}")
         print(f"     {oracle_setting}")
         oracle_profile = int(feats.bot_suit_profile[oracle_idx])
