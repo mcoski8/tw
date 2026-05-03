@@ -920,4 +920,77 @@ The kicker symmetry rule is structural: when (n_a, n_b) is asymmetric, the v9 ru
 - Whether the (2,2) symmetric-kicker sub-class deserves its own LOUDER rule (it had a $8.3K signal vs the (1,1) class's $1.1K).
 
 
+## Decision 046 — Session 25/26 mining sprint: v9.1/v10/v12/v14 ship; v11/v13/v15 archived
+
+**Date:** 2026-05-03
+**Status:** Settled. v14 is the strategy of record. Simple-rule mining has reached diminishing returns on multi-archetype categories.
+
+**Context:** User asked to exhaustively mine the grid for new rules using the methodology established in Decision 045. Eight cycle attempts followed.
+
+**The cycle scoreboard:**
+
+| Cycle | Target | Approach | Result | Status |
+|---|---|---|---|---|
+| v9.1 | single pair | discriminator-tightened (pair rank ∈ {2-5,T-Q}, kicker symmetric) | +$24 vs v8 | SHIPPED |
+| v10 | two_pair | top-15 inspection: never split a pair, enumerate 9 no-split candidates | +$81 incremental | SHIPPED |
+| v12 | trips_pair | top-15 inspection: never split pair, split trips 2+1 | +$10 incremental | SHIPPED |
+| v14 | single pair refine | extend v9.1 to (1,3)/(3,1) asymmetric kicker per discriminator | +$5 incremental | SHIPPED |
+| v11 | high_only | top-15 → broad "sacrifice top, omaha-first" rule | **−$1,745** vs v10 | ARCHIVED |
+| v13 | trips | top-15 → broad "split trips 2-1, mid=paired-trips" rule | **−$172** vs v12 | ARCHIVED |
+| v15 | high_only refine | discriminator → "patch v8's bot to DS when feasible" | **−$296** vs v14 | ARCHIVED |
+
+**Final standings (full 6M grid, N=200):**
+- v8_hybrid: $3,153/1000h vs ceiling, 36.70% pct_optimal
+- **v14**: **$3,033/1000h, 39.61% pct_optimal** (+$120 vs v8 cumulative)
+
+**At higher fidelity (500K-prefix grid, N=1000):**
+- v8: $3,051/1000h, 38.51% optimal
+- **v14: $2,037/1000h, 47.61% optimal**  (+**$1,014/1000h** vs v8)
+
+The N=200 grid was understating gains by ~8×. v14's TRUE edge against the realistic mixture is about **$1,000/1000h** ≈ $10 per hand.
+
+**Methodology lessons:**
+
+1. **Categories with ONE dominant correct play** yield to simple top-15 inspection rules: two_pair (v10), trips_pair (v12). One iteration suffices.
+
+2. **Categories with MANY optimal archetypes** require a discriminator step BEFORE shipping a broad rule: pair (v9 → v9.1), high_only (no simple rule found).
+
+3. **"Top-15 outliers" are not representative.** They show extreme cases where a specific archetype wins by $25-58K/1000h, but those are <10% of the category. The bulk of the category prefers a different play. Three regressions came from generalizing the outlier rule (v11, v13, v15).
+
+4. **Diminishing returns are real.** v9.1: $24, v10: $81, v12: $10, v14: $5. The marginal gain shrinks with each rule.
+
+5. **Prefix re-grading at N=1000 is a free 5-minute "are we sure?" check.** It vastly tightened our confidence in the gains and caught no false positives.
+
+**What this leaves on the table:**
+
+| Category | $/1000h gap | Share | Bleed share % | Status |
+|---|---:|---:|---:|---|
+| high_only | $4,082 | 20.4% | 27.5% | 3 attempts failed; needs DT/ML |
+| pair | $2,011 | 46.6% | 30.9% | mostly captured by v9.2 |
+| two_pair | $3,371 | 22.3% | 24.8% | mostly captured by v10 |
+| trips | $4,054 | 5.5% | 7.3% | 1 attempt failed; needs DT/ML |
+| trips_pair | $5,417 | 2.9% | 5.1% | mostly captured by v12 |
+| three_pair | $4,529 | 1.9% | 2.8% | not attacked |
+| quads | $9,670 | 0.2% | 0.8% | not attacked, tiny share |
+| composite | $10,883 | 0.2% | 0.9% | not attacked, tiny share |
+
+high_only and trips together = $1,055 / $3,033 of remaining bleed = 35% of v14's gap to ceiling. Cracking these would meaningfully lower v14's regret.
+
+**Consequence + Session 27 options:**
+
+1. **Pause + ship v14 as the production strategy.** It's a real $1,000/1000h gain over v8 against the realistic mixture. Update v8_hybrid → v14_combined as the deployed strategy in the trainer / wherever else v8 is referenced.
+
+2. **DT-based v16 candidate.** Train an sklearn DecisionTreeRegressor on the grid: input = per-hand features (pair_rank, suit_dist, broadway_count, longest_run, ace_present, etc.), output = the 105-EV vector or just argmax. The grid is the ground-truth labels. This is the v7-regression methodology re-applied with the grid (v7 was trained against the OLD 4-profile mixture; v16 trains against the realistic mixture). Likely captures another $500-1000/1000h on the multi-archetype categories.
+
+3. **High_only-specific DT.** Smaller scope than full DT — just for high_only hands. Less data, faster to train, easier to interpret rules from.
+
+4. **More granular discriminators on high_only.** Carve into sub-clusters (e.g., suit_dist=(4,1,1,1) is a distinct sub-class with different optimal play). Each sub-cluster may have a clean simple rule. 8-15 hours of analysis work potentially.
+
+5. **Two-pair refinement** — v10's choice rule has tiebreak heuristics that might not always match oracle. A few hundred dollars more might be there.
+
+**Recommended next move:** Session 27 should kick off **option 2 (DT regression on full grid) AND option 1 (deploy v14)** in parallel. The DT will probably capture another $500-1500/1000h based on v7's prior history; v14 deployment is independent and locks in today's gain.
+
+
+
+
 
