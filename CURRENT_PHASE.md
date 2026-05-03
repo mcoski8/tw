@@ -1,152 +1,169 @@
-# Current: Sprint 8 — Mining sprint complete. v14 is production. Next: DT regression on the grid.
+# Current: Sprint 8 — v16_dt is the new ML champion. Next: distill v16's tree into hand-coded rules (v17).
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 27):** Two parallel tracks — (a) train a DecisionTreeRegressor on the full Oracle Grid using the v7-regression methodology (input = per-hand features, output = setting choice that maximizes grid-EV); (b) deploy v14 as the production strategy in any trainer or downstream tool that currently references v8_hybrid.
+> **🎯 IMMEDIATE NEXT ACTION (Session 28):** Walk v16's 28,790-leaf
+> DecisionTreeRegressor and surface the highest-impact splits as candidate
+> plain-English rules. The tree is beating the v9.2/v10/v12/v14 chain by
+> $431/1000h at N=1000 fidelity — distilling its top splits should
+> expand `STRATEGY_GUIDE.md` with new human-memorizable rules.
 
-> **✅ SHIPPED (Decisions 044, 045, 046):** Full Oracle Grid + Query Harness + Strategy-Grading harness + 4 hand-coded rules (v9.1, v10, v12, v14) totaling +$1,014/1000h vs v8 (at N=1000 prefix fidelity).
+> **✅ SHIPPED (Decision 047):** v16_dt — the first ML strategy of the new
+> grid era. Trained on full 6M canonical hands × N=200 with the v5/v7
+> 37-feature set, depth=18, min_samples_leaf=100. **+$569/1000h vs v14
+> on full grid (N=200), +$431/1000h on the N=1000 prefix.**
 
-> **🚫 ARCHIVED:** v11, v13, v15 — three high_only/trips simple-rule attempts that regressed. Multi-archetype categories don't yield to top-15-inspection-based rules; need DT/ML or much deeper discriminators.
+> **🚫 ARCHIVED:** prefix-trained v16 — overfits to canonical-id bias of
+> the 500K-prefix (oracle mean EV in prefix is −0.667 vs +0.758 on full
+> grid). Generalizes catastrophically: $8,493/1000h, 16.40% optimal.
+> Lesson: do not train on canonical-id-prefix subsets; the canonical
+> ordering is highly non-uniform in hand strength.
 
-> Updated: 2026-05-03 (end of Session 26)
-
----
-
-## Headline state at end of Session 26
-
-**v14_combined is the strategy of record.** It's the chain:
-trips_pair (v12) → two_pair (v10) → single-pair (v9.2) → v8_hybrid fallback.
-
-**Captured gain vs v8_hybrid:**
-- At N=200 (full 6M grid): **+$120/1000h, +2.91 pp pct_optimal**
-- At N=1000 (500K prefix grid): **+$1,014/1000h, +9.10 pp pct_optimal**
-
-The N=200 grid was understating gains by ~8× due to MC noise. v14's true edge against the realistic 70/25/5 mixture is approximately $1,000/1000h ≈ $10 per hand.
-
-**Cycle scoreboard (8 attempts, 4 ships, 3 regressions, 1 baseline-only):**
-
-| Cycle | Target | Gain at N=200 | Status |
-|---|---|---:|---|
-| v9.1 | single pair (discriminator-tight) | +$24 | SHIPPED |
-| v10  | two_pair (no-split) | +$81 incremental | SHIPPED |
-| v11  | high_only (broad sacrifice-top) | −$1,745 | ARCHIVED |
-| v12  | trips_pair (split trips, pair intact) | +$10 incremental | SHIPPED |
-| v13  | trips (broad split-trips) | −$172 | ARCHIVED |
-| v14  | single pair refine (v9.2) | +$5 incremental | SHIPPED |
-| v15  | high_only DS-patch | −$296 | ARCHIVED |
+> Updated: 2026-05-03 (end of Session 27)
 
 ---
 
-## What's still on the table
+## Headline state at end of Session 27
 
-| Category | $/1000h gap | Share | Total bleed | Status |
+**Two strategies of record, for different audiences:**
+
+| Strategy | Use case | Where it lives |
+|---|---|---|
+| **v14_combined** | Human-memorizable rule chain | `STRATEGY_GUIDE.md` + `analysis/scripts/strategy_v14_combined.py` |
+| **v16_dt** | ML champion (28,790-leaf DT) | `analysis/scripts/strategy_v16_dt.py` + `data/v16_dt_model.npz` |
+
+**Final standings (full 6M grid, N=200):**
+
+| Strategy | $/1000h vs ceiling | pct_optimal | Δ vs v8 | Δ vs v14 |
+|---|---:|---:|---:|---:|
+| v8_hybrid | $3,153 | 36.70% | — | — |
+| v14_combined | $3,033 | 39.61% | −$120 | — |
+| **v16_dt** | **$2,464** | **42.54%** | **−$689** | **−$569** |
+
+**At higher fidelity (500K-prefix grid, N=1000):**
+
+| Strategy | $/1000h vs ceiling | pct_optimal | Δ vs v8 | Δ vs v14 |
+|---|---:|---:|---:|---:|
+| v8_hybrid | $3,051 | 38.51% | — | — |
+| v14_combined | $2,037 | 47.61% | −$1,014 | — |
+| **v16_dt** | **$1,607** | **50.77%** | **−$1,444** | **−$431** |
+
+**Per-category breakdown (full grid, N=200):**
+
+| Category | v14 $/1000h | v16 $/1000h | Δ | Notes |
 |---|---:|---:|---:|---|
-| pair | $2,011 | 46.6% | $937 | mostly captured |
-| high_only | $4,082 | 20.4% | $832 | 3 attempts failed; needs DT |
-| two_pair | $3,371 | 22.3% | $752 | mostly captured |
-| trips | $4,054 | 5.5% | $223 | 1 attempt failed; needs DT |
-| trips_pair | $5,417 | 2.9% | $157 | mostly captured |
-| three_pair | $4,529 | 1.9% | $86 | not attacked |
-| quads | $9,670 | 0.2% | $19 | not attacked |
-| composite | $10,883 | 0.2% | $22 | not attacked |
-
-high_only + trips together = $1,055 of $3,033 remaining (35% of the gap). Cracking these is the biggest remaining opportunity.
+| high_only | $4,082 | $3,785 | −$297 | partial improvement, still the biggest residual at 31% of v16 bleed |
+| pair | $2,011 | $2,127 | +$116 | apparent regression at N=200; at N=1000 v16 edges v14 ($1,191 vs $1,229) — was MC noise |
+| two_pair | $3,371 | $2,005 | −$1,366 | v10's tiebreaks superseded |
+| trips | $4,054 | $2,347 | −$1,707 | v14 had no rule here |
+| trips_pair | $5,417 | $2,438 | −$2,979 | v12's chain superseded |
+| three_pair | $4,529 | $1,975 | −$2,554 | v14 had no rule |
+| quads | $9,670 | $2,233 | −$7,437 | v14 had no rule |
+| composite | $10,883 | $5,260 | −$5,623 | v14 had no rule |
 
 ---
 
-## Methodology lessons (Decision 046 §"Methodology lessons")
+## What this leaves on the table (full grid)
 
-1. **One-archetype categories** (two_pair, trips_pair) yield to top-15 inspection rules. One iteration suffices.
-2. **Many-archetype categories** (high_only, trips) need a discriminator step BEFORE shipping a broad rule. Top-15 outliers are not representative; they show extreme wins for a narrow archetype that doesn't generalize.
-3. **Simple rules hit diminishing returns.** v9.1=$24, v10=$81, v12=$10, v14=$5. To break out of this regime, need DT/regression or per-hand model.
-4. **Prefix re-grade at N=1000 is a free sanity check.** Caught nothing wrong but tightened confidence dramatically.
-5. **Run the grade harness on every candidate before shipping.** Three regressions (v11, v13, v15) would have been ship-time disasters; the grade caught them in 5-15 min each.
+- v16 captures **24% of the v14→ceiling gap** ($569/$3,033) at N=200 fidelity
+- v16 captures **21% of the v14→ceiling gap** ($431/$2,037) at N=1000 fidelity
+- Remaining gap to ceiling: $2,464/1000h (full grid N=200) / $1,607/1000h (prefix N=1000)
+- Biggest residual: high_only ($3,785 × 20.4% share = $774 of v16 bleed = 31%)
 
----
-
-## What was built across Sessions 24-26
-
-**Engine (Rust):**
-- `oracle_grid.rs` — file format + writer + solver
-- `opp_models.rs::opp_mfsuit_top_locked` — Decision 043 deterministic profile
-- `monte_carlo.rs::OpponentModel::RealisticHumanMixture` — 70/25/5 dispatch
-- `oracle-grid` CLI subcommand
-- 141/141 tests pass
-
-**Python harness:**
-- `tw_analysis.oracle_grid` — reader + memmap + integrity check
-- `tw_analysis.query` — vectorized features (~115 µs/hand) + filter combinators + `compare_setting_classes`
-- `tw_analysis.grade_strategy` — score any deterministic strategy against the grid in ~4 min
-
-**Strategies (in dependency chain order):**
-- `strategy_v9_1_pair_to_bot_ds` — narrow pair-to-bot rule (DS-feasible, kicker symmetric, pair rank zone)
-- `strategy_v9_2_pair_to_bot_ds` — extends v9.1 with (1,3)/(3,1) kickers
-- `strategy_v10_two_pair_no_split` — never split a two-pair, enumerate 9 candidates
-- `strategy_v12_trips_pair` — for trips_pair: split trips 2+1, pair intact, DS bot
-- `strategy_v14_combined` — the production chain: v12 → v10 → v9.2 → v8
-
-**Analysis scripts:**
-- `find_worst_v8_two_pair.py` — generic top-N regret-finder (parameterizable by --category --strategy)
-- `q4_inspect_top10.py`, `q4_characterize_b_wins.py`, `q4_discriminator_diagnostic.py` — Q4 (pair) analysis
-- `high_only_archetype_discriminator.py` — high_only feature/archetype cross-tab
-- `oracle_grid_full_queries.py` — Q1-Q5 user-locked questions on full grid
-- `grade_*_full_grid.py` family — full-grid graders for each candidate
-- `grade_against_prefix.py` — N=1000 prefix re-grade harness
-
-**Compute artifacts (gitignored):**
-- `data/oracle_grid_full_realistic_n200.bin` (2.55 GB) — full 6M grid at N=200
-- `data/oracle_grid_prefix500k_n1000.bin` (212 MB) — 500K-prefix at N=1000
+The v16 DT is interpretable. Walking the tree's top-impact splits will both:
+1. Reveal what feature-combinations the DT keys on (e.g. "if pair_high_rank ∈ {2-5} AND can_make_ds_bot AND has_ace_singleton, branch X" — could be a new Rule).
+2. Provide the next set of v17/v18 hand-coded rules for the strategy guide.
 
 ---
 
-## Resume Prompt (Session 27)
+## Methodology lessons (Session 27)
+
+1. **Canonical-id prefix is not a uniform sample.** The first N canonical hands skew toward weak/low-rank archetypes. Prefix oracle mean EV = −0.667; full-grid mean = +0.758. Models trained on the prefix learn a distribution-warped argmax and fail catastrophically on the full population.
+
+2. **N=200 has real per-category noise.** v16's apparent "pair-category regression" disappeared at N=1000. Future ship/archive decisions on small per-category deltas should always re-validate at N=1000.
+
+3. **Multi-output regression DT works at scale.** 6M × 105 outputs at depth=18 fits in 172s of `sklearn` time on the M2 Mac mini and produces a model that beats every hand-coded chain. The methodology is repeatable for any future grid.
+
+4. **Cycle scoreboard since Session 25 (8 ships, 3 archives, 1 baseline-only):**
+
+| Cycle | Target | Result | Status |
+|---|---|---:|---|
+| v9.1 | single pair | +$24 N=200 | SHIPPED |
+| v10 | two_pair | +$81 incremental | SHIPPED |
+| v11 | high_only | −$1,745 | ARCHIVED |
+| v12 | trips_pair | +$10 incremental | SHIPPED |
+| v13 | trips | −$172 | ARCHIVED |
+| v14 | single pair refine | +$5 incremental | SHIPPED |
+| v15 | high_only DS-patch | −$296 | ARCHIVED |
+| v16_prefix | DT on 500K prefix | −$5,460 | ARCHIVED |
+| **v16_full** | **DT on 6M full** | **+$569** | **SHIPPED — current ML champion** |
+
+---
+
+## What was built in Session 27
+
+**Strategies:**
+- `analysis/scripts/strategy_v16_dt.py` — load + walk a v16 DT model; argmax 105-EV leaf vec
+- `data/v16_dt_model.npz` — 21.5 MB, 28,790 leaves, depth=18, full-grid trained (canonical model)
+- `data/v16_dt_model_full.npz` — verbatim copy preserved for reproducibility
+- `data/v16_dt_model_prefix.npz` — failed prefix-trained variant (kept as "what NOT to do")
+
+**Trainer:**
+- `analysis/scripts/train_v16_regression.py` — flexible CLI trainer (--training-grid, --max-depth, --min-samples-leaf, --output)
+
+**Graders:**
+- `analysis/scripts/grade_v16_full_grid.py` — head-to-head v8 vs v14 vs v16 on full or prefix grid
+- `analysis/scripts/grade_v16_full_trained.py` — quick single-strategy grader for v16_full
+
+**Tournament:**
+- `analysis/scripts/tournament_50k.py` updated with v9.2 / v10 / v12 / v14 / v16_dt
+
+---
+
+## Resume Prompt (Session 28)
 
 ```
-Resume Session 27 of the Taiwanese Poker Solver project at
+Resume Session 28 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context:
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of Session 26)
-- DECISIONS_LOG.md (latest: Decision 046 — mining sprint summary)
-- analysis/scripts/strategy_v14_combined.py — production strategy
-- analysis/src/tw_analysis/grade_strategy.py — grading harness
-- analysis/scripts/strategy_v7_regression.py — prior DT-regression precedent
+- STRATEGY_GUIDE.md (the rule book — current production human strategy)
+- CURRENT_PHASE.md (rewritten end of Session 27)
+- DECISIONS_LOG.md (latest: Decision 047 — v16_dt ships)
+- analysis/scripts/strategy_v16_dt.py — ML champion
+- analysis/scripts/train_v16_regression.py — trainer
 
-State (end of Session 26):
-- v14 is the production strategy of record at $3,033/1000h vs ceiling
-  (full grid N=200) / $2,037 (prefix N=1000). +$120/1000h vs v8 at
-  N=200, +$1,014/1000h at N=1000.
-- 4 hand-coded rules shipped (v9.1, v10, v12, v14).
-- 3 simple-rule regressions archived (v11, v13, v15) — high_only and
-  trips have multiple optimal archetypes; simple rules over-fire.
-- 141 Rust tests pass. Full grid + prefix grid on disk.
+State (end of Session 27):
+- v14_combined is the human-memorizable strategy ($3,033/1000h vs ceiling).
+- v16_dt is the ML champion ($2,464/1000h, +$569 vs v14 at N=200,
+  +$431/1000h on the prefix at N=1000). 28,790 leaves, depth=18.
+- v16 wins on every category vs v14. Pair-category regression at N=200
+  was MC noise — v16 wins at N=1000.
+- Remaining gap to ceiling: $2,464/1000h. Biggest residual is high_only
+  ($3,785 × 20.4% share).
 
-Two parallel tracks for Session 27:
+Next session targets:
 
-(A) **DT regression v16.** Train an sklearn DecisionTreeRegressor on
-    the full Oracle Grid using v7's prior methodology:
-      - Input: per-hand features (pair_rank, suit_dist, broadway_count,
-        longest_run, ace_present, etc. — see q4_discriminator_diagnostic.py
-        for feature list).
-      - Output: 105-EV vector (regression target) OR setting argmax.
-      - Training data: full 6M canonical hands × N=200 (or N=1000
-        prefix for tighter labels).
-    Likely captures another $500-1000/1000h on multi-archetype categories.
-    Reference: analysis/scripts/strategy_v7_regression.py — old DT
-    that beat v3 by $445/1000h on the OLD 4-profile mixture.
+(A) **Distill v16's tree.** Walk v16_dt_model.npz, find the highest-impact
+    splits (those that reduce per-leaf MSE the most), translate them to
+    plain-English rules. Add the top 3-5 to STRATEGY_GUIDE.md. The DT is
+    the oracle's best fit; its splits are exactly the patterns a human
+    should memorize.
 
-(B) **v14 deployment.** Find every place v8_hybrid is referenced as
-    "production" and update to v14_combined. Likely just trainer/src/
-    and tournament_50k.py reference points. Sanity-check the trainer's
-    setting-encoding round-trip works (Decision 041 str-sort bug
-    must remain fixed).
+(B) **High_only deep-dive.** v16 still leaves $3,785/1000h on high_only
+    (31% of v16's total bleed). Sub-cluster by suit_dist, broadway_count,
+    longest_run; find archetypes where v16's leaf-prediction is far from
+    oracle argmax. Targeted v18 rule.
 
-Optional follow-ups:
-(C) Investigate Q4 B-wins canonical_ids 425562, 3546583, etc. as
-    targets for v9.3 refinement (multi-pair archetypes).
-(D) Investigate suit_dist=(4,1,1,1) high_only sub-cluster (worst v8
-    bleed at $5,500/1000h, no DS-feasible).
-(E) Two_pair refinement — v10's tiebreak heuristics may not always
-    match oracle on edge cases.
+(C) **Try v17 = v9.2/v10/v12 → v16 fallback.** The hand-coded rules
+    encode interpretable logic; on hands where the rules fire, they
+    might agree with v16. On disagreements, ground-truth EV decides.
+    Probably a wash given v16's edge but worth a 4-min grade to confirm.
+
+(D) **Tighter v16 training.** Train on the N=1000 prefix instead of
+    full N=200, but ONLY if the prefix is rebuilt as a uniform random
+    subsample (not the canonical-id prefix, which biases toward weak
+    hands). Or train on the full grid at higher MC sample count
+    (N=500-1000) — would be a multi-day compute job.
 
 REMINDERS:
 - Auto mode is on; minimize interruptions.
@@ -154,10 +171,11 @@ REMINDERS:
 - cargo lives at ~/.cargo/bin/cargo (not on PATH).
 - Session-end protocol: commit + push to origin/main (pre-authorized).
 - For long Python scripts that pipe output: use python3 -u or
-  PYTHONUNBUFFERED=1 (Session 24 lesson).
-- N=200 grades understate true gain by ~8× vs N=1000 prefix.
+  PYTHONUNBUFFERED=1.
+- N=200 grades have real per-category noise; re-validate small deltas
+  at N=1000.
 - 4-min full-grid grade is the validation gate; never ship a candidate
-  that grades negative even on N=200.
+  that grades negative on the full grid.
 ```
 
 ---

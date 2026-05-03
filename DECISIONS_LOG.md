@@ -991,6 +991,87 @@ high_only and trips together = $1,055 / $3,033 of remaining bleed = 35% of v14's
 **Recommended next move:** Session 27 should kick off **option 2 (DT regression on full grid) AND option 1 (deploy v14)** in parallel. The DT will probably capture another $500-1500/1000h based on v7's prior history; v14 deployment is independent and locks in today's gain.
 
 
+## Decision 047 — v16_dt is the new ML champion (Session 27)
 
+**Date:** 2026-05-03
+**Status:** Settled. v16_dt is the new ML strategy of record. v14_combined remains the human-memorizable strategy of record (the rule book in STRATEGY_GUIDE.md).
 
+**Question:** Decision 046 recommended kicking off (option 2) DT regression on the full Oracle Grid in parallel with (option 1) v14 deployment. Did the DT capture the $500-1500/1000h Decision 046 forecast?
+
+**Answer:** **Yes — +$569/1000h on the full grid (N=200), +$431/1000h on the N=1000 prefix.** The Decision 046 forecast was on the nose.
+
+**What got built:**
+
+1. **`analysis/scripts/train_v16_regression.py`** — flexible trainer. Reads either the full 6M-hand grid (N=200) or the 500K-prefix (N=1000), uses the same 37-feature set as v5/v7 (via `strategy_v5_dt.compute_feature_vector` for byte-identity), fits a `DecisionTreeRegressor` on the per-hand 105-EV vector. Saves model in v7-compatible npz format.
+
+2. **`analysis/scripts/strategy_v16_dt.py`** — drop-in inference. Walks the saved DT, returns argmax of leaf 105-vec.
+
+3. **`analysis/scripts/grade_v16_full_grid.py`** — head-to-head grader (v8 vs v14 vs v16) on either the full or prefix grid.
+
+4. **`analysis/scripts/grade_v16_full_trained.py`** — single-strategy grader for v16 with custom model path (used to grade v16-full in parallel with the prefix-trained grading).
+
+**Two training variants tried:**
+
+| Training data | Records | min_samples_leaf | depth | leaves | Full-grid grade | Status |
+|---|---:|---:|---:|---:|---:|---|
+| 500K-prefix (N=1000) | 500,000 | 200 | 15 | 1,783 | $8,493/1000h, 16.40% opt | **ARCHIVED** (catastrophic overfitting to canonical-id bias) |
+| full 6M (N=200) | 6,009,159 | 100 | 18 | 28,790 | $2,464/1000h, 42.54% opt | **SHIPPED** (champion) |
+
+**The catastrophic prefix failure was the surprise of the session.** The prefix's oracle mean EV is **−0.667** vs the full grid's **+0.758** — the first 500K canonical hands are a heavily-warped subsample skewed toward weak/low-rank archetypes. A DT trained on that subsample learns argmax patterns that are completely wrong when applied to strong hands.
+
+**Methodology lesson:** canonical-id ordering is highly non-uniform in hand strength. **Never train on a canonical-id prefix.** If a future session needs a smaller training subset, sample uniformly at random from `canonical_hands.bin`.
+
+**Final standings (full 6M grid, N=200):**
+
+| Strategy | $/1000h vs ceiling | pct_optimal | Δ vs v8 | Δ vs v14 |
+|---|---:|---:|---:|---:|
+| v8_hybrid | $3,153 | 36.70% | — | — |
+| v14_combined | $3,033 | 39.61% | −$120 | — |
+| **v16_dt** | **$2,464** | **42.54%** | **−$689** | **−$569** |
+
+**At higher fidelity (N=1000 prefix grid):**
+
+| Strategy | $/1000h vs ceiling | pct_optimal | Δ vs v8 | Δ vs v14 |
+|---|---:|---:|---:|---:|
+| v8_hybrid | $3,051 | 38.51% | — | — |
+| v14_combined | $2,037 | 47.61% | −$1,014 | — |
+| **v16_dt** | **$1,607** | **50.77%** | **−$1,444** | **−$431** |
+
+**Per-category breakdown (full grid, N=200): v16 wins on every multi-rank category:**
+
+| Category | v14 $/1000h | v16 $/1000h | Δ |
+|---|---:|---:|---:|
+| high_only | $4,082 | $3,785 | −$297 |
+| pair | $2,011 | $2,127 | +$116 (apparent) |
+| two_pair | $3,371 | $2,005 | −$1,366 |
+| trips | $4,054 | $2,347 | −$1,707 |
+| trips_pair | $5,417 | $2,438 | −$2,979 |
+| three_pair | $4,529 | $1,975 | −$2,554 |
+| quads | $9,670 | $2,233 | −$7,437 |
+| composite | $10,883 | $5,260 | −$5,623 |
+
+**The pair-category +$116 apparent regression at N=200 was MC noise.** At N=1000 prefix fidelity, v16's pair regret is $1,191 vs v14's $1,229 — v16 actually wins by $38/1000h on pair too. Future single-category deltas under ~$200/1000h should be re-validated at N=1000 before any "v9.2 still wins on its niche" claim.
+
+**Why v16 wins big on the rare categories:**
+- v14's hand-coded rules covered single-pair (v9.2), two-pair (v10), trips_pair (v12). Three-pair, quads, composite had NO hand-coded rule — they fell through to v8_hybrid which uses v3 for high_only/pair and v7 (the OLD-mixture-trained DT) for everything else. Against the realistic mixture, the old v7 routing on these tier-rare hands was wildly suboptimal.
+- v16, trained on the realistic-mixture grid, learned the right routing for ALL categories simultaneously.
+
+**Track B (v14 deployment) outcome:** done in ~2 minutes. The only "production strategy" reference for v8_hybrid was `analysis/scripts/tournament_50k.py`'s strategy list — added v9.2/v10/v12/v14/v16 as comparison entries. The trainer's `engine.py` references to `strategy_v3` are for opponent-profile MC dispatch, NOT user-strategy choice — left unchanged.
+
+**Consequence:**
+
+1. **v16_dt is the new ML champion.** Use it whenever a deployed-in-software strategy choice is needed. Loaded at inference via `strategy_v16_dt(hand_bytes) -> setting_index`. Model file: `data/v16_dt_model.npz` (21.5 MB).
+
+2. **v14_combined remains the human-memorizable rule chain** for `STRATEGY_GUIDE.md`. The two coexist for different audiences: v14 is what a human studies; v16 is what the trainer compares the user against (alongside the grid argmax).
+
+3. **The Strategy-Grading harness keeps working unchanged.** v16 is just another strategy_fn. Future v17/v18 candidates should grade against both v14 and v16.
+
+4. **Project END PRODUCT update:** the project's stated end product (CLAUDE.md) is "a condensed decision tree / hierarchy of rules that a human can memorize and apply in <30 seconds, validated to match the solver 95-99% of the time." v14 hits 47.61% pct_optimal at N=1000 — far from 95%. v16 hits 50.77% — also far. The 95% target was set before we discovered that the realistic mixture has many hands with multiple near-optimal settings (tied or near-tied EV). The right success metric is now "$/1000h vs ceiling," not "% optimal." See `project_taiwanese_rule_baseline.md` for the EV-reframe history.
+
+5. **Distillation is the obvious Session 28 move.** v16's 28,790 leaves encode a rich interpretable strategy. Walking the highest-impact splits (those that reduce MSE the most) and translating them to English will give us the next batch of v17/v18/v19 hand-coded rules for the strategy guide. This is the "DT-as-pattern-mining-tool" insight that originally motivated the v7 → v8_hybrid path in Session 22.
+
+**Open questions for Session 28+:**
+- Whether a uniform-random 500K-hand subsample at N=1000 trains as well as the full 6M at N=200 (cheaper to compute the grid).
+- Which v16 splits are most-impactful and most-interpretable — the distillation candidates.
+- Whether the high_only category ($3,785/1000h, 31% of v16 bleed) yields to any specific archetypal rule visible in v16's tree, or whether it's irreducibly noisy.
 

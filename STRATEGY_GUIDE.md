@@ -4,10 +4,17 @@
 > Full Oracle Grid (6M canonical hands × 105 settings × N=200 MC samples
 > vs the realistic 70/25/5 human mixture).
 >
-> Strategy of record: **v14_combined**.
+> **Human-memorizable strategy of record: v14_combined.**
 > Edge over v8_hybrid baseline: **+$1,014 per 1,000 hands** at $10/EV-pt
 > (measured on the N=1000 prefix grid for tightest fidelity).
-> Last updated: 2026-05-03 (Session 26).
+>
+> **ML champion (not human-memorizable): v16_dt** — a 28,790-leaf
+> DecisionTreeRegressor trained on the full 6M-hand grid. Beats v14 by
+> **+$569/1000h** on the full grid (N=200). Useful as a target for
+> distillation into future hand-coded rules. Lives at
+> `analysis/scripts/strategy_v16_dt.py` + `data/v16_dt_model.npz`.
+>
+> Last updated: 2026-05-03 (Session 27).
 
 ---
 
@@ -167,11 +174,12 @@ The mid tier is forgiving (Hold'em rules, can use 0/1/2 hole cards), so giving u
 
 ## What's NOT yet covered (next session targets)
 
-- **High-only hands** (no pair, ~20% of all hands, $4,082/1000h on the table). Tried 3 simple rules; all regressed. The oracle plays these too variably for a single hand-coded rule. Decision-tree-trained-on-the-grid (planned Session 27 v16) is the likely fix.
-- **Trips without a pair** (~5% of all hands, $4,054/1000h on the table). Same issue.
-- **Three pairs / quads / composite** — small share, not yet attacked.
+- **High-only hands** (no pair, ~20% of all hands). v14 leaves $4,082/1000h; v16 captures it down to $3,785 — partial improvement, room remains.
+- **Trips without a pair** (~5% of all hands). v14 leaves $4,054/1000h; v16 captures it down to $2,347.
+- **Three pairs / quads / composite** — v16 captures these heavily (e.g. quads $9,670 → $2,233). Hand-coded rules to match the DT's choices would be ideal — pull splits from `v16_dt_model.npz` to see what features the DT keys on.
+- **Pair category** — v14's hand-coded rules (v9.2) actually slightly outperform v16 here (pair regret $2,011 vs $2,127). A v17 chain (v9.2 → v16) would combine the best of both.
 
-Together these account for ~$1,055 of v14's $3,033/1000h gap to perfect play. Cracking them via DT regression is the single biggest remaining opportunity.
+The next-session lever is **distillation**: walk v16's tree, identify the highest-impact splits, convert them to plain-English rules.
 
 ---
 
@@ -180,7 +188,9 @@ Together these account for ~$1,055 of v14's $3,033/1000h gap to perfect play. Cr
 - Rule 1 → `analysis/scripts/strategy_v9_2_pair_to_bot_ds.py`
 - Rule 2 → `analysis/scripts/strategy_v10_two_pair_no_split.py`
 - Rule 3 → `analysis/scripts/strategy_v12_trips_pair.py`
-- Combined chain → `analysis/scripts/strategy_v14_combined.py`
+- Combined human-memorizable chain → `analysis/scripts/strategy_v14_combined.py`
+- ML champion (Session 27) → `analysis/scripts/strategy_v16_dt.py` + `data/v16_dt_model.npz`
+- v16 trainer → `analysis/scripts/train_v16_regression.py`
 - Grading harness → `analysis/src/tw_analysis/grade_strategy.py`
 - Full ground-truth grid → `data/oracle_grid_full_realistic_n200.bin` (gitignored, 2.55 GB)
 

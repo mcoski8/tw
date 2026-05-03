@@ -42,17 +42,27 @@ from strategy_v6_ensemble import strategy_v6_ensemble  # noqa: E402
 from strategy_v7_regression import strategy_v7_regression  # noqa: E402
 from strategy_v7_patched import strategy_v7_patched  # noqa: E402
 from strategy_v8_hybrid import strategy_v8_high_only_only, strategy_v8_hybrid  # noqa: E402
+from strategy_v9_2_pair_to_bot_ds import strategy_v9_2_pair_to_bot_ds  # noqa: E402
+from strategy_v10_two_pair_no_split import strategy_v10_two_pair_no_split  # noqa: E402
+from strategy_v12_trips_pair import strategy_v12_trips_pair  # noqa: E402
+from strategy_v14_combined import strategy_v14_combined  # noqa: E402
+from strategy_v16_dt import strategy_v16_dt  # noqa: E402
 
 GRID_PATH = ROOT / "data" / "oracle_grid_50k.npz"
 
 STRATEGIES = [
-    ("v3 (production hand-coded)",  strategy_v3),
-    ("v5_dt (shape DT)",              strategy_v5_dt),
-    ("v6_ensemble (4-DT vote)",       strategy_v6_ensemble),
-    ("v7_regression (EV DT)",         strategy_v7_regression),
-    ("v7_patched (v7 + AAKK rule)",   strategy_v7_patched),
+    ("v3 (early hand-coded)",                  strategy_v3),
+    ("v5_dt (shape DT)",                       strategy_v5_dt),
+    ("v6_ensemble (4-DT vote)",                strategy_v6_ensemble),
+    ("v7_regression (EV DT)",                  strategy_v7_regression),
+    ("v7_patched (v7 + AAKK rule)",            strategy_v7_patched),
     ("v8_high_only_only (v7 + v3 high_only)",  strategy_v8_high_only_only),
     ("v8_hybrid (v7 + v3 high_only + pair)",   strategy_v8_hybrid),
+    ("v9.2 (pair-to-bot-DS)",                  strategy_v9_2_pair_to_bot_ds),
+    ("v10 (two_pair no-split)",                strategy_v10_two_pair_no_split),
+    ("v12 (trips_pair split)",                 strategy_v12_trips_pair),
+    ("v14_combined (rule-based champion)",     strategy_v14_combined),
+    ("v16_dt (ML champion, full-grid DT)",     strategy_v16_dt),
 ]
 
 

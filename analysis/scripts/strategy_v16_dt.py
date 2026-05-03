@@ -1,0 +1,104 @@
+"""
+Session 27 — strategy_v16_dt: walk the regression DT trained against the
+realistic 70/25/5 mixture (the Oracle Grid). v16 is to v14 what v7 was to v3.
+
+Trained by train_v16_regression.py. At inference: compute the 37-feature
+vector, walk the saved tree to a leaf, get the leaf's 105-vec of predicted
+EV, argmax. Returns setting_index.
+
+Drop-in replacement for strategy_v14_combined as a candidate strategy.
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+from typing import Optional
+
+import numpy as np
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent.parent
+SRC = ROOT / "analysis" / "src"
+SCRIPTS = ROOT / "analysis" / "scripts"
+for p in (str(SRC), str(SCRIPTS)):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+from strategy_v5_dt import compute_feature_vector  # noqa: E402
+
+_MODEL_CACHE: Optional[dict] = None
+MODEL_PATH = ROOT / "data" / "v16_dt_model.npz"
+
+
+def load_model(path: Optional[Path] = None) -> dict:
+    global _MODEL_CACHE
+    if _MODEL_CACHE is not None:
+        return _MODEL_CACHE
+    if path is None:
+        path = MODEL_PATH
+    arr = np.load(path, allow_pickle=True)
+    keys = list(arr["cat_map_keys"])
+    vals = list(arr["cat_map_values"])
+    cat_map = {str(k): int(v) for k, v in zip(keys, vals)}
+    feature_columns = [str(c) for c in arr["feature_columns"]]
+    _MODEL_CACHE = {
+        "children_left": arr["children_left"],
+        "children_right": arr["children_right"],
+        "feature": arr["feature"],
+        "threshold": arr["threshold"],
+        "leaf_values": arr["leaf_values"],
+        "feature_columns": feature_columns,
+        "cat_map": cat_map,
+        "depth": int(arr["depth"]),
+        "n_leaves": int(arr["n_leaves"]),
+    }
+    return _MODEL_CACHE
+
+
+def _walk_tree_to_leaf(x: np.ndarray, model: dict) -> int:
+    cl = model["children_left"]
+    cr = model["children_right"]
+    feat = model["feature"]
+    thr = model["threshold"]
+    node = 0
+    while cl[node] != -1:
+        if x[feat[node]] <= thr[node]:
+            node = cl[node]
+        else:
+            node = cr[node]
+    return node
+
+
+def strategy_v16_dt(hand: np.ndarray) -> int:
+    """Predict setting_index by walking the v16 regression DT and argmax over 105."""
+    model = load_model()
+    feat_meta = {
+        "cat_map": model["cat_map"],
+        "feature_columns": model["feature_columns"],
+    }
+    x = compute_feature_vector(hand, feat_meta)
+    leaf_node = _walk_tree_to_leaf(x, model)
+    leaf_vec = model["leaf_values"][leaf_node]
+    return int(leaf_vec.argmax())
+
+
+if __name__ == "__main__":
+    _RANK = {"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,
+             "T":10,"J":11,"Q":12,"K":13,"A":14}
+    _SUIT = {"c":0,"d":1,"h":2,"s":3}
+    def hh(*cards):
+        bytes_ = sorted((_RANK[c[0]]-2)*4 + _SUIT[c[1]] for c in cards)
+        return np.array(bytes_, dtype=np.uint8)
+
+    sample_hands = [
+        ("2c 3d 5h 7s 9d Jh Kc",),
+        ("2c 6c Jd Kh Ks Ac Ad",),
+        ("2c 8c 8d 8h 9s Qc Qs",),
+        ("Ac Ad Ah Kc Kd Qc Qd",),
+        ("3c 4d 8d 9c Qc Qd Ac",),
+    ]
+    for (s,) in sample_hands:
+        cards = s.split()
+        h = hh(*cards)
+        idx = strategy_v16_dt(h)
+        print(f"  {s:<32}  v16_dt setting = {idx}")
