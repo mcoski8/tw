@@ -2010,3 +2010,89 @@ Done in ~2 minutes. The only "production strategy" reference for v8_hybrid was `
 4. **Tighter v16 training (later)** — build a uniform-random-subsample grid at higher N, retrain.
 
 **Doctrine update (Session 27):** Canonical-id prefix subsets are not safe training subsets. Always validate the oracle mean EV of the training data matches the production target distribution before training. If they diverge by >1.0 EV-pt, the subset is non-representative.
+
+---
+
+## Sessions 28-30 — covered in CURRENT_PHASE.md rewrites + DECISIONS_LOG.md
+
+Session 28: v18_dt ships ($2,306/1000h, +$158 vs v16); Rule 4 added; v17 archived. (Decisions 048-050.)
+Session 29: v18b/v18c/v18d ship via capacity sweep; v19 (ungated suited) ARCHIVED for failing prefix tripwire; coined "prefix tripwire" methodology. (Decisions 051-052.)
+Session 30: v18e + v20 (gated suited features) ship; v20 = $1,982/1000h on full grid (+$84 vs v18e). Established the GATED feature template. (Decisions 053-054.)
+
+These sessions used CURRENT_PHASE.md (rewritten each session) + DECISIONS_LOG.md (append-only) as the primary log. The MASTER_HANDOFF append convention drifted; reinstated below for Session 31.
+
+---
+
+### Session 31 — 2026-05-04 — All-4-targets sprint: v23 + v24 ship; gating template proven across 3 categories; Rule 5 REJECTED; capacity sweep CLOSED
+
+**Context:** Session opened with 4 targets queued in CURRENT_PHASE.md from Session 30 (distill v20 / new gated aug families / composite deep-dive / v20b capacity step). User requested all four be done in one session. All four executed, plus 2 ML champion ships beyond.
+
+#### What got built
+
+**Three gated aug families (one was Session 30's, two are new):**
+- `analysis/scripts/trips_pair_aug_features_gated.py` (NEW) — 6 features for trips_pair routing (trip_rank, pair_rank, high/low singleton ranks, singletons_suited, pair_routing_is_ds). Gated to n_trips==1 AND n_pairs==1. Persisted to `data/feature_table_trips_pair_aug_gated.parquet` (20 MB). Fires on 2.86% of canonical hands.
+- `analysis/scripts/composite_aug_features_gated.py` (NEW) — 4 features for composite routing (archetype_id [1-4], lower_trip_rank [unique-info: baseline only carries higher trip], singleton_rank, higher_pair_rank). Gated to composite hands (14,742 = 0.245%). Persisted to `data/feature_table_composite_aug_gated.parquet` (19 MB).
+- `analysis/scripts/composite_v20_residual.py` (NEW) — diagnostic that surfaced 4 archetype clusters (trips_two_pair / two_trips / quads_pair / quads_trip) with the pattern "v20 splits dominant trips/quads instead of keeping them on bot." Drove the design of composite_aug.
+
+**Two ML champion ships:**
+- `data/v23_dt_model.npz` (215 MB, 314,705 leaves, 49 features). +$5/1000h vs v20 on full, +$9/1000h on prefix; trips_pair −$161 on category. Trainer = `train_v23_dt.py`, inference = `strategy_v23_dt.py`, grader = `grade_v23.py`.
+- `data/v24_dt_model.npz` (215 MB, 314,759 leaves, 53 features). +$1/1000h vs v23 on full, +$1/1000h on prefix; composite −$216 on category. Trainer = `train_v24_dt.py`, inference = `strategy_v24_dt.py`, grader = `grade_v24.py`.
+
+**Rule 5 attempts (both REJECTED):**
+- `analysis/scripts/strategy_rule5_suited_mid.py` — naive variant (msphr ≥ 9). v21 grader: −$680/1000h vs v14_combined.
+- `analysis/scripts/strategy_rule5_tight_suited_mid.py` — tightened (msphr ≥ 11 AND msplr ≥ 9). v22 grader: −$473/1000h vs v14. Both fire ~8× too often relative to the DT's gated routing.
+
+**Distillation generalized:**
+- `distill_v16_dt.py` modified to accept `--model` CLI arg + auto-detect gated parquets. Used to walk v20's tree (272-line output: top 30 splits, feature importance for all 43 features, top gated suited splits). Surfaced the Rule 5 candidates above.
+
+**Capacity step v20b:**
+- `data/v20b_dt_model.npz` (211 MB, 307,939 leaves at depth=32, ml=5) — bit-identical to v20. Capacity saturated at depth=30 with ml=5 binding. Sweep CLOSED.
+
+#### Compute results (full 6M grid, N=200 + prefix N=1000)
+
+| Strategy | Full $/1000h | Prefix $/1000h | Leaves | Features | Status |
+|---|---:|---:|---:|---:|---|
+| v20 | $1,982 | $1,082 | 307,939 | 43 | predecessor |
+| v20b | $1,982 | $1,082 | 307,939 | 43 | ARCHIVED (saturated) |
+| v21 | $3,713 | n/a | n/a | n/a | ARCHIVED (Rule 5 loose) |
+| v22 | $3,506 | n/a | n/a | n/a | ARCHIVED (Rule 5 tight) |
+| v23 | $1,977 | $1,073 | 314,705 | 49 | shipped, then superseded |
+| **v24** | **$1,977** | **$1,072** | **314,759** | **53** | **CURRENT CHAMPION** |
+
+#### Verified
+
+- v23/v24 prefix tripwire passes — non-targeted categories bit-identical.
+- v23 trips_pair −$161 on category isolates cleanly; other categories at $0 or noise.
+- v24 composite −$216 on category isolates cleanly; other categories at $0 or noise.
+- 141/141 Rust tests still passing (engine unchanged this session).
+- Three distinct gated aug families now in production: high_only/v20, trips_pair/v23, composite/v24.
+
+#### Gotchas + lessons
+
+- **Capacity sweeps have a floor.** min_samples_leaf=5 caps depth-30 leaves at 307,939. Going to depth=32 changes nothing because every leaf is already at the leaf-size floor. Future ML wins must be feature engineering, not deeper trees. min_samples_leaf=3 would risk overfitting.
+- **Distilled rules need head-to-head validation.** Both Rule 5 variants looked good in the v20 distillation (gated suited features clearly carve high_only routing). But the DT uses 4+ rank thresholds + cross-feature combinations. Any single AND-rule fires on ~8× more hands than the DT routes selectively. Lesson: never ship a hand-rule extracted from a DT split without a head-to-head grade vs the current human-rule baseline.
+- **Diminishing returns on small categories.** Composite is 0.245% of population. v24's +$1 headline is at noise floor; the −$216 category effect is real but the absolute lever is ~$0.5/1000h overall. Quads (0.24% × $724 = $1.7 share) is below noise floor; not worth gating.
+
+#### Cycle scoreboard since Session 25
+
+17 ships, 7 archives, 1 doc-only.
+
+| Cycle | Target | Result | Status |
+|---|---|---:|---|
+| v9.1 / v10 / v12 / v14 | hand-coded rules | various | SHIPPED |
+| v11 / v13 / v15 / v16_prefix / v17 / v19 | various | various | ARCHIVED |
+| v16 | DT 28K leaves | +$569 vs v14 | SHIPPED |
+| Rule 4 | KK/AA documentation | doc-only | SHIPPED |
+| v18 / v18b / v18c / v18d / v18e | DT capacity sweep | various | SHIPPED |
+| v19_gated | gated suited (d=28,ml=10) | +$73 / $0 vs v18d | SUPERSEDED |
+| v20 | v18e capacity + gated suited | +$84 / $0 vs v18e | SHIPPED |
+| v20b | DT d=32, ml=5 | $0 / $0 (saturated) | ARCHIVED |
+| v21 / v22 | Rule 5 attempts | −$680 / −$473 vs v14 | ARCHIVED |
+| v23 | gated trips_pair on v20 | +$5 / +$9 vs v20 | SHIPPED |
+| **v24** | **gated composite on v23** | **+$1 / +$1 vs v23** | **SHIPPED — current champion** |
+
+#### Session 32 priorities (priority order by absolute share)
+
+1. **Pair audit.** Pair = $873/1000h share — biggest residual. 3 ungated aug features already exist (`default_bot_is_ds`, `n_top_choices_yielding_ds_bot`, `pair_to_bot_alt_is_ds`). Diagnostic: are they cross-category leakage (v19 lesson in reverse)? If leakage, replace with `pair_aug_gated`. If genuine, design 6-feature gated extension.
+2. **two_pair_aug_gated.** $325/1000h share, biggest fully-untouched. Existing `feature_table_two_pair_aug.parquet` (Session 19) is UNGATED. Audit + rebuild as gated. Train v25.
+3. **High_only round 2.** $590/1000h share. Distill v24 specifically for high_only; candidate gated additions: `connectivity_high_g`, `n_broadway_in_2nd_suit_g`. Train v26.
