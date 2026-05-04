@@ -1075,3 +1075,140 @@ high_only and trips together = $1,055 / $3,033 of remaining bleed = 35% of v14's
 - Which v16 splits are most-impactful and most-interpretable — the distillation candidates.
 - Whether the high_only category ($3,785/1000h, 31% of v16 bleed) yields to any specific archetypal rule visible in v16's tree, or whether it's irreducibly noisy.
 
+
+## Decision 048 — v17 (rules-then-DT chain) archived (Session 28)
+
+**Date:** 2026-05-04
+**Status:** Settled. v17 is archived. The hand-coded v9.2/v10/v12 rules are inferior to v16 in their categories and chaining them BEFORE v16 forces the inferior strategy to fire.
+
+**Question:** Decision 047 left open whether a v17 = v9.2/v10/v12 → v16 fallback could combine the best of both worlds (interpretable rules where they fire, DT for unruled categories). Does it?
+
+**Answer:** No. v17 LOSES to v16 by **−$369/1000h** on the full grid.
+
+**Per-category (full grid, N=200) vs v16:**
+
+| Category | v17 $/1000h | v16 $/1000h | Δ |
+|---|---:|---:|---:|
+| high_only | $3,785 | $3,785 | $0 (v17 falls through to v16) |
+| pair | $2,084 | $2,127 | −$43 (v9.2 helps slightly) |
+| two_pair | $3,371 | $2,005 | **+$1,366** (v10 is wildly worse than v16) |
+| trips | $2,347 | $2,347 | $0 (v17 falls through) |
+| trips_pair | $5,417 | $2,438 | **+$2,979** (v12 is wildly worse than v16) |
+| three_pair | $1,975 | $1,975 | $0 |
+| quads | $2,233 | $2,233 | $0 |
+| composite | $5,260 | $5,260 | $0 |
+
+**Why:** v9.2/v10/v12 were optimized against the OLD 4-profile mixture pre-Session 24. v16 was trained against the realistic 70/25/5 mixture. The DT discovered better per-category routings that the hand-coded rules cannot match.
+
+**Methodology lesson:** Hand-coded rules that win against an OLDER baseline can simultaneously be inferior to a DT trained on the CURRENT ground truth. Do NOT chain hand-coded rules before the DT in production. The strategy guide can keep the rules as human-memorizable approximations (they still beat v8 by $120/1000h on their own), but in code, use the DT alone.
+
+**Files:**
+- `analysis/scripts/strategy_v17_rules_then_dt.py` — kept as historical artifact (matches the convention that archived strategies stay in tree for diff/comparison).
+- `analysis/scripts/grade_v17_full_grid.py` — the grader that produced the result.
+- `data/grade_v17_full.log` — grader output.
+
+**Consequence:**
+1. Strategy guide remains v14_combined as the human-memorizable chain — its purpose is teaching, not maximizing EV.
+2. Code path remains v16/v18 as the production strategy — they win on every category.
+3. Future hybrid attempts should fire the DT FIRST and use rules only as overrides for cases where the DT is known to be wrong.
+
+
+## Decision 049 — Rule 4 (KK / AA → mid) added to STRATEGY_GUIDE.md (Session 28)
+
+**Date:** 2026-05-04
+**Status:** Settled. Documentation-only change. Strategy guide gains a 4th rule.
+
+**Question:** The v16 distillation surfaced `has_premium_pair` as the 5th-most-important feature (4.5% of feature importance). It splits the population into a "keep KK/AA together in mid" branch. Empirical check on v3, v8, v16 confirmed all three already encode this play. Should the strategy guide formalize it as a rule?
+
+**Choice:** Yes. Rule 4 = "KK or AA → keep pair in mid; top = highest non-pair card; bot = remaining 4." Added to `STRATEGY_GUIDE.md` between Rule 3 and the Default section.
+
+**Why:**
+- Behavior is unchanged (v3/v8/v16/v18 all converge on this setting). The rule documents existing best practice.
+- The strategy guide previously mentioned KK/AA-in-mid only as a footnote inside Rule 1's discussion. Promoting it to a numbered rule makes it memorizable.
+- The DT's independent discovery of `has_premium_pair` as a top-5 feature confirms the play is worth highlighting.
+- Fires on **7.17%** of all hands (KK 3.58% + AA 3.58%; verified against `data/feature_table.parquet`).
+
+**Note on the K-K split misconception:**
+A prior draft of Rule 4 claimed "with KK + an Ace singleton, the K-K split is forced because the Ace dominates top selection." Empirical check showed this is WRONG: v3, v8, and v16 all return setting 104 = top=A, mid=KK (intact), bot=lowest 4. The Ace lands on top NATURALLY because it's the highest non-K, and the K-K stays in mid. No split occurs. Rule 4 was rewritten to remove the misclaim.
+
+**Empirical edge case:** for AA + an all-low body (no broadway non-A cards, e.g. `2c 3d 4h 5s 6c Ah As`), v16 picks setting 14 = top=2c (lowest), mid=AA, bot=3-4-5-6 (connected). v3/v8 pick setting 74 = top=6c (highest non-A), mid=AA, bot=2-3-4-5. The DT trades top strength (a 6 on top loses 90% anyway) for bot connectivity. Documented as a footnote; human play follows v3/v8 (highest non-pair on top).
+
+**Files:**
+- `STRATEGY_GUIDE.md` — Rule 4 section + cheat-sheet update + table-of-shapes update.
+
+**Consequence:**
+1. Strategy guide now has 4 numbered rules: pair-to-bot DS (1), no-split two-pair (2), trips-pair routing (3), KK/AA → mid (4).
+2. No code changes (Rule 4 is implicit in `encode_rules.strategy_v3`'s pair-to-mid default, which v8 / v14 inherit).
+3. Future trainer UI can quiz on Rule 4 as a discrete pattern.
+
+
+## Decision 050 — v18_dt is the new ML champion (Session 28)
+
+**Date:** 2026-05-04
+**Status:** Settled. v18 supersedes v16 as the production ML strategy. v16 is kept as a baseline.
+
+**Question:** Decision 047 used v16 = depth=18, min_samples_leaf=100, 28,790 leaves. Was 28,790 leaves the capacity ceiling? Or is there more EV to extract from a higher-capacity tree?
+
+**Answer:** **Yes — v18 = depth=22, min_samples_leaf=50, 60,651 leaves wins +$158/1000h on the full grid AND +$129/1000h on the prefix N=1000 grid (overfitting tripwire).**
+
+**What got built:**
+
+1. **`analysis/scripts/train_v18_dt.py`** — trainer using cached parquet features (skips the ~20-min Python feature-compute pass that v16 had). Total cycle: 5min train + 4min grade. Same npz output format as v16, drop-in compatible with the existing inference path.
+2. **`analysis/scripts/strategy_v18_dt.py`** — inference: walks the saved DT, returns argmax of leaf 105-vec.
+3. **`analysis/scripts/grade_v18_full_grid.py`** — head-to-head v16 vs v18 grader on the full 6M grid.
+4. **`analysis/scripts/grade_v18_prefix_grid.py`** — v8/v14/v16/v18 on the 500K N=1000 prefix grid (the generalization check).
+5. **`data/v18_dt_model.npz`** — 45 MB, 60,651 leaves, depth=22, min_samples_leaf=50.
+
+**Final standings:**
+
+| Strategy | Full grid (N=200) | Prefix (N=1000) |
+|---|---:|---:|
+| v8_hybrid | $3,153 | $3,051 |
+| v14_combined | $3,033 | $2,037 |
+| v16_dt (28K leaves) | $2,464 | $1,607 |
+| **v18_dt (60K leaves)** | **$2,306** | **$1,478** |
+
+**Per-category (full grid, N=200): v18 wins on every category vs v16:**
+
+| Category | v16 $/1000h | v18 $/1000h | Δ |
+|---|---:|---:|---:|
+| high_only | $3,785 | $3,489 | −$296 |
+| pair | $2,127 | $2,023 | −$104 |
+| two_pair | $2,005 | $1,878 | −$127 |
+| trips | $2,347 | $2,241 | −$106 |
+| trips_pair | $2,438 | $2,135 | −$303 |
+| three_pair | $1,975 | $1,812 | −$163 |
+| quads | $2,233 | $1,474 | −$759 |
+| composite | $5,260 | $4,623 | −$637 |
+
+**Per-category on N=1000 prefix (the smaller categories — note the prefix grid has no high_only by canonical-id ordering):**
+
+| Category | v16 $/1000h | v18 $/1000h | Δ |
+|---|---:|---:|---:|
+| pair | $1,191 | $1,116 | −$75 |
+| two_pair | $1,862 | $1,678 | −$184 |
+| trips | $2,213 | $2,148 | −$65 |
+| trips_pair | $2,660 | $2,326 | −$334 |
+| three_pair | $1,138 | $1,169 | +$31 (small noise on 25K hands) |
+| quads | $1,156 | $1,133 | −$23 |
+| composite | $4,246 | $3,791 | −$455 |
+
+The +$31 prefix three_pair regression is well within Monte-Carlo noise (25,614 hands × $0.001 SE per cell). v18 wins on every category that has enough samples to be statistically stable.
+
+**Why this matters for overfitting:**
+
+A bigger tree (60K leaves vs 28K) trained on the same N=200 grid could just be memorizing N=200 noise — better training-set fit, worse generalization. The N=1000 prefix grid uses 5× as many MC samples per cell, so its labels are a closer estimate of the true game-theoretic answer. **v18 wins on prefix by $129/1000h** — the win generalizes. If v18 had only memorized noise, prefix performance would have regressed.
+
+**Methodology lesson (cached parquets):**
+
+The v16 trainer (`train_v16_regression.py`) recomputed all 6M hands' features from canonical bytes inside Python — that's the ~20-minute pass that gated rapid iteration. The cached `feature_table*.parquet` files (built once during the v3/v5/v7 era) contain the exact same 28 baseline + 9 aug features. The new `train_v18_dt.py` reads those parquets, joins them by canonical_id, computes the 7 derived flags in numpy (sub-second), and goes straight to fit. Total cycle drops from ~25 min to ~5 min. **Future ML training scripts MUST use cached parquets.**
+
+**Consequence:**
+
+1. **v18_dt is the new ML champion.** Use `strategy_v18_dt(hand_bytes) -> setting_index` for any production inference. Model file: `data/v18_dt_model.npz`.
+2. **v16_dt is kept as a comparison baseline** (not deleted). The `strategy_v16_dt` import path still works.
+3. **The Strategy-Grading harness keeps working unchanged.** Future v19/v20 candidates must grade against v18 as the bar.
+4. **STRATEGY_GUIDE.md champion pointer updated to v18.**
+5. **Open question:** depth=22 was the first try at higher capacity. Sweeping depth=20, 24, 26 may extract more. Also worth trying min_samples_leaf=30 (more leaves) and min_samples_leaf=80 (fewer leaves with longer trees). Session 29 picks this up alongside the suited-broadway aug feature work.
+6. **The v18 tree is interpretable.** Re-run `distill_v16_dt.py` against `data/v18_dt_model.npz` (small modification needed for the model path) to see what splits the bigger tree added. Likely candidates: more granular category-aware splits in the trips_pair / composite branches where v18 won most.
+
