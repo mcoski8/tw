@@ -1,50 +1,63 @@
-# Current: Sprint 8 — v20_dt is the new ML champion (capacity sweep + GATED suited features). Multi-cycle overnight progress.
+# Current: Sprint 8 — Session 31 wrap. v24_dt is the new ML champion (gating template generalized to 3 categories: high_only, trips_pair, composite). v20b ARCHIVED, Rule 5 candidates ARCHIVED.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 31):** Two paths to extract more $:
->   (A) **Distill v20.** Run `distill_v16_dt.py` against
->       `data/v20_dt_model.npz` (small change to make MODEL_PATH a CLI
->       arg). Find what splits v20's bigger tree added beyond v18e
->       and especially what the gated suited features partition.
->   (B) **More gated aug families.** The gated approach worked. Apply
->       the same pattern to other categories: e.g. a gated `trips_aug`
->       family that fires only for trips_pair / pure trips. Each new
->       gated family is a low-risk add (the prefix tripwire passes
->       trivially since the features fire on zero hands not in their
->       category).
->   (C) **Composite category deep-dive.** Composite remains the largest
->       per-hand bleed at $2,100/1000h v20 / $2,547 prefix. 14k hands ×
->       high regret = $66K total. Build a composite-specific
->       diagnostic mirroring `high_only_v16_residual.py`.
+> **🎯 IMMEDIATE NEXT ACTION (Session 32):**
+>   (A) **two_pair_aug_gated.** Biggest UNTOUCHED lever after pair —
+>       22.3% × $1,458 = **$325/1000h share**. Existing
+>       `feature_table_two_pair_aug.parquet` is UNGATED (Session 19);
+>       audit and rebuild as `two_pair_aug_gated`. Train v25.
+>   (B) **Pair category audit.** Pair is the SINGLE biggest residual
+>       (46.6% × $1,873 = **$873/1000h share**). Already has 3 ungated
+>       aug features. Diagnostic question: are they cross-category
+>       leakage (the v19 lesson) or genuine help? If leakage, replace
+>       with proper gated versions; if genuine, design a 6-feature
+>       `pair_aug_gated` v2.
+>   (C) **High_only round 2.** v23/v24 didn't add anything for high_only.
+>       It remains $2,894/1000h (3rd-biggest share at $590). Distill v24
+>       on high_only specifically; candidate gated additions:
+>       `connectivity_high_g`, `n_broadway_in_2nd_suit_g`.
 
-> **✅ SHIPPED (Decision 053):** v20_dt — depth=30, min_samples_leaf=5,
-> **307,939 leaves**, 43 features (37 base + 6 GATED suited-broadway).
-> Strictly dominates v18e: **+$84/1000h on full grid** (high_only
-> category drops $413), **tied on prefix** (gated features fire on zero
-> prefix hands by design). The gating fixed the v19 overfitting
-> problem from Session 29.
+> **✅ SHIPPED (Decision 058):** v24_dt — depth=30, ml=5,
+> **314,759 leaves**, 53 features (49 v23 features + 4 GATED composite
+> features). Strictly dominates v23: **+$1/1000h on full**
+> (composite drops $216), **+$1/1000h on prefix** (composite drops $201).
+> Headline gain at noise floor because composite is 0.245% of population,
+> but the per-category effect is unambiguous: 3rd clean instance of the
+> gating template.
 
-> **✅ SHIPPED (Decision 054):** Capacity sweep continued — v18d
-> (depth=28, ml=10, 193K leaves) and v18e (depth=30, ml=5, 274K
-> leaves) both pass the prefix tripwire with non-trivial gains. v20
-> incorporates v18e's capacity profile with the gated suited features.
+> **✅ SHIPPED (Decision 057):** v23_dt — depth=30, ml=5,
+> **314,705 leaves**, 49 features (43 v20 features + 6 GATED trips_pair
+> features). Beat v20: **+$5/1000h full**, **+$9/1000h prefix**
+> (trips_pair drops $161 / $179). 2nd instance of the gating template
+> after v20→high_only.
 
-> Updated: 2026-05-04 (end of Session 30 / overnight continuation)
+> **❌ ARCHIVED (Decision 055):** v20b (depth=32, ml=5) — bit-identical
+> to v20. min_samples_leaf=5 is the binding constraint at depth=30;
+> capacity sweep is closed.
+
+> **❌ REJECTED (Decision 056):** Rule 5 candidates (suited-mid for
+> high_only). Both naive (msphr ≥ 9, v21) and tightened (msphr ≥ 11
+> AND msplr ≥ 9, v22) variants LOSE head-to-head against v14_combined:
+> v21 = −$680/1000h, v22 = −$473/1000h. Stop at Rule 4 for the human
+> chain.
+
+> Updated: 2026-05-04 (end of Session 31)
 
 ---
 
-## Headline state at end of Session 30
+## Headline state at end of Session 31
 
 **Strategies of record:**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
 | **v14_combined + Rule 4** | Human-memorizable rule chain (4 rules) | `STRATEGY_GUIDE.md` + `analysis/scripts/strategy_v14_combined.py` |
-| **v20_dt** | ML champion (307,939 leaves, 43 feat with gated suited) | `analysis/scripts/strategy_v20_dt.py` + `data/v20_dt_model.npz` |
-| v18e_dt / v18d / v18c / v18b / v18 / v16 | superseded baselines, retained | `data/v18*_dt_model.npz`, `data/v16_dt_model.npz` |
-| v19_dt (ungated suited) | ARCHIVED — failed prefix tripwire | `data/v19_dt_model.npz` |
-| v19_gated_dt | superseded by v20 (same idea, smaller capacity) | `data/v19_gated_dt_model.npz` |
+| **v24_dt** | ML champion (314,759 leaves, 53 feat: 37 base + 6 gated suited + 6 gated trips_pair + 4 gated composite) | `analysis/scripts/strategy_v24_dt.py` + `data/v24_dt_model.npz` |
+| v23_dt | Predecessor (49 feat); kept as a comparison baseline | `analysis/scripts/strategy_v23_dt.py` + `data/v23_dt_model.npz` |
+| v20 / v18e / v18d / v18c / v18b / v18 / v16 | Superseded baselines; retained | `data/v*_dt_model.npz` |
+| v20b (d=32) | ARCHIVED — capacity saturated, bit-identical to v20 | `data/v20b_dt_model.npz` |
+| v19, v21, v22 | ARCHIVED (v19: prefix fail; v21/v22: Rule 5 rejected) | various |
 
-**Final capacity sweep + feature engineering progression (full 6M grid, N=200):**
+**Capacity + feature progression (full 6M grid, N=200):**
 
 | Strategy | Depth | min_leaf | Features | Leaves | $/1000h | pct_opt | Δ vs prev |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -54,144 +67,113 @@
 | v18c | 26 | 20 | 37 | 124,902 | $2,172 | 45.59% | −$45 |
 | v18d | 28 | 10 | 37 | 193,365 | $2,108 | 46.45% | −$64 |
 | v18e | 30 | 5 | 37 | 274,446 | $2,066 | 47.08% | −$42 |
-| **v20** | **30** | **5** | **43 gated** | **307,939** | **$1,982** | **47.81%** | **−$84** |
+| v20 | 30 | 5 | 43 (gated suited) | 307,939 | $1,982 | 47.81% | −$84 |
+| v20b | 32 | 5 | 43 (gated suited) | 307,939 | $1,982 | 47.81% | $0 (saturated) |
+| v23 | 30 | 5 | 49 (43+6 gated TP) | 314,705 | $1,977 | 47.89% | −$5 vs v20 |
+| **v24** | **30** | **5** | **53 (49+4 gated comp)** | **314,759** | **$1,977** | **47.89%** | **−$1 vs v23 (composite −$216)** |
 
 **Same sweep on N=1000 prefix (overfitting tripwire):**
 
 | Strategy | $/1000h | pct_opt | Δ vs prev |
 |---|---:|---:|---:|
-| v16_dt | $1,607 | 50.77% | — |
-| v18_dt | $1,478 | 52.60% | −$129 |
-| v18b | $1,343 | 54.56% | −$135 |
-| v18c | $1,261 | 55.90% | −$82 |
-| v18d | $1,145 | 58.13% | −$117 |
-| v18e | $1,082 | 59.30% | −$63 |
-| **v20** | **$1,082** | **59.31%** | **$0 (tied — gating works)** |
+| v18e | $1,082 | 59.30% | — |
+| v20 | $1,082 | 59.31% | $0 |
+| v20b | $1,082 | 59.31% | $0 |
+| v23 | $1,073 | 59.47% | −$9 vs v20 |
+| **v24** | **$1,072** | **59.48%** | **−$1 vs v23 (composite −$201)** |
 
-**Per-category breakdown (full grid, N=200) — v20 wins on every category vs v16:**
+**Per-category breakdown (full grid, N=200) — three gating wins visible:**
 
-| Category | v16 | v18e | v20 | Δ v20 vs v16 |
-|---|---:|---:|---:|---:|
-| high_only | $3,785 | $3,307 | $2,894 | **−$891** |
-| pair | $2,127 | $1,873 | $1,873 | −$254 |
-| two_pair | $2,005 | $1,458 | $1,458 | −$547 |
-| trips | $2,347 | $1,997 | $1,997 | −$350 |
-| trips_pair | $2,438 | $1,608 | $1,608 | −$830 |
-| three_pair | $1,975 | $1,653 | $1,653 | −$322 |
-| quads | $2,233 | $724 | $724 | −$1,509 |
-| composite | $5,260 | $2,100 | $2,100 | −$3,160 |
+| Category | v18e (37 feat) | v20 (+suited) | v23 (+TP) | v24 (+comp) | Δ v24 vs v18e |
+|---|---:|---:|---:|---:|---:|
+| high_only | $3,307 | $2,894 | $2,894 | $2,894 | **−$413** (v20 win) |
+| pair | $1,873 | $1,873 | $1,873 | $1,873 | $0 |
+| two_pair | $1,458 | $1,458 | $1,458 | $1,458 | $0 |
+| trips | $1,997 | $1,997 | $1,997 | $1,997 | $0 |
+| trips_pair | $1,608 | $1,608 | $1,447 | $1,447 | **−$161** (v23 win) |
+| three_pair | $1,653 | $1,653 | $1,654 | $1,654 | +$1 (noise) |
+| quads | $724 | $724 | $724 | $723 | −$1 (noise) |
+| composite | $2,100 | $2,100 | $2,080 | $1,864 | **−$236** (v24 win + small carryover) |
 
-The high_only category alone gained another **−$413** going from v18e → v20 — that's purely from the gated suited features. Every other category is unchanged because the gating ensures the new features fire on zero hands in those populations.
+**The gating template is proven across 3 categories.** Each champion
+upgrade lifts ONLY its targeted category and keeps everything else
+bit-identical (or within N=200 noise). This is the cleanest possible
+controlled-experiment shape for a feature-engineering change.
 
 ---
 
 ## What this leaves on the table
 
-- v20 captures **35% of the v14→ceiling gap** at N=200 fidelity ($1,051/$3,033 vs v14)
-- v20 captures **62% of the v14→ceiling gap** at N=1000 fidelity ($955/$2,037)
-- Remaining gap to ceiling: **$1,982/1000h (full grid N=200)**, **$1,082/1000h (prefix N=1000)**
-- Biggest residual at full grid: still high_only ($2,894 × 20.4% share = $590 of v20's $1,982 = 30%)
-- Biggest residual at prefix: composite ($1,812 × 1.0% share — small population, but every hand bleeds ~$2K)
-- trips_pair is still ~$1,600/1000h on prefix (8.7% of bleed) — candidate for a gated trips_pair_aug
+- v24 captures **35% of the v14→ceiling gap** at N=200 fidelity ($1,056/$3,033 vs v14)
+- v24 captures **62% of the v14→ceiling gap** at N=1000 fidelity ($965/$2,037)
+- Remaining gap to ceiling: **$1,977/1000h (full grid N=200)**, **$1,072/1000h (prefix N=1000)**
+- Biggest residuals at full grid (per-category × share):
+  - **pair**: 46.6% × $1,873 = **$873 share** — single biggest untapped lever
+  - **high_only**: 20.4% × $2,894 = **$590 share** — partly addressed; round 2 candidate
+  - **two_pair**: 22.3% × $1,458 = **$325 share** — biggest fully-untouched category
+  - trips: 5.5% × $1,997 = $110, three_pair: 1.9% × $1,654 = $32
+  - trips_pair: 2.86% × $1,447 = $41 (already gated)
+  - composite: 0.245% × $1,864 = $4.6 (already gated)
+- Per-category prioritization: pair > high_only_round2 > two_pair > trips > three_pair
 
 ---
 
-## What Session 30 produced (overnight continuation of Session 29)
+## What Session 31 produced
 
-### Capacity sweep continuation (v18d, v18e)
+### Session 31 was an "all 4 targets" sprint
 
-Built on Session 29's v18b/v18c sweep with two more steps:
+User requested all four queued items get done: (A) distill v20, (B) new
+gated aug families, (C) composite deep-dive, (D) v20b capacity step.
+All four executed. Outcomes:
 
-| Variant | Depth | min_leaf | Leaves | Full $/1000h | Prefix $/1000h |
-|---|---:|---:|---:|---:|---:|
-| v18d | 28 | 10 | 193,365 | $2,108 | $1,145 |
-| v18e | 30 | 5 | 274,446 | $2,066 | $1,082 |
+- **(A) distill v20** → produced detailed split breakdown
+  (`data/distill_v20_dt.log`). Top splits all standard features
+  (n_broadway, third_rank, pair_high_rank). The 6 gated suited features
+  cluster around msphr thresholds 5.5–8.5, mostly in deep subtrees.
+  Distillation surfaced **2 candidate Rule 5 variants** (loose msphr ≥ 9
+  and tight msphr ≥ 11 AND msplr ≥ 9), both **REJECTED** in head-to-head
+  vs v14 (Decision 056).
 
-Marginal returns are diminishing but still positive on both grids.
-v18d's prefix gain (+$117) was actually LARGER than v18c's (+$82) —
-the curve hasn't strictly plateaued.
+- **(B) new gated aug families** → built two:
+  - **trips_pair_aug_gated** (6 features): SHIPPED as v23 (Decision 057,
+    +$5/1000h full, +$9/1000h prefix; trips_pair −$161 on category).
+  - **composite_aug_gated** (4 features): SHIPPED as v24 (Decision 058,
+    +$1/1000h full, +$1/1000h prefix; composite −$216 on category).
 
-### Gated suited-broadway features → v19_gated → v20
+- **(C) composite_v20_residual diagnostic** → identified 4 clean
+  archetypes (trips_two_pair, two_trips, quads_pair, quads_trip) with
+  the pattern: v20 frequently SPLITS the dominant trips/quads instead of
+  keeping them together on bot. Informed the design of v24's 4
+  composite-gated features.
 
-Diagnosed the Session 29 v19 failure: the 6 suited features fired
-across all categories, and the DT used them to fit N=200 noise on the
-pair category, causing prefix regression.
+- **(D) v20b at depth=32** → bit-identical to v20 (same 307,939 leaves).
+  ARCHIVED. Capacity sweep is closed; min_samples_leaf=5 is the binding
+  constraint.
 
-**Fix:** gate the features to high_only only.
-Built `analysis/scripts/suited_aug_features_gated.py` returning
-zeros for any hand with `n_pairs/n_trips/n_quads ≥ 1`.
-Persisted to `data/feature_table_suited_aug_gated.parquet` (20 MB).
+### Methodology lessons (Session 31)
 
-**v19_gated** (depth=28, ml=10, 215K leaves, gated features):
-- Full grid: +$73 vs v18d (high_only category drops $356)
-- Prefix: TIED with v18d ($0 change — gated features fire on zero
-  prefix hands by design).
+1. **The gating template generalizes across 3 categories now.** v20
+   (high_only), v23 (trips_pair), v24 (composite). Future aug families
+   should follow the same shape: 4-6 archetype-specific features, zero
+   for off-archetype hands, persisted by canonical_id, trained on top of
+   the current champion.
 
-**v20** (depth=30, ml=5, 308K leaves, gated features — combines v18e
-capacity with gating):
-- Full grid: +$84 vs v18e (high_only category drops $413)
-- Prefix: TIED with v18e ($0 change)
-- Strictly dominates v18e. **Shipped as the new ML champion.**
+2. **Distilled rules need head-to-head validation BEFORE shipping.**
+   Both Rule 5 variants looked good in distillation but lost to
+   v14_combined by hundreds of $/1000h. The DT's gated routing is too
+   selective for any single AND-rule to replicate. Naive rule extraction
+   is ~8× over-eager.
 
-The gating pattern is now the template for all future aug families:
-fire ONLY in the targeted category, leave other categories unchanged,
-prefix tripwire passes trivially.
+3. **Capacity sweeps have a floor.** min_samples_leaf=5 caps depth-30
+   leaves at 307,939 (v20). Going to depth=32 changes nothing. Future
+   gains are feature-engineering, not capacity.
 
-### What was built
+4. **Diminishing returns on small categories.** v24 added composite
+   gating for a ~$0.5/1000h overall lift. Quads (0.24% × $724 = $1.7
+   share) is below the noise floor and not worth gating. Future work
+   should focus on LARGE categories: pair, high_only round 2, two_pair.
 
-**Aug features (gated):**
-- `analysis/scripts/suited_aug_features_gated.py` — 6 features computed
-  only for high_only hands, zeros otherwise
-- `analysis/scripts/persist_suited_aug_gated.py` — writes parquet
-  (`data/feature_table_suited_aug_gated.parquet`, 20 MB, 23 sec)
-
-**Strategies:**
-- `analysis/scripts/strategy_v19_gated_dt.py` — generic gated-suited
-  inference (loads MODEL_PATH default, can be overridden)
-- `analysis/scripts/strategy_v20_dt.py` — clean wrapper around the v20
-  champion model
-- `analysis/scripts/train_v19_gated_dt.py` — trainer for any gated-suited
-  variant via `--max-depth` / `--min-samples-leaf` / `--output`
-
-**Graders:**
-- `analysis/scripts/grade_v18d_v18e.py` — 2-strategy capacity-step grader
-- `analysis/scripts/grade_v19_gated.py` — v18d vs v19_gated head-to-head
-- `analysis/scripts/grade_v20.py` — v18e vs v20 head-to-head
-
-**Models (gitignored):**
-- `data/v18d_dt_model.npz` (137 MB, 193,365 leaves)
-- `data/v18e_dt_model.npz` (189 MB, 274,446 leaves)
-- `data/v19_gated_dt_model.npz` (152 MB, 215,597 leaves)
-- `data/v20_dt_model.npz` (211 MB, 307,939 leaves) ← champion
-
----
-
-## Methodology lessons (Session 30)
-
-1. **Gated aug features are the template.** v19 (ungated) failed prefix
-   tripwire because cross-category leakage let the DT fit pair-category
-   N=200 noise. v19_gated (same features, zeroed for non-high_only)
-   tied prefix exactly while winning full grid. Future aug families
-   should ALL be category-gated.
-
-2. **Capacity scaling continues, with reversals.** The diminishing-
-   returns curve isn't strictly monotonic — v18d → v18c gave +$64 full
-   / +$117 prefix, BIGGER than v18c → v18b's +$45 full / +$82 prefix.
-   The curve has noise on top of the trend. Don't stop sweeping just
-   because one step looks small.
-
-3. **Prefix tripwire saved us twice this session.** v19 (ungated) and
-   v20 design both started from "more features." Without the prefix
-   check, ungated v19 would have shipped, replacing v18 with a
-   slightly-overfit model. The prefix exposed the leakage.
-
-4. **The 4 ML champions form a clean ablation:**
-   - v18e (37 features, no augs): high_only $3,307
-   - v20  (43 features, gated augs): high_only $2,894 ← SAME architecture, different features only
-   - The $413/1000h delta is purely attributable to the gated suited
-     features. This is a clean controlled experiment.
-
-5. **Cycle scoreboard since Session 25 (15 ships, 5 archives, 1 doc-only):**
+5. **Cycle scoreboard since Session 25 (17 ships, 7 archives, 1 doc-only):**
 
 | Cycle | Target | Result | Status |
 |---|---|---:|---|
@@ -199,66 +181,64 @@ prefix tripwire passes trivially.
 | v11 / v13 / v15 / v16_prefix / v17 / v19 | various | various | ARCHIVED |
 | v16 | DT 28K leaves | +$569 vs v14 | SHIPPED |
 | Rule 4 | KK/AA documentation | doc-only | SHIPPED |
-| v18 | DT d=22, ml=50 | +$158 / +$129 (full/prefix vs v16) | SHIPPED |
-| v18b | DT d=24, ml=30 | +$90 / +$135 vs v18 | SHIPPED |
-| v18c | DT d=26, ml=20 | +$45 / +$82 vs v18b | SHIPPED |
-| v18d | DT d=28, ml=10 | +$64 / +$117 vs v18c | SHIPPED |
-| v18e | DT d=30, ml=5 | +$42 / +$63 vs v18d | SHIPPED |
+| v18 / v18b / v18c / v18d / v18e | DT capacity sweep | various | SHIPPED |
 | v19_gated | gated suited (d=28,ml=10) | +$73 / $0 vs v18d | SUPERSEDED |
-| **v20** | **v18e capacity + gated suited** | **+$84 / $0 vs v18e** | **SHIPPED — current champion** |
+| v20 | v18e capacity + gated suited | +$84 / $0 vs v18e | SHIPPED |
+| v20b | DT d=32, ml=5 | $0 / $0 (saturated) | ARCHIVED |
+| v21 / v22 | Rule 5 attempts | −$680 / −$473 vs v14 | ARCHIVED |
+| v23 | gated trips_pair on v20 | +$5 / +$9 vs v20 | SHIPPED |
+| **v24** | **gated composite on v23** | **+$1 / +$1 vs v23** | **SHIPPED — current champion** |
 
 ---
 
-## Resume Prompt (Session 31)
+## Resume Prompt (Session 32)
 
 ```
-Resume Session 31 of the Taiwanese Poker Solver project at
+Resume Session 32 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context:
 - CLAUDE.md
-- STRATEGY_GUIDE.md (Rule 4 + Distillation insights)
-- CURRENT_PHASE.md (rewritten end of Session 30)
-- DECISIONS_LOG.md (latest: Decisions 053 / 054)
-- analysis/scripts/strategy_v20_dt.py — current ML champion
-- analysis/scripts/suited_aug_features_gated.py — gated features template
+- STRATEGY_GUIDE.md (Rule 5 archived, v24 champion section)
+- CURRENT_PHASE.md (rewritten end of Session 31)
+- DECISIONS_LOG.md (latest: Decisions 055 / 056 / 057 / 058)
+- analysis/scripts/strategy_v24_dt.py — current ML champion
+- analysis/scripts/composite_aug_features_gated.py — gated template
+  (third instance after suited and trips_pair)
 
-State (end of Session 30):
-- v20_dt is the new ML champion: $1,982/1000h on full grid (47.81% opt),
-  $1,082/1000h on prefix N=1000 (59.31% opt). 307,939 leaves, depth=30,
-  min_samples_leaf=5, 43 features (37 base + 6 GATED suited-broadway).
-- The gated-features pattern is now the template for new aug families:
-  fire only in targeted category (zeros elsewhere), prefix tripwire
-  passes trivially since features fire on zero non-targeted hands.
-- Capacity sweep continues paying with diminishing returns; v18e at
-  depth=30 / ml=5 was the last 37-feature step before v20's gating
-  added another +$84.
+State (end of Session 31):
+- v24_dt is the new ML champion: $1,977/1000h on full grid (47.89% opt),
+  $1,072/1000h on prefix N=1000 (59.48% opt). 314,759 leaves, depth=30,
+  min_samples_leaf=5, 53 features (37 base + 6 gated suited + 6 gated
+  trips_pair + 4 gated composite).
+- The gating template is now PROVEN across 3 categories
+  (high_only/v20, trips_pair/v23, composite/v24). Future aug families
+  should follow same shape.
+- Capacity sweep CLOSED — min_samples_leaf=5 saturates at depth=30.
+- Rule 5 (suited-mid for high_only) REJECTED in both variants.
+  STRATEGY_GUIDE.md "Rule 5 candidate" section now reads "REJECTED".
 
-Next session targets:
+Next session targets (priority order by absolute share):
 
-(A) **Distill v20.** Run `distill_v16_dt.py` against v20_dt_model.npz
-    (small change to make MODEL_PATH a CLI arg). Find what splits
-    v20's bigger tree added beyond v18e — especially what the gated
-    suited features partition. May surface a Rule 5 candidate for
-    STRATEGY_GUIDE.md.
+(A) **Pair category audit.** Pair = $873/1000h share — single biggest
+    residual. Already has 3 ungated aug features
+    (`default_bot_is_ds`, `n_top_choices_yielding_ds_bot`,
+    `pair_to_bot_alt_is_ds`). Diagnostic question: are they
+    cross-category leakage (the v19 lesson in reverse) or genuine
+    help? If leakage, replace with proper `pair_aug_gated`. If
+    genuine, design a 6-feature gated extension.
 
-(B) **More gated aug families.** Apply the gated template to new
-    categories. Candidates:
-    - `trips_pair_aug_gated`: 3-5 features for trips_pair routing
-      (trips-rank, pair-rank, kicker-suit). Trips_pair is $1,608
-      v20 / $1,835 prefix — still a big residual.
-    - `composite_aug_gated`: 3-5 features for the composite category
-      (which includes 2-trips, quads+pair, two-trips, trips+two-pair).
-      Composite is $2,100 v20 — biggest per-hand bleed.
+(B) **two_pair_aug_gated.** Biggest fully-untouched category at
+    $325/1000h share. Existing `feature_table_two_pair_aug.parquet`
+    (Session 19) is UNGATED. Audit and rebuild as
+    `two_pair_aug_gated`. Likely 6 features for "which pair goes
+    top", "singleton position", "DS-bot reachability" routing
+    decisions. Train v25.
 
-(C) **Composite deep-dive.** Build `composite_v20_residual.py`
-    mirroring `high_only_v16_residual.py`. Find worst clusters.
-    Composite is rare hands (14k of 6M) — there may be a clean
-    per-archetype rule.
-
-(D) **One more capacity step.** Try v20b at depth=32, ml=5 with the
-    gated features. The curve hasn't strictly plateaued; might
-    extract +$30-50.
+(C) **High_only round 2.** $590/1000h share, third lever. v20→v24
+    didn't add anything for high_only beyond Session 30. Distill v24
+    on high_only specifically; candidate additional gated features:
+    `connectivity_high_g`, `n_broadway_in_2nd_suit_g`. Train v26.
 
 REMINDERS:
 - Auto mode is on; minimize interruptions.
@@ -268,9 +248,10 @@ REMINDERS:
 - For long Python scripts that pipe output: use python3 -u or
   PYTHONUNBUFFERED=1.
 - Validate ML candidates on BOTH full grid (N=200) AND prefix (N=1000).
-- ALL new aug feature families MUST be category-gated. Cross-category
-  features have proven to overfit (Session 29 v19 lesson).
+- ALL new aug feature families MUST be category-gated. Gating template
+  is now proven 3× and is the default.
 - Cached parquets cut training cycles to ~5 min.
+- Capacity sweep is closed — don't burn cycles increasing depth/ml.
 ```
 
 ---

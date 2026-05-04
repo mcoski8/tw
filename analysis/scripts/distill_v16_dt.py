@@ -1,12 +1,18 @@
 """
-Session 28 — distill_v16_dt: rank the highest-impact splits in v16's
-28,790-leaf DecisionTreeRegressor and translate them to plain-English
-candidate rules for STRATEGY_GUIDE.md.
+Session 28 — distill_v16_dt: rank the highest-impact splits in a saved
+DecisionTreeRegressor and translate them to plain-English candidate
+rules for STRATEGY_GUIDE.md.
+
+Session 31 — generalised: takes --model CLI arg and auto-detects which
+feature parquets are needed by inspecting feature_columns saved in the
+model npz. Supports v16/v18*/v19/v19_gated/v20.
 
 Approach:
-  1. Build the 37-feature matrix X for all 6M canonical hands by joining
+  1. Build the feature matrix X for all 6M canonical hands by joining
      the cached parquet feature tables + computing 7 derived flags +
-     remapping category_id to v5/v16's alphabetical map.
+     remapping category_id to v5/v16's alphabetical map. Loads the
+     gated suited-broadway parquet only if model.feature_columns
+     contains the *_g column names.
   2. Load Y from data/oracle_grid_full_realistic_n200.bin (memmap).
   3. Walk every hand through the saved tree to record its leaf id.
   4. Aggregate per-leaf (count, sum_Y, sum_Y_sq) via np.bincount per
@@ -22,18 +28,22 @@ Approach:
      each side.
 
 Input data sources (no retrain needed):
-  - data/v16_dt_model.npz        (saved tree)
+  - data/<MODEL>.npz             (saved tree)
   - data/feature_table.parquet   (28 baseline features, 6M rows)
   - data/feature_table_aug.parquet
   - data/feature_table_high_only_aug.parquet
   - data/feature_table_two_pair_aug.parquet
-  - data/oracle_grid_full_realistic_n200.bin  (Y vectors)
+  - data/feature_table_suited_aug_gated.parquet  (v19_gated/v20 only)
+  - data/oracle_grid_full_realistic_n200.bin     (Y vectors)
 
 Run:
   PYTHONUNBUFFERED=1 python3 analysis/scripts/distill_v16_dt.py
+  PYTHONUNBUFFERED=1 python3 analysis/scripts/distill_v16_dt.py \
+      --model data/v20_dt_model.npz
 """
 from __future__ import annotations
 
+import argparse
 import sys
 import time
 from pathlib import Path
@@ -51,12 +61,22 @@ for p in (str(SRC), str(SCRIPTS)):
 
 from tw_analysis.oracle_grid import read_oracle_grid  # noqa: E402
 
-MODEL_PATH = ROOT / "data" / "v16_dt_model.npz"
+DEFAULT_MODEL_PATH = ROOT / "data" / "v16_dt_model.npz"
 GRID_PATH = ROOT / "data" / "oracle_grid_full_realistic_n200.bin"
 FT_PATH = ROOT / "data" / "feature_table.parquet"
 PA_PATH = ROOT / "data" / "feature_table_aug.parquet"
 HA_PATH = ROOT / "data" / "feature_table_high_only_aug.parquet"
 TP_PATH = ROOT / "data" / "feature_table_two_pair_aug.parquet"
+SG_PATH = ROOT / "data" / "feature_table_suited_aug_gated.parquet"
+
+GATED_SUITED_COLUMNS = (
+    "n_suited_pairs_total_g",
+    "max_suited_pair_high_rank_g",
+    "max_suited_pair_low_rank_g",
+    "has_suited_broadway_pair_g",
+    "has_suited_premium_pair_g",
+    "n_broadway_in_largest_suit_g",
+)
 
 CATS = ["high_only", "pair", "quads", "three_pair", "trips", "trips_pair", "two_pair"]
 ALPHA_MAP = {c: i for i, c in enumerate(CATS)}
@@ -79,13 +99,18 @@ def categorize_row(n_pairs: int, n_trips: int, n_quads: int) -> str:
 
 
 def build_feature_matrix(model_columns: list[str]) -> np.ndarray:
-    print(f"loading parquet feature tables ...", flush=True)
+    needs_gated = any(c in model_columns for c in GATED_SUITED_COLUMNS)
+    print(f"loading parquet feature tables (gated suited: {needs_gated}) ...", flush=True)
     t0 = time.time()
     ft = pd.read_parquet(FT_PATH)
     pa = pd.read_parquet(PA_PATH)
     ha = pd.read_parquet(HA_PATH)
     tp = pd.read_parquet(TP_PATH)
-    print(f"  ft={ft.shape}  pa={pa.shape}  ha={ha.shape}  tp={tp.shape}  ({time.time()-t0:.1f}s)", flush=True)
+    sg = pd.read_parquet(SG_PATH) if needs_gated else None
+    if sg is not None:
+        print(f"  ft={ft.shape}  pa={pa.shape}  ha={ha.shape}  tp={tp.shape}  sg={sg.shape}  ({time.time()-t0:.1f}s)", flush=True)
+    else:
+        print(f"  ft={ft.shape}  pa={pa.shape}  ha={ha.shape}  tp={tp.shape}  ({time.time()-t0:.1f}s)", flush=True)
 
     # All four are sorted by canonical_id and have the same row count, so we
     # can join by row position. Verify.
@@ -93,6 +118,8 @@ def build_feature_matrix(model_columns: list[str]) -> np.ndarray:
     assert (pa["canonical_id"].values == np.arange(len(pa))).all()
     assert (ha["canonical_id"].values == np.arange(len(ha))).all()
     assert (tp["canonical_id"].values == np.arange(len(tp))).all()
+    if sg is not None:
+        assert (sg["canonical_id"].values == np.arange(len(sg))).all()
 
     n = len(ft)
     print(f"\nbuilding 37-col X matrix for {n:,} hands ...", flush=True)
@@ -173,6 +200,9 @@ def build_feature_matrix(model_columns: list[str]) -> np.ndarray:
         "n_routings_yielding_ds_bot_tp": tp["n_routings_yielding_ds_bot_tp"].to_numpy(),
         "swap_high_pair_to_bot_ds_compatible": tp["swap_high_pair_to_bot_ds_compatible"].to_numpy(),
     }
+    if sg is not None:
+        for c in GATED_SUITED_COLUMNS:
+            column_data[c] = sg[c].to_numpy()
 
     X = np.empty((n, len(model_columns)), dtype=np.int16)
     for j, c in enumerate(model_columns):
@@ -325,12 +355,25 @@ FEATURE_DESCRIPTIONS = {
     "default_bot_is_ds_tp": "(two_pair-cat aug) v8 default-bot is DS",
     "n_routings_yielding_ds_bot_tp": "(two_pair-cat aug) # of two-pair routings yielding DS bot",
     "swap_high_pair_to_bot_ds_compatible": "(two_pair-cat aug) swapping high pair to bot is DS-compatible",
+    "n_suited_pairs_total_g":         "(high_only-gated suited) count of suited card-pairs (0 elsewhere)",
+    "max_suited_pair_high_rank_g":    "(high_only-gated suited) highest rank participating in any suited pair (0 elsewhere)",
+    "max_suited_pair_low_rank_g":     "(high_only-gated suited) max(min(suited-pair ranks)) — both cards suited AND high (0 elsewhere)",
+    "has_suited_broadway_pair_g":     "(high_only-gated suited) 1 if any suited pair has BOTH cards >= T (0 elsewhere)",
+    "has_suited_premium_pair_g":      "(high_only-gated suited) 1 if any suited pair has BOTH cards >= J (0 elsewhere)",
+    "n_broadway_in_largest_suit_g":   "(high_only-gated suited) broadway-card count in dominant suit (0 elsewhere)",
 }
 
 
 def main() -> int:
-    print(f"loading model {MODEL_PATH} ...", flush=True)
-    arr = np.load(MODEL_PATH, allow_pickle=True)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--model", type=Path, default=DEFAULT_MODEL_PATH,
+                    help="Path to saved DT model npz (default: data/v16_dt_model.npz)")
+    ap.add_argument("--top", type=int, default=30, help="Top-N splits to print")
+    args = ap.parse_args()
+
+    model_path = args.model
+    print(f"loading model {model_path} ...", flush=True)
+    arr = np.load(model_path, allow_pickle=True)
     feature_columns = [str(c) for c in arr["feature_columns"]]
     model = {
         "children_left": np.asarray(arr["children_left"], dtype=np.int32),
@@ -389,7 +432,7 @@ def main() -> int:
         reductions[node] = nN * impurity[node] - nL * impurity[L] - nR * impurity[R]
 
     # Top-K splits by reduction.
-    TOP = 30
+    TOP = int(args.top)
     order = np.argsort(-reductions)[:TOP]
     print(f"\n=== TOP {TOP} SPLITS BY MSE REDUCTION ===\n", flush=True)
     print(f"{'rank':>4}  {'node':>6}  {'feature':<35}  {'thr':>8}  {'reduce':>12}  "
@@ -428,6 +471,40 @@ def main() -> int:
         pct = 100.0 * feat_imp[idx] / feat_total if feat_total > 0 else 0
         desc = FEATURE_DESCRIPTIONS.get(feature_columns[idx], "")
         print(f"{rank:>4}  {feature_columns[idx]:<40}  {pct:>7.2f}%  {feat_imp[idx]:>14.0f}  {desc}", flush=True)
+
+    # Gated-suited splits, ordered by reduction (helps surface Rule 5
+    # candidates from v19_gated/v20). Skipped if model has no gated cols.
+    gated_idx_set = {i for i, c in enumerate(feature_columns) if c in GATED_SUITED_COLUMNS}
+    if gated_idx_set:
+        print(f"\n=== TOP GATED-SUITED SPLITS (high_only-only features) ===\n", flush=True)
+        gated_node_mask = np.zeros(n_nodes, dtype=bool)
+        for node in np.where(is_internal)[0]:
+            if int(feat[node]) in gated_idx_set:
+                gated_node_mask[node] = True
+        gated_nodes = np.where(gated_node_mask)[0]
+        if gated_nodes.size == 0:
+            print("  (no gated-suited splits in tree)", flush=True)
+        else:
+            g_order = gated_nodes[np.argsort(-reductions[gated_nodes])][:25]
+            print(f"{'rank':>4}  {'node':>6}  {'feature':<35}  {'thr':>8}  {'reduce':>12}  "
+                  f"{'n_node':>10}  {'n_left':>10}  {'n_right':>10}  {'argL':>5}  {'argR':>5}  {'mEV_L':>7}  {'mEV_R':>7}",
+                  flush=True)
+            print("-" * 165, flush=True)
+            for rank, node in enumerate(g_order, 1):
+                f_idx = feat[node]
+                f_name = feature_columns[f_idx]
+                L = cl[node]
+                R = cr[node]
+                meanL = (sumY[L] / count[L]) if count[L] > 0 else np.zeros(105)
+                meanR = (sumY[R] / count[R]) if count[R] > 0 else np.zeros(105)
+                argL = int(meanL.argmax())
+                argR = int(meanR.argmax())
+                mevL = float(meanL.max())
+                mevR = float(meanR.max())
+                print(f"{rank:>4}  {node:>6}  {f_name:<35}  {thr[node]:>8.2f}  {reductions[node]:>12.0f}  "
+                      f"{count[node]:>10.0f}  {count[L]:>10.0f}  {count[R]:>10.0f}  {argL:>5d}  {argR:>5d}  "
+                      f"{mevL:>+7.3f}  {mevR:>+7.3f}",
+                      flush=True)
 
     # Print depth-1, depth-2 splits — these are the most consequential
     # high-level branching decisions.

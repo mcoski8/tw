@@ -1473,3 +1473,195 @@ Notable: v18d's PREFIX gain (+$117) was BIGGER than v18c's (+$82) — the dimini
 2. **The capacity profile (depth=30, ml=5)** is what v20 inherits.
 3. **Open question for Session 31:** Try v20b at depth=32, ml=5 — might extract +$30-50.
 
+
+## Decision 055 — v20b (depth=32) ARCHIVED — capacity saturated at depth=30, ml=5 (Session 31)
+
+**Date:** 2026-05-04
+**Status:** Settled. v20b is bit-identical to v20 on both grids. The capacity sweep has terminated.
+
+**Question:** Decision 054 left depth=32 / ml=5 as an open candidate. Is there any extra $/1000h to extract by going one more depth step on the same gated-suited feature set?
+
+**Answer:** No. v20b trains to **307,939 leaves** (identical to v20) at depth=32, ml=5. min_samples_leaf=5 is the binding constraint, not depth. Both grids:
+
+| Strategy | Full $/1000h | Prefix $/1000h | Leaves |
+|---|---:|---:|---:|
+| v20 | $1,982 | $1,082 | 307,939 |
+| v20b | $1,982 | $1,082 | 307,939 |
+
+Δ = +$0 / +$0. Depth ≥ 30 is unreachable when min_samples_leaf=5 already pins every terminal node.
+
+**Files:**
+- `data/v20b_dt_model.npz` (211 MB) — kept for reproducibility but functionally redundant.
+- `analysis/scripts/grade_v20b.py`
+
+**Consequence:**
+1. **Capacity sweep is closed.** Future ML wins must come from features (gated aug families), not from deeper trees on the same feature set.
+2. **min_samples_leaf=5 is the floor.** Pushing it lower would risk overfitting.
+
+
+## Decision 056 — Rule 5 candidates ARCHIVED — both naive and tightened variants lose vs v14_combined (Session 31)
+
+**Date:** 2026-05-04
+**Status:** Settled. Rule 5 (high_only suited-mid) cannot be extracted as a hand-coded rule. The v20 DT's gated suited routing is too fine-grained for any single threshold rule to match.
+
+**Question:** v20's gated suited features capture −$413/1000h on the high_only category. Can that be turned into a human-memorizable Rule 5 ("if there's a same-suit pair with a 9+ in it, put it on mid"), or do we need a tightened variant ("J+ + 9+")?
+
+**Answer:** Both fail. The single-threshold rule fires on far more high_only hands than the population that actually benefits from suited-mid routing.
+
+| Strategy | Full $/1000h | Δ vs v14 |
+|---|---:|---:|
+| v14_combined + Rule 4 (baseline) | $3,033 | — |
+| v21 = v14 + Rule 5 (msphr ≥ 9) | $3,713 | **−$680** |
+| v22 = v14 + Rule 5 (msphr ≥ 11 AND msplr ≥ 9) | $3,506 | **−$473** |
+
+Tightening helped (−$473 vs −$680) but didn't make Rule 5 positive. Per-category damage:
+
+| Strategy | high_only | pair | two_pair | trips | trips_pair | three_pair | quads | composite |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| v14 | (~$4,082) | $2,011 | $3,371 | $4,054 | $5,417 | $4,529 | $9,670 | $10,883 |
+| v21 | $7,411 | $2,011 | $3,371 | $4,054 | $5,417 | $4,529 | $9,670 | $10,883 |
+| v22 | $6,398 | $2,011 | $3,371 | $4,054 | $5,417 | $4,529 | $9,670 | $10,883 |
+
+The damage is entirely in high_only — Rules 1/2/3/4 don't fire there, so the rule chain falls through to v8 fallback unmodified for non-high_only categories. The −$3K-$3.4K hit on high_only is from over-eager firing: the rule routes hands to suited-mid that the DT (with its 308K leaves) carves around.
+
+**Why the DT-vs-rule gap is fundamental here:** the gated suited DT splits in v20 use thresholds at multiple ranks (msphr at 5, 6, 7, 8 in different subtrees) and combine with `n_low`, `n_broadway`, and other features. A single AND-threshold rule cannot replicate this routing without firing ~8× too often on the wrong hands (the lesson the user already saved as memory).
+
+**Files:**
+- `analysis/scripts/strategy_rule5_suited_mid.py` (loose) — KEEP for reference / never use in production
+- `analysis/scripts/strategy_rule5_tight_suited_mid.py` (tight) — KEEP for reference
+- `analysis/scripts/strategy_v21_combined.py`, `strategy_v22_combined.py`
+- `analysis/scripts/grade_v21_combined.py`, `grade_v22_combined.py`
+
+**Consequence:**
+1. **STRATEGY_GUIDE.md updated:** "Candidate Rule 5" section now says **REJECTED** (both variants tested), no Rule 5 in the rule chain.
+2. **v14_combined + Rule 4 remains the human-memorizable strategy of record** at $3,033/1000h.
+3. **The DT champion is the ONLY way to capture the high_only suited routing.** Use `strategy_v23_dt` (or v24 if it ships) for production.
+4. **Methodology lesson confirmed:** Distillation of a gated DT feature into a hand-coded rule requires head-to-head validation BEFORE shipping. Naive extractions over-fire by an order of magnitude.
+
+
+## Decision 057 — v23_dt is the new ML champion (Session 31) — gated trips_pair aug family generalizes the template
+
+**Date:** 2026-05-04
+**Status:** Shipped. v23 strictly dominates v20 on both grids by adding 6 trips_pair-gated features. Confirms the gating template generalizes from high_only (v20) to other categories.
+
+**What v23 is:**
+- 49 features: 37 base + 6 suited-broadway-gated (Session 30) + **6 trips_pair-gated (new)**.
+- Training profile inherits from v20: depth=30, min_samples_leaf=5, random_state=42.
+- 314,705 leaves (vs v20's 307,939) — +6,766 leaves carve trips_pair more finely.
+- Model file: `data/v23_dt_model.npz` (215 MB).
+
+**The 6 trips_pair-gated features** (`analysis/scripts/trips_pair_aug_features_gated.py`):
+
+| Feature | Domain | What it encodes |
+|---|---|---|
+| `tp_trip_rank_g` | 0..14 | rank of the trip; 0 if not trips_pair |
+| `tp_pair_rank_g` | 0..14 | rank of the pair |
+| `tp_high_singleton_rank_g` | 0..14 | higher of the 2 singleton ranks |
+| `tp_low_singleton_rank_g` | 0..14 | lower of the 2 singleton ranks (NEW info — baseline only carries `top_rank`) |
+| `tp_singletons_suited_g` | 0/1 | 1 if both singletons share a suit |
+| `tp_pair_routing_is_ds_g` | 0/1 | 1 if singleton suits fill out the pair's two suits → pair-on-bot routing yields DS |
+
+All zero for any hand that is not trips_pair (n_trips==1 AND n_pairs==1 AND n_quads==0). 171,600 of 6,009,159 canonical hands fire the gate (2.86%).
+
+**Validation results:**
+
+| Grid | v20 $/1000h | v23 $/1000h | Δ |
+|---|---:|---:|---:|
+| Full (N=200, 6.0M hands) | $1,982 | **$1,977** | **−$5** |
+| Prefix (N=1000, 500K hands) | $1,082 | **$1,073** | **−$9** |
+
+The −$5 / −$9 gain is small because trips_pair is only 2.86% of the canonical full grid (8% of prefix). Per-category:
+
+| Category | v20 full | v23 full | Δ |
+|---|---:|---:|---:|
+| high_only | $2,894 | $2,894 | $0 |
+| pair | $1,873 | $1,873 | $0 |
+| two_pair | $1,458 | $1,458 | $0 |
+| trips | $1,997 | $1,997 | $0 |
+| **trips_pair** | **$1,608** | **$1,447** | **−$161** |
+| three_pair | $1,653 | $1,654 | +$1 (noise) |
+| quads | $724 | $724 | $0 |
+| composite | $2,100 | $2,080 | −$20 |
+
+**The gating works perfectly:** every non-trips_pair category is bit-identical (or within N=200 noise). The −$161 on trips_pair is a clean controlled-experiment attribution to the 6 new gated features.
+
+**Top feature importance** (v23 trainer): tp_low_singleton_rank_g made top-20 (0.20%), confirming the DT uses the new-info column most. The other tp_* features rank between 22 and 30.
+
+**Files:**
+- `analysis/scripts/trips_pair_aug_features_gated.py` — feature computation
+- `analysis/scripts/persist_trips_pair_aug_gated.py` — writes parquet
+- `data/feature_table_trips_pair_aug_gated.parquet` (20 MB)
+- `analysis/scripts/train_v23_dt.py` — trainer (49 features)
+- `analysis/scripts/strategy_v23_dt.py` — inference wrapper
+- `analysis/scripts/grade_v23.py` — head-to-head grader
+- `data/v23_dt_model.npz` (215 MB)
+
+**Consequence:**
+1. **v23 is the new ML champion.** Use `strategy_v23_dt(hand_bytes) -> setting_index`. (Or v24 if Decision 058 ships.)
+2. **The gating template generalizes.** Confirmed: a category-gated aug feature family lifts ONLY its targeted category and ties everywhere else (including prefix tripwire).
+3. **Future aug families should follow the same shape:** ~4-6 archetype-specific features, computed only when n_pairs/n_trips/n_quads gates fire, zeros otherwise, parquet'd by canonical_id, trained on top of the current champion.
+4. **Open question answered (Decision 058):** v24 (composite-gated) DOES ship on top of v23 — third category gated cleanly.
+
+
+## Decision 058 — v24_dt is the new ML champion (Session 31) — composite-gated aug family is the third gating success
+
+**Date:** 2026-05-04
+**Status:** Shipped. v24 wins on both grids by adding 4 composite-gated features. Third clean instance of the gating template (after high_only via v20 and trips_pair via v23). Headline gain is tiny because composite is 0.245% of population, but the per-category effect is unambiguous: composite drops $216/1000h and every other category is bit-identical or within N=200 noise.
+
+**What v24 is:**
+- 53 features: 49 v23 features + **4 composite-gated (new)**.
+- Same training profile: depth=30, ml=5, random_state=42.
+- 314,759 leaves (vs v23's 314,705) — only +54 leaves; the DT is reusing v23's structure and adding a few composite-specific splits.
+- Model file: `data/v24_dt_model.npz` (215 MB).
+
+**The 4 composite-gated features** (`analysis/scripts/composite_aug_features_gated.py`):
+
+| Feature | Domain | What it encodes |
+|---|---|---|
+| `comp_archetype_g` | 0..4 | 0=non-composite, 1=trips_two_pair, 2=two_trips, 3=quads_pair, 4=quads_trip |
+| `comp_lower_trip_rank_g` | 0..14 | Lower trip rank (only meaningful in two_trips); 0 elsewhere. **NEW info — baseline `trips_rank` only carries the higher one.** |
+| `comp_singleton_rank_g` | 0..14 | Rank of the lone singleton in two_trips or quads_pair; 0 if no singleton or non-composite |
+| `comp_higher_pair_rank_g` | 0..14 | Higher pair rank in trips_two_pair (mirror of pair_high_rank but zeroed off-archetype to avoid leakage) |
+
+All zero for any non-composite hand. 14,742 of 6,009,159 canonical hands fire the gate (0.245%).
+
+**Validation results:**
+
+| Grid | v23 $/1000h | v24 $/1000h | Δ |
+|---|---:|---:|---:|
+| Full (N=200, 6.0M hands) | $1,977 | $1,977 | +$1 (effectively tied at headline; composite improves) |
+| Prefix (N=1000, 500K hands) | $1,073 | $1,072 | +$1 |
+
+Per-category at full grid:
+
+| Category | v23 | v24 | Δ |
+|---|---:|---:|---:|
+| high_only | $2,894 | $2,894 | $0 |
+| pair | $1,873 | $1,873 | $0 |
+| two_pair | $1,458 | $1,458 | $0 |
+| trips | $1,997 | $1,997 | $0 |
+| trips_pair | $1,447 | $1,447 | $0 |
+| three_pair | $1,654 | $1,654 | $0 |
+| quads | $724 | $723 | −$1 (noise) |
+| **composite** | **$2,080** | **$1,864** | **−$216** |
+
+The −$216 composite improvement is real (prefix saw the same: composite $1,811 → $1,610, −$201). The 0.245% population share means the overall delta is ~$0.5/1000h — the +$1 headline is largely noise on top of a real micro-effect.
+
+**Diagnostic provenance:** `composite_v20_residual.py` (Session 31, run earlier in this session) found 4 archetype clusters where v20 frequently SPLITS the dominant trips/quads instead of keeping them together on bot. v24's gated features expose the archetype + the unique-info "lower_trip_rank" signal so the DT can learn the per-archetype routing.
+
+**Files:**
+- `analysis/scripts/composite_aug_features_gated.py` — feature computation
+- `analysis/scripts/persist_composite_aug_gated.py` — writes parquet
+- `data/feature_table_composite_aug_gated.parquet` (19 MB)
+- `analysis/scripts/train_v24_dt.py` — trainer (53 features, builds on train_v23)
+- `analysis/scripts/strategy_v24_dt.py` — inference wrapper
+- `analysis/scripts/grade_v24.py` — head-to-head grader
+- `analysis/scripts/composite_v20_residual.py` — provenance diagnostic
+- `data/v24_dt_model.npz` (215 MB)
+
+**Consequence:**
+1. **v24 is the new ML champion.** Use `strategy_v24_dt(hand_bytes) -> setting_index`. Marginal but technically positive on both grids.
+2. **Three categories gated cleanly:** high_only (v20), trips_pair (v23), composite (v24). The template is now proven across hand-count and archetype dimensions.
+3. **Diminishing-returns warning:** v24's headline gain is at the noise floor. Future small categories (quads at 0.24% × $724 = $1.7 share) are not worth gating. The remaining levers are the LARGE categories: pair ($873 share), high_only ($590 share), two_pair ($325 share).
+4. **Open question for Session 32:** the gating template's natural next target is `two_pair_aug_gated` (~$325/1000h share, biggest untouched category). See CURRENT_PHASE.md "Next Session Targets" for a sketch.
+

@@ -209,25 +209,37 @@ Every model trained, side-by-side, on both validation grids:
 | v18d | S30 | 28 | 10 | 37 | 193,365 | $2,108 | $1,145 | superseded |
 | v18e | S30 | 30 | 5 | 37 | 274,446 | $2,066 | $1,082 | superseded |
 | v19_gated | S30 | 28 | 10 | 43 gated | 215,597 | $2,036 | $1,145 | superseded |
-| **v20** | **S30** | **30** | **5** | **43 gated** | **307,939** | **$1,982** | **$1,082** | **CURRENT CHAMPION** |
+| v20 | S30 | 30 | 5 | 43 gated | 307,939 | $1,982 | $1,082 | superseded by v23 |
+| v20b | S31 | 32 | 5 | 43 gated | 307,939 | $1,982 | $1,082 | ARCHIVED (capacity saturated) |
+| v21 / v22 | S31 | n/a | n/a | n/a | n/a | $3,713 / $3,506 | n/a | ARCHIVED (Rule 5 attempts vs v14) |
+| v23 | S31 | 30 | 5 | 49 (43+6 trips_pair) | 314,705 | $1,977 | $1,073 | superseded by v24 |
+| **v24** | **S31** | **30** | **5** | **53 (49+4 composite)** | **314,759** | **$1,977** | **$1,072** | **CURRENT CHAMPION** |
 
 **Per-category breakdown** (full grid, N=200): how each category's
-regret has dropped across the three flagship versions:
+regret has dropped across the four flagship versions:
 
-| Category | v14 | v16 | v18e | v20 | Δ v20 vs v14 |
-|---|---:|---:|---:|---:|---:|
-| high_only | $4,082 | $3,785 | $3,307 | $2,894 | −$1,188 |
-| pair | $2,011 | $2,127 | $1,873 | $1,873 | −$138 |
-| two_pair | $3,371 | $2,005 | $1,458 | $1,458 | −$1,913 |
-| trips | $4,054 | $2,347 | $1,997 | $1,997 | −$2,057 |
-| trips_pair | $5,417 | $2,438 | $1,608 | $1,608 | −$3,809 |
-| three_pair | $4,529 | $1,975 | $1,653 | $1,653 | −$2,876 |
-| quads | $9,670 | $2,233 | $724 | $724 | −$8,946 |
-| composite | $10,883 | $5,260 | $2,100 | $2,100 | −$8,783 |
+| Category | v14 | v16 | v18e | v20 | v23 | v24 | Δ v24 vs v14 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| high_only | $4,082 | $3,785 | $3,307 | $2,894 | $2,894 | $2,894 | −$1,188 |
+| pair | $2,011 | $2,127 | $1,873 | $1,873 | $1,873 | $1,873 | −$138 |
+| two_pair | $3,371 | $2,005 | $1,458 | $1,458 | $1,458 | $1,458 | −$1,913 |
+| trips | $4,054 | $2,347 | $1,997 | $1,997 | $1,997 | $1,997 | −$2,057 |
+| trips_pair | $5,417 | $2,438 | $1,608 | $1,608 | $1,447 | $1,447 | −$3,970 |
+| three_pair | $4,529 | $1,975 | $1,653 | $1,653 | $1,654 | $1,654 | −$2,875 |
+| quads | $9,670 | $2,233 | $724 | $724 | $724 | $723 | −$8,947 |
+| composite | $10,883 | $5,260 | $2,100 | $2,100 | $2,080 | $1,864 | −$9,019 |
 
-The v20 jump is concentrated in high_only (−$413 vs v18e); other
-categories inherit v18e's numbers because gating zeroes the new
-features for them.
+Three category-gated wins are now visible across the v18e → v24
+progression:
+- **v20 → high_only:** −$413 vs v18e (6 gated suited features).
+- **v23 → trips_pair:** −$161 vs v20 (6 gated trips_pair features).
+- **v24 → composite:** −$216 vs v23 (4 gated composite features).
+
+Each upgrade lifted ONLY its targeted category and kept every other
+category bit-identical (or within N=200 noise) — the cleanest possible
+controlled-experiment shape for feature engineering. Every change also
+trivially passes the prefix N=1000 tripwire because the new features
+fire on zero off-archetype hands by design.
 
 ---
 
@@ -292,18 +304,30 @@ and v20 is $2,100). v20 has not been formally distilled yet — Session
 
 | Hand type | Frequency | v14 $/1000h | v20 $/1000h | Status |
 |---|---:|---:|---:|---|
-| high_only | 20.4% | $4,082 | $2,894 | Largest absolute residual; gated suited features helped (Session 30) but a candidate **Rule 5** (suited middle for high_only) hasn't been codified yet. |
+| high_only | 20.4% | $4,082 | $2,894 | Largest absolute residual; gated suited features helped (Session 30). A naive **Rule 5** (suited middle for high_only) was tested both ways in Session 31 and **REJECTED** — see below. |
 | trips (no pair) | 5.5% | $4,054 | $1,997 | No human rule yet. Multi-archetype. |
+| trips_pair | 2.9% | $5,417 | $1,447 (v23) | v23 (Session 31) added 6 trips_pair-gated features; −$161/1000h on the category. No hand-coded rule extracted; the DT routing is multi-axis. |
 | three_pair | 1.9% | $4,529 | $1,653 | No human rule yet. |
 | quads | 0.2% | $9,670 | $724 | v20 captures heavily but no human rule. |
-| composite | 0.2% | $10,883 | $2,100 | Biggest per-hand bleed in v20. Candidate for a `composite_aug_gated` family in Session 31. |
+| composite | 0.2% | $10,883 | $2,080 (v23) | v24 (Session 31) added 4 composite-gated features for archetype-specific routing; small absolute lever (~$5/1000h max overall) but composite is the largest per-hand bleed. |
 
-**Candidate Rule 5 (not yet codified):** for no-pair high_only hands,
-when there exists a same-suit pair of cards both ranked T+, prefer
-routing them together to mid. The v20 DT has clearly learned this
-pattern (the gated `max_suited_pair_high_rank_g` feature is in v20's
-top-15 importance) but extracting it as a plain-English rule requires
-Session 31's distillation of the v20 tree.
+**Rule 5 candidates — REJECTED (Session 31):** Two attempts to extract a
+suited-mid rule from v20's gated features both lost head-to-head against
+v14_combined:
+
+| Strategy | Full $/1000h | Δ vs v14 |
+|---|---:|---:|
+| v14_combined + Rule 4 | $3,033 | — |
+| v21 = v14 + Rule 5 (msphr ≥ 9, "any high suited pair") | $3,713 | −$680 |
+| v22 = v14 + Rule 5 (msphr ≥ 11 AND msplr ≥ 9, tightened) | $3,506 | −$473 |
+
+Both variants fire on far more high_only hands than the population that
+actually benefits from suited-mid routing (the rule is ~8× over-eager
+relative to the DT's selective routing). The DT's gated splits use 4+
+distinct rank thresholds combined with `n_low` / `n_broadway` that no
+single AND-rule can replicate. **For the human strategy: stop at Rule 4.
+For computational play: use the DT champion (v23 or v24).** See
+Decision 056 in DECISIONS_LOG.md.
 
 **v17 hybrid attempt (rules-then-DT) was archived in Session 28.**
 Hand-coded rules can be inferior to the DT in their own categories.
@@ -325,7 +349,9 @@ guide can keep them as human-memorizable approximations.
 - Combined chain → `analysis/scripts/strategy_v14_combined.py`
 
 **ML champion + baselines (newest first):**
-- v20 (current) → `analysis/scripts/strategy_v20_dt.py` + `data/v20_dt_model.npz` (308K leaves)
+- v24 (current) → `analysis/scripts/strategy_v24_dt.py` + `data/v24_dt_model.npz` (315K leaves, 53 features)
+- v23 → `analysis/scripts/strategy_v23_dt.py` + `data/v23_dt_model.npz` (315K leaves, 49 features)
+- v20 → `analysis/scripts/strategy_v20_dt.py` + `data/v20_dt_model.npz` (308K leaves)
 - v18e → `data/v18e_dt_model.npz` (274K leaves)
 - v18d → `data/v18d_dt_model.npz` (193K leaves)
 - v18c → `analysis/scripts/strategy_v18c_dt.py` + `data/v18c_dt_model.npz` (125K leaves)
@@ -333,6 +359,8 @@ guide can keep them as human-memorizable approximations.
 - v16 → `analysis/scripts/strategy_v16_dt.py` + `data/v16_dt_model.npz` (29K leaves)
 
 **Trainers:**
+- v24 trainer (53 features incl. all 3 gated families) → `analysis/scripts/train_v24_dt.py`
+- v23 trainer (49 features incl. gated suited + gated trips_pair) → `analysis/scripts/train_v23_dt.py`
 - v18 capacity trainer (37 features) → `analysis/scripts/train_v18_dt.py`
 - v19_gated trainer (43 features incl. gated suited) → `analysis/scripts/train_v19_gated_dt.py`
 - v16 trainer (legacy, recomputes features) → `analysis/scripts/train_v16_regression.py`
@@ -340,6 +368,10 @@ guide can keep them as human-memorizable approximations.
 **Aug feature compute:**
 - Gated suited (high_only) → `analysis/scripts/suited_aug_features_gated.py`
 - Gated suited persist → `analysis/scripts/persist_suited_aug_gated.py`
+- Gated trips_pair → `analysis/scripts/trips_pair_aug_features_gated.py`
+- Gated trips_pair persist → `analysis/scripts/persist_trips_pair_aug_gated.py`
+- Gated composite → `analysis/scripts/composite_aug_features_gated.py`
+- Gated composite persist → `analysis/scripts/persist_composite_aug_gated.py`
 
 **Analysis:**
 - v16 distillation → `analysis/scripts/distill_v16_dt.py`
@@ -366,19 +398,21 @@ print(result.summary())
 
 # Part 6 — THE CURRENT STANDARD
 
-> Everything below this line is the active rule set as of Session 30.
+> Everything below this line is the active rule set as of Session 31.
 > If you only read one section, read this one.
 >
 > **Human-memorizable strategy of record: v14_combined + Rule 4.**
 > Four numbered rules plus a default play. Edge over v8_hybrid baseline:
 > **+$1,014/1000h** at $10/EV-pt (measured on the N=1000 prefix).
+> A naive Rule 5 (suited-mid for high_only) was tested in Session 31
+> in two flavors and **REJECTED** — see Part 4 + Decision 056.
 >
-> **ML champion (not human-memorizable): v20_dt** — 307,939-leaf
-> DecisionTreeRegressor (depth=30, min_samples_leaf=5), 43 features
-> including 6 gated suited-broadway features for high_only. Beats v14
-> by **+$1,051/1000h** on the full grid and **+$955/1000h** on the
-> prefix N=1000. Lives at `analysis/scripts/strategy_v20_dt.py` +
-> `data/v20_dt_model.npz`.
+> **ML champion (not human-memorizable): v24_dt** — 314,759-leaf
+> DecisionTreeRegressor (depth=30, min_samples_leaf=5), 53 features
+> including 6 gated suited-broadway (high_only), 6 gated trips_pair, and
+> 4 gated composite features. Beats v14 by **+$1,056/1000h** on the full
+> grid and **+$965/1000h** on the prefix N=1000. Lives at
+> `analysis/scripts/strategy_v24_dt.py` + `data/v24_dt_model.npz`.
 
 ---
 
