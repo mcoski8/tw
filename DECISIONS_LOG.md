@@ -1355,3 +1355,121 @@ The pair-category regression on prefix (+$36/1000h on 215K hands) is the smoking
 
 **Methodology lesson:** The Session 28 prefix tripwire just paid off concretely. Without it, v19's positive full-grid grade would have shipped, replacing v18 with a slightly-overfit model. The tripwire saved us from a regression. Keep using it on every ML candidate.
 
+
+## Decision 053 — v20_dt is the new ML champion (Session 30 / overnight continuation)
+
+**Date:** 2026-05-04
+**Status:** Settled. v20 supersedes v18e/v18c/v18d/v18b/v18/v16. All older models retained as baselines.
+
+**Question:** Decision 052 archived v19 (ungated suited-broadway aug features) for failing the prefix tripwire on the pair category. Could the same features work if GATED to the targeted population (high_only) only?
+
+**Answer:** Yes. The gating pattern eliminates cross-category leakage and preserves the high_only signal. v20 (v18e capacity + 6 gated suited features) wins +$84/1000h on the full grid AND ties exactly on the prefix.
+
+**What got built:**
+
+1. **`analysis/scripts/suited_aug_features_gated.py`** — same 6 features as the Session 29 ungated version, but returns `(0, 0, 0, 0, 0, 0)` for any hand with `n_pairs/n_trips/n_quads ≥ 1`. Only fires on the 1.23M high_only canonical hands (20.4% of the population).
+
+2. **`analysis/scripts/persist_suited_aug_gated.py`** — writes `data/feature_table_suited_aug_gated.parquet` (20 MB, 23 sec compute). Verification: 1,226,940 rows have non-zero features (matches the high_only count exactly).
+
+3. **`analysis/scripts/train_v19_gated_dt.py`** — trainer reads 4 parquets (base + 3 augs + gated suited) and produces a 43-feature model. CLI flags for depth / min_leaf / output.
+
+4. **`analysis/scripts/strategy_v19_gated_dt.py`** — generic gated-suited inference (used by both v19_gated and v20).
+
+5. **`analysis/scripts/strategy_v20_dt.py`** — clean wrapper that loads `data/v20_dt_model.npz`.
+
+6. **`data/v20_dt_model.npz`** — 211 MB, 307,939 leaves, depth=30, min_samples_leaf=5.
+
+**Capacity sweep + feature engineering progression:**
+
+| Strategy | Depth | min_leaf | Features | Leaves | Full $/1000h | Prefix $/1000h |
+|---|---:|---:|---:|---:|---:|---:|
+| v16 | 18 | 100 | 37 | 28,790 | $2,464 | $1,607 |
+| v18 | 22 | 50 | 37 | 60,651 | $2,306 | $1,478 |
+| v18b | 24 | 30 | 37 | 96,409 | $2,217 | $1,343 |
+| v18c | 26 | 20 | 37 | 124,902 | $2,172 | $1,261 |
+| v18d | 28 | 10 | 37 | 193,365 | $2,108 | $1,145 |
+| v18e | 30 | 5 | 37 | 274,446 | $2,066 | $1,082 |
+| **v20** | **30** | **5** | **43 gated** | **307,939** | **$1,982** | **$1,082** |
+
+**Per-category v20 vs v18e (full grid, N=200):**
+
+| Category | v18e $/1000h | v20 $/1000h | Δ |
+|---|---:|---:|---:|
+| high_only | $3,307 | $2,894 | **−$413** |
+| pair | $1,873 | $1,873 | $0 (gating works) |
+| two_pair | $1,458 | $1,458 | $0 |
+| trips | $1,997 | $1,997 | $0 |
+| trips_pair | $1,608 | $1,608 | $0 |
+| three_pair | $1,653 | $1,653 | $0 |
+| quads | $724 | $724 | $0 |
+| composite | $2,100 | $2,100 | $0 |
+
+ONLY high_only changed. Every other category is bit-identical to v18e. The gating produces a clean controlled experiment: the −$413 high_only gain is purely attributable to the 6 gated suited features.
+
+**Prefix N=1000 confirmation:**
+
+| Strategy | $/1000h | Δ vs v18e |
+|---|---:|---:|
+| v18e | $1,082 | — |
+| v20 | $1,082 | $0 (tied — gating fires on zero prefix hands by design) |
+
+The prefix has no high_only canonical_ids (the prefix is the first 500K canonical IDs, which are pair / two_pair / trips / trips_pair / three_pair / quads / composite). The gated features fire on zero hands in the prefix → identical predictions to v18e. The "tie" is the BEST possible prefix outcome for a feature-engineering change in a non-prefix category.
+
+**Why this generalizes (the v19 lesson applied):**
+
+The v19 (ungated) features failed the prefix tripwire by giving the DT permission to make small spurious splits in the pair / two_pair / trips populations using cross-category aug values. v19_gated and v20 zero out those features, leaving the pair-category routing decisions identical to the corresponding base-feature-only model. The new features only inform the high_only routing, where the signal is real.
+
+**The gated pattern is the new template for aug families:**
+- Compute features only for the targeted hand category.
+- Return zeros otherwise.
+- Persist as `feature_table_<category>_aug_gated.parquet`.
+- Add to trainer's feature list.
+- Validate on prefix tripwire (should tie if the targeted category isn't in the prefix).
+
+**Consequence:**
+1. **v20_dt is the new ML champion.** Use `strategy_v20_dt(hand_bytes) -> setting_index`. Model file: `data/v20_dt_model.npz`.
+2. **STRATEGY_GUIDE.md champion pointer updated to v20.**
+3. **Future aug families MUST be category-gated** per the v19 / v20 lesson.
+4. **Open question:** Can we apply the gating pattern to other categories? Trips_pair ($1,608 v20) and composite ($2,100 v20) are the next biggest residuals. Both are good candidates for gated aug feature families in Session 31.
+
+
+## Decision 054 — Capacity sweep continuation: v18d, v18e (Session 30)
+
+**Date:** 2026-05-04
+**Status:** Settled. v18d (depth=28, ml=10) and v18e (depth=30, ml=5) both pass full-grid + prefix tripwire. Used as intermediate baselines and as the capacity profile for v20.
+
+**Question:** Decision 051 ended at v18c (depth=26, ml=20) with diminishing returns. Does the curve actually plateau, or is there more $/1000h to extract from deeper trees?
+
+**Answer:** The curve hasn't plateaued. Two more steps both pass:
+
+| Variant | Depth | min_leaf | Leaves | Full $/1000h | Prefix $/1000h | Δ Full vs prev | Δ Prefix vs prev |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| v18c | 26 | 20 | 124,902 | $2,172 | $1,261 | — | — |
+| **v18d** | **28** | **10** | **193,365** | **$2,108** | **$1,145** | **−$64** | **−$117** |
+| **v18e** | **30** | **5** | **274,446** | **$2,066** | **$1,082** | **−$42** | **−$63** |
+
+Notable: v18d's PREFIX gain (+$117) was BIGGER than v18c's (+$82) — the diminishing-returns curve isn't strictly monotonic. There's noise on top of the overall trend.
+
+**Per-category gains (full grid):**
+
+| Category | v18c | v18d | v18e |
+|---|---:|---:|---:|
+| high_only | $3,359 | $3,323 | $3,307 |
+| pair | $1,934 | $1,894 | $1,873 |
+| two_pair | $1,676 | $1,550 | $1,458 |
+| trips | $2,110 | $2,045 | $1,997 |
+| trips_pair | $1,873 | $1,754 | $1,608 |
+| three_pair | $1,706 | $1,675 | $1,653 |
+| quads | $907 | $829 | $724 |
+| composite | $3,207 | $2,680 | $2,100 |
+
+**Files:**
+- `data/v18d_dt_model.npz` (137 MB)
+- `data/v18e_dt_model.npz` (189 MB)
+- `analysis/scripts/grade_v18d_v18e.py` (capacity-step grader)
+
+**Consequence:**
+1. **v18e was briefly the ML champion** (between v18c and v20). v20 supersedes via gated suited features.
+2. **The capacity profile (depth=30, ml=5)** is what v20 inherits.
+3. **Open question for Session 31:** Try v20b at depth=32, ml=5 — might extract +$30-50.
+

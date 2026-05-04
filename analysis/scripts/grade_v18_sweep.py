@@ -68,6 +68,7 @@ def main() -> int:
         ("v18_dt (d=22, ml=50, 60K leaves)", REPO / "data" / "v18_dt_model.npz"),
         ("v18b   (d=24, ml=30, 96K leaves)", REPO / "data" / "v18b_dt_model.npz"),
         ("v18c   (d=26, ml=20, 125K leaves)", REPO / "data" / "v18c_dt_model.npz"),
+        ("v18d   (d=28, ml=10, 193K leaves)", REPO / "data" / "v18d_dt_model.npz"),
     ]:
         if not mp.exists():
             print(f"  SKIP {label}: model not found at {mp}", flush=True)
@@ -93,6 +94,9 @@ def main() -> int:
     if len(results) >= 4:
         print(f"v18c vs v18b: {results[2].mean_regret - results[3].mean_regret:+.4f}  ≈ ${(results[2].mean_regret - results[3].mean_regret) * 10 * 1000:+,.0f}/1000h")
         print(f"v18c vs v16:  {results[0].mean_regret - results[3].mean_regret:+.4f}  ≈ ${(results[0].mean_regret - results[3].mean_regret) * 10 * 1000:+,.0f}/1000h")
+    if len(results) >= 5:
+        print(f"v18d vs v18c: {results[3].mean_regret - results[4].mean_regret:+.4f}  ≈ ${(results[3].mean_regret - results[4].mean_regret) * 10 * 1000:+,.0f}/1000h")
+        print(f"v18d vs v16:  {results[0].mean_regret - results[4].mean_regret:+.4f}  ≈ ${(results[0].mean_regret - results[4].mean_regret) * 10 * 1000:+,.0f}/1000h")
     return 0
 
 

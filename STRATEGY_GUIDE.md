@@ -9,15 +9,16 @@
 > **+$1,014 per 1,000 hands** at $10/EV-pt (measured on the N=1000
 > prefix grid for tightest fidelity).
 >
-> **ML champion (not human-memorizable): v18c_dt** — a 124,902-leaf
-> DecisionTreeRegressor (depth=26, min_samples_leaf=20) trained on
-> the full 6M-hand grid. Beats v14 by **+$861/1000h** on the full
-> grid (N=200) and **+$776/1000h** on the prefix N=1000. Lives at
-> `analysis/scripts/strategy_v18c_dt.py` + `data/v18c_dt_model.npz`.
-> Supersedes v18_dt (60,651 leaves) and v16_dt (28,790 leaves), both
-> kept as baselines.
+> **ML champion (not human-memorizable): v20_dt** — a 307,939-leaf
+> DecisionTreeRegressor (depth=30, min_samples_leaf=5) trained on
+> the full 6M-hand grid with 43 features (37 base + 6 GATED
+> suited-broadway features for high_only). Beats v14 by **+$1,051/1000h**
+> on the full grid (N=200) and **+$955/1000h** on the prefix N=1000.
+> Lives at `analysis/scripts/strategy_v20_dt.py` + `data/v20_dt_model.npz`.
+> Supersedes v18e (274K leaves), v18d, v18c, v18b, v18, v16 — all
+> retained as baselines.
 >
-> Last updated: 2026-05-04 (Session 29 — v18c ships via capacity sweep; v19 archived for failing prefix tripwire).
+> Last updated: 2026-05-04 (Session 30 — v20 ships via capacity sweep + gated suited features).
 
 ---
 
@@ -318,10 +319,15 @@ human-readable rule could match.
   agree on the canonical KK and AA play; Rule 4 is documentation, not a
   separate code path.
 - Combined human-memorizable chain → `analysis/scripts/strategy_v14_combined.py`
-- ML champion (Session 29) → `analysis/scripts/strategy_v18c_dt.py` + `data/v18c_dt_model.npz` (124,902 leaves, depth=26, min_leaf=20)
-- v18 baseline (Session 28) → `analysis/scripts/strategy_v18_dt.py` + `data/v18_dt_model.npz` (60,651 leaves, depth=22, min_leaf=50)
-- v16 baseline (Session 27) → `analysis/scripts/strategy_v16_dt.py` + `data/v16_dt_model.npz` (28,790 leaves, depth=18, min_leaf=100)
-- v18 trainer (cached parquets, ~5min cycle) → `analysis/scripts/train_v18_dt.py` (use --max-depth / --min-samples-leaf / --output for sweeps)
+- ML champion (Session 30) → `analysis/scripts/strategy_v20_dt.py` + `data/v20_dt_model.npz` (307,939 leaves, depth=30, min_leaf=5, 43 features incl. 6 GATED suited)
+- v18e baseline (Session 30) → `data/v18e_dt_model.npz` (274K leaves, 37 features)
+- v18c baseline (Session 29) → `analysis/scripts/strategy_v18c_dt.py` + `data/v18c_dt_model.npz` (125K leaves)
+- v18 baseline (Session 28) → `analysis/scripts/strategy_v18_dt.py` + `data/v18_dt_model.npz` (60K leaves)
+- v16 baseline (Session 27) → `analysis/scripts/strategy_v16_dt.py` + `data/v16_dt_model.npz` (28K leaves)
+- v18 capacity trainer → `analysis/scripts/train_v18_dt.py` (37 features; --max-depth / --min-samples-leaf / --output)
+- v19_gated trainer (43 feat with gated suited) → `analysis/scripts/train_v19_gated_dt.py` (used for v19_gated AND v20)
+- Gated suited aug feature compute → `analysis/scripts/suited_aug_features_gated.py`
+- Gated suited aug parquet builder → `analysis/scripts/persist_suited_aug_gated.py`
 - v16 trainer (legacy, recomputes features) → `analysis/scripts/train_v16_regression.py`
 - v16 distillation analysis → `analysis/scripts/distill_v16_dt.py` + `analysis/scripts/high_only_v16_residual.py` (Session 28)
 - Multi-strategy sweep grader → `analysis/scripts/grade_v18_sweep.py` (Session 29)
