@@ -1929,3 +1929,84 @@ For pair_rank ≤ 5 (the lowest 4 ranks of pair), routing pair-to-bot is EV-corr
 4. **User-driven follow-up questions** — any class-vs-class comparison answers in ~10 min via `compare_setting_classes`.
 
 **Doctrine update (Session 24):** Vectorize before scaling. The Python-object reference path was useful for parity checking but unusable at full scale. For any future grid-scan harness, prefer numpy-from-bytes over object enumeration. Sanity-check vectorized output against the slow reference once, then use the fast path everywhere.
+
+## Session 25–26 — Hand-coded rule mining (covered in DECISIONS_LOG.md Decisions 045–046)
+
+Mining sprint: built `tw_analysis.grade_strategy` (4-min full-grid grader), shipped v9.1, v10, v12, v14 (cumulative +$120/1000h vs v8 at N=200, +$1,014/1000h at N=1000 prefix), archived v11/v13/v15. v14 became the human-memorizable strategy of record.
+
+## Session 27 — 2026-05-03 — DT regression v16 ships as ML champion
+
+### What got built
+
+1. **`analysis/scripts/train_v16_regression.py`** — flexible DecisionTreeRegressor trainer. Reads either the full 6M-hand grid (N=200) or the 500K-prefix (N=1000); uses the 37-feature set from `strategy_v5_dt.compute_feature_vector` (byte-identical to v7); fits multi-output regression on the per-hand 105-EV vector; saves model in v7-compatible `.npz` format. CLI: `--training-grid {full,prefix} --max-depth N --min-samples-leaf N --output PATH`.
+
+2. **`analysis/scripts/strategy_v16_dt.py`** — drop-in inference. Walks the saved DT to a leaf, returns argmax of leaf 105-vec. Same shape as `strategy_v7_regression`.
+
+3. **`analysis/scripts/grade_v16_full_grid.py`** — head-to-head grader (v8 vs v14 vs v16) on either the full or prefix grid. CLI: `--grid {full,prefix}`.
+
+4. **`analysis/scripts/grade_v16_full_trained.py`** — single-strategy grader for v16_full with custom model path (used to grade v16-full in parallel with the prefix-trained grading run, saving ~12 min wall).
+
+5. **`tournament_50k.py`** — registers v9.2/v10/v12/v14/v16_dt alongside legacy v3-v8 for side-by-side comparison.
+
+### Compute results
+
+**Two training variants, fundamentally different generalization:**
+
+| Training data | min_leaf | depth | leaves | Full-grid grade | Status |
+|---|---:|---:|---:|---:|---|
+| 500K-prefix N=1000 | 200 | 15 | 1,783 | $8,493/1000h, 16.40% opt | **ARCHIVED** (catastrophic overfit) |
+| full 6M N=200 | 100 | 18 | 28,790 | **$2,464/1000h, 42.54% opt** | **SHIPPED** (champion) |
+
+**Final standings (full 6M grid, N=200):**
+
+| Strategy | $/1000h vs ceiling | pct_optimal | Δ vs v8 | Δ vs v14 |
+|---|---:|---:|---:|---:|
+| v8_hybrid | $3,153 | 36.70% | — | — |
+| v14_combined | $3,033 | 39.61% | −$120 | — |
+| **v16_dt** | **$2,464** | **42.54%** | **−$689** | **−$569** |
+
+**N=1000 prefix grid (tighter labels):** v8 $3,051 / v14 $2,037 / **v16 $1,607** — v16 captures another $431/1000h over v14.
+
+**Per-category (full grid, N=200):** v16 wins on every category vs v14. Largest captures: quads $9,670→$2,233 (−$7,437), composite $10,883→$5,260 (−$5,623), trips_pair $5,417→$2,438 (−$2,979). The +$116 "pair regression" at N=200 was MC noise — v16 wins on pair too at N=1000 ($1,191 vs $1,229).
+
+### Verified
+
+- 141/141 Rust tests pass (engine unchanged).
+- v16 inference round-trips on 6 sample hands; setting indices in [0, 105).
+- Tournament import of all 11 strategies resolves cleanly.
+- Parity check (sklearn predict vs manual tree walk) on 50K samples: 0 disagreements.
+
+### Gotchas + lessons
+
+- **Canonical-id prefix is NOT a uniform sample.** First 500K canonical hands skew low-rank: prefix oracle mean EV = −0.667 vs full-grid mean +0.758. Models trained on the prefix learn argmax patterns wrong for high-rank hands and fail catastrophically. **Never train on a canonical-id prefix; sample uniformly at random.** (New project memory: `project_taiwanese_canonical_id_prefix_lesson.md`.)
+- **N=200 has real per-category MC noise.** v16's apparent pair-category regression vanished at N=1000. Future small-delta ship/archive decisions should always re-grade at N=1000.
+- **Multi-output DT regression scales fine on the M2 Mac mini.** 6M × 105 outputs at depth=18 fits in 172s of sklearn time. Methodology is repeatable on any future grid.
+
+### Track B (v14 deployment) outcome
+
+Done in ~2 minutes. The only "production strategy" reference for v8_hybrid was `analysis/scripts/tournament_50k.py`'s strategy list — added v9.2/v10/v12/v14/v16 as comparison entries. Trainer's `engine.py` references to `strategy_v3` are for opponent-profile MC dispatch (not user-strategy choice) — left unchanged. Decision 041 byte-sort fix verified intact.
+
+### Cycle scoreboard since Session 25
+
+8 ships, 4 archives, 0 baselines.
+
+| Cycle | Target | Result | Status |
+|---|---|---:|---|
+| v9.1 | single pair | +$24 | SHIPPED |
+| v10 | two_pair | +$81 incremental | SHIPPED |
+| v11 | high_only | −$1,745 | ARCHIVED |
+| v12 | trips_pair | +$10 incremental | SHIPPED |
+| v13 | trips | −$172 | ARCHIVED |
+| v14 | single pair refine | +$5 incremental | SHIPPED |
+| v15 | high_only DS-patch | −$296 | ARCHIVED |
+| v16_prefix | DT on 500K prefix | −$5,460 | ARCHIVED |
+| **v16_full** | **DT on 6M full** | **+$569** | **SHIPPED — current ML champion** |
+
+### Session 28 priorities
+
+1. **Distill v16's tree** — walk `data/v16_dt_model.npz`, find the highest-impact splits (those that reduce MSE the most), translate them to plain-English rules. Add the top 3-5 to `STRATEGY_GUIDE.md`.
+2. **High_only deep-dive** — v16 still leaves $3,785/1000h on high_only (31% of v16 bleed). Sub-cluster by suit_dist, broadway_count, longest_run; find archetypes where v16 is far from oracle argmax.
+3. **Try v17 = v9.2/v10/v12 → v16 fallback chain.** 4-min grade to confirm whether the rule overrides help or wash; document either way.
+4. **Tighter v16 training (later)** — build a uniform-random-subsample grid at higher N, retrain.
+
+**Doctrine update (Session 27):** Canonical-id prefix subsets are not safe training subsets. Always validate the oracle mean EV of the training data matches the production target distribution before training. If they diverge by >1.0 EV-pt, the subset is non-representative.
