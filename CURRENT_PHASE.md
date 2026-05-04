@@ -1,297 +1,273 @@
-# Current: Sprint 8 — v18_dt is the new ML champion. Distillation pass complete; Rule 4 added; v17 archived.
+# Current: Sprint 8 — v18c_dt is the new ML champion (capacity sweep). v19 (suited-broadway aug) failed prefix tripwire and was archived.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 29):** The two clearest paths to the
-> next $100-300/1000h:
->   (A) Add **suited-broadway aug features** to the feature set. The
->       Session 28 high_only deep-dive showed v16 misses suited mids
->       that the oracle prefers. Persist 3 new features as
->       `data/feature_table_suited_aug.parquet`, retrain v18 with the
->       extended 40-feature set.
->   (B) Sweep tree hyperparameters around v18's (depth=22, min_leaf=50)
->       — try (depth=20, min_leaf=30), (depth=24, min_leaf=80) etc.
->       v18 was the first try at higher capacity; there's likely more
->       to extract.
+> **🎯 IMMEDIATE NEXT ACTION (Session 30):** The diminishing-returns
+> capacity curve suggests one or two more depth/leaf-count steps may
+> still extract real $ before plateauing — try (depth=28, ml=10) and
+> (depth=30, ml=5). The bigger wins are likely in:
+>   (A) **Different aug features.** v19's suited-broadway features
+>       failed the prefix tripwire — they may be encoding signal but
+>       in a way that overfits N=200 noise on the pair category. Try
+>       narrower features that ONLY fire for high_only hands (gated
+>       like the pair_aug / two_pair_aug families).
+>   (B) **Train at higher MC density.** A 200K-hand uniform-random
+>       N=2000 grid would give cleaner labels for trying new aug
+>       features without the prefix's canonical-id bias problem.
 
-> **✅ SHIPPED (Decision 050):** v18_dt — depth=22, min_samples_leaf=50,
-> **60,651 leaves** (2.1× v16). Trained on the same full 6M grid (N=200)
-> using cached parquet features (5min total — no per-hand feature
-> recompute). **Wins +$158/1000h on the full grid, +$129/1000h on the
-> N=1000 prefix** — the prefix confirmation rules out overfitting. Wins
-> every category vs v16 except three_pair (+$31 noise on 25k hands).
+> **✅ SHIPPED (Decision 051):** v18c_dt — depth=26, min_samples_leaf=20,
+> **124,902 leaves**. Wins +$292/1000h vs v16 on full grid AND
+> +$345/1000h on N=1000 prefix. Wins on every category vs both v16
+> and v18 (v18b intermediate). The capacity curve (28K → 60K → 96K → 125K
+> leaves) is monotonically improving with diminishing-but-positive
+> marginal returns.
 
-> **✅ SHIPPED (Decision 049):** Rule 4 added to STRATEGY_GUIDE.md —
-> KK or AA → keep pair in mid; top = highest non-pair card. v3 / v8 /
-> v16 / v18 all converge on this. Documentation-only (no code change).
+> **🚫 ARCHIVED (Decision 052):** v19_dt with 6 suited-broadway aug
+> features. Won full grid by +$57/1000h vs v18, but **lost prefix by
+> −$16/1000h**. The pair-category regression (+$36 on prefix) suggests
+> the new features are partly memorizing N=200 noise. Suited-broadway
+> features as currently designed don't generalize.
 
-> **🚫 ARCHIVED (Decision 048):** v17 = v9.2/v10/v12 → v16 fallback.
-> Loses to v16 by **−$369/1000h** on the full grid because v10 and v12
-> are inferior to v16 on their categories (v10 worse by $1,366 on
-> two_pair; v12 worse by $2,979 on trips_pair). The hand-coded rules
-> were optimized against the OLD 4-profile mixture; v16/v18 are trained
-> against the realistic mixture and supersede them.
-
-> Updated: 2026-05-04 (end of Session 28)
+> Updated: 2026-05-04 (end of Session 29 / overnight continuation)
 
 ---
 
-## Headline state at end of Session 28
+## Headline state at end of Session 29
 
 **Strategies of record:**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
-| **v14_combined + Rule 4** | Human-memorizable rule chain (4 rules now documented) | `STRATEGY_GUIDE.md` + `analysis/scripts/strategy_v14_combined.py`. Rule 4 is implicit in v8's pair-to-mid default. |
-| **v18_dt** | ML champion (60,651-leaf DT, depth=22) | `analysis/scripts/strategy_v18_dt.py` + `data/v18_dt_model.npz` |
-| v16_dt | superseded but kept for diff/baseline | `analysis/scripts/strategy_v16_dt.py` + `data/v16_dt_model.npz` |
+| **v14_combined + Rule 4** | Human-memorizable rule chain (4 rules) | `STRATEGY_GUIDE.md` + `analysis/scripts/strategy_v14_combined.py` |
+| **v18c_dt** | ML champion (124,902-leaf DT, depth=26) | `analysis/scripts/strategy_v18c_dt.py` + `data/v18c_dt_model.npz` |
+| v18_dt / v18b | superseded but kept for diff/baseline | `data/v18_dt_model.npz`, `data/v18b_dt_model.npz` |
+| v16_dt | superseded, kept | `data/v16_dt_model.npz` |
+| v19_dt | ARCHIVED — failed prefix tripwire | `data/v19_dt_model.npz`, `analysis/scripts/strategy_v19_dt.py` |
 
-**Final standings (full 6M grid, N=200):**
+**Capacity sweep (full 6M grid, N=200):**
 
-| Strategy | $/1000h vs ceiling | pct_optimal | Δ vs v8 | Δ vs v16 |
+| Strategy | Depth | min_leaf | Leaves | $/1000h | pct_opt | Δ vs prev | Δ vs v16 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| v16_dt | 18 | 100 | 28,790 | $2,464 | 42.54% | — | — |
+| v18_dt | 22 | 50 | 60,651 | $2,306 | 44.01% | −$158 | −$158 |
+| v18b | 24 | 30 | 96,409 | $2,217 | 45.04% | −$89 | −$247 |
+| **v18c** | **26** | **20** | **124,902** | **$2,172** | **45.59%** | **−$45** | **−$292** |
+
+**Capacity sweep (500K-prefix grid, N=1000):**
+
+| Strategy | Leaves | $/1000h | pct_opt | Δ vs prev | Δ vs v16 |
+|---|---:|---:|---:|---:|---:|
+| v16_dt | 28K | $1,607 | 50.77% | — | — |
+| v18_dt | 60K | $1,478 | 52.60% | −$129 | −$129 |
+| v18b | 96K | $1,343 | 54.56% | −$135 | −$263 |
+| **v18c** | **125K** | **$1,261** | **55.90%** | **−$82** | **−$345** |
+
+**Per-category breakdown (full grid, N=200) — v18c wins on every category:**
+
+| Category | v16 | v18 | v18c | Δ v18c vs v16 |
 |---|---:|---:|---:|---:|
-| v8_hybrid | $3,153 | 36.70% | — | — |
-| v14_combined | $3,033 | 39.61% | −$120 | — |
-| v17_rules_then_dt | $2,833 | 41.15% | −$320 | +$369 |
-| v16_dt (depth=18, 28K leaves) | $2,464 | 42.54% | −$689 | — |
-| **v18_dt (depth=22, 60K leaves)** | **$2,306** | **44.01%** | **−$847** | **−$158** |
-
-**At higher fidelity (500K-prefix grid, N=1000):**
-
-| Strategy | $/1000h vs ceiling | pct_optimal | Δ vs v8 | Δ vs v16 |
-|---|---:|---:|---:|---:|
-| v8_hybrid | $3,051 | 38.51% | — | — |
-| v14_combined | $2,037 | 47.61% | −$1,014 | — |
-| v16_dt | $1,607 | 50.77% | −$1,444 | — |
-| **v18_dt** | **$1,478** | **52.60%** | **−$1,573** | **−$129** |
-
-**Per-category breakdown (full grid, N=200) — v18 wins on every category:**
-
-| Category | v16 $/1000h | v18 $/1000h | Δ |
-|---|---:|---:|---:|
-| high_only | $3,785 | $3,489 | −$296 |
-| pair | $2,127 | $2,023 | −$104 |
-| two_pair | $2,005 | $1,878 | −$127 |
-| trips | $2,347 | $2,241 | −$106 |
-| trips_pair | $2,438 | $2,135 | −$303 |
-| three_pair | $1,975 | $1,812 | −$163 |
-| quads | $2,233 | $1,474 | −$759 |
-| composite | $5,260 | $4,623 | −$637 |
+| high_only | $3,785 | $3,489 | $3,359 | −$426 |
+| pair | $2,127 | $2,023 | $1,934 | −$193 |
+| two_pair | $2,005 | $1,878 | $1,676 | −$329 |
+| trips | $2,347 | $2,241 | $2,110 | −$237 |
+| trips_pair | $2,438 | $2,135 | $1,873 | −$565 |
+| three_pair | $1,975 | $1,812 | $1,706 | −$269 |
+| quads | $2,233 | $1,474 | $907 | −$1,326 |
+| composite | $5,260 | $4,623 | $3,207 | −$2,053 |
 
 ---
 
-## What this leaves on the table (full grid, after v18)
+## What this leaves on the table (after v18c, full grid)
 
-- v18 captures **27% of the v14→ceiling gap** ($727/$3,033 vs v14) at N=200 fidelity
-- v18 captures **52% of the v14→ceiling gap** at N=1000 fidelity ($559/$2,037)
-- Remaining gap to ceiling: **$2,306/1000h (full grid N=200)**, **$1,478/1000h (prefix N=1000)**
-- Biggest residual: still high_only ($3,489 × 20.4% share = $711 of v18 bleed = 31%)
-
----
-
-## What Session 28 produced
-
-### (A) Distillation of v16's 28,790-leaf DT (`distill_v16_dt.py`)
-
-Walked all 6M oracle-grid hands through v16's tree. Computed
-population-weighted MSE reduction at every internal node.
-
-**Top feature importance (population-weighted MSE reduction):**
-1. `n_broadway` — **44.9%** (root split: `n_broadway ≤ 2.5`)
-2. `third_rank` — 11.5%
-3. `pair_high_rank` — 8.8%
-4. `n_low` — 7.7%
-5. `has_premium_pair` — 4.5%
-6. `top_rank` — 4.3%
-7. `second_rank` — 3.8%
-8. `has_ace_singleton` — 3.4%
-
-The 9 hand-engineered "aug" features collectively contribute **<0.4%** of
-total importance. The DT solves the problem almost entirely with raw
-body-strength features. All distillation observations recorded in
-`STRATEGY_GUIDE.md` under "Distillation insights (Session 28)".
-
-### (B) High_only deep-dive (`high_only_v16_residual.py`)
-
-Clustered all 1.23M high_only hands by (`suit_dist`, `n_broadway`,
-`can_ds_bot`, `has_ace_singleton`).
-
-**Worst residual cluster:** `suit_dist=3+2+1+1, n_broadway=3, has_ace_singleton=1` —
-88,200 hands × $0.33 mean regret = $29,487 total = **6.4% of all
-high_only bleed**. Examples show v16 choosing default "Ace on top, mid
-= mid-rank cards" when the oracle prefers a **suited middle** (e.g. the
-`5d Kd` mid in `2c 5d 6h 7s Ts Kd Ad`).
-
-**v18 (60K-leaf) reduced this category by $296/1000h, but the
-absolute residual remains the largest.** Adding suited-broadway aug
-features is the next attack vector.
-
-### (C) v17 = v9.2/v10/v12 → v16 fallback — ARCHIVED
-
-Built and graded `strategy_v17_rules_then_dt.py`. Lost to v16 by
-**−$369/1000h** because v10 and v12 are inferior to v16 in their
-respective categories. See Decision 048 in DECISIONS_LOG.md.
-
-### (D) Higher-capacity v18 — SHIPPED (the session's biggest win)
-
-Wrote `train_v18_dt.py` using **cached parquet features** (saves ~20
-min vs the per-hand Python feature compute that v16's trainer used).
-Trained at depth=22, min_samples_leaf=50.
-
-- Training: 188.4s fit, 60,651 leaves, depth=22, retention 69.59% on
-  training set.
-- Full grid grade: $2,306/1000h, 44.01% optimal — **wins by $158/1000h vs v16**.
-- Prefix N=1000 grade: $1,478/1000h, 52.60% optimal — **wins by $129/1000h vs v16**.
-- Prefix confirmation rules out overfitting concerns: a higher-capacity
-  tree that simply memorized N=200 noise would NOT improve on the
-  cleaner N=1000 labels. v18 does. The win is real.
+- v18c captures **31% of the v14→ceiling gap** at N=200 fidelity
+- v18c captures **62% of the v14→ceiling gap** at N=1000 fidelity ($776/$2,037)
+- Remaining gap to ceiling: **$2,172/1000h (full grid N=200)**, **$1,261/1000h (prefix N=1000)**
+- Biggest residual at N=200: still high_only ($3,359 × 20.4% share = $685 of v18c bleed = 31%)
+- Biggest residual at N=1000: composite ($2,547 × 1.4% share = $36 — small population, but every hand bleeds ~$3K)
 
 ---
 
-## Methodology lessons (Session 28)
+## What Session 29 produced
 
-1. **Cached parquet features cut training cycles from ~25min to ~5min.**
-   `distill_v16_dt.py` and `train_v18_dt.py` read the cached
-   `feature_table*.parquet` and reconstruct the 37-col matrix in 2 sec.
-   Future training/analysis scripts MUST use the cached path.
+### (A/B) Suited-broadway aug features → v19 → ARCHIVED
 
-2. **Bigger trees still help.** v16 (depth=18, 28K leaves) was the
-   first DT champion; v18 (depth=22, 60K leaves) extracts another
-   $158/1000h. There may be more in the depth=24-28 range, possibly
-   needing `min_samples_leaf` tuning.
+Built `analysis/scripts/suited_aug_features.py` with 6 features:
+- `n_suited_pairs_total` (0-21)
+- `max_suited_pair_high_rank` (0,2-14)
+- `max_suited_pair_low_rank` (0,2-14)
+- `has_suited_broadway_pair` (0/1)
+- `has_suited_premium_pair` (0/1)
+- `n_broadway_in_largest_suit` (0-7)
 
-3. **The prefix grid is the overfitting tripwire.** Any future ML
-   candidate that claims a full-grid win must also be validated on the
-   N=1000 prefix. v18's prefix win confirms generalization; if v18 had
-   regressed on prefix, we'd archive it as overfit even if full-grid
-   was positive.
+Persisted via `analysis/scripts/persist_suited_aug.py` to
+`data/feature_table_suited_aug.parquet` (23 MB, 44 sec compute).
 
-4. **n_broadway is the master classifier.** A single root split on
-   `n_broadway ≤ 2.5` captures more MSE reduction than any other
-   split in the entire 28K-leaf v16 tree.
+Trained v19 (43 features = 37 base + 6 suited), depth=22, min_leaf=50,
+72,900 leaves.
 
-5. **Aug features are under-leveraged.** The 9 hand-engineered aug
-   features contribute <0.4% of v16's feature importance. New augs
-   should encode genuinely missing information (suited broadway pairs,
-   connected high cards) rather than precomputed routing signals.
+**Result:**
+- Full grid (N=200): v19 = $2,250, +$57/1000h vs v18  ← positive
+- Prefix (N=1000): v19 = $1,494, **−$16/1000h vs v18** ← FAILS prefix tripwire
+- The pair-category regression on prefix (+$36/1000h) is the smoking
+  gun — the new features improve full-grid pair (small win) by
+  fitting N=200 noise that doesn't survive to N=1000 ground truth.
+- The new features don't appear in v19's top-15 importance list
+  (sklearn impurity-decrease normalized).
 
-6. **Hand-coded rules can't compete with the DT in their own
-   categories.** v9.2/v10/v12 were optimized against the OLD
-   4-profile mixture; v16/v18 are trained against the realistic
-   mixture and supersede them. v17 (rules-then-DT chain) regresses
-   because it forces the inferior strategy to fire first. Do NOT
-   chain hand-coded rules before the DT in production.
+**Decision:** archive v19. Suited-broadway features as designed don't
+generalize. See Decision 052.
 
-7. **v3 / v8 / v16 / v18 all converge on KK / AA play.** Rule 4
-   doesn't change strategy behavior — it documents what every strategy
-   in the chain already does. Strategy guide gains a 4th rule for
-   memorization without code changes.
+### (C/D) Capacity sweep → v18b, v18c → v18c SHIPPED
 
-8. **Cycle scoreboard since Session 25 (10 ships, 4 archives, 1 doc-only):**
+Three sweeps from v18's (depth=22, ml=50) baseline:
+
+| Variant | Depth | min_leaf | Leaves | Full $/1000h | Prefix $/1000h | Status |
+|---|---:|---:|---:|---:|---:|---|
+| v18b | 24 | 30 | 96,409 | $2,217 (+$89) | $1,343 (+$135) | passed |
+| **v18c** | **26** | **20** | **124,902** | **$2,172 (+$45)** | **$1,261 (+$82)** | **SHIPPED** |
+
+The capacity curve is monotonically improving on BOTH grids with
+diminishing-but-positive marginal returns. v18c is shipped as the
+new ML champion. Future sessions can probe deeper.
+
+### What was built
+
+**Aug features:**
+- `analysis/scripts/suited_aug_features.py` — 6 feature compute fns + batch
+- `analysis/scripts/persist_suited_aug.py` — persists to
+  `data/feature_table_suited_aug.parquet` (all 6M hands, no category gate)
+
+**Strategies:**
+- `analysis/scripts/strategy_v19_dt.py` — 43-feature inference
+  (archived; kept for diff)
+- `analysis/scripts/strategy_v18c_dt.py` — new champion inference
+  (loads `data/v18c_dt_model.npz`)
+
+**Trainers:**
+- `analysis/scripts/train_v19_dt.py` — extends train_v18 with suited augs
+- `analysis/scripts/train_v18_dt.py` — already extant; reused for v18b/v18c
+  via `--max-depth` / `--min-samples-leaf` / `--output` flags
+
+**Graders:**
+- `analysis/scripts/grade_v19_full_grid.py` — v16/v18/v19 head-to-head
+- `analysis/scripts/grade_v18_sweep.py` — v16/v18/v18b/v18c sweep grader
+  (prefix or full)
+
+**Models (gitignored):**
+- `data/v19_dt_model.npz` — 54 MB, 72,900 leaves (archived)
+- `data/v18b_dt_model.npz` — 71 MB, 96,409 leaves
+- `data/v18c_dt_model.npz` — 90 MB, 124,902 leaves (champion)
+
+---
+
+## Methodology lessons (Session 29)
+
+1. **Prefix tripwire works.** v19 grades positive on full grid (+$57)
+   but negative on prefix (−$16). Without the prefix check we'd ship
+   v19 and live with overfit features. The lesson from Session 28
+   (introduce the tripwire) just paid off concretely.
+
+2. **Capacity scaling has clean diminishing returns.** Doubling leaves
+   roughly halves the marginal $/1000h gain:
+   - 28K → 60K (2.1x): −$158 full, −$129 prefix
+   - 60K → 96K (1.6x): −$89 full, −$135 prefix
+   - 96K → 125K (1.3x): −$45 full, −$82 prefix
+   The next step (depth=28, ml=10, ~150K leaves) might still extract
+   $30-50, but is unlikely to be transformative.
+
+3. **The 6 suited-broadway features were too coarse.** Computing them
+   for ALL hand categories meant the DT could find spurious-yet-
+   noise-fitting splits in the pair / two_pair populations. A future
+   v19' should gate the suited-broadway features to high_only ONLY
+   (set them to 0 for paired hands), mirroring the existing
+   `default_bot_is_ds_high` family pattern.
+
+4. **The v18c tree is interpretable.** Re-running `distill_v16_dt.py`
+   against `data/v18c_dt_model.npz` (small model-path arg change)
+   would surface what splits v18c added beyond v18. Likely candidates:
+   more granular composite-category routing where v18c won most
+   ($5,260 → $3,207 = −$2,053 — the biggest single-category gain).
+
+5. **Cycle scoreboard since Session 25 (12 ships, 5 archives, 1 doc-only):**
 
 | Cycle | Target | Result | Status |
 |---|---|---:|---|
-| v9.1 | single pair | +$24 N=200 | SHIPPED |
-| v10 | two_pair | +$81 incremental | SHIPPED |
+| v9.1 | single pair | +$24 | SHIPPED |
+| v10 | two_pair | +$81 | SHIPPED |
 | v11 | high_only | −$1,745 | ARCHIVED |
-| v12 | trips_pair | +$10 incremental | SHIPPED |
+| v12 | trips_pair | +$10 | SHIPPED |
 | v13 | trips | −$172 | ARCHIVED |
-| v14 | single pair refine | +$5 incremental | SHIPPED |
-| v15 | high_only DS-patch | −$296 | ARCHIVED |
-| v16_prefix | DT on 500K prefix | −$5,460 | ARCHIVED |
-| v16_full | DT on 6M full | +$569 | SHIPPED |
-| Rule 4 | KK/AA documentation | doc-only | SHIPPED (doc-only) |
-| v17 | rules-then-DT chain | −$369 | ARCHIVED |
-| **v18** | **DT depth=22 / min_leaf=50** | **+$158 (full), +$129 (prefix)** | **SHIPPED — current ML champion** |
+| v14 | single pair refine | +$5 | SHIPPED |
+| v15 | high_only DS | −$296 | ARCHIVED |
+| v16_prefix | DT prefix | −$5,460 | ARCHIVED |
+| v16 | DT 6M | +$569 | SHIPPED |
+| Rule 4 | KK/AA doc | doc-only | SHIPPED |
+| v17 | rules→DT | −$369 | ARCHIVED |
+| v18 | DT d=22, ml=50 | +$158 full, +$129 prefix | SHIPPED |
+| v19 | suited-aug | +$57 full, **−$16 prefix** | ARCHIVED (prefix fail) |
+| v18b | DT d=24, ml=30 | +$90 full, +$135 prefix | SHIPPED |
+| **v18c** | **DT d=26, ml=20** | **+$45 full, +$82 prefix** | **SHIPPED — current champion** |
 
 ---
 
-## What was built in Session 28
-
-**Distillation:**
-- `analysis/scripts/distill_v16_dt.py` — walks the saved tree, computes per-node MSE reduction, ranks splits + features
-- `analysis/scripts/high_only_v16_residual.py` — clusters high_only residual by suit_dist + n_broadway + ace_singleton
-- `analysis/scripts/high_only_suited_mid_probe.py` — tests the suited-mid hypothesis (not run; reserved for Session 29 v18 features)
-- `data/distill_v16_dt.log` — full distillation output (top 30 splits, full feature importance, depth-5 tree dump)
-- `data/high_only_v16_residual.log` — top 30 high_only clusters with worst-regret examples
-
-**Strategies:**
-- `analysis/scripts/strategy_v17_rules_then_dt.py` — v9.2/v10/v12 → v16 fallback (archived after grading)
-- `analysis/scripts/strategy_v18_dt.py` — loads `data/v18_dt_model.npz` (the new ML champion)
-
-**Trainer:**
-- `analysis/scripts/train_v18_dt.py` — uses cached parquet features (~5 min train cycle vs ~25 min for the v16 trainer)
-
-**Graders:**
-- `analysis/scripts/grade_v17_full_grid.py` — 4-strategy comparison (v8/v14/v16/v17) on full grid
-- `analysis/scripts/grade_v18_full_grid.py` — v16 vs v18 on full grid
-- `analysis/scripts/grade_v18_prefix_grid.py` — v8/v14/v16/v18 on N=1000 prefix (overfitting tripwire)
-
-**Models:**
-- `data/v18_dt_model.npz` — 45 MB, 60,651 leaves, depth=22 (the new champion)
-
-**Documentation:**
-- `STRATEGY_GUIDE.md` — Rule 4 added; "Distillation insights (Session 28)" appendix added; champion pointer updated to v18
-- `CURRENT_PHASE.md` — rewritten (this file)
-- `DECISIONS_LOG.md` — Decisions 048 (v17 archive), 049 (Rule 4 ship), 050 (v18 ship)
-
----
-
-## Resume Prompt (Session 29)
+## Resume Prompt (Session 30)
 
 ```
-Resume Session 29 of the Taiwanese Poker Solver project at
+Resume Session 30 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context:
 - CLAUDE.md
-- STRATEGY_GUIDE.md (now includes Rule 4 + Distillation insights)
-- CURRENT_PHASE.md (rewritten end of Session 28)
-- DECISIONS_LOG.md (latest: Decisions 048 / 049 / 050)
-- analysis/scripts/distill_v16_dt.py — Session 28's tree-walker
-- analysis/scripts/train_v18_dt.py — fast retrainer using cached features
-- analysis/scripts/strategy_v18_dt.py — ML champion
+- STRATEGY_GUIDE.md (Rule 4 + Distillation insights)
+- CURRENT_PHASE.md (rewritten end of Session 29)
+- DECISIONS_LOG.md (latest: Decisions 051 / 052)
+- analysis/scripts/strategy_v18c_dt.py — current ML champion
+- analysis/scripts/train_v18_dt.py — quick capacity-sweep trainer
 
-State (end of Session 28):
-- v18_dt is the new ML champion: $2,306/1000h on full grid (44.01% opt),
-  $1,478/1000h on prefix N=1000 (52.60% opt). 60,651 leaves, depth=22.
-  Wins +$158 vs v16 on full, +$129 vs v16 on prefix.
-- v14_combined + Rule 4 remains the human-memorizable strategy.
-- v17 (hand-coded rules → v16 fallback) lost by $369 and was archived.
-  The hand-coded v9.2/v10/v12 are inferior to v16's per-category routing.
-- Distillation revealed n_broadway is the master signal (44.9% of total
-  feature importance). Aug features contribute <0.4% — new augs should
-  encode genuinely missing information.
-- High_only worst-residual cluster has a clean signal the DT can't see:
-  suited mids (same-suit pair of cards both ≥ T) that 37 features miss.
+State (end of Session 29):
+- v18c_dt is the new ML champion: $2,172/1000h on full grid (45.59% opt),
+  $1,261/1000h on prefix N=1000 (55.90% opt). 124,902 leaves,
+  depth=26, min_samples_leaf=20.
+- Capacity curve (28K → 60K → 96K → 125K leaves) is monotonically
+  improving with diminishing-but-positive marginal returns. Next step
+  (depth=28, ml=10) might extract another $30-50.
+- v19 (6 suited-broadway aug features) FAILED the prefix tripwire
+  (−$16/1000h on N=1000) despite winning the full grid (+$57). The
+  features fit N=200 noise on the pair category that doesn't survive
+  to N=1000 ground truth. Archived.
+- The suited-broadway feature direction is still promising — the
+  failure is "applied to all categories without gating." A retry should
+  zero out the features for non-high_only hands (mirror the
+  default_bot_is_ds_high pattern that's gated to high_only).
 
 Next session targets:
 
-(A) **Build suited-broadway aug parquet (HIGHEST PRIORITY).**
-    Add 3-5 features:
-    - n_suited_pairs_in_top5 (count of (i,j) in top-5 ranked cards
-      with same suit)
-    - max_suited_pair_rank (highest rank involved in such a pair)
-    - has_suited_broadway_pair (binary, both ranks ≥ T and same suit)
-    Persist to data/feature_table_suited_aug.parquet using the
-    persist_*_aug.py pattern.
+(A) **Gated suited-broadway features.** Build `suited_aug_features_v2`
+    that returns (0,0,0,0,0,0) for any hand with a pair/trip/quad
+    (mirroring how `compute_high_only_aug_for_hand` short-circuits on
+    paired hands). Persist to `data/feature_table_suited_aug_v2.parquet`.
+    Train v19' = v18c base + gated suited augs. Grade. If passes
+    prefix tripwire, ship.
 
-(B) **Train v19 with extended 40-feature set.** Use train_v18_dt.py +
-    new aug parquet. Try (depth=22, min_leaf=50) first (matching v18
-    config); if positive, sweep capacity.
+(B) **One more capacity step.** Train v18d at (depth=28, ml=10) and
+    grade. Marginal: probably $30-50 more if returns continue
+    halving. Cheap to try.
 
-(C) **Codify Rule 5 if v19 finds a clean suited-mid split.** Walk
-    v19's tree (reuse distill_v16_dt.py with a model-path arg) and
-    translate the highest-impact suited-broadway split to an English
-    rule for STRATEGY_GUIDE.md.
+(C) **Distill v18c.** Run `distill_v16_dt.py` against
+    `data/v18c_dt_model.npz` (small change to make MODEL_PATH a CLI
+    arg). The composite-category gain ($5,260 → $3,207 = −$2,053) is
+    the biggest single-category win — what splits did v18c add to
+    composite that v18 didn't?
 
-(D) **Sweep v18's hyperparameters.** Now that we know depth=22 +
-    min_leaf=50 wins, try (depth=24, min_leaf=80) and
-    (depth=20, min_leaf=30) — wider/narrower regularization. Cheap
-    (~5 min train + 4 min grade each).
+(D) **Composite category deep-dive.** v18c leaves $4,596 on composite
+    (full grid) — still 14k hands × $0.46 = $66K total bleed. Build
+    `composite_v18c_residual.py` mirroring `high_only_v16_residual.py`.
+    Find the worst clusters. Composite is rare hands (quads+pair,
+    two trips, etc.) — there may be a clean per-archetype rule.
 
-(E) **Diagnose composite category.** v18 leaves $4,623/1000h on
-    composite (the highest residual after high_only). 14k hands ×
-    high regret = real money. Build a composite-only diagnostic
-    similar to high_only_v16_residual.py.
+(E) **Higher-MC training data.** A 200K-hand uniform-random sample
+    at N=2000 would be cleaner than the prefix N=1000 (which has
+    canonical-id bias) for validating new feature ideas. ~2-day
+    compute on the M2 Mac mini per the Session 24 throughput
+    estimate (134.9 hands/s × 200K hands × 2000 samples).
 
 REMINDERS:
 - Auto mode is on; minimize interruptions.
@@ -301,9 +277,11 @@ REMINDERS:
 - For long Python scripts that pipe output: use python3 -u or
   PYTHONUNBUFFERED=1.
 - Always validate ML candidates on BOTH full grid (N=200) AND prefix
-  (N=1000) — prefix grid is the overfitting tripwire.
-- ALWAYS prefer reading data/feature_table*.parquet over recomputing
-  features from canonical hand bytes (saves 20 min per training run).
+  (N=1000) — the prefix tripwire just rejected v19 in Session 29.
+- Cached parquets cut training cycles to ~5min — keep using them.
+- Don't add aug features that fire for ALL hand categories without
+  testing — gated features (one category only) generalize better
+  per the v19 lesson.
 ```
 
 ---

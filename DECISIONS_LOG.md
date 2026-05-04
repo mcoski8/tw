@@ -1212,3 +1212,146 @@ The v16 trainer (`train_v16_regression.py`) recomputed all 6M hands' features fr
 5. **Open question:** depth=22 was the first try at higher capacity. Sweeping depth=20, 24, 26 may extract more. Also worth trying min_samples_leaf=30 (more leaves) and min_samples_leaf=80 (fewer leaves with longer trees). Session 29 picks this up alongside the suited-broadway aug feature work.
 6. **The v18 tree is interpretable.** Re-run `distill_v16_dt.py` against `data/v18_dt_model.npz` (small modification needed for the model path) to see what splits the bigger tree added. Likely candidates: more granular category-aware splits in the trips_pair / composite branches where v18 won most.
 
+
+## Decision 051 — v18c_dt is the new ML champion (Session 29 / overnight continuation)
+
+**Date:** 2026-05-04
+**Status:** Settled. v18c supersedes v18 as the production ML strategy. v18 / v18b / v16 are kept as baselines.
+
+**Question:** Decision 050 left open whether the depth=22 / min_leaf=50 v18 was the capacity ceiling. Capacity sweep through depth=24/26 with shrinking min_samples_leaf.
+
+**Answer:** **More capacity continues to help, with diminishing returns.** v18c (depth=26, min_leaf=20, 124,902 leaves) wins on every category vs v18 on BOTH grids and passes the prefix tripwire.
+
+**Capacity sweep results:**
+
+| Variant | Depth | min_leaf | Leaves | Full $/1000h | Prefix $/1000h | Δ Full vs prev | Δ Prefix vs prev |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| v16_dt | 18 | 100 | 28,790 | $2,464 | $1,607 | — | — |
+| v18_dt | 22 | 50 | 60,651 | $2,306 | $1,478 | −$158 | −$129 |
+| v18b | 24 | 30 | 96,409 | $2,217 | $1,343 | −$89 | −$135 |
+| **v18c** | **26** | **20** | **124,902** | **$2,172** | **$1,261** | **−$45** | **−$82** |
+
+Doubling leaves roughly halves the marginal $/1000h gain. Not yet plateaued — depth=28 / ml=10 might extract another $30-50 (Session 30 target).
+
+**Per-category breakdown (full grid, N=200) — v18c wins on every category vs v16:**
+
+| Category | v16 | v18 | v18b | v18c | Δ v18c vs v16 |
+|---|---:|---:|---:|---:|---:|
+| high_only | $3,785 | $3,489 | $3,396 | $3,359 | −$426 |
+| pair | $2,127 | $2,023 | $1,966 | $1,934 | −$193 |
+| two_pair | $2,005 | $1,878 | $1,743 | $1,676 | −$329 |
+| trips | $2,347 | $2,241 | $2,165 | $2,110 | −$237 |
+| trips_pair | $2,438 | $2,135 | $1,977 | $1,873 | −$565 |
+| three_pair | $1,975 | $1,812 | $1,717 | $1,706 | −$269 |
+| quads | $2,233 | $1,474 | $945 | $907 | −$1,326 |
+| composite | $5,260 | $4,623 | $3,740 | $3,207 | −$2,053 |
+
+The composite and quads categories show the biggest absolute wins — these are rare hands (14K each of 6M) where the additional capacity lets v18c memorize their per-archetype routings.
+
+**Prefix N=1000 confirmation (overfitting check):**
+
+| Strategy | $/1000h | pct_opt | Δ vs v16 |
+|---|---:|---:|---:|
+| v16_dt | $1,607 | 50.77% | — |
+| v18_dt | $1,478 | 52.60% | −$129 |
+| v18b | $1,343 | 54.56% | −$263 |
+| v18c | $1,261 | 55.90% | **−$345** |
+
+v18c wins on every category in prefix too. The win is not memorization of N=200 noise.
+
+**What got built:**
+
+1. `analysis/scripts/strategy_v18c_dt.py` — inference for the depth=26 model.
+2. `data/v18c_dt_model.npz` — 90 MB, 124,902 leaves.
+3. `data/v18b_dt_model.npz` — 71 MB, 96,409 leaves (intermediate, kept).
+4. `analysis/scripts/grade_v18_sweep.py` — generic sweep grader; loads any model file via npz path.
+
+**Consequence:**
+1. **v18c_dt is the new ML champion.** Use `strategy_v18c_dt(hand_bytes) -> setting_index` for any production inference. Model file: `data/v18c_dt_model.npz`.
+2. **v18 / v18b kept as baselines** for diff comparisons. Files retained.
+3. **Future v19/v20 candidates must grade against v18c as the bar.**
+4. **STRATEGY_GUIDE.md champion pointer updated to v18c.**
+
+
+## Decision 052 — v19 (suited-broadway aug features) ARCHIVED — failed prefix tripwire (Session 29)
+
+**Date:** 2026-05-04
+**Status:** Settled. v19 is archived. The 6 suited-broadway aug features as designed don't generalize past N=200 noise.
+
+**Question:** Session 28's high_only deep-dive showed v16/v18 cannot represent suited mids (e.g., 5d-Kd in `2c 5d 6h 7s Ts Kd Ad`). Adding suited-broadway aug features to the trainer should let the DT discover and exploit this pattern. Did it?
+
+**Answer:** No — full grid was positive but prefix tripwire failed.
+
+**What got built:**
+
+1. `analysis/scripts/suited_aug_features.py` — 6 features:
+   - `n_suited_pairs_total` (0-21)
+   - `max_suited_pair_high_rank` (0,2-14)
+   - `max_suited_pair_low_rank` (0,2-14)
+   - `has_suited_broadway_pair` (0/1)
+   - `has_suited_premium_pair` (0/1)
+   - `n_broadway_in_largest_suit` (0-7)
+
+2. `analysis/scripts/persist_suited_aug.py` — persists to
+   `data/feature_table_suited_aug.parquet` (23 MB, 44 sec compute,
+   computed for ALL 6M hands without category gating).
+
+3. `analysis/scripts/train_v19_dt.py` — extended trainer (43 features).
+4. `analysis/scripts/strategy_v19_dt.py` — inference for v19.
+5. `analysis/scripts/grade_v19_full_grid.py` — head-to-head grader.
+
+**Result (full 6M grid, N=200):**
+
+| Strategy | Leaves | $/1000h | Δ vs v18 |
+|---|---:|---:|---:|
+| v16_dt | 28K | $2,464 | — |
+| v18_dt | 60K | $2,306 | — |
+| **v19_dt** | **73K** | **$2,250** | **+$57** |
+
+**Result (500K-prefix grid, N=1000):**
+
+| Strategy | $/1000h | Δ vs v18 |
+|---|---:|---:|
+| v16_dt | $1,607 | — |
+| v18_dt | $1,478 | — |
+| **v19_dt** | **$1,494** | **−$16** |  ← **FAIL**
+
+**Per-category prefix breakdown:**
+
+| Category | v18 | v19 | Δ |
+|---|---:|---:|---:|
+| pair | $1,116 | $1,152 | +$36 (regression) |
+| two_pair | $1,678 | $1,687 | +$9 (≈noise) |
+| trips | $2,148 | $2,093 | −$55 (small win) |
+| trips_pair | $2,326 | $2,321 | −$5 (≈noise) |
+| three_pair | $1,169 | $1,169 | $0 |
+| quads | $1,133 | $1,133 | $0 |
+| composite | $3,791 | $3,793 | +$2 (≈noise) |
+
+The pair-category regression on prefix (+$36/1000h on 215K hands) is the smoking gun. The new features improve pair hands on the noisier full grid (where v19 picks something marginally better than v18 on N=200 labels) but that improvement disappears on cleaner N=1000 labels — a signature of overfitting.
+
+**Why the features didn't generalize:**
+
+1. **Computed for all categories.** The 6 features fire for paired hands too (e.g., a single-pair hand can have suited broadway among its non-pair cards). The DT uses them to make small discriminating splits in the pair branches that fit N=200 noise but don't survive to higher fidelity.
+
+2. **No new feature in v19's top-15.** The sklearn feature_importances_ ranking puts the same v16/v18 base features at the top: n_broadway, third_rank, pair_high_rank, n_low, etc. The suited features contribute scattered low-importance splits — exactly the pattern of noise-fitting.
+
+3. **Prefix doesn't include high_only.** The prefix's first 500K canonical_ids skip the high_only category (where the suited-mid signal lives). So we can't validate the targeted population's improvement directly. The prefix's pair-heavy composition exposes the spurious-feature problem instead.
+
+**What to try next (Session 30):**
+
+1. **Gated suited-broadway features.** Mirror `compute_high_only_aug_for_hand`'s pattern: return (0, 0, 0, 0, 0, 0) for any hand with n_pairs/n_trips/n_quads ≥ 1. Suited features fire ONLY for high_only hands. This should keep the high_only signal while removing the spurious pair-category fits.
+
+2. **Higher-MC validation grid.** A 200K-hand uniform-random sample at N=2000 would test new feature ideas without the prefix's canonical-id-bias artifact. ~2-day compute on the M2 Mac mini.
+
+**Files (kept for diff/comparison):**
+- `analysis/scripts/suited_aug_features.py`
+- `analysis/scripts/persist_suited_aug.py`
+- `analysis/scripts/train_v19_dt.py`
+- `analysis/scripts/strategy_v19_dt.py`
+- `analysis/scripts/grade_v19_full_grid.py`
+- `data/feature_table_suited_aug.parquet` (gitignored)
+- `data/v19_dt_model.npz` (gitignored)
+
+**Methodology lesson:** The Session 28 prefix tripwire just paid off concretely. Without it, v19's positive full-grid grade would have shipped, replacing v18 with a slightly-overfit model. The tripwire saved us from a regression. Keep using it on every ML candidate.
+
