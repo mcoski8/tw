@@ -12,7 +12,7 @@
 > 5. Where each rule + model lives in code
 > 6. **The Current Standard** (at the bottom — the rules to memorize, the model to call)
 >
-> Last updated: 2026-05-04 (Session 32 — v25 ships, pair-gated aug family is the 4th and largest gating success).
+> Last updated: 2026-05-04 (Session 33 — v26 ships, two_pair-gated aug family is the 5th gating success and largest per-category gain since v20).
 
 ---
 
@@ -214,29 +214,31 @@ Every model trained, side-by-side, on both validation grids:
 | v21 / v22 | S31 | n/a | n/a | n/a | n/a | $3,713 / $3,506 | n/a | ARCHIVED (Rule 5 attempts vs v14) |
 | v23 | S31 | 30 | 5 | 49 (43+6 trips_pair) | 314,705 | $1,977 | $1,073 | superseded by v24 |
 | v24 | S31 | 30 | 5 | 53 (49+4 composite) | 314,759 | $1,977 | $1,072 | superseded by v25 |
-| **v25** | **S32** | **30** | **5** | **59 (53+6 pair-gated)** | **390,626** | **$1,929** | **$1,054** | **CURRENT CHAMPION** |
+| v25 | S32 | 30 | 5 | 59 (53+6 pair-gated) | 390,626 | $1,929 | $1,054 | superseded by v26 |
+| **v26** | **S33** | **30** | **5** | **65 (59+6 two_pair-gated)** | **459,209** | **$1,859** | **$1,002** | **CURRENT CHAMPION** |
 
 **Per-category breakdown** (full grid, N=200): how each category's
-regret has dropped across the five flagship versions:
+regret has dropped across the six flagship versions:
 
-| Category | v14 | v16 | v18e | v20 | v23 | v24 | v25 | Δ v25 vs v14 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| high_only | $4,082 | $3,785 | $3,307 | $2,894 | $2,894 | $2,894 | $2,894 | −$1,188 |
-| pair | $2,011 | $2,127 | $1,873 | $1,873 | $1,873 | $1,873 | $1,771 | −$240 |
-| two_pair | $3,371 | $2,005 | $1,458 | $1,458 | $1,458 | $1,458 | $1,458 | −$1,913 |
-| trips | $4,054 | $2,347 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | −$2,057 |
-| trips_pair | $5,417 | $2,438 | $1,608 | $1,608 | $1,447 | $1,447 | $1,446 | −$3,971 |
-| three_pair | $4,529 | $1,975 | $1,653 | $1,653 | $1,654 | $1,654 | $1,654 | −$2,875 |
-| quads | $9,670 | $2,233 | $724 | $724 | $724 | $723 | $723 | −$8,947 |
-| composite | $10,883 | $5,260 | $2,100 | $2,100 | $2,080 | $1,864 | $1,869 | −$9,014 |
+| Category | v14 | v16 | v18e | v20 | v23 | v24 | v25 | v26 | Δ v26 vs v14 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| high_only | $4,082 | $3,785 | $3,307 | $2,894 | $2,894 | $2,894 | $2,894 | $2,894 | −$1,188 |
+| pair | $2,011 | $2,127 | $1,873 | $1,873 | $1,873 | $1,873 | $1,771 | $1,771 | −$240 |
+| two_pair | $3,371 | $2,005 | $1,458 | $1,458 | $1,458 | $1,458 | $1,458 | $1,145 | −$2,226 |
+| trips | $4,054 | $2,347 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | −$2,057 |
+| trips_pair | $5,417 | $2,438 | $1,608 | $1,608 | $1,447 | $1,447 | $1,446 | $1,445 | −$3,972 |
+| three_pair | $4,529 | $1,975 | $1,653 | $1,653 | $1,654 | $1,654 | $1,654 | $1,654 | −$2,875 |
+| quads | $9,670 | $2,233 | $724 | $724 | $724 | $723 | $723 | $723 | −$8,947 |
+| composite | $10,883 | $5,260 | $2,100 | $2,100 | $2,080 | $1,864 | $1,869 | $1,741 | −$9,142 |
 
-Four category-gated wins are now visible across the v18e → v25
+Five category-gated wins are now visible across the v18e → v26
 progression:
 - **v20 → high_only:** −$413 vs v18e (6 gated suited features).
 - **v23 → trips_pair:** −$161 vs v20 (6 gated trips_pair features).
 - **v24 → composite:** −$216 vs v23 (4 gated composite features).
-- **v25 → pair:** −$102 vs v24 (6 gated pair features). Largest absolute
-  headline gain since v20 because pair has 46.6% population share.
+- **v25 → pair:** −$102 vs v24 (6 gated pair features).
+- **v26 → two_pair:** −$313 vs v25 (6 gated two_pair features). Largest
+  per-category gain since v20→high_only.
 
 Each upgrade lifted ONLY its targeted category and kept every other
 category bit-identical (or within N=200 noise) — the cleanest possible
@@ -308,13 +310,13 @@ and v20 is $2,100). v20 has not been formally distilled yet — Session
 | Hand type | Frequency | v14 $/1000h | Latest $/1000h | Status |
 |---|---:|---:|---:|---|
 | high_only | 20.4% | $4,082 | $2,894 (v20+) | Largest residual share at $590/1000h. Gated suited features helped (Session 30). A naive **Rule 5** (suited middle for high_only) was tested both ways in Session 31 and **REJECTED** — see below. **High_only round 2 is a Session 33 candidate.** |
-| pair | 46.6% | $2,011 | $1,771 (v25) | v25 (Session 32) added 6 pair-gated features alongside the 3 pre-existing pair aug booleans; −$102/1000h on the category. Largest population share — biggest absolute headline gain since v20. No hand-coded rule extracted; v25's gated routing is too multi-axis for any single AND-rule (Rule 1's gates already cover the simplest pair-to-bot trigger). |
+| pair | 46.6% | $2,011 | $1,771 (v25+) | v25 (Session 32) added 6 pair-gated features alongside the 3 pre-existing pair aug booleans; −$102/1000h on the category. No hand-coded rule extracted; v25's gated routing is too multi-axis for any single AND-rule (Rule 1's gates already cover the simplest pair-to-bot trigger). |
 | trips (no pair) | 5.5% | $4,054 | $1,997 | No human rule yet. Multi-archetype. |
 | trips_pair | 2.9% | $5,417 | $1,447 (v23+) | v23 (Session 31) added 6 trips_pair-gated features; −$161/1000h on the category. No hand-coded rule extracted; the DT routing is multi-axis. |
 | three_pair | 1.9% | $4,529 | $1,654 | No human rule yet. |
-| two_pair | 22.3% | $3,371 | $1,458 (v18e+) | Existing `feature_table_two_pair_aug.parquet` is UNGATED (Session 19); audit-and-rebuild as `two_pair_aug_gated` is the natural Session 33 target ($325/1000h share, biggest fully-untouched category). |
+| two_pair | 22.3% | $3,371 | $1,145 (v26) | v26 (Session 33) added 6 two_pair-gated features alongside the 3 pre-existing two_pair aug booleans; −$313/1000h on the category. Largest per-category gain since v20→high_only. The 6 features split Layout B (high pair → mid) from Layout C (low pair → mid) which the existing 3 features lumped together. |
 | quads | 0.2% | $9,670 | $723 (v24+) | v20 captures heavily but no human rule. Below noise floor for further gating. |
-| composite | 0.2% | $10,883 | $1,864 (v24) | v24 (Session 31) added 4 composite-gated features for archetype-specific routing; small absolute lever (~$5/1000h max overall) but composite is the largest per-hand bleed. |
+| composite | 0.2% | $10,883 | $1,741 (v26) | v24 (Session 31) added 4 composite-gated features for archetype-specific routing. v26's two_pair work also marginally improved composite via tree-shape side effect (likely N=200 noise — prefix saw composite tied). |
 
 **Rule 5 candidates — REJECTED (Session 31):** Two attempts to extract a
 suited-mid rule from v20's gated features both lost head-to-head against
@@ -354,7 +356,8 @@ guide can keep them as human-memorizable approximations.
 - Combined chain → `analysis/scripts/strategy_v14_combined.py`
 
 **ML champion + baselines (newest first):**
-- v25 (current) → `analysis/scripts/strategy_v25_dt.py` + `data/v25_dt_model.npz` (391K leaves, 59 features)
+- v26 (current) → `analysis/scripts/strategy_v26_dt.py` + `data/v26_dt_model.npz` (459K leaves, 65 features)
+- v25 → `analysis/scripts/strategy_v25_dt.py` + `data/v25_dt_model.npz` (391K leaves, 59 features)
 - v24 → `analysis/scripts/strategy_v24_dt.py` + `data/v24_dt_model.npz` (315K leaves, 53 features)
 - v23 → `analysis/scripts/strategy_v23_dt.py` + `data/v23_dt_model.npz` (315K leaves, 49 features)
 - v20 → `analysis/scripts/strategy_v20_dt.py` + `data/v20_dt_model.npz` (308K leaves)
@@ -365,7 +368,8 @@ guide can keep them as human-memorizable approximations.
 - v16 → `analysis/scripts/strategy_v16_dt.py` + `data/v16_dt_model.npz` (29K leaves)
 
 **Trainers:**
-- v25 trainer (59 features incl. all 4 gated families + 3 pre-existing pair-gated booleans) → `analysis/scripts/train_v25_dt.py`
+- v26 trainer (65 features incl. all 5 gated families + 3 pre-existing pair-gated booleans + 3 pre-existing two_pair-gated booleans) → `analysis/scripts/train_v26_dt.py`
+- v25 trainer (59 features incl. 4 gated families + 3 pre-existing pair-gated booleans) → `analysis/scripts/train_v25_dt.py`
 - v24 trainer (53 features incl. 3 gated families + 3 pre-existing pair-gated booleans) → `analysis/scripts/train_v24_dt.py`
 - v23 trainer (49 features incl. gated suited + gated trips_pair) → `analysis/scripts/train_v23_dt.py`
 - v18 capacity trainer (37 features) → `analysis/scripts/train_v18_dt.py`
@@ -377,6 +381,9 @@ guide can keep them as human-memorizable approximations.
 - Pair persist → `analysis/scripts/persist_aug_features.py` → `data/feature_table_aug.parquet`
 - Gated pair (Session 32, 6 new features) → `analysis/scripts/pair_aug_features_gated.py`
 - Gated pair persist → `analysis/scripts/persist_pair_aug_gated.py` → `data/feature_table_pair_aug_gated.parquet`
+- Two_pair (3 pre-existing, already category-gated since Session 19) → `analysis/scripts/two_pair_aug_features.py` → `data/feature_table_two_pair_aug.parquet`
+- Gated two_pair (Session 33, 6 new features, prefix `t2p_*`) → `analysis/scripts/two_pair_aug_features_gated.py`
+- Gated two_pair persist → `analysis/scripts/persist_two_pair_aug_gated.py` → `data/feature_table_two_pair_aug_gated.parquet`
 - Gated suited (high_only) → `analysis/scripts/suited_aug_features_gated.py`
 - Gated suited persist → `analysis/scripts/persist_suited_aug_gated.py`
 - Gated trips_pair → `analysis/scripts/trips_pair_aug_features_gated.py`
@@ -409,7 +416,7 @@ print(result.summary())
 
 # Part 6 — THE CURRENT STANDARD
 
-> Everything below this line is the active rule set as of Session 32.
+> Everything below this line is the active rule set as of Session 33.
 > If you only read one section, read this one.
 >
 > **Human-memorizable strategy of record: v14_combined + Rule 4.**
@@ -418,13 +425,13 @@ print(result.summary())
 > A naive Rule 5 (suited-mid for high_only) was tested in Session 31
 > in two flavors and **REJECTED** — see Part 4 + Decision 056.
 >
-> **ML champion (not human-memorizable): v25_dt** — 390,626-leaf
-> DecisionTreeRegressor (depth=30, min_samples_leaf=5), 59 features
+> **ML champion (not human-memorizable): v26_dt** — 459,209-leaf
+> DecisionTreeRegressor (depth=30, min_samples_leaf=5), 65 features
 > including 6 gated suited-broadway (high_only), 6 gated trips_pair,
-> 4 gated composite, and 6 gated pair features (the latter shipped
-> Session 32). Beats v14 by **+$1,104/1000h** on the full grid and
-> **+$983/1000h** on the prefix N=1000. Lives at
-> `analysis/scripts/strategy_v25_dt.py` + `data/v25_dt_model.npz`.
+> 4 gated composite, 6 gated pair, and 6 gated two_pair features (the
+> latter shipped Session 33). Beats v14 by **+$1,174/1000h** on the
+> full grid and **+$1,035/1000h** on the prefix N=1000. Lives at
+> `analysis/scripts/strategy_v26_dt.py` + `data/v26_dt_model.npz`.
 
 ---
 
@@ -610,7 +617,7 @@ For every hand not covered above — single pair outside the rule's gates, no-pa
 - **Mid** = your strongest 2-card Hold'em combination from what's left (pair > broadway > suited connector)
 - **Bot** = whatever's left, ideally with at least 2 of one suit for some Omaha equity
 
-This is the v8_hybrid play. It's not optimal on every hand but it's adequate. The v25 ML champion captures meaningful additional EV here (especially on high_only and pair hands), but no clean human-memorizable rule has been extracted yet — Session 33+ priority.
+This is the v8_hybrid play. It's not optimal on every hand but it's adequate. The v26 ML champion captures meaningful additional EV here (especially on high_only, pair, and two_pair hands), but no clean human-memorizable rule has been extracted yet — Session 34+ priority.
 
 ---
 

@@ -1752,3 +1752,100 @@ The textbook gating-template signature: pair drops on both grids ($102 / $41), e
 4. **Capacity surprise:** v25 needed +75K leaves vs v24, the largest leaf-count delta since v20. Suggests the pair category's new partitioning is structural, not noise-fitting; the prefix N=1000 tripwire confirmed this independently.
 5. **Open question for Session 33:** with pair now gated, the largest untouched lever is `two_pair_aug_gated` ($325/1000h share, 22.3% population). High_only round 2 ($590 share but partly addressed) is the alternative. See CURRENT_PHASE.md.
 
+
+## Decision 060 — v26_dt is the new ML champion (Session 33) — two_pair-gated aug family is the fifth gating success and largest per-category gain since v20
+
+**Date:** 2026-05-04
+**Status:** Shipped. v26 wins on BOTH grids by adding 6 two_pair-gated features that augment the 3 pre-existing two_pair aug booleans (verified strictly category-gated since Session 19 — same audit pattern as the Session 32 pair audit). Fifth clean instance of the gating template (high_only/v20, trips_pair/v23, composite/v24, pair/v25, two_pair/v26). The $313/1000h per-category drop on two_pair is the biggest single-category win since v20→high_only's $413.
+
+**Two_pair audit (the diagnostic question from Session 32's resume prompt):**
+The 3 two_pair aug features that have existed since Session 19 (`default_bot_is_ds_tp`, `n_routings_yielding_ds_bot_tp`, `swap_high_pair_to_bot_ds_compatible`) were verified strictly zero on every non-two_pair canonical hand:
+
+| Feature | Non-two_pair rows nonzero | Two_pair-row coverage |
+|---|---:|---:|
+| `default_bot_is_ds_tp` | 0 | 180,180 / 1,338,480 = 13.5% |
+| `n_routings_yielding_ds_bot_tp` | 0 | 617,760 / 1,338,480 = 46.2% (values {0,1,2,4} only) |
+| `swap_high_pair_to_bot_ds_compatible` | 0 | 386,100 / 1,338,480 = 28.8% |
+
+So they were already gated since Session 19 — same Session 17 vintage as the pair aug features. NOT v19 leakage. Path was again option B: design a 6-feature gated extension.
+
+**What v26 is:**
+- 65 features: 59 v25 features + **6 two_pair-gated (new)**.
+- Same training profile: depth=30, ml=5, random_state=42.
+- 459,209 leaves (vs v25's 390,626) — **+68,583 leaves**, +18% capacity expansion. Second-largest leaf-count delta of any single ship.
+- Model file: `data/v26_dt_model.npz` (309 MB).
+
+**The 6 two_pair-gated features** (`analysis/scripts/two_pair_aug_features_gated.py`):
+
+| Feature | Domain | What it encodes |
+|---|---|---|
+| `t2p_layout_a_bot_is_ds_g` | 0/1 | Layout A (both pairs → bot) gives DS — fires when both pairs share BOTH suits exactly. ~19% of two_pair hands. |
+| `t2p_n_layout_b_routings_ds_g` | 0..3 | DS routings with HIGH pair in mid (subset of `n_routings_yielding_ds_bot_tp`). Splits Layout B from Layout C — the Session 19 mining notes called out this exact distinction as the dominant miss pattern. |
+| `t2p_top_singleton_rank_g` | 0..14 | Highest of the 3 singletons (natural top). |
+| `t2p_low_singleton_rank_g` | 0..14 | Lowest singleton. Captures "is there a 2 or 3 to throw to top safely?" — surprisingly strong: #12 in feature importance at 0.81%. |
+| `t2p_singletons_max_suit_count_g` | 1..3 | Max count of singletons in any one suit (suited-mid signal). |
+| `t2p_high_pair_rank_g` | 0..14 | High pair rank, zeroed off-archetype (mirror of pair_high_rank with strict gating, mirrors pattern from `comp_higher_pair_rank_g`). |
+
+All zero for any non-two_pair hand. 1,338,480 of 6,009,159 canonical hands fire the gate (22.3%).
+
+**Validation results:**
+
+| Grid | v25 $/1000h | v26 $/1000h | Δ |
+|---|---:|---:|---:|
+| Full (N=200, 6.0M hands) | $1,929 | **$1,859** | **−$70** |
+| Prefix (N=1000, 500K hands) | $1,054 | **$1,002** | **−$52** |
+
+Per-category at full grid:
+
+| Category | v25 | v26 | Δ |
+|---|---:|---:|---:|
+| high_only | $2,894 | $2,894 | $0 |
+| pair | $1,771 | $1,771 | $0 |
+| **two_pair** | **$1,458** | **$1,145** | **−$313** |
+| trips | $1,997 | $1,997 | $0 |
+| trips_pair | $1,446 | $1,445 | −$1 (noise) |
+| three_pair | $1,654 | $1,654 | $0 |
+| quads | $723 | $723 | $0 |
+| composite | $1,869 | $1,741 | −$128 (likely N=200 noise — composite is 0.245% of population, prefix saw +$2) |
+
+Per-category at prefix grid:
+
+| Category | v25 | v26 | Δ |
+|---|---:|---:|---:|
+| pair | $888 | $888 | $0 |
+| **two_pair** | **$1,050** | **$924** | **−$126** |
+| trips | $1,763 | $1,763 | $0 |
+| trips_pair | $1,657 | $1,656 | −$1 (noise) |
+| three_pair | $1,122 | $1,123 | +$1 (noise) |
+| quads | $794 | $794 | $0 |
+| composite | $1,610 | $1,612 | +$2 (noise) |
+
+Textbook gating-template signature on prefix; full-grid composite move is most plausibly noise (composite has only 14,742 hands at N=200, and prefix shows it tied). Headline gain matches arithmetic: $313 × 22.3% population share = $70 (exact). pct_optimal moves from 48.43% → 49.21% on full and 59.80% → 60.80% on prefix; two_pair-only pct_opt jumps 57.3% → 60.8% (full) and 58.8% → 61.3% (prefix).
+
+**Feature importance (v26 top-25):** 3 of 6 new two_pair-gated features placed in top-25, with `t2p_low_singleton_rank_g` at #12 (0.81%) — surprisingly strong, likely encoding "can we safely demote the weakest singleton to top?". The 3 pre-existing two_pair aug features remain in the model alongside the new 6.
+
+**Bug encountered + fixed mid-session — naming-collision lesson:**
+v26 was first trained with the 6 new features named `tp_*` (matching the trips_pair gated family's prefix). Both `tp_low_singleton_rank_g` AND `tp_top_singleton_rank_g` collided with the trips_pair feature names. Training succeeded by column index, but inference's `feature_columns.index(c)` returned the FIRST occurrence for both name lookups; the v26 strategy wrote two_pair values into the trips_pair column index and left the actual two_pair column uninitialized. **Result: v26 (buggy) showed $3,746/1000h on prefix** — a $2,692 catastrophic regression with two_pair AND trips_pair both blown up. Renamed all 6 features to `t2p_*` prefix; re-persisted parquet (37s); re-trained (256s); re-graded — clean win as documented above.
+
+**Methodology lesson** (added to CURRENT_PHASE.md): each gated family must use a UNIQUE prefix. The trips_pair family already owned `tp_`; future families need distinct prefixes. Audit checklist now includes: `grep -c <new_prefix> existing feature definitions` before naming.
+
+**Files:**
+- `analysis/scripts/two_pair_aug_features_gated.py` — feature computation (6 features)
+- `analysis/scripts/persist_two_pair_aug_gated.py` — writes parquet
+- `data/feature_table_two_pair_aug_gated.parquet` (20 MB)
+- `analysis/scripts/train_v26_dt.py` — trainer (65 features, builds on train_v25)
+- `analysis/scripts/strategy_v26_dt.py` — inference wrapper
+- `analysis/scripts/grade_v26.py` — head-to-head grader
+- `data/v26_dt_model.npz` (309 MB)
+
+**Consequence:**
+1. **v26 is the new ML champion.** Use `strategy_v26_dt(hand_bytes) -> setting_index`. Largest per-category gain since v20→high_only (Session 30).
+2. **Five categories gated cleanly:** high_only (v20), trips_pair (v23), composite (v24), pair (v25), two_pair (v26). Population shares span 0.245% (composite) to 46.6% (pair).
+3. **Naming convention enforcement:** all gated features must use a unique prefix. Existing prefixes claimed: `_g` suffix variants for suited (`*_g`), trips_pair (`tp_*_g`), composite (`comp_*_g`), pair (`pair_*_g`), two_pair (`t2p_*_g`). New families must check.
+4. **Diminishing-returns watch:** five large categories now gated. Remaining absolute residuals at full grid (per-category × share):
+   - **pair**: 46.6% × $1,771 = $825 share — second-pass diagnostic candidate
+   - **high_only**: 20.4% × $2,894 = $590 share — round 2 candidate
+   - **two_pair**: 22.3% × $1,145 = $255 share — just got hit
+   - trips: 5.5% × $1,997 = $110 — never gated
+   - The large levers are increasingly squeezed; round-2 audits and trips_aug_gated are the natural Session 34+ targets.
+5. **Open question for Session 34:** distill v26 on high_only (still $2,894/1000h, untouched since v20). Either a `connectivity_high_g` family yields another v20-shaped win, or high_only is intrinsically harder and we move to trips_aug_gated.
