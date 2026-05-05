@@ -189,6 +189,184 @@ fire only in the targeted hand category, leave others bit-identical,
 prefix tripwire passes trivially. This is the single biggest
 methodology lesson of Sessions 28-30.
 
+## Session 31: Two ships (v23 trips_pair, v24 composite); v20b archived; Rule 5 rejected
+
+This was an "all 4 targets" sprint per the user's request: distill v20,
+new gated aug families, composite deep-dive, v20b capacity step.
+
+**v20b at depth=32 (capacity probe).** Bit-identical to v20 (same
+307,939 leaves). `min_samples_leaf=5` is the binding constraint at
+depth=30; pushing to depth=32 changes nothing. **ARCHIVED.** The
+trainer-flag-level capacity sweep is now CLOSED — future gains are
+feature-engineering, not raw capacity.
+
+**Distill v20 → Rule 5 candidates → REJECTED.** Walked v20's tree on
+the high_only category. Top splits all standard features (n_broadway,
+third_rank, pair_high_rank); the 6 gated suited features cluster around
+msphr thresholds 5.5–8.5 in deep subtrees. Two candidate Rule 5 variants
+(loose `msphr ≥ 9` and tight `msphr ≥ 11 AND msplr ≥ 9`) tested
+head-to-head against v14_combined:
+- **v21 = v14 + Rule 5 (loose):** $3,713/1000h, **−$680 vs v14.**
+- **v22 = v14 + Rule 5 (tight):** $3,506/1000h, **−$473 vs v14.**
+
+Both **REJECTED**. Both fire on ~8× more high_only hands than the DT's
+selective routing actually wants. The DT's gated splits use 4+ rank
+thresholds combined with `n_low`/`n_broadway` that no single AND-rule
+can replicate. **For the human chain: stop at Rule 4. For computational
+play: use the DT champion.**
+
+**v23 ships — gated trips_pair aug family.** 6 new features
+(`tp_trip_rank_g`, `tp_pair_rank_g`, `tp_high_singleton_rank_g`,
+`tp_low_singleton_rank_g`, `tp_singletons_suited_g`,
+`tp_pair_routing_is_ds_g`), zeros for non-trips_pair. 49 features total
+(43 v20 + 6 trips_pair-gated), depth=30 ml=5, **314,705 leaves**.
+- Full grid: $1,977/1000h. **+$5 vs v20** (trips_pair drops $1,608 → $1,447, **−$161**).
+- Prefix: $1,073/1000h. **+$9 vs v20** (trips_pair drops $1,657 → $1,478, **−$179**).
+- Every other category bit-identical or within N=200 noise. 2nd clean instance of the gating template after v20→high_only.
+
+**v24 ships — gated composite aug family.** 4 new features
+(`comp_archetype_g`, `comp_lower_trip_rank_g`, `comp_singleton_rank_g`,
+`comp_higher_pair_rank_g`), zeros for non-composite. Composite is rare
+(0.245% of population) but the largest per-hand bleed at $2,080 on v23.
+The `composite_v20_residual` diagnostic identified 4 archetype clusters
+(trips_two_pair, two_trips, quads_pair, quads_trip) where v20 frequently
+SPLITS the dominant trips/quads instead of keeping them together on bot.
+The 4 gated features expose archetype + the unique-info "lower_trip_rank"
+signal. 53 features total (49 v23 + 4 composite-gated), depth=30 ml=5,
+**314,759 leaves** (only +54 over v23).
+- Full grid: $1,977/1000h. **+$1 vs v23** at the headline (composite drops $2,080 → $1,864, **−$216**).
+- Prefix: $1,072/1000h. **+$1 vs v23** (composite drops $1,811 → $1,610, **−$201**).
+- Headline is at the noise floor because composite is 0.245% of population, but per-category effect is unambiguous. 3rd clean instance of the gating template.
+
+**Score: v23 $1,977/1000h, v24 $1,977/1000h. v24 is the new ML champion.
+Improvement: −$487 vs v16, −$1,056 vs v14.**
+
+**Methodology lesson — the gating template is now proven across THREE
+categories** (high_only, trips_pair, composite). Each upgrade lifted
+ONLY its targeted category and kept every other category bit-identical
+or within N=200 noise. Population shares span 0.245% to 20.4%. Future
+aug families should follow the same shape: 4-6 archetype-specific
+features, zero for off-archetype hands, persisted by canonical_id,
+trained on top of the current champion.
+
+**Methodology lesson — distilled rules need head-to-head validation
+BEFORE shipping.** Both Rule 5 variants looked good in distillation but
+lost to v14 by hundreds of $/1000h. Naive rule extraction is ~8×
+over-eager relative to the DT's selective routing.
+
+## Session 32: v25 ships (gated pair) — 4th gating success, largest population share
+
+**Pair audit — answers the diagnostic question from Session 31's
+resume prompt.** The 3 pre-existing pair aug features
+(`default_bot_is_ds`, `n_top_choices_yielding_ds_bot`,
+`pair_to_bot_alt_is_ds`) were verified STRICTLY zero on every non-pair
+canonical row. They've been category-gated since Session 17 — the
+naming inconsistency (no `_g` suffix) was misleading but harmless. They
+are NOT the v19 leakage pattern.
+
+Path forked: option B (design 6-feature gated EXTENSION alongside the
+existing 3 booleans), not option A (rebuild from scratch).
+
+**v25 ships — 6 new pair-gated features.** The existing 3 features
+answered "is the bot DS under this routing?" (booleans / 0-3 buckets).
+The new 6 add rank- and mid-quality signal:
+- `pair_kickers_in_pair_suit_max_g` (0..5)
+- `pair_kickers_in_pair_suit_min_g` (0..5)
+- `pair_default_top_rank_g` (0..14)
+- `pair_alt_top_rank_g` (0..14)
+- `pair_alt_mid_suited_g` (0/1)
+- `pair_alt_mid_n_broadway_g` (0..2)
+
+59 features total (53 v24 + 6 pair-gated), depth=30 ml=5,
+**390,626 leaves** (+75K vs v24 — biggest single-ship leaf delta since
+v20). Prefix tripwire confirmed the new partitioning is structural, not
+noise-fitting.
+
+- Full grid: $1,929/1000h. **−$47 vs v24** (pair drops $1,873 → $1,771, **−$102**).
+- Prefix: $1,054/1000h. **−$18 vs v24** (pair drops $929 → $888, **−$41**).
+- Every other category bit-identical or within N=200 noise. pct_optimal
+  jumps 47.89% → 48.43% (full) and 59.48% → 59.80% (prefix). Pair-only
+  pct_opt: 52.8% → 53.9% (full), 62.8% → 63.5% (prefix).
+
+**Score: $1,929/1000h on full grid. Improvement: −$535 vs v16, −$1,104 vs v14.**
+
+**Methodology lesson — population share matters more than per-hand
+bleed for picking next targets.** Pair has only $1,873/1000h regret
+(modest) but 46.6% population share, so its absolute share is $873/1000h
+— biggest residual. v25's $102 per-category gain × 46.6% = $47 headline,
+the largest gating gain since v20. Compare composite (0.245% × $216 =
+$0.5/1000h headline despite a comparable per-category effect).
+
+**Methodology lesson — leakage check is a one-shot pyarrow read.**
+The pair audit was a single ~5-second pandas script (count nonzero rows
+by category for each suspect feature). Should be the first step of every
+audit going forward; 3 sessions of "is this gated?" diagnostics
+collapses into one query.
+
+## Session 33: v26 ships (gated two_pair) — 5th gating success, biggest per-category gain since v20
+
+**Two_pair audit (same pattern as Session 32).** The 3 pre-existing
+two_pair aug features (`default_bot_is_ds_tp`,
+`n_routings_yielding_ds_bot_tp`, `swap_high_pair_to_bot_ds_compatible`)
+were verified strictly zero on every non-two_pair canonical row.
+Already gated since Session 19. NOT v19 leakage. Path: option B (extend
+with 6 new features alongside the existing 3).
+
+**v26 ships — 6 new two_pair-gated features.** The Session 19 mining
+notes had flagged "high-pair-on-mid (DT default) vs high-pair-on-bot
+(BR swap)" as the dominant miss pattern; the existing
+`n_routings_yielding_ds_bot_tp` lumps Layout B and Layout C together.
+The 6 new features SPLIT B from C and add rank/suit info:
+- `t2p_layout_a_bot_is_ds_g` (0/1) — Layout A bot DS, fires when both
+  pairs share BOTH suits exactly (~19% of two_pair hands)
+- `t2p_n_layout_b_routings_ds_g` (0..3) — Layout B subset of total DS
+  routings (the long-flagged distinction)
+- `t2p_top_singleton_rank_g` (0..14)
+- `t2p_low_singleton_rank_g` (0..14) — surprisingly strong, #12 in
+  feature importance
+- `t2p_singletons_max_suit_count_g` (1..3)
+- `t2p_high_pair_rank_g` (0..14)
+
+65 features total (59 v25 + 6 two_pair-gated), depth=30 ml=5,
+**459,209 leaves** (+68K vs v25, second-largest single-ship leaf delta
+after v25's +75K).
+
+- Full grid: $1,859/1000h. **−$70 vs v25** (two_pair drops $1,458 → $1,145, **−$313**).
+- Prefix: $1,002/1000h. **−$52 vs v25** (two_pair drops $1,050 → $924, **−$126**).
+- Every other category bit-identical or within N=200 noise. pct_optimal
+  jumps 48.43% → 49.21% (full) and 59.80% → 60.80% (prefix). Two_pair
+  pct_opt: 57.3% → 60.8% (full), 58.8% → 61.3% (prefix).
+- **Largest per-category gain since v20→high_only ($413).**
+
+**Score: $1,859/1000h on full grid. Improvement: −$605 vs v16, −$1,174 vs v14.**
+
+**Bug recovery mid-session — naming collision.** First v26 attempt named
+the new features `tp_*`, colliding with the trips_pair gated family's
+prefix. Both `tp_low_singleton_rank_g` AND `tp_top_singleton_rank_g`
+existed in two different feature definitions. Training succeeded by
+column index, but inference's `feature_columns.index(c)` returned the
+FIRST occurrence for both name lookups — the v26 strategy wrote
+two_pair values into the trips_pair column index and left the actual
+two_pair column uninitialized. **Buggy v26 output: $3,746/1000h on
+prefix** ($2,692 catastrophic regression with two_pair AND trips_pair
+both blown up). Diagnosed in 1 round-trip from the cross-category
+blowup pattern; renamed all 6 features to `t2p_*`, re-persisted parquet
+(38s), retrained (256s), regraded — clean win as documented above.
+
+**Methodology lesson — each gated family must use a UNIQUE prefix.**
+Existing claims: `_g` suffix variants (suited), `tp_*_g` (trips_pair),
+`comp_*_g` (composite), `pair_*_g` (pair), `t2p_*_g` (two_pair). New
+families must check existing prefixes BEFORE picking a name. Cross-
+category blowup (regressing both the targeted category AND another) is
+the diagnostic signature for column-name collisions.
+
+**Methodology lesson — the gating template is now proven across FIVE
+categories** (high_only, trips_pair, composite, pair, two_pair).
+Population shares span 0.245% (composite) to 46.6% (pair). Per-category
+gains: high_only $413, two_pair $313, composite $216, trips_pair $161,
+pair $102. The template works at every scale tried; the question is no
+longer "does it work?" but "which category next, and what features?".
+
 ---
 
 # Part 2 — ML champion progression (the full table)

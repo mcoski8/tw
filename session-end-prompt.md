@@ -29,13 +29,18 @@ Once pre-flight passes, update these files:
    - Immediate next actions
    - Ready-to-paste resume prompt
 
-3. **MASTER_HANDOFF_XX.md** — APPEND session log entry
+3. **STRATEGY_GUIDE.md** — MIXED update mode. **READ THE STRUCTURE NOTE AT THE TOP OF THE FILE FIRST** (lines ~7-15) before editing. The file is divided into 6 parts with different update conventions:
+   - **Part 1 (Strategy Evolution) — APPEND-ONLY.** Add a new `## Session NN: <one-line title>` section at the END of Part 1 (right before the `# Part 2` divider) summarizing this session's strategy-relevant work. Match the format of the most recent existing session entry: bold-titled paragraphs, per-category numbers, a `**Score: $X/1000h on full grid. Improvement: −$Y vs v16, −$Z vs v14.**` line near the end, and a `**Methodology lesson —**` takeaway. Do NOT edit prior session entries.
+   - **Parts 2–6 — UPDATE IN PLACE.** Refresh tables, file pointers, and "current standard" text to reflect the latest champion. The "Last updated" line in the front matter must reflect this session.
+   - Skip Part 1 if this session did NOT change the strategy of record (e.g., a pure bug fix or doc-only session). State so explicitly in the commit message.
 
-4. **DECISIONS_LOG.md** — APPEND any non-trivial decisions
+4. **MASTER_HANDOFF_XX.md** — APPEND session log entry
 
-5. **checklist.md** — Check off `[x]` completed tasks
+5. **DECISIONS_LOG.md** — APPEND any non-trivial decisions
 
-6. **SPRINT_INDEX.md** — Update if sprint status changed
+6. **checklist.md** — Check off `[x]` completed tasks
+
+7. **SPRINT_INDEX.md** — Update if sprint status changed
 
 ## Final Confirmation
 
