@@ -192,10 +192,11 @@
 
 ---
 
-> **STALENESS NOTICE (added end of Session 33, 2026-05-04):** This checklist
-> was authored pre-build. The actual project has advanced through Sprint 7
-> with v26_dt as current ML champion and 5 gating-template wins shipped
-> (high_only/v20, trips_pair/v23, composite/v24, pair/v25, two_pair/v26).
+> **STALENESS NOTICE (last updated end of Session 34, 2026-05-05):** This
+> checklist was authored pre-build. The actual project has advanced through
+> Sprint 7 with **v27_dt as current ML champion** and **6 gating-template
+> wins** shipped (high_only-via-suited/v20, trips_pair/v23, composite/v24,
+> pair/v25, two_pair/v26, high_only-direct/v27).
 > Most engine + best-response items above are complete via the Full Oracle
 > Grid (Session 24); CFR Tier 2 was deferred. The "AI Consensus" sub-tasks
 > were superseded by direct DT regression (v16+) and pattern-mining via

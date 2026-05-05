@@ -1849,3 +1849,123 @@ v26 was first trained with the 6 new features named `tp_*` (matching the trips_p
    - trips: 5.5% × $1,997 = $110 — never gated
    - The large levers are increasingly squeezed; round-2 audits and trips_aug_gated are the natural Session 34+ targets.
 5. **Open question for Session 34:** distill v26 on high_only (still $2,894/1000h, untouched since v20). Either a `connectivity_high_g` family yields another v20-shaped win, or high_only is intrinsically harder and we move to trips_aug_gated.
+
+
+## Decision 061 — v27_dt is the new ML champion (Session 34) — high_only-gated aug family is the sixth gating success but the smallest per-category gain to date
+
+**Date:** 2026-05-05
+**Status:** Shipped (marginal). v27 wins on full grid by adding 4 high_only-gated features. Sixth clean instance of the gating template (after v20→suited/high_only-via-suited, v23→trips_pair, v24→composite, v25→pair, v26→two_pair). The $31/1000h within-category gain on high_only is real and category-isolated, but the smallest per-category absolute drop in the project's history. Headline: $1,859 → $1,853 (−$6/1000h, +0.06pp pct_opt).
+
+**Diagnostic origin (Session 34 distillation of v26):**
+The distillation `distill_v26_high_only.py` walked all 6M hands through v26's 459K-leaf tree and identified the top 30 high_only miss leaves. ALL of them shared the path `n_broadway ∈ [3,4]` AND `n_broadway_in_largest_suit_g ≥ 2` — i.e., suited-broadway high_only hands with 3-4 broadway cards. Stratifying within these miss leaves by the candidate feature `n_broadway_in_2nd_suit` produced striking separations:
+
+| Leaf | n_ho | mean_regret | cand=0 reg | cand=1 reg | Δ |
+|---|---:|---:|---:|---:|---:|
+| 578474 | 420 | +0.635 | +0.773 | +0.359 | **+0.414 EV** |
+| 545147 | 420 | +0.635 | +0.748 | +0.408 | +0.340 EV |
+| 798839 | 432 | +0.589 | +0.679 | +0.544 | +0.135 EV |
+| 545045 | 840 | +0.588 | +0.640 | +0.486 | +0.154 EV |
+
+9/10 top miss leaves showed ≥0.15 EV within-leaf separation. This was the strongest pre-train signal of any session — comparable in magnitude to the per-leaf signal that motivated v25 and v26.
+
+**What v27 is:**
+- 69 features: 65 v26 features + **4 high_only-gated (new)**.
+- Same training profile: depth=30, ml=5, random_state=42.
+- 460,375 leaves (vs v26's 459,209) — **+1,166 leaves**, +0.25% expansion. The smallest single-ship leaf delta of any gating-template ship (compare v25→v26 +68K, v24→v25 +76K, v23→v24 +54).
+- Model file: `data/v27_dt_model.npz` (310 MB).
+
+**The 4 high_only-gated features** (`analysis/scripts/high_only_aug_features_gated.py`, prefix `ho_*_g` to avoid Session-33 naming-collision lesson):
+
+| Feature | Domain | What it encodes |
+|---|---|---|
+| `ho_n_broadway_in_2nd_suit_g` | 0..3 | Count of T-A in the 2nd-largest suit. PRIMARY signal from diagnostic. |
+| `ho_n_broadway_in_3rd_suit_g` | 0..3 | Count of T-A in the 3rd-largest suit. Completes the per-suit broadway distribution. |
+| `ho_connectivity_high_g` | 0..5 | Longest run of consecutive ranks within broadway (T-A). |
+| `ho_n_broadway_pairs_adj_g` | 0..4 | Count of adjacent broadway pairs present (AK/KQ/QJ/JT). Differs from connectivity_high — KQ + JT gives 2 here but longest=2. |
+
+All zero for any non-high_only hand. 1,226,940 of 6,009,159 canonical hands fire the gate (20.4% — second-largest gating share after pair).
+
+**Validation results:**
+
+| Grid | v26 $/1000h | v27 $/1000h | Δ |
+|---|---:|---:|---:|
+| Full (N=200, 6.0M hands) | $1,859 | **$1,853** | **−$6** |
+| Prefix (N=1000, 500K hands) | $1,002 | $1,002 | $0 (no high_only hands) |
+
+Per-category at full grid:
+
+| Category | v26 | v27 | Δ |
+|---|---:|---:|---:|
+| **high_only** | **$2,894** | **$2,863** | **−$31** |
+| pair | $1,771 | $1,771 | $0 |
+| two_pair | $1,145 | $1,145 | $0 |
+| trips | $1,997 | $1,997 | $0 |
+| trips_pair | $1,445 | $1,445 | $0 |
+| three_pair | $1,654 | $1,654 | $0 |
+| quads | $723 | $723 | $0 |
+| composite | $1,741 | $1,741 | $0 |
+
+Per-category at prefix grid: **all categories bit-identical (zero changes anywhere)** — confirmed because the prefix grid's canonical-id 0..500K subset contains zero high_only hands. The category distribution in prefix sums to exactly 500,000 across (pair, two_pair, trips, trips_pair, three_pair, quads, composite) — every prefix hand has at least one pair. This is a structural feature of the canonical-id ordering and means v27's high_only-targeting features can only be validated on the full grid.
+
+Textbook gating-template signature on full grid: high_only drops, every other category bit-identical to the byte. Headline gain matches arithmetic: $31 × 20.42% population share = $6.33 ≈ $6 actual. pct_optimal moves from 49.21% → 49.27% on full (+0.06 pp); high_only-only pct_opt: 27.7% → 28.0% (+0.3 pp).
+
+**Feature importance (v27 top-25):** **0 of 4 new ho_*_g features placed in the top 25.** Compare to v26 (3/6 t2p_*) and v25 (5/6 pair_*). This was the leading indicator of the marginal headline result. The DT primarily captured the new signal through reshuffling existing-feature splits, not through the new features themselves. Only +1,166 leaves grew, vs +68K/+76K of recent ships.
+
+**Diagnostic-to-headline conversion ratio: ~10%.** The within-leaf 0.34-0.41 EV separation (worst miss leaves) projected to ~$3,400/1000h within-leaf. Realized headline: $31/1000h within-category, $6/1000h whole-grid. The signal is concentrated in a small fraction of hands within each miss leaf — even a perfect feature would only flip ~24% of bot-DS-eligible KKK/AAA, and the same logic holds for high_only: the 0.34 EV separation only fires on the SUBSET of leaf hands where the feature actually changes the optimal pick, not the full leaf population.
+
+**Files:**
+- `analysis/scripts/high_only_aug_features_gated.py` — feature computation (4 features)
+- `analysis/scripts/persist_high_only_aug_gated.py` — writes parquet (28.5s for 6M hands)
+- `data/feature_table_high_only_aug_gated.parquet` (19 MB)
+- `analysis/scripts/train_v27_dt.py` — trainer (69 features, builds on train_v26)
+- `analysis/scripts/strategy_v27_dt.py` — inference wrapper (6 gated families + base)
+- `analysis/scripts/grade_v27.py` — head-to-head grader
+- `analysis/scripts/distill_v26_high_only.py` — diagnostic that motivated the design
+- `data/v27_dt_model.npz` (310 MB)
+
+**Consequence:**
+1. **v27 is the new ML champion.** Use `strategy_v27_dt(hand_bytes) -> setting_index`. Marginal but technically positive on the only grid that can measure it (full).
+2. **Six categories gated cleanly:** suited/high_only-via-suited (v20), trips_pair (v23), composite (v24), pair (v25), two_pair (v26), high_only-direct (v27). The template is now proven across population shares from 0.245% (composite) to 46.6% (pair), with high_only at 20.4% being the second-largest.
+3. **Naming convention enforcement upheld.** `ho_*_g` prefix is unique among existing gated families.
+4. **New methodology rule: top-25 feature importance is a pre-grade tripwire.** If 0/N new features place in top-25, expect marginal-to-null headline. Future families: validate the diagnostic with a single-feature DT before committing to a 4-6 feature family. For correlated candidates (e.g. `ho_connectivity_high_g` overlaps with `n_broadway`+`n_low`+`connectivity`), the additional features may not earn their place.
+5. **New methodology rule: prefix N=1000 grid has 0 high_only hands.** Future high_only-targeting models can only be validated on full-grid N=200. This was always true but had not been observed to LIMIT a grade until this session. The canonical-id 0..500K subset contains only hands with at least one pair (sums to exactly 500,000 across pair / two_pair / trips / trips_pair / three_pair / quads / composite).
+6. **Open question for Session 35:** with high_only now lightly touched, the largest residual is back to **pair at $825/1000h whole-grid share**. Session 35 priority A is a pair second-pass diagnostic + a head-to-head grade of v27 vs the KK/AA-Rule-4 + bot-DS-oracle on the KK/AA subset (see Decision 062) to determine how much of pair's $42/1000h KK/AA upper bound v25's pair-gated features already capture.
+
+
+## Decision 062 — KKK/AAA routing rule confirmed; KK/AA Rule-4 boundary probe (Session 34) — preserves Rule 4 default but identifies $42/1000h KK/AA upper bound for future pair second-pass
+
+**Date:** 2026-05-05
+**Status:** Documentation-only. No strategy change this session. Two probes ran in Session 34 to characterize the KK/AA and KKK/AAA routing decisions; both confirm the existing Rule 4 / paired-mid default but identify quantifiable exception subsets for future iteration.
+
+**KKK/AAA probe (`probe_trips_kkk_aaa_routing.py`, n=50,490, 0.84% of grid):**
+- A_paired_mid (keep 2 of 3 trip-rank cards in mid as a pair) is the dominant routing: mean EV **+2.530**, BR-optimal on **79.18%** of all KKK/AAA hands.
+- AAA: A wins vs B 80.1% (clearer A-dominance). pct_opt of A = 83.84%.
+- KKK: A wins vs B 70.9% (splits to DS-bot more often). pct_opt of A = 74.53%. Asymmetry explanation: AAA's stronger mid-pair makes the split less attractive than KKK's.
+- B_split_bot_DS (2 of 3 trip-rank in bot, anchoring DS) is geometrically available on 68.6% of KKK/AAA hands. When available, strictly beats A on 24.3% of those cases with mean +0.363 EV gain.
+- Top B-wins concentrated where smax=2, s2nd=2 (a 2-2-2-1 suit profile) with n_broadway ∈ [3,4] — high-broadway hands with strong DS-bot potential and mediocre kickers for paired-mid.
+- Upper bound oracle-perfect rule: $606/1000h within KKK/AAA, **$5/1000h whole-grid** (KKK/AAA is 0.84% of population).
+- CSV at `data/kkk_aaa_routing_probe.csv`.
+
+**KK/AA Rule-4 boundary probe (`probe_kk_aa_ds_bot_vs_mid.py`, n=430,848, 7.17% of grid):**
+- Rule 4 (KK/AA → mid as a pair) is BR-optimal on **72.76%** of non-trips KK/AA hands.
+- DS-bot routing geometrically available on **55.1%** of KK/AA hands (always when both pair-cards are in different suits, which is 100% of canonical KK/AA hands).
+- When DS-bot is available, it strictly beats Rule-4 mid-pair on **28.08%** of cases with mean +0.379 EV gain when it wins.
+- Hands where bot-DS strictly wins: 66,713 / 430,848 = 15.48% of all KK/AA.
+- Upper bound oracle-perfect Rule-5* on KK/AA: $587/1000h within KK/AA, **$42/1000h whole-grid**.
+- CSV at `data/kk_aa_rule4_probe.csv`.
+
+**Human-strategy implications:**
+- **Rule 4 stays.** Both probes confirm "high pair (KK/AA) or trips of K/A → mid as a pair" as the dominant rule on the realistic mixture (72.76% / 79.18% / 83.84% optimal across the three subsets).
+- **No Rule 5 (yet).** The DS-bot exception fires on ~24-28% of geometrically-eligible hands but is hard to evaluate manually pre-flop. The two prior Rule 5 attempts (v21 / v22 in Session 31) were rejected for being ~8× over-eager relative to the DT's selective routing.
+- **Computational implication:** The KK/AA $42 and KKK/AAA $5 upper bounds are within range of v23/v24/v27-magnitude ships. Whether they're already captured by the existing pair_*_g and trips_rank features is the Session 35 priority A diagnostic.
+
+**Files:**
+- `analysis/scripts/probe_kk_aa_ds_bot_vs_mid.py` — KK/AA boundary probe
+- `analysis/scripts/probe_trips_kkk_aaa_routing.py` — KKK/AAA routing probe
+- `data/kk_aa_rule4_probe.csv` — n=430,848 per-hand frame
+- `data/kkk_aaa_routing_probe.csv` — n=50,490 per-hand frame
+
+**Consequence:**
+1. **Rule 4 is preserved unchanged in `STRATEGY_GUIDE.md`.** Both KK/AA and KKK/AAA probes reaffirm the existing default.
+2. **A new probe-script discipline established:** quick boundary probes (5-10s scan + headline pandas) should run BEFORE distillation to set expectations on per-category upper bounds. The KK/AA upper bound of $42/1000h whole-grid is informative for Session 35 prioritization.
+3. **Open question for Session 35 priority A:** distill v27 on pair-only hands AND grade v27 vs Rule-4 + bot-DS oracle on the KK/AA subset specifically. If v27 already gets >75% of the $42 upper bound, KK/AA is "done" and the remaining pair residual is in non-KK/AA pair hands. If v27 gets <50%, there's a `pair_kk_aa_split_bot_ds_*_g` candidate family for v28.

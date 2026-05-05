@@ -2208,3 +2208,41 @@ Per-category (full grid): two_pair $1,458 → $1,145 (**−$313**). Largest per-
 1. **High_only round 2.** Now biggest UNTOUCHED lever after pair (untouched since v20). 20.4% × $2,894 = **$590/1000h share**. Distill v26 on high_only first (~10 min) as a diagnostic before committing to round 2; if no clear missing signal, pivot. Candidate gated additions: `connectivity_high_g`, `n_broadway_in_2nd_suit_g`. Train v27.
 2. **Pair second-pass diagnostic.** Pair is still largest residual share at $825/1000h. Distill v26 on pair to see which v25-pair-gated features are doing the work and whether further engineering is warranted.
 3. **trips_aug_gated.** Trips (no pair) is 5.5% × $1,997 = $110 share, fully untouched. Smaller absolute lever but a clean 6th gating template instance.
+
+---
+
+## Session 34 (2026-05-05) — v27 ships (gated high_only-direct), KKK/AAA + KK/AA boundary probes confirm Rule 4
+
+**Outcome:** Marginal ship — v27_dt is the new ML champion at $1,853/1000h (49.27% pct_opt) on full grid. **−$6 vs v26**, the smallest gating-template ship to date. High_only category drops $2,894 → $2,863 (−$31), pct_opt 27.7% → 28.0%; every other category bit-identical. The 4 new `ho_*_g` features placed 0/4 in v27's top-25 importance — leading indicator of the marginal headline. Capacity expansion of just +1,166 leaves (vs +68K/+76K of recent ships) further suggested feature redundancy with existing axes.
+
+**Diagnostic-first design.** Ran `distill_v26_high_only.py` (~5 min walk of 6M hands through v26's 459K-leaf tree). Top miss leaves clustered on `n_broadway ∈ [3,4]` AND `n_broadway_in_largest_suit_g ≥ 2`. Stratifying these leaves by candidate `n_broadway_in_2nd_suit` produced 0.34-0.41 EV within-leaf separation — strongest pre-train signal of any session. Designed 4-feature family with prefix `ho_*_g` (unique among existing claimed prefixes).
+
+**Conversion ratio: ~10%.** The within-leaf EV separation projected to ~$3,400/1000h within-leaf, but realized only $31/1000h within-category and $6/1000h whole-grid. Reasons: signal concentrated in subset of leaf hands where feature actually flips picks; correlated candidates (`ho_connectivity_high_g` overlapped with `n_broadway`+`n_low`+`connectivity`); DT regression criterion partitioned before reaching within-leaf signal threshold.
+
+**Methodology lessons added:**
+1. Within-leaf EV separation in N=200 distillation does NOT scale linearly to ML headline. ~10% conversion ratio observed.
+2. Top-25 feature importance is a pre-grade tripwire (v25: 5/6 → +$47, v26: 3/6 → +$70, v27: 0/4 → +$6). Future families with 0/N placement should be archived.
+3. Prefix N=1000 grid contains zero high_only hands. Future high_only-targeting models can only be validated on full grid. Canonical-id 0..500K subset only contains categories with at least one pair.
+4. For future high-share categories: validate diagnostic with single-feature DT before committing to a 4-6 feature family.
+
+**Two boundary probes ran for human-strategy completeness:**
+- `probe_trips_kkk_aaa_routing.py` (Session 34, fresh): 50,490 KKK/AAA hands. A_paired_mid BR-optimal on 79.18%; AAA→A wins 80.1% vs B, KKK→A wins 70.9%. Upper bound oracle-perfect Rule-5* on KKK/AAA: $5/1000h whole-grid. **Rule 4 extends to KKK and AAA.**
+- `probe_kk_aa_ds_bot_vs_mid.py` (existing CSV from Session 33-34 staging): 430,848 KK/AA hands. Rule 4 BR-optimal on 72.76%; DS-bot beats Rule 4 on 28.08% of bds-eligible. Upper bound: $42/1000h whole-grid. Largest remaining clean rule-extraction candidate.
+
+**Strategy guide update:** Added Rule 4 (extended) section formally documenting KKK/AAA → keep 2-of-3 in mid as a pair. Step 1 categorization table updated to route KKK/AAA to Rule 4 (extended). The Current Standard text updated to v27 references.
+
+**Cycle scoreboard since Session 25 (20 ships, 7 archives, 1 doc-only, 1 mid-session bug recovery):**
+
+| Cycle | Target | Result | Status |
+|---|---|---:|---|
+| v23 | gated trips_pair on v20 | +$5 / +$9 vs v20 | SHIPPED |
+| v24 | gated composite on v23 | +$1 / +$1 vs v23 | SHIPPED |
+| v25 | gated pair on v24 | +$47 / +$18 vs v24 | SHIPPED |
+| v26 | gated two_pair on v25 | +$70 / +$52 vs v25 | SHIPPED |
+| **v27** | **gated high_only-direct on v26** | **+$6 / $0 vs v26 (prefix uninformative)** | **SHIPPED — current champion (marginal)** |
+
+#### Session 35 priorities (priority order by expected value)
+
+1. **Pair second-pass diagnostic.** Pair is now the largest residual at 46.6% × $1,771 = **$825/1000h share**. Distill v27 on pair-only hands. Specifically: (i) which v25-pair-gated features dominate; (ii) is there room for v3-mid-quality or kicker-gap-encoding; (iii) on the KK/AA subset, grade v27 vs Rule-4 + bot-DS oracle to determine how much of the $42/1000h KK/AA upper bound is already captured.
+2. **trips_aug_gated.** Trips (no pair) is 5.5% × $1,997 = $110 share, fully untouched. Would be the 7th gating template instance. Probe data from `probe_trips_kkk_aaa_routing.py` informs feature design for the KKK/AAA subset; need broader trips analysis for the full category.
+3. **High_only round 3** (lower priority due to v27 conversion ratio). $2,863 still in high_only, but diagnostic-to-headline was poor. Revisit after pair second-pass.
