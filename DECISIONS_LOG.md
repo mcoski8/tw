@@ -1665,3 +1665,90 @@ The −$216 composite improvement is real (prefix saw the same: composite $1,811
 3. **Diminishing-returns warning:** v24's headline gain is at the noise floor. Future small categories (quads at 0.24% × $724 = $1.7 share) are not worth gating. The remaining levers are the LARGE categories: pair ($873 share), high_only ($590 share), two_pair ($325 share).
 4. **Open question for Session 32:** the gating template's natural next target is `two_pair_aug_gated` (~$325/1000h share, biggest untouched category). See CURRENT_PHASE.md "Next Session Targets" for a sketch.
 
+## Decision 059 — v25_dt is the new ML champion (Session 32) — pair-gated aug family is the fourth gating success and the largest absolute win
+
+**Date:** 2026-05-04
+**Status:** Shipped. v25 wins on BOTH grids by adding 6 pair-gated features that augment the 3 pre-existing pair aug booleans (which the Session 32 audit confirmed were already category-gated despite their inconsistent naming, not the v19 leakage pattern). Fourth clean instance of the gating template (after v20→high_only, v23→trips_pair, v24→composite). Pair is the largest category by share, so this is the biggest absolute headline gain since v20.
+
+**Pair audit (the diagnostic question from Session 31's resume prompt):**
+The 3 pair aug features that have existed since Session 17 (`default_bot_is_ds`, `n_top_choices_yielding_ds_bot`, `pair_to_bot_alt_is_ds`) were verified strictly zero on every non-pair canonical hand:
+
+| Feature | Non-pair rows nonzero | Pair-row coverage |
+|---|---:|---:|
+| `default_bot_is_ds` | 0 | 432,432 / 2,800,512 = 15.4% |
+| `n_top_choices_yielding_ds_bot` | 0 | 1,338,480 / 2,800,512 = 47.8% (values {0,1,3} only) |
+| `pair_to_bot_alt_is_ds` | 0 | 370,656 / 2,800,512 = 13.2% |
+
+So they're already gated. They are NOT the v19 leakage pattern. The verdict was therefore option B from the resume prompt: design a 6-feature gated EXTENSION rather than rebuild from scratch.
+
+**What v25 is:**
+- 59 features: 53 v24 features + **6 pair-gated (new)**.
+- Same training profile: depth=30, ml=5, random_state=42.
+- 390,626 leaves (vs v24's 314,759) — **+75,867 leaves**, a +24% capacity expansion. Compare to v23→v24's +54 leaves: pair is genuinely large enough that the new features unlock substantial new partitioning.
+- Model file: `data/v25_dt_model.npz` (266 MB).
+
+**The 6 pair-gated features** (`analysis/scripts/pair_aug_features_gated.py`):
+
+| Feature | Domain | What it encodes |
+|---|---|---|
+| `pair_kickers_in_pair_suit_max_g` | 0..5 | Max count of non-pair cards matching either pair-suit. Zero off-archetype. |
+| `pair_kickers_in_pair_suit_min_g` | 0..5 | Min of same. Together with max fully specifies Rule 1's (1,1)/(2,2)/(2,1)/(3,1) split. |
+| `pair_default_top_rank_g` | 0..14 | Rank of top under v3-default routing (= highest non-pair singleton). Lets DT split on "DS bot AND high top". |
+| `pair_alt_top_rank_g` | 0..14 | Rank of top under pair→bot alt routing (= 3rd-highest non-pair singleton). Lets DT decide whether alt-top is competitive. |
+| `pair_alt_mid_suited_g` | 0/1 | Top-2 non-pair cards same-suit under alt routing. Drives "alt mid is suited connector" splits. |
+| `pair_alt_mid_n_broadway_g` | 0..2 | Broadway count among top-2 non-pair cards under alt routing. |
+
+All zero for any non-pair hand. 2,800,512 of 6,009,159 canonical hands fire the gate (46.6% — the biggest gating share to date).
+
+**Validation results:**
+
+| Grid | v24 $/1000h | v25 $/1000h | Δ |
+|---|---:|---:|---:|
+| Full (N=200, 6.0M hands) | $1,977 | **$1,929** | **−$47** |
+| Prefix (N=1000, 500K hands) | $1,072 | **$1,054** | **−$18** |
+
+Per-category at full grid:
+
+| Category | v24 | v25 | Δ |
+|---|---:|---:|---:|
+| high_only | $2,894 | $2,894 | $0 |
+| **pair** | **$1,873** | **$1,771** | **−$102** |
+| two_pair | $1,458 | $1,458 | $0 |
+| trips | $1,997 | $1,997 | $0 |
+| trips_pair | $1,447 | $1,446 | −$1 (noise) |
+| three_pair | $1,654 | $1,654 | $0 |
+| quads | $723 | $723 | $0 |
+| composite | $1,864 | $1,869 | +$5 (noise) |
+
+Per-category at prefix grid:
+
+| Category | v24 | v25 | Δ |
+|---|---:|---:|---:|
+| **pair** | **$929** | **$888** | **−$41** |
+| two_pair | $1,051 | $1,050 | −$1 (noise) |
+| trips | $1,763 | $1,763 | $0 |
+| trips_pair | $1,657 | $1,657 | $0 |
+| three_pair | $1,122 | $1,122 | $0 |
+| quads | $794 | $794 | $0 |
+| composite | $1,610 | $1,610 | $0 |
+
+The textbook gating-template signature: pair drops on both grids ($102 / $41), every other category bit-identical or within N=200 noise. Headline gain matches arithmetic ($102 × 46.6% pair share = $47). pct_optimal moves from 47.89% → 48.43% on full and 59.48% → 59.80% on prefix; pair-only pct_opt goes 52.8% → 53.9% (full) and 62.8% → 63.5% (prefix).
+
+**Feature importance (v25 top-25):** 5 of 6 new pair-gated features placed in top-25, top one being `pair_alt_top_rank_g` at #15 (0.69%). The 3 pre-existing pair aug booleans (`default_bot_is_ds`, etc.) are still present as inputs and remain useful — the new features ADD signal rather than replace.
+
+**Files:**
+- `analysis/scripts/pair_aug_features_gated.py` — feature computation
+- `analysis/scripts/persist_pair_aug_gated.py` — writes parquet
+- `data/feature_table_pair_aug_gated.parquet` (20 MB)
+- `analysis/scripts/train_v25_dt.py` — trainer (59 features, builds on train_v24)
+- `analysis/scripts/strategy_v25_dt.py` — inference wrapper
+- `analysis/scripts/grade_v25.py` — head-to-head grader
+- `data/v25_dt_model.npz` (266 MB)
+
+**Consequence:**
+1. **v25 is the new ML champion.** Use `strategy_v25_dt(hand_bytes) -> setting_index`. Largest non-suited category gain in the project's history.
+2. **Four categories gated cleanly:** high_only (v20), trips_pair (v23), composite (v24), pair (v25). The template now spans 0.245% to 46.6% population shares.
+3. **Pair audit answer:** the 3 pre-existing pair aug features were already strictly category-gated. The naming inconsistency (no `_g` suffix) was misleading but harmless. They remain in the model and have been confirmed useful (0.32% feature importance combined in v25); the 6 new features add complementary signal rather than duplicate.
+4. **Capacity surprise:** v25 needed +75K leaves vs v24, the largest leaf-count delta since v20. Suggests the pair category's new partitioning is structural, not noise-fitting; the prefix N=1000 tripwire confirmed this independently.
+5. **Open question for Session 33:** with pair now gated, the largest untouched lever is `two_pair_aug_gated` ($325/1000h share, 22.3% population). High_only round 2 ($590 share but partly addressed) is the alternative. See CURRENT_PHASE.md.
+
