@@ -11,11 +11,13 @@
 | S0 | Foundation + Lookup Tables | Phase 1: Engine Core | **Completed** | 2026-04-16 | 2026-04-16 |
 | S1 | Hand Evaluator (Holdem + Omaha) | Phase 1: Engine Core | **Completed** | 2026-04-16 | 2026-04-16 |
 | S2 | Monte Carlo Engine | Phase 1: Engine Core | **Completed** | 2026-04-17 | 2026-04-17 |
-| S3 | Best Response Computation | Phase 2: Solving | **In Progress** | 2026-04-17 | — |
-| S4 | Hand Bucketing + CFR | Phase 2: Solving | Not Started | — | — |
+| S3 | Best Response Computation | Phase 2: Solving | **Completed** (Full Oracle Grid 6M × N=200 + 500K-prefix N=1000) | 2026-04-17 | 2026-05-02 |
+| S4 | Hand Bucketing + CFR | Phase 2: Solving | Deferred (oracle-grid + DT pipeline supersedes for Tier-1 best-response goal) | — | — |
 | S5 | Trainer Application | Phase 3: Trainer | Not Started | — | — |
 | S6 | Validation + Comparison | Phase 3: Trainer | Not Started | — | — |
-| S7 | Analytics + GTO Extraction | Phase 4: Analytics & Final Output | Not Started | — | — |
+| S7 | Analytics + GTO Extraction | Phase 4: Analytics & Final Output | **In Progress** — v26_dt is current ML champion ($1,859/1000h on full grid); 5 gating-template wins shipped (high_only/v20, trips_pair/v23, composite/v24, pair/v25, two_pair/v26) | 2026-05-02 | — |
+
+> Active sprint at end of Session 33 (2026-05-04): **Sprint 7 — Analytics + GTO Extraction**. See CURRENT_PHASE.md for the Session 34 resume prompt.
 
 ---
 

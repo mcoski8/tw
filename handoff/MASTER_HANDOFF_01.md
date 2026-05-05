@@ -2096,3 +2096,115 @@ These sessions used CURRENT_PHASE.md (rewritten each session) + DECISIONS_LOG.md
 1. **Pair audit.** Pair = $873/1000h share — biggest residual. 3 ungated aug features already exist (`default_bot_is_ds`, `n_top_choices_yielding_ds_bot`, `pair_to_bot_alt_is_ds`). Diagnostic: are they cross-category leakage (v19 lesson in reverse)? If leakage, replace with `pair_aug_gated`. If genuine, design 6-feature gated extension.
 2. **two_pair_aug_gated.** $325/1000h share, biggest fully-untouched. Existing `feature_table_two_pair_aug.parquet` (Session 19) is UNGATED. Audit + rebuild as gated. Train v25.
 3. **High_only round 2.** $590/1000h share. Distill v24 specifically for high_only; candidate gated additions: `connectivity_high_g`, `n_broadway_in_2nd_suit_g`. Train v26.
+
+---
+
+### Session 32 — 2026-05-04 — v25 ships (gated pair); 4th gating success, biggest population share
+
+**Context:** Session 32 priorities from the Session 31 handoff put pair audit at the top (largest residual share). User followed that order in auto mode.
+
+#### What got built
+
+- **Pair audit (one-shot pyarrow read).** Verified the 3 pre-existing pair aug features (`default_bot_is_ds`, `n_top_choices_yielding_ds_bot`, `pair_to_bot_alt_is_ds`) are STRICTLY zero on every non-pair canonical row. Already gated since Session 17 — naming convention drift, NOT v19 leakage. Path forked to option B (extend with new features).
+- `analysis/scripts/pair_aug_features_gated.py` (NEW) — 6 new pair-gated features: `pair_kickers_in_pair_suit_max_g` (0..5), `pair_kickers_in_pair_suit_min_g` (0..5), `pair_default_top_rank_g` (0..14), `pair_alt_top_rank_g` (0..14), `pair_alt_mid_suited_g` (0/1), `pair_alt_mid_n_broadway_g` (0..2). All zero off-archetype.
+- `data/feature_table_pair_aug_gated.parquet` (20 MB, persisted via `persist_pair_aug_gated.py` in 35s).
+- `data/v25_dt_model.npz` (266 MB, **390,626 leaves**, 59 features). +75K leaves vs v24 — biggest single-ship leaf delta since v20.
+- Trainer = `train_v25_dt.py`, inference = `strategy_v25_dt.py`, grader = `grade_v25.py`.
+
+#### Compute results
+
+| Strategy | Full $/1000h | Prefix $/1000h | Leaves | Features | Status |
+|---|---:|---:|---:|---:|---|
+| v24 | $1,977 | $1,072 | 314,759 | 53 | predecessor |
+| **v25** | **$1,929** | **$1,054** | **390,626** | **59** | **CURRENT CHAMPION** |
+
+Per-category (full grid): pair $1,873 → $1,771 (**−$102**). Every other category bit-identical or within N=200 noise. pct_optimal 47.89% → 48.43% (full), 59.48% → 59.80% (prefix).
+
+#### Verified
+
+- Pair-only category effect; cross-category bit-identity holds.
+- Prefix tripwire passes — v25 −$18 prefix isn't noise (gated features fire on zero off-archetype hands by design).
+- Capacity expansion (+75K leaves) is structural; prefix tripwire confirms not noise-fitting.
+
+#### Gotchas + lessons
+
+- **Population share is the dominant factor for headline gain.** Pair $1,873/1000h regret is modest, but 46.6% population share gives $873/1000h absolute share — biggest residual. v25's $102 per-category × 46.6% = $47 headline, the largest gating headline gain since v20.
+- **Leakage check is a one-shot pyarrow read.** Should be the first step of every audit. Five-second pandas script answers "is this gated?" definitively.
+
+#### Session 33 priorities (priority order by absolute share)
+
+1. **two_pair_aug_gated.** Now biggest UNTOUCHED lever ($325 share). Existing `feature_table_two_pair_aug.parquet` is UNGATED naming-wise but audit will likely confirm it's already strictly category-gated (same as pair). Path B (6-feature extension) most likely.
+2. **High_only round 2.** $590 share, untouched since v20.
+3. **Pair second-pass.** $824 residual share remains; cheap diagnostic.
+
+---
+
+### Session 33 — 2026-05-04 — v26 ships (gated two_pair); 5th gating success, biggest per-category gain since v20; naming-collision bug recovery
+
+**Context:** Session 33 priority A from Session 32 handoff was two_pair. User confirmed; auto mode ran end-to-end including a mid-session bug recovery.
+
+#### What got built
+
+- **Two_pair audit (same pattern as Session 32).** Confirmed the 3 pre-existing two_pair aug features are STRICTLY zero on every non-two_pair canonical row. Already gated since Session 19. Path B (extend) confirmed.
+- `analysis/scripts/two_pair_aug_features_gated.py` (NEW) — 6 new `t2p_*`-prefixed gated features: `t2p_layout_a_bot_is_ds_g` (0/1), `t2p_n_layout_b_routings_ds_g` (0..3), `t2p_top_singleton_rank_g` (0..14), `t2p_low_singleton_rank_g` (0..14), `t2p_singletons_max_suit_count_g` (1..3), `t2p_high_pair_rank_g` (0..14). The Layout B count splits the long-flagged "high-pair-on-mid vs high-pair-on-bot" distinction from the Session 19 mining notes.
+- `data/feature_table_two_pair_aug_gated.parquet` (20 MB).
+- `data/v26_dt_model.npz` (309 MB, **459,209 leaves**, 65 features). +68K leaves vs v25, second-largest single-ship leaf delta.
+- Trainer = `train_v26_dt.py`, inference = `strategy_v26_dt.py`, grader = `grade_v26.py`.
+
+**Bug recovered mid-session — naming collision.** First v26 attempt named the new features `tp_*`, colliding with the trips_pair gated family's prefix. `tp_low_singleton_rank_g` AND `tp_top_singleton_rank_g` already existed (trips_pair). Training succeeded by column index, but inference's `feature_columns.index(c)` returned the FIRST occurrence for both lookups → wrote two_pair values into the trips_pair column index, left actual two_pair column uninitialized. Buggy v26 prefix output: $3,746/1000h (vs v25's $1,054 — $2,692 catastrophic regression with two_pair AND trips_pair both blown up). Diagnosed in 1 round-trip from cross-category blowup pattern; renamed all 6 features to `t2p_*`, re-persisted (38s), retrained (256s), regraded — clean win.
+
+**Documentation cleanup (separate commit):**
+- Discovered `STRATEGY_GUIDE.md` Part 1 (APPEND-ONLY per its own front-matter) had been violated for 3 sessions. Sessions 31, 32, and 33 had updated Parts 2-6 in place but never appended Part 1 entries.
+- Appended 3 missing Part 1 entries (Sessions 31, 32, 33) matching Session 30's format.
+- Updated `session-end-prompt.md` with explicit STRATEGY_GUIDE.md update step + warning about Part 1's APPEND-ONLY convention.
+
+#### Compute results
+
+| Strategy | Full $/1000h | Prefix $/1000h | Leaves | Features | Status |
+|---|---:|---:|---:|---:|---|
+| v25 | $1,929 | $1,054 | 390,626 | 59 | predecessor |
+| v26_buggy_tp_collision | n/a | $3,746 | 459,209 | 65 | RECOVERED IN-SESSION (overwritten) |
+| **v26** | **$1,859** | **$1,002** | **459,209** | **65** | **CURRENT CHAMPION** |
+
+Per-category (full grid): two_pair $1,458 → $1,145 (**−$313**). Largest per-category gain since v20→high_only's $413. Every other category bit-identical or within N=200 noise (composite −$128 full, but prefix shows tied — likely N=200 noise on 14,742 hands). pct_optimal 48.43% → 49.21% (full), 59.80% → 60.80% (prefix).
+
+#### Verified
+
+- Two_pair-only category effect on prefix; cross-category bit-identity holds on prefix.
+- Prefix tripwire passes — v26 −$52 prefix is real.
+- Five gating template instances now in production: high_only/v20, trips_pair/v23, composite/v24, pair/v25, two_pair/v26.
+- Population shares span 0.245% (composite) to 46.6% (pair).
+
+#### Gotchas + lessons
+
+- **Each gated family must use a UNIQUE prefix.** Existing claims: `_g` suffix variants (suited), `tp_*_g` (trips_pair), `comp_*_g` (composite), `pair_*_g` (pair), `t2p_*_g` (two_pair). New families MUST check existing prefixes BEFORE picking a name. Cost of the collision was ~10 minutes (re-persist + retrain + re-grade); cost of catching it via prefix tripwire saved a buggy ship.
+- **Cross-category blowup is the diagnostic for column-name collisions.** A "gated for category X" feature change that regresses category X AND another category Y simultaneously is the signature.
+- **Append-only file conventions can drift silently for multiple sessions.** Discovered 3 sessions of STRATEGY_GUIDE.md Part 1 drift only because the user explicitly asked to verify the update convention. Session-end-prompt.md now explicitly references STRATEGY_GUIDE.md and warns about the convention.
+- **Two_pair routing was richer than expected.** $313/1000h per-category gain was 3× larger than predicted by extrapolating from pair's $102. The Layout B / Layout C distinction (long-flagged in Session 19 mining) was indeed the dominant miss pattern.
+
+#### Cycle scoreboard since Session 25
+
+19 ships, 7 archives, 1 doc-only, 1 mid-session bug recovery.
+
+| Cycle | Target | Result | Status |
+|---|---|---:|---|
+| v9.1 / v10 / v12 / v14 | hand-coded rules | various | SHIPPED |
+| v11 / v13 / v15 / v16_prefix / v17 / v19 | various | various | ARCHIVED |
+| v16 | DT 28K leaves | +$569 vs v14 | SHIPPED |
+| Rule 4 | KK/AA documentation | doc-only | SHIPPED |
+| v18 / v18b / v18c / v18d / v18e | DT capacity sweep | various | SHIPPED |
+| v19_gated | gated suited (d=28,ml=10) | +$73 / $0 vs v18d | SUPERSEDED |
+| v20 | v18e capacity + gated suited | +$84 / $0 vs v18e | SHIPPED |
+| v20b | DT d=32, ml=5 | $0 / $0 (saturated) | ARCHIVED |
+| v21 / v22 | Rule 5 attempts | −$680 / −$473 vs v14 | ARCHIVED |
+| v23 | gated trips_pair on v20 | +$5 / +$9 vs v20 | SHIPPED |
+| v24 | gated composite on v23 | +$1 / +$1 vs v23 | SHIPPED |
+| v25 | gated pair on v24 | +$47 / +$18 vs v24 | SHIPPED |
+| v26_buggy | gated two_pair (`tp_*` collision) | −$2,692 prefix | RECOVERED IN-SESSION |
+| **v26** | **gated two_pair (`t2p_*` rename) on v25** | **+$70 / +$52 vs v25** | **SHIPPED — current champion** |
+
+#### Session 34 priorities (priority order by absolute share)
+
+1. **High_only round 2.** Now biggest UNTOUCHED lever after pair (untouched since v20). 20.4% × $2,894 = **$590/1000h share**. Distill v26 on high_only first (~10 min) as a diagnostic before committing to round 2; if no clear missing signal, pivot. Candidate gated additions: `connectivity_high_g`, `n_broadway_in_2nd_suit_g`. Train v27.
+2. **Pair second-pass diagnostic.** Pair is still largest residual share at $825/1000h. Distill v26 on pair to see which v25-pair-gated features are doing the work and whether further engineering is warranted.
+3. **trips_aug_gated.** Trips (no pair) is 5.5% × $1,997 = $110 share, fully untouched. Smaller absolute lever but a clean 6th gating template instance.
