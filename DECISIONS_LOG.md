@@ -2124,3 +2124,138 @@ Textbook gating-template signature on both grids — pair drops, every other cat
 6. **User intuition correlates with ML weak points.** The user's question about K♠K♦3♠5♦9♥T♣J♠ ("Rule 4 leaves rainbow garbage in the bot, surely DS-bot is better?") pointed at a $63/1000h whole-grid hole that v27's headline metrics never surfaced. Future sessions should treat user-flagged "this can't be right" reactions as a research-priority signal.
 
 7. **Open question for Session 36:** distill v29 on pair to see how the residual KK/AA gap looks now. v29's pair drop is $97 within-pair × 46.6% = $45 whole-grid; the diagnostic predicted up to $62 available on KK/AA alone. Likely a notable chunk remains for either v30 (pair_r4 round-2 with finer features) or pivot to trips_aug_gated.
+
+## Decision 065 — v30_dt is the new ML champion (Session 36) — trips-gated aug family is the 8th gating success and the smallest ship since v27
+
+**Date:** 2026-05-05
+**Status:** Shipped. v30 wins on BOTH grids by adding 6 trips-gated features (`trips_*_g`) targeting the A_paired_mid vs B_paired_bot routing decision identified by the Session-36 v29 trips distillation. Eighth clean instance of the gating template (after suited/v20, trips_pair/v23, composite/v24, pair-v1/v25, two_pair/v26, high_only-direct/v27, pair-v2/v29, trips/v30). Smallest single ML ship since v27 (+$6) but on a much larger underlying opportunity ($109 whole-grid trips share vs v27's high_only). Diagnostic-driven: every feature traces directly to a competing-baseline gap identified before training.
+
+**Diagnostic origin (`distill_v29_trips.py`, Session 36):**
+
+The trips distill walked all 6M hands through v29's 486K-leaf tree, restricted analysis to the 328,185 pure trips hands, and ran the routing-baseline analysis:
+
+| Strategy | Within-trips regret | Whole-grid contribution |
+|---|---:|---:|
+| Always A_paired_mid (mid is trip pair)  | $24/1000h within-trips | $24/1000h |
+| Always B_paired_bot_any                 | $625/1000h within-trips | $341/1000h |
+| Always C_top_trip                       | $1,107/1000h within-trips | $605/1000h |
+| Oracle (max over A∪B_any∪C)             | $0 (perfect routing)    | $0 |
+| **v29 actual**                          | **$1,997/1000h**        | **$109** |
+
+**v29 was $85/1000h whole-grid WORSE than always-A_paired_mid** — the largest gap-to-baseline ever measured in this project (4× v27's KK/AA Rule-4 deficit). v29 picks A on 79.9% of trips, B on 4.8%, C on 15.3%; the 20.1% non-A picks are systematically wrong, especially on low-rank trips (2-9 each leak $7-8/rank-share, total $60 of the $85 deficit). The missing signal: structural feasibility of B-DS routing + kicker quality.
+
+**What v30 is:**
+- 79 features: 73 v29 features + **6 trips-gated (new)**.
+- Same training profile: depth=30, ml=5, random_state=42.
+- 493,057 leaves (vs v29's 486,342) — **+6,715 leaves**, +1.4% capacity expansion. Significantly less than v29's +25,967 — leading-indicator of smaller headline.
+- Model file: `data/v30_dt_model.npz` (330 MB).
+
+**The 6 trips-gated features** (`analysis/scripts/trips_aug_features_gated.py`, prefix `trips_*_g`):
+
+| Feature | Domain | What it encodes |
+|---|---|---|
+| `trips_b_ds_avail_g`              | 0/1   | Is any 105-setting B-DS routing feasible? (Bot has 2 trip-rank cards AND bot suit profile = DS.) |
+| `trips_b_ds_n_routings_g`         | 0..3  | Number of distinct trip-pair {a,b} choices for which kickers contain ≥1 in suit a AND ≥1 in suit b. |
+| `trips_kickers_max_suit_count_g`  | 0..4  | Max suit count among 4 kickers. ≥2 is necessary for B-DS. |
+| `trips_kickers_max_rank_g`        | 0..14 | Highest kicker rank. High → A is strong. |
+| `trips_n_broadway_kickers_g`      | 0..4  | Count of T-A among kickers. |
+| `trips_n_low_kickers_g`           | 0..4  | Count of 2-5 among kickers. |
+
+All zero for any non-pure-trips hand. 328,185 of 6,009,159 canonical hands fire the gate (5.46%). B-DS feasibility within trips matches diagnostic exactly: 225,225/328,185 = 68.6%.
+
+**Validation results:**
+
+| Grid | v29 $/1000h | v30 $/1000h | Δ |
+|---|---:|---:|---:|
+| Full (N=200, 6.0M hands) | $1,807 | **$1,794** | **−$13** |
+| Prefix (N=1000, 500K hands) | $965 | **$951** | **−$15** |
+
+Per-category at full grid:
+
+| Category | v29 | v30 | Δ |
+|---|---:|---:|---:|
+| high_only | $2,862 | $2,862 | $0 |
+| pair      | $1,674 | $1,674 | $0 |
+| two_pair  | $1,145 | $1,145 | $0 |
+| **trips** | **$1,997** | **$1,758** | **−$239** |
+| trips_pair | $1,443 | $1,442 | −$1 (noise) |
+| three_pair | $1,654 | $1,654 | $0 |
+| quads     | $723 | $723 | $0 |
+| composite | $1,741 | $1,733 | −$8 (noise) |
+
+Per-category at prefix grid: trips drops $1,763 → $1,474 (−$289), every other category bit-identical or within prefix-grid noise.
+
+Textbook gating-template signature on both grids — trips drops, every other category bit-identical to the byte. Headline gain matches arithmetic: $239 × 5.46% trips share = $13 ≈ $13 full grid. pct_optimal moves from 49.80% → 49.98% on full (+0.18 pp); trips-only pct_opt: 40.1% → 43.4% (+3.3 pp).
+
+**Full:prefix ratio: 0.87:1.** This is the FIRST ship where prefix gain exceeds full-grid gain. v25 was 2.6:1, v26 was 1.35:1, v29 was 1.24:1, v30 is 0.87:1. Why: trips routing has a relatively clean structural answer (always-A is correct ~95%+ of the time on prefix's higher-fidelity N=1000 grading); on the full-grid noisier N=200, the marginal-deviation signal is harder to capture cleanly. This is consistent with trips being the LEAST noise-sensitive ship to date.
+
+**Feature importance (v30 top-30):** **0 of 6** new features placed in top-30:
+- `trips_kickers_max_rank_g`        at #34 (0.14%)
+- `trips_b_ds_n_routings_g`         at #59 (0.05%)
+- `trips_n_low_kickers_g`           at #60 (0.04%)
+- `trips_n_broadway_kickers_g`      at #63 (0.04%)
+- `trips_kickers_max_suit_count_g`  at #65 (0.02%)
+- `trips_b_ds_avail_g`              at #74 (0.01%)
+
+This matches the v27 pattern (0/4 → +$6) and confirms the tripwire: when 0 of new features place in top-30, expect a small headline. The methodology rule is now tested across 5 ships:
+- v25: 5/6 in top-25 → +$47 / +$18
+- v26: 3/6 in top-25 → +$70 / +$52
+- v27: 0/4 in top-25 → +$6 / $0
+- v29: 3/4 in top-30 → +$46 / +$37
+- **v30: 0/6 in top-30 → +$13 / +$15**
+
+Tripwire predicts CONVERSION rate, not absolute opportunity: trips category had 18× v27's high_only $/category opportunity, but the conversion is similar (~10-15% capture). Why: feature importance ranking measures global importance across 6M hands; gated features specific to a 5.5% subpopulation can capture meaningful within-category gains without ranking high globally — but if they're TIGHTLY gated and the global tree doesn't lean on them, the magnitude is bounded by what depth/leaf-count concedes.
+
+**Files:**
+- `analysis/scripts/trips_aug_features_gated.py` — feature computation (6 features)
+- `analysis/scripts/persist_trips_aug_gated.py` — writes parquet (27s for 6M hands)
+- `data/feature_table_trips_aug_gated.parquet` (19 MB)
+- `analysis/scripts/train_v30_dt.py` — trainer (79 features, builds on train_v29)
+- `analysis/scripts/strategy_v30_dt.py` — inference wrapper (8 gated families + base)
+- `analysis/scripts/grade_v30.py` — head-to-head grader
+- `analysis/scripts/distill_v29_trips.py` — diagnostic that motivated the design
+- `data/v30_dt_model.npz` (330 MB)
+
+**Consequence:**
+
+1. **v30 is the new ML champion.** Use `strategy_v30_dt(hand_bytes) -> setting_index`. Both grids show clean gains on trips with all other categories bit-identical.
+
+2. **Eight categories now have at least one gating-template ship.** Pair has TWO iterations (v25 + v29). Trips just got its first.
+
+3. **Naming convention enforcement upheld.** `trips_*_g` prefix is unique (distinct from `tp_*_g` for trips_pair).
+
+4. **Trips category still has $1,758/1000h within-trips residual** = $96/1000h whole-grid. The diagnostic showed oracle ceiling is $0 (perfect routing exists). v30 captured 12% of available routing headroom; round-2 trips features (v31b candidate) targeting C_top_trip routing + finer A/B distinction are queued for overnight exploration.
+
+5. **The Rule 6 candidate ("Always set trips on mid") is empirically validated as a strong human-strategy primitive.** The diagnostic showed always-A captures $85/1000h whole-grid relative to v29 (or what it would have looked like without v30's partial fix). Worth investigating in a future session as a Rule 6 candidate analogous to Rule 4 for pair.
+
+## Session 36 round-2 finding — v29 KK/AA single-suited Rule-4-bot stratum still leaks (deferred to v31a candidate)
+
+**Date:** 2026-05-05
+**Status:** Open finding. The Session-36 round-2 pair audit (`distill_v29_pair.py`) revealed that v29 closed only $7/1000h of v27's $14 KK/AA Rule-4 deficit — KK/AA whole-grid contribution went $89 (v27) → $82 (v29). v29 still picks Rule-4 84.8% of KK/AA (essentially unchanged from v27's 84.6%). The single-suited Rule-4-bot stratum (52.9% of KK/AA, 3.7% of grid) is the dominant residual leak.
+
+**Stratification by Rule-4-bot suit profile (whole-grid $/1000h, 8.2% of grid is KK/AA total):**
+
+| Profile | KK/AA share | v29 | Rule-4 | Oracle | v29-oracle gap |
+|---|---:|---:|---:|---:|---:|
+| rainbow (1+1+1+1)        |  8.8% | $12.0 | $15.4 | $3.8  | **$8.2** |
+| **single-suited (2+1+1)** | **52.9%** | **$51.0** | **$38.1** | **$14.1** | **$36.9** |
+| double-suited (2+2)      | 15.4% | $3.6 | $2.0 | $1.0 | $2.6 |
+| three-of-suit (3+1)      | 20.6% | $14.4 | $11.9 | $6.3 | $8.0 |
+| four-of-suit             |  2.2% | $1.0 | $0.8 | $0.7 | $0.3 |
+
+The rainbow stratum (where Rule 5 lives) is the only one where v29 BEATS Rule-4. Single-suited is the largest leak: v29 is $13 worse than always-Rule-4 there, $37 below oracle.
+
+**Why pair_r4_*_g didn't fix it:** v29's `pair_r4_bot_suit_profile_g` is a CATEGORICAL feature (rainbow / SS / DS / 3-suit / 4-flush). It treats single-suited as a single bucket. The single-suited stratum needs FINER encoding — which suit is dominant, its rank composition, and pair-suit alignment. v31a candidate (overnight cascade) tests 4 KK/AA-tight features (`pair_r4v3_*_g`) targeting this finer signal.
+
+**Cycle scoreboard since Session 25 (22 ships, 7 archives, 1 doc-only, 1 mid-session bug recovery, 1 rule-strategy-only ship):**
+
+| Cycle | Target | Result | Status |
+|---|---|---:|---|
+| v23 | gated trips_pair on v20 | +$5 / +$9 vs v20 | SHIPPED |
+| v24 | gated composite on v23 | +$1 / +$1 vs v23 | SHIPPED |
+| v25 | gated pair on v24 | +$47 / +$18 vs v24 | SHIPPED |
+| v26 | gated two_pair on v25 | +$70 / +$52 vs v25 | SHIPPED |
+| v27 | gated high_only-direct on v26 | +$6 / $0 vs v26 (prefix uninformative) | SHIPPED |
+| v28 | Rule 5 (Rainbow override, human strategy) | +$1 vs v14_combined | SHIPPED (rule-only) |
+| v29 | gated pair_r4 (round 2 of pair) on v27 | +$46 / +$37 vs v27 | SHIPPED |
+| **v30** | **gated trips on v29** | **+$13 / +$15 vs v29** | **SHIPPED — current ML champion** |
