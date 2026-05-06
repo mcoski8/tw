@@ -12,7 +12,7 @@
 > 5. Where each rule + model lives in code
 > 6. **The Current Standard** (at the bottom — the rules to memorize, the model to call)
 >
-> Last updated: 2026-05-05 (Session 34 — v27 ships, high_only-gated aug family is the 6th gating success but smallest per-category gain to date; KK/AA + KKK/AAA boundary probes ran and confirm Rule 4 default).
+> Last updated: 2026-05-05 (Session 35 — v29 ships, pair-gated v2 (`pair_r4_*_g`) is the 7th gating success and the largest diagnostic-driven win to date. Rule 5 (Rainbow override) shipped to human strategy chain (+$1/1000h vs v14_combined, first successful Rule 5 in project history).
 
 ---
 
@@ -462,6 +462,49 @@ at Rule 4. For computational play: use v27 (or v26 — they're nearly
 identical on the KK/AA and KKK/AAA subsets since neither was the
 target of v27's high_only features).
 
+## Session 35: v29 ships (gated pair_r4) — 7th gating success and largest diagnostic-driven win
+
+**The chain:** This session was driven entirely by user intuition + diagnostic-first design. The trail:
+
+1. **User question (Session 34 close):** "What about KK/AA where leftover bot is rainbow? Shouldn't we move KK/AA to bot for DS?" Per-hand probe of K♠K♦3♠5♦9♥T♣J♠ confirmed: Rule 4 picks rainbow bot for +1.225 EV; oracle BR is DS-bot for +3.025 EV (Δ = $18,000/1000h on this single hand).
+
+2. **Rule 5 (Rainbow override) shipped to STRATEGY_GUIDE** as the user-intuited human rule (Decision 063). v28 = v14 + Rule 5 = $3,032/1000h on full grid, +$1 vs v14_combined. **First successful Rule 5 in project history** (v21/v22 lost $473-$680). Tight structural trigger (KK/AA + Rule-4-bot rainbow + DS feasibility) fires on 0.27% of all hands. Per-hand wins on the firing subset are dramatic ($15-18K/1000h on canonical examples).
+
+3. **`distill_v27_pair.py` ran the KK/AA capture analysis** to quantify how much of the boundary-probe $42/1000h upper bound v27 already captures. Surprising finding: **v27 is $20/1000h whole-grid WORSE than Rule 4 alone on KK/AA** (regret 0.1236 vs 0.0949 EV/hand). v27 picks Rule-4 84.6% of KK/AA, but the 15.4% non-Rule-4 picks are systematically incorrect — overgeneralizing v25's pair-gated features. Total v27→oracle gap on KK/AA: $63/1000h whole-grid.
+
+4. **The missing signal: suit profile of Rule-4's resulting bot.** v25's existing `pair_*_g` features encode kickers-in-pair-suit and alt-routing rank quality but NOT the SHAPE of the leftover bot. The rainbow trigger that drives Rule 5 is the same axis the ML champion was missing.
+
+**v29 ships — 4 new pair-gated v2 features** (prefix `pair_r4_*_g` to avoid collision with v25's `pair_*_g`):
+
+- `pair_r4_bot_suit_profile_g` (0..5) — encoded Rule-4 bot suit shape. THE missing signal.
+- `pair_r4_bot_max_rank_g` (0..14) — highest rank in Rule-4 bot
+- `pair_r4_n_broadway_kickers_g` (0..5) — count of T-A among 5 non-pair cards
+- `pair_r4_n_low_kickers_g` (0..5) — count of 2-5 among 5 non-pair cards
+
+73 features total (69 v27 + 4 pair_r4-gated), depth=30 ml=5,
+**486,342 leaves** (+25,967 vs v27, +5.6% capacity expansion).
+3 of 4 new features placed in top-30 importance (#17, #20, #23) —
+strong pre-grade tripwire signal.
+
+- Full grid: $1,807/1000h. **−$46 vs v27** (pair drops $1,771 → $1,674, **−$97 within-pair**).
+- Prefix: $965/1000h. **−$37 vs v27** (pair drops $888 → $803, **−$85 within-pair**).
+- Every other category bit-identical or within N=200 noise. pct_optimal moves 49.27% → 49.80% (full, +0.53 pp) and 60.80% → 61.32% (prefix, +0.52 pp).
+- Full:prefix ratio 1.24:1 — well-calibrated, low overfitting risk.
+
+**Score: $1,807/1000h on full grid. Improvement: −$657 vs v16, −$1,226 vs v14.**
+
+**Methodology lesson — diagnostic-first design produces 7.7× better headline-per-feature than speculative design.** v27 (4 speculative high_only candidates) gained $6/1000h. v29 (4 diagnostic-driven pair features) gained $46/1000h. Same trainer config, same gating template. The difference: v29's diagnostic explicitly compared v27 vs Rule 4 alone and discovered v27 was *losing* — that's the kind of finding that prescribes feature design rather than just suggesting candidates.
+
+**Methodology lesson — diagnostic should identify a competing baseline.** Future feature engineering should explicitly ask: "What rule-based or simpler-ML alternative am I beating, and where is the ML champion underperforming it?" That comparison surfaces the *missing signal* directly. Within-leaf separation (Session-34 high_only) is necessary but not sufficient; you need the baseline comparison to know whether the signal will translate to ML capacity.
+
+**Methodology lesson — user intuition correlates with ML weak points.** The user-flagged hand pattern (KK/AA + rainbow Rule-4-bot) revealed a $63/1000h whole-grid weakness that v27's headline metrics never surfaced. When a domain expert says "this can't be right" at the table, treat that as a high-prior research signal.
+
+**Methodology lesson — categories can absorb multiple gating-template iterations.** Pair has now seen TWO independent ships:
+- v25: 6 features encoding kickers-in-pair-suit + alt-routing quality (-$102 within-pair)
+- v29: 4 features encoding Rule-4-bot suit profile + body-card distribution (-$97 within-pair)
+
+Total pair improvement since v18e: **−$199/1000h within-pair**. Each iteration targeted a distinct signal axis; neither superseded the other (v29 BUILDS ON v25, doesn't replace).
+
 ---
 
 # Part 2 — ML champion progression (the full table)
@@ -489,36 +532,39 @@ Every model trained, side-by-side, on both validation grids:
 | v24 | S31 | 30 | 5 | 53 (49+4 composite) | 314,759 | $1,977 | $1,072 | superseded by v25 |
 | v25 | S32 | 30 | 5 | 59 (53+6 pair-gated) | 390,626 | $1,929 | $1,054 | superseded by v26 |
 | v26 | S33 | 30 | 5 | 65 (59+6 two_pair-gated) | 459,209 | $1,859 | $1,002 | superseded by v27 |
-| **v27** | **S34** | **30** | **5** | **69 (65+4 high_only-gated)** | **460,375** | **$1,853** | **$1,002** | **CURRENT CHAMPION** (prefix unchanged because prefix has no high_only hands) |
+| v27 | S34 | 30 | 5 | 69 (65+4 high_only-gated) | 460,375 | $1,853 | $1,002 | superseded by v29 (prefix unchanged because prefix has no high_only hands) |
+| **v29** | **S35** | **30** | **5** | **73 (69+4 pair_r4-gated)** | **486,342** | **$1,807** | **$965** | **CURRENT CHAMPION** — diagnostic-driven from v27 pair distillation |
 
 **Per-category breakdown** (full grid, N=200): how each category's
 regret has dropped across the six flagship versions:
 
-| Category | v14 | v16 | v18e | v20 | v23 | v24 | v25 | v26 | v27 | Δ v27 vs v14 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| high_only | $4,082 | $3,785 | $3,307 | $2,894 | $2,894 | $2,894 | $2,894 | $2,894 | $2,863 | −$1,219 |
-| pair | $2,011 | $2,127 | $1,873 | $1,873 | $1,873 | $1,873 | $1,771 | $1,771 | $1,771 | −$240 |
-| two_pair | $3,371 | $2,005 | $1,458 | $1,458 | $1,458 | $1,458 | $1,458 | $1,145 | $1,145 | −$2,226 |
-| trips | $4,054 | $2,347 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | −$2,057 |
-| trips_pair | $5,417 | $2,438 | $1,608 | $1,608 | $1,447 | $1,447 | $1,446 | $1,445 | $1,445 | −$3,972 |
-| three_pair | $4,529 | $1,975 | $1,653 | $1,653 | $1,654 | $1,654 | $1,654 | $1,654 | $1,654 | −$2,875 |
-| quads | $9,670 | $2,233 | $724 | $724 | $724 | $723 | $723 | $723 | $723 | −$8,947 |
-| composite | $10,883 | $5,260 | $2,100 | $2,100 | $2,080 | $1,864 | $1,869 | $1,741 | $1,741 | −$9,142 |
+| Category | v14 | v16 | v18e | v20 | v25 | v26 | v27 | v29 | Δ v29 vs v14 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| high_only | $4,082 | $3,785 | $3,307 | $2,894 | $2,894 | $2,894 | $2,863 | $2,862 | −$1,220 |
+| pair | $2,011 | $2,127 | $1,873 | $1,873 | $1,771 | $1,771 | $1,771 | **$1,674** | **−$337** |
+| two_pair | $3,371 | $2,005 | $1,458 | $1,458 | $1,458 | $1,145 | $1,145 | $1,145 | −$2,226 |
+| trips | $4,054 | $2,347 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | −$2,057 |
+| trips_pair | $5,417 | $2,438 | $1,608 | $1,608 | $1,446 | $1,445 | $1,445 | $1,443 | −$3,974 |
+| three_pair | $4,529 | $1,975 | $1,653 | $1,653 | $1,654 | $1,654 | $1,654 | $1,654 | −$2,875 |
+| quads | $9,670 | $2,233 | $724 | $724 | $723 | $723 | $723 | $723 | −$8,947 |
+| composite | $10,883 | $5,260 | $2,100 | $2,100 | $1,869 | $1,741 | $1,741 | $1,741 | −$9,142 |
 
-Six category-gated wins are now visible across the v18e → v27
+Seven category-gated wins are now visible across the v18e → v29
 progression:
 - **v20 → high_only-via-suited:** −$413 vs v18e (6 gated suited features).
 - **v23 → trips_pair:** −$161 vs v20 (6 gated trips_pair features).
 - **v24 → composite:** −$216 vs v23 (4 gated composite features).
-- **v25 → pair:** −$102 vs v24 (6 gated pair features).
+- **v25 → pair (v1):** −$102 vs v24 (6 gated pair features).
 - **v26 → two_pair:** −$313 vs v25 (6 gated two_pair features). Largest
   per-category gain since v20→high_only.
 - **v27 → high_only-direct:** −$31 vs v26 (4 gated high_only features).
-  Smallest per-category gain to date — diagnostic-to-headline
-  conversion ratio was ~10%, the within-leaf 0.34 EV separations
-  identified by distillation only flipped picks on a small fraction
-  of leaf hands. Sets up v28 with a clearer methodology bar (validate
-  with single-feature DT before family commitment).
+  Smallest per-category gain to date — diagnostic was speculative.
+- **v29 → pair (v2):** −$97 vs v27 (4 gated pair_r4 features).
+  **First successful within-category iteration — pair has now seen
+  TWO independent gating-template ships, totaling −$199 within-pair
+  vs v18e.** Diagnostic-driven from `distill_v27_pair.py`'s
+  competing-baseline analysis — the most prescriptive feature design
+  in project history.
 
 Each upgrade lifted ONLY its targeted category and kept every other
 category bit-identical (or within N=200 noise) — the cleanest possible
@@ -590,7 +636,7 @@ and v20 is $2,100). v20 has not been formally distilled yet — Session
 | Hand type | Frequency | v14 $/1000h | Latest $/1000h | Status |
 |---|---:|---:|---:|---|
 | high_only | 20.4% | $4,082 | $2,863 (v27) | v27 (Session 34) added 4 high_only-gated features (`ho_n_broadway_in_2nd_suit_g` and 3 others); −$31/1000h on the category. Smallest per-category gating gain to date. Diagnostic-to-headline conversion was ~10%; remaining residual at $584/1000h whole-grid share. A naive **Rule 5** (suited middle for high_only) was tested both ways in Session 31 and **REJECTED** — see below. |
-| pair | 46.6% | $2,011 | $1,771 (v25+) | v25 (Session 32) added 6 pair-gated features alongside the 3 pre-existing pair aug booleans; −$102/1000h on the category. No hand-coded rule extracted; v25's gated routing is too multi-axis for any single AND-rule (Rule 1's gates already cover the simplest pair-to-bot trigger). |
+| pair | 46.6% | $2,011 | $1,674 (v29) | TWO gating ships: v25 (Session 32) added 6 features encoding kickers-in-pair-suit / alt-routing rank quality (−$102 within-pair); v29 (Session 35) added 4 features encoding Rule-4-bot suit profile + body-card distribution (−$97 within-pair). v29 was diagnostic-driven from `distill_v27_pair.py`'s competing-baseline analysis (v27 was actually $20/1000h whole-grid WORSE than Rule 4 alone on KK/AA — overgeneralizing v25's features). v29 closes that gap and adds DS-bot-detection capacity. **Rule 5 (Rainbow override) ships to STRATEGY_GUIDE for human play (Decision 063)** as the matching rule-based equivalent. |
 | trips (no pair) | 5.5% | $4,054 | $1,997 | No human rule yet. Multi-archetype. |
 | trips_pair | 2.9% | $5,417 | $1,447 (v23+) | v23 (Session 31) added 6 trips_pair-gated features; −$161/1000h on the category. No hand-coded rule extracted; the DT routing is multi-axis. |
 | three_pair | 1.9% | $4,529 | $1,654 | No human rule yet. |
@@ -639,7 +685,8 @@ guide can keep them as human-memorizable approximations.
   (wraps v14 with Rule 5)
 
 **ML champion + baselines (newest first):**
-- v27 (current) → `analysis/scripts/strategy_v27_dt.py` + `data/v27_dt_model.npz` (460K leaves, 69 features)
+- v29 (current) → `analysis/scripts/strategy_v29_dt.py` + `data/v29_dt_model.npz` (486K leaves, 73 features)
+- v27 → `analysis/scripts/strategy_v27_dt.py` + `data/v27_dt_model.npz` (460K leaves, 69 features)
 - v26 → `analysis/scripts/strategy_v26_dt.py` + `data/v26_dt_model.npz` (459K leaves, 65 features)
 - v25 → `analysis/scripts/strategy_v25_dt.py` + `data/v25_dt_model.npz` (391K leaves, 59 features)
 - v24 → `analysis/scripts/strategy_v24_dt.py` + `data/v24_dt_model.npz` (315K leaves, 53 features)
@@ -652,7 +699,8 @@ guide can keep them as human-memorizable approximations.
 - v16 → `analysis/scripts/strategy_v16_dt.py` + `data/v16_dt_model.npz` (29K leaves)
 
 **Trainers:**
-- v27 trainer (69 features incl. all 6 gated families) → `analysis/scripts/train_v27_dt.py`
+- v29 trainer (73 features incl. all 7 gated families) → `analysis/scripts/train_v29_dt.py`
+- v27 trainer (69 features incl. 6 gated families) → `analysis/scripts/train_v27_dt.py`
 - v26 trainer (65 features incl. 5 gated families + 3 pre-existing pair-gated booleans + 3 pre-existing two_pair-gated booleans) → `analysis/scripts/train_v26_dt.py`
 - v25 trainer (59 features incl. 4 gated families + 3 pre-existing pair-gated booleans) → `analysis/scripts/train_v25_dt.py`
 - v24 trainer (53 features incl. 3 gated families + 3 pre-existing pair-gated booleans) → `analysis/scripts/train_v24_dt.py`
@@ -671,6 +719,8 @@ guide can keep them as human-memorizable approximations.
 - Gated two_pair persist → `analysis/scripts/persist_two_pair_aug_gated.py` → `data/feature_table_two_pair_aug_gated.parquet`
 - Gated high_only-direct (Session 34, 4 new features, prefix `ho_*`) → `analysis/scripts/high_only_aug_features_gated.py`
 - Gated high_only-direct persist → `analysis/scripts/persist_high_only_aug_gated.py` → `data/feature_table_high_only_aug_gated.parquet`
+- Gated pair_r4 (Session 35, 4 new features, prefix `pair_r4_*`) → `analysis/scripts/pair_aug_v2_features_gated.py`
+- Gated pair_r4 persist → `analysis/scripts/persist_pair_aug_v2_gated.py` → `data/feature_table_pair_aug_v2_gated.parquet`
 - Gated suited (high_only-via-suited, Session 30) → `analysis/scripts/suited_aug_features_gated.py`
 - Gated suited persist → `analysis/scripts/persist_suited_aug_gated.py`
 - Gated trips_pair → `analysis/scripts/trips_pair_aug_features_gated.py`
@@ -681,6 +731,7 @@ guide can keep them as human-memorizable approximations.
 **Analysis:**
 - v16 distillation → `analysis/scripts/distill_v16_dt.py`
 - v26 high_only distillation (Session 34) → `analysis/scripts/distill_v26_high_only.py`
+- v27 pair distillation + KK/AA capture analysis (Session 35) → `analysis/scripts/distill_v27_pair.py`
 - KK/AA Rule-4 boundary probe (Session 34) → `analysis/scripts/probe_kk_aa_ds_bot_vs_mid.py` + `data/kk_aa_rule4_probe.csv`
 - KKK/AAA routing probe (Session 34) → `analysis/scripts/probe_trips_kkk_aaa_routing.py` + `data/kkk_aaa_routing_probe.csv`
 - High_only residual diagnostic → `analysis/scripts/high_only_v16_residual.py`
@@ -726,16 +777,17 @@ print(result.summary())
 > for human play, treat KKK and AAA the same as KK and AA — pair in mid.
 > See Decision 062.
 >
-> **ML champion (not human-memorizable): v27_dt** — 460,375-leaf
-> DecisionTreeRegressor (depth=30, min_samples_leaf=5), 69 features
+> **ML champion (not human-memorizable): v29_dt** — 486,342-leaf
+> DecisionTreeRegressor (depth=30, min_samples_leaf=5), 73 features
 > including 6 gated suited-broadway (high_only-via-suited), 6 gated
-> trips_pair, 4 gated composite, 6 gated pair, 6 gated two_pair, and
-> 4 gated high_only-direct features (the latter shipped Session 34).
-> Beats v14 by **+$1,180/1000h** on the full grid and **+$1,035/1000h**
-> on the prefix N=1000. Lives at `analysis/scripts/strategy_v27_dt.py`
-> + `data/v27_dt_model.npz`. (v26 — the predecessor — is essentially
-> equivalent on KK/AA, KKK/AAA, and all non-high_only categories;
-> use v26 if you need a smaller model.)
+> trips_pair, 4 gated composite, 6 gated pair (v1), 6 gated two_pair,
+> 4 gated high_only-direct, and 4 gated pair_r4 (the latter shipped
+> Session 35 — the diagnostic-driven Rule-4-bot-suit-profile family).
+> Beats v14 by **+$1,226/1000h** on the full grid and **+$1,072/1000h**
+> on the prefix N=1000. Lives at `analysis/scripts/strategy_v29_dt.py`
+> + `data/v29_dt_model.npz`. (v27 — the predecessor — is the only
+> model still competitive; use v27 if you need to compare or v26 for
+> a smaller model.)
 
 ---
 

@@ -15,9 +15,9 @@
 | S4 | Hand Bucketing + CFR | Phase 2: Solving | Deferred (oracle-grid + DT pipeline supersedes for Tier-1 best-response goal) | — | — |
 | S5 | Trainer Application | Phase 3: Trainer | Not Started | — | — |
 | S6 | Validation + Comparison | Phase 3: Trainer | Not Started | — | — |
-| S7 | Analytics + GTO Extraction | Phase 4: Analytics & Final Output | **In Progress** — v27_dt is current ML champion ($1,853/1000h on full grid); 6 gating-template wins shipped (high_only-via-suited/v20, trips_pair/v23, composite/v24, pair/v25, two_pair/v26, high_only-direct/v27) | 2026-05-02 | — |
+| S7 | Analytics + GTO Extraction | Phase 4: Analytics & Final Output | **In Progress** — v29_dt is current ML champion ($1,807/1000h on full grid, $965 on prefix); 7 gating-template wins shipped (high_only-via-suited/v20, trips_pair/v23, composite/v24, pair-v1/v25, two_pair/v26, high_only-direct/v27, pair-v2/v29). Rule 5 (Rainbow override) shipped to STRATEGY_GUIDE for human play (first successful Rule 5 in project history). | 2026-05-02 | — |
 
-> Active sprint at end of Session 34 (2026-05-05): **Sprint 7 — Analytics + GTO Extraction**. See CURRENT_PHASE.md for the Session 35 resume prompt. v27_dt is the current ML champion; KK/AA + KKK/AAA boundary probes ran in Session 34 and confirm Rule 4 default, with KK/AA $42/1000h upper bound flagged for Session 35 priority A.
+> Active sprint at end of Session 35 (2026-05-05): **Sprint 7 — Analytics + GTO Extraction**. See CURRENT_PHASE.md for the Session 36 resume prompt. v29_dt is the current ML champion (largest ML ship since v26: −$46 full grid, −$37 prefix). Pair has seen two iterations of gating-template work; categories can absorb multiple distinct signal-axis attacks. Diagnostic-first design produced 7.7× better headline-per-feature than speculative design.
 
 ---
 

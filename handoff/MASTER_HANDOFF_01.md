@@ -2246,3 +2246,60 @@ Per-category (full grid): two_pair $1,458 → $1,145 (**−$313**). Largest per-
 1. **Pair second-pass diagnostic.** Pair is now the largest residual at 46.6% × $1,771 = **$825/1000h share**. Distill v27 on pair-only hands. Specifically: (i) which v25-pair-gated features dominate; (ii) is there room for v3-mid-quality or kicker-gap-encoding; (iii) on the KK/AA subset, grade v27 vs Rule-4 + bot-DS oracle to determine how much of the $42/1000h KK/AA upper bound is already captured.
 2. **trips_aug_gated.** Trips (no pair) is 5.5% × $1,997 = $110 share, fully untouched. Would be the 7th gating template instance. Probe data from `probe_trips_kkk_aaa_routing.py` informs feature design for the KKK/AAA subset; need broader trips analysis for the full category.
 3. **High_only round 3** (lower priority due to v27 conversion ratio). $2,863 still in high_only, but diagnostic-to-headline was poor. Revisit after pair second-pass.
+
+---
+
+## Session 35 (2026-05-05) — v29 ships (gated pair_r4): 7th gating instance, biggest diagnostic-driven win
+
+**Outcome:** v29_dt is the new ML champion at $1,807/1000h on full grid (49.80% pct_opt) and $965/1000h on prefix (61.32% pct_opt). **−$46 full / −$37 prefix vs v27**, the largest ML ship since v26. Pair category drops $1,771 → $1,674 (−$97 within-pair). Every other category bit-identical. Full:prefix ratio 1.24:1 (well-calibrated, low overfitting risk).
+
+**Diagnostic-driven design — the chain:**
+
+1. **User question (Session 34 close):** What about KK/AA + rainbow Rule-4-bot? Per-hand probe of K♠K♦3♠5♦9♥T♣J♠ confirmed Rule 4 picks +1.225 EV vs oracle BR +3.025 EV (Δ = $18K/1000h on this single hand). v26/v27 both already correctly route to DS-bot here.
+
+2. **Rule 5 (Rainbow override) shipped to STRATEGY_GUIDE for human play** (Decision 063): tight structural trigger fires on 0.27% of all hands. v28 = v14 + Rule 5 = $3,032/1000h, +$1 vs v14_combined. **First successful Rule 5 in project history** (v21/v22 lost $473-$680 by firing on 5-13% of all hands). The same rainbow-bot trigger that drives Rule 5 turned out to be the missing ML feature.
+
+3. **`distill_v27_pair.py` ran the KK/AA capture analysis.** Surprising finding: v27 is $20/1000h whole-grid WORSE than Rule 4 alone on KK/AA (regret 0.1236 EV/hand vs Rule 4's 0.0949). v27 picks Rule-4 84.6%, DS-bot 7.8%, "other" 7.6%. The 15.4% non-Rule-4 picks were systematically incorrect — overgeneralizing v25's pair-gated features. Total v27→oracle gap: $63/1000h whole-grid.
+
+4. **v29 designed: 4-feature `pair_r4_*_g` family** targeting the missing signal (Rule-4-bot suit profile + body-card distribution). 73 features total, 486,342 leaves (+25,967 vs v27). 3/4 of new features placed in top-30 importance — strong tripwire confirmation pre-grade.
+
+5. **v29 graded:**
+
+| Grid | v27 | v29 | Δ |
+|---|---:|---:|---:|
+| Full | $1,853 / 49.27% | **$1,807 / 49.80%** | **−$46 / +0.53 pp** |
+| Prefix | $1,002 / 60.80% | **$965 / 61.32%** | **−$37 / +0.52 pp** |
+
+Pair drops $1,771 → $1,674 (−$97 within-pair, pct_opt 53.9% → 55.0%).
+
+**Methodology lessons reinforced:**
+
+1. **Diagnostic-first design produces 7.7× better headline-per-feature.** v27 (4 speculative high_only candidates) gained $6. v29 (4 diagnostic-driven pair features) gained $46. Same trainer config, same gating template. Difference: v29's diagnostic showed v27 LOSING to Rule 4 (a competing baseline), which prescribed feature design.
+
+2. **Diagnostic should identify a competing baseline, not just within-leaf separation.** Session-34 high_only diagnostic showed within-leaf 0.34 EV separation but didn't compare against any non-DT alternative. Session-35 pair diagnostic explicitly compared v27 vs Rule 4 alone — and finding v27 was *losing* immediately prescribed the feature design.
+
+3. **User intuition correlates with ML weak points.** The user-flagged hand (KK/AA + rainbow Rule-4-bot) revealed a $63/1000h whole-grid weakness that v27's headline metrics never surfaced.
+
+4. **Categories can absorb multiple gating-template iterations.** Pair has now seen TWO independent ships (v25 −$102 + v29 −$97 = −$199/1000h within-pair vs v18e). Each iteration targeted a distinct signal axis; v29 builds on v25 rather than replacing it.
+
+5. **Top-25/30 feature importance is a pre-grade tripwire.** v25 5/6 → +$47, v26 3/6 → +$70, v27 0/4 → +$6, v29 3/4 → +$46. Placement count is a leading indicator.
+
+**Cycle scoreboard since Session 25 (21 ships, 7 archives, 1 doc-only, 1 mid-session bug recovery, 1 rule-strategy-only ship):**
+
+| Cycle | Target | Result | Status |
+|---|---|---:|---|
+| v23 | gated trips_pair on v20 | +$5 / +$9 vs v20 | SHIPPED |
+| v24 | gated composite on v23 | +$1 / +$1 vs v23 | SHIPPED |
+| v25 | gated pair (v1) on v24 | +$47 / +$18 vs v24 | SHIPPED |
+| v26 | gated two_pair on v25 | +$70 / +$52 vs v25 | SHIPPED |
+| v27 | gated high_only-direct on v26 | +$6 / $0 vs v26 (prefix uninformative) | SHIPPED |
+| v28 (rule strategy only) | Rule 5 (Rainbow override, KK/AA) | +$1 vs v14 | SHIPPED (rule-only) |
+| **v29** | **gated pair_r4 (v2 of pair) on v27** | **+$46 / +$37 vs v27** | **SHIPPED — current ML champion** |
+
+#### Session 36 priorities (priority order by expected value)
+
+1. **Re-distill v29 on pair** to see how much KK/AA gap remains. v29 captured $46 whole-grid; the diagnostic predicted up to $62 available on KK/AA alone. Likely a notable chunk remains — a v30 = pair_r4 round-2 candidate.
+
+2. **trips_aug_gated** — Trips (no pair) is 5.5% × $1,997 = $110 share, fully untouched. Would be the 8th gating template instance. Probe data from Session 34 (KKK/AAA) informs feature design for that subset.
+
+3. **High_only round 3** — v29 left $2,862 in high_only. Lower priority because Session-34 conversion was poor (~10%).
