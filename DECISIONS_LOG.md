@@ -2334,3 +2334,126 @@ v31b's trips round-2 features captured $277 within-trips on full (clean second i
 6. **v31a (pair_r4v3 KK/AA-tight) is archived.** Within-pair gain was small and didn't propagate to prefix. The categorical-encoding hypothesis (v29's pair_r4_bot_suit_profile being too coarse) remains plausible but the tight gating did not unlock the expected value. The KK/AA single-suited Rule-4-bot stratum (52.9% of KK/AA, $37 below oracle) remains an open optimization target — but the next attempt should use a fundamentally different angle (e.g., a meta-classifier feature predicting "DS-bot beats Rule 4" trained on probe data, or a sub-tree dedicated to KK/AA hands).
 
 7. **v31a/v31b model files retained but archived.** `data/v31a_dt_model.npz` and `data/v31b_dt_model.npz` are kept on disk (gitignored) for future cross-strategy comparisons but are not exposed via strategy modules.
+
+---
+
+## Decision 067 — v32_dt is the new ML champion (Session 37) — round-2 trips features at high capacity, completing the v30 → v32 ship arc
+
+**Date:** 2026-05-06
+**Status:** Shipped. v32 = v31b's 83 features (79 v30 + 4 trips_v2 round-2) trained at v31's high-capacity config (depth=32, min_samples_leaf=3). Ships **+$20/1000h on full grid (+$79 cumulative vs v30)** and **+$18/1000h on prefix (+$47 cumulative vs v30)**. The cumulative v30→v32 ship of $79/1000h on full grid **beats v26's record ($70)** to become the largest single-session ML ship in project history.
+
+**Origin:** Session 36's overnight cascade had two independently-positive ML candidates: v31b (trips_v2 round-2 features, +$15 full at depth=30 ml=5) and v31c → v31 (pure capacity, +$58 full). They were graded against v30 separately and v31 won the cascade head-to-head decision. But the two improvements come from orthogonal axes — trips_v2 features add new signal in trips, while capacity expansion expresses already-encoded signal across all 8 categories. **The v32 hypothesis is that they should stack additively.**
+
+**What v32 is:**
+- 83 features = v30's 79 + 4 trips_v2 (`trips_v2_c_top_advantage_g`, `trips_v2_b_ds_kicker_max_rank_g`, `trips_v2_b_ds_kicker_2nd_rank_g`, `trips_v2_n_kickers_in_trip_suits_g`).
+- Hyperparameters: depth=32, min_samples_leaf=3 (same as v31).
+- **731,606 leaves** (+31,833 vs v31's 699,773, +4.6% capacity).
+- Model file: `data/v32_dt_model.npz` (468.5 MB).
+- Tripwire: 0/4 trips_v2 in top-30 (positions 55, 60, 72, 73). Bearish, matching v31b at depth=30 ml=5 which placed 0/4 yet shipped +$15. Tripwire failure rate now 7 ships in a row for round-2 features — predicts conversion rate (~10-15%), not absolute opportunity.
+
+**Validation results:**
+
+| Grid | v30 $/1000h | v31 $/1000h | v32 $/1000h | Δ vs v31 | Δ vs v30 (cumulative) |
+|---|---:|---:|---:|---:|---:|
+| Full (N=200, 6.0M hands) | $1,794 / 49.98% | $1,736 / 50.92% | **$1,715 / 51.31%** | **−$20 / +0.39 pp** | **−$79 / +1.33 pp** |
+| Prefix (N=1000, 500K hands) | $951 / 61.53% | $921 / 62.07% | **$904 / 62.47%** | **−$18 / +0.40 pp** | **−$47 / +0.94 pp** |
+
+**Per-category at full grid (full N=200) — only trips moves:**
+
+| Category | v30 | v31 | v32 | Δ v32 vs v31 |
+|---|---:|---:|---:|---:|
+| high_only  | $2,862 | $2,816 | $2,816 | $0 |
+| pair       | $1,674 | $1,639 | $1,639 | $0 |
+| two_pair   | $1,145 | $1,037 | $1,037 | $0 |
+| **trips**  | $1,758 | $1,732 | **$1,359** | **−$373** |
+| trips_pair | $1,442 | $1,225 | $1,225 | $0 |
+| three_pair | $1,654 | $1,639 | $1,639 | $0 |
+| quads      | $723   | $645   | $645   | $0 |
+| composite  | $1,733 | $1,387 | $1,386 | −$1 |
+
+Textbook category-gating signature — only the gated category (trips) moves; all others bit-identical. The −$373 within-trips translates to the +$20 whole-grid headline at the 5.5% trips share. On prefix, trips drops $1,467 → $1,116 (−$351 within-trips, +$18 whole-grid given trips' 8.0% prefix share).
+
+**Full:prefix ratio: 1.11:1.** Lower than v31's 2:1 — the trips_v2 features are a much sharper, more focused gain than the broad capacity expansion v31 delivered. This is the fingerprint of a clean diagnostic-driven feature ship.
+
+**Files:**
+- `analysis/scripts/strategy_v32_dt.py` — inference wrapper (delegates to strategy_v31b_dt with v32 model path)
+- `analysis/scripts/train_v32_dt.py` — trainer (extends train_v31b_dt; defaults depth=32 ml=3)
+- `analysis/scripts/grade_v32.py` — head-to-head grader vs v31 + optional vs v30
+- `data/v32_dt_model.npz` (468.5 MB)
+
+**Consequence:**
+
+1. **v32 is the new ML champion.** Use `strategy_v32_dt(hand_bytes) -> setting_index`. Cumulative improvement v18e → v32: $2,066 → $1,715 = −$351/1000h over 10 ML ships. Total improvement vs v14_combined: −$1,317/1000h. Captures **43.5% of the v14→ceiling gap** at N=200 fidelity.
+
+2. **The combined v30→v32 ship of $79/1000h is the largest single-session ML ship in project history**, beating v26 ($70). The two contributing changes — capacity expansion (v31, $58) and round-2 trips features (v32 increment, $20) — are confirmed orthogonal: capacity helped all 8 categories simultaneously; trips_v2 helps only trips. Future sessions should follow this template: any time a new feature family is added, also re-test capacity at the higher feature-count.
+
+3. **Methodology rule (Session 37, supplements Session 36):** the ship template is now (a) diagnostic-driven feature design → (b) standalone train at v31's default depth=32 ml=3 → (c) if leaf-count grows ≥10, re-test capacity at depth=34 ml=2. v32's 731,606 leaves is +5% over v31's 699,773 — borderline; the next ship that adds ≥6 features should test depth=34 ml=2 explicitly.
+
+4. **Tripwire conversion rate continues to be ~10-15% on round-2 features** (7 ships now: v25 5/6→+$47, v26 3/6→+$70, v27 0/4→+$6, v29 3/4→+$46, v30 0/6→+$13, v31a 0/4→+$6, v31b 0/4→+$15, v32 0/4→+$20). Position-55/60/72/73 in importance is the typical v32-style tripwire footprint for already-saturated categorical signals.
+
+5. **Trips category at $1,359/1000h is now the 4th-best-handled category** (after composite $1,386, trips_pair $1,225, two_pair $1,037 — wait, trips IS now $1,359 which is below trips_pair $1,225 and two_pair $1,037; corrected ranking: two_pair $1,037 < trips_pair $1,225 < trips $1,359 < composite $1,386). The combined v30+v32 trips work has lifted trips from $1,997 (v18e) to $1,359 (v32) = −$638/1000h within-trips, the second-largest absolute within-category improvement after composite ($2,100 → $1,386).
+
+---
+
+## Decision 068 — v33_rule6 is the new human strategy of record (Session 37) — Rule 6 (always pair mid on pure trips) ships +$112/1000h, the largest single rule ship in project history
+
+**Date:** 2026-05-06
+**Status:** Shipped. v33 = v28_rule5_rainbow + Rule 6 (trips routing override). Ships **+$112/1000h on full grid** (v28 $3,032 → v33 $2,920, 39.64% → 40.68% opt) and **+$143/1000h on prefix** (v28 $2,037 → v33 $1,894, 47.61% → 48.81% opt). This is **larger than every prior single rule ship combined** — Rule 4 + Rule 5 together moved v14 by ~$2/1000h, while Rule 6 alone moves the chain by $112-143 depending on the grid.
+
+**Origin:** Session 36's `distill_v29_trips.py` had identified that v29 (the ML champion at the time) was $85/1000h whole-grid worse than the structural baseline "Always A_paired_mid" on pure trips — the largest gap-to-baseline ever measured. This was prescriptive for ML feature design (→ v30/v32 trips features) but it also raised the question whether the human strategy chain (v14_combined + Rule 4 + Rule 5) was making the same mistake.
+
+Session 37 wrote `verify_rule6_v14_trips.py` to trace v14 on a 30K pure-trips sample. Findings:
+
+- **v14 picks "mid is pair-of-trip-rank" on only 94.3% of pure trips.** The remaining 5.43% goes to B_bot_pair_trip routings (the third trip card on bot, breaking the mid-pair). This 5.4% is systematically wrong on every single rank, costing $3,609/1000h within-trips ($197/1000h whole-grid) vs the always-A∪C baseline.
+- **v14's A-vs-C decision (top = highest kicker vs top = trip-rank) is already empirically correct on the 94.3% it gets right** — it's effectively computing `top = max(trip_rank, max_kicker_rank)` via the learned v7_regression tree.
+- **Always-A∪C** (mid is pair of trip-rank, top is free) is the cleanest rule formulation. On the 30K probe, this rule gains $197/1000h whole-grid over v14 (oracle ceiling).
+
+**What Rule 6 says:** *"On pure trips (one rank with count 3, no other pairs/quads), the third trip card never goes to bot. Mid is always 2 of the 3 trip-rank cards."* The third trip card goes either to top (C variant; preferred when trip_rank > max_kicker) or to bot as part of the 4-card bot (A variant; preferred when max_kicker > trip_rank).
+
+**v33 implementation** (`analysis/scripts/strategy_v33_rule6_trips.py`):
+- Decision tree mirrors v14's empirical optimum on A vs C: `if trip_rank > max_kicker_rank → C variant; else → A variant`.
+- C variant: top = lowest-byte trip card, mid = other 2 trips, bot = 4 kickers (suit-symmetric across the 3 trip choices).
+- A variant: top = highest-rank kicker; among 3 ways to choose which trip → bot, pick the one that maximizes (bot_suit_profile_score, bot_rank_sum, bot_longest_run).
+
+**Probe vs full grid validation:**
+
+| Sample | v28 within-trips $/1000h | v33 within-trips $/1000h | Δ within-trips | Δ whole-grid |
+|---|---:|---:|---:|---:|
+| 30K probe (full N=200) | $4,047 | $2,011 | −$2,036 | $+111 |
+| Full 6M grid (N=200) | $4,054 | $2,010 | −$2,044 | **$+112** |
+| Prefix 500K (N=1000) | $4,576 | $1,744 | −$2,832 | **$+143** |
+
+Probe → full agreement is essentially perfect (1% drift). Prefix N=1000 confirms a slightly larger gain ($143 vs $112), with the prefix:full ratio at 1.28:1 — within the historical band for hand-coded rules. The 56% capture of the $197 oracle ceiling is the heuristic limit of "no peeking at oracle EVs"; the remaining $86/1000h would require a learned routing within A∪C (out of scope for the human rule chain).
+
+**Per-category at full grid (full N=200) — only trips moves:**
+
+| Category | v28 | v33 | Δ v33 vs v28 |
+|---|---:|---:|---:|
+| high_only  | $4,082 | $4,082 | $0 |
+| pair       | $2,008 | $2,008 | $0 |
+| two_pair   | $3,371 | $3,371 | $0 |
+| **trips**  | $4,054 | **$2,010** | **−$2,044** |
+| trips_pair | $5,417 | $5,417 | $0 |
+| three_pair | $4,529 | $4,529 | $0 |
+| quads      | $9,670 | $9,670 | $0 |
+| composite  | $10,883 | $10,883 | $0 |
+
+Trips' optimal-pick rate jumps from 19.9% to 39.0% (almost doubled). Same gating signature as the ML ships: clean isolation to the targeted category.
+
+**Files:**
+- `analysis/scripts/strategy_v33_rule6_trips.py` — Rule 6 implementation; `strategy_v33_rule6_trips(hand)` is the new human-strategy entry point
+- `analysis/scripts/verify_rule6_v14_trips.py` — diagnostic that surfaced the rule
+- `analysis/scripts/probe_v33_trips.py` — fast (3s) empirical check of v33 vs v28 on 30K trips
+- `analysis/scripts/grade_v33_rule6.py` — full-grid head-to-head grader
+
+**Consequence:**
+
+1. **v33_rule6_trips is the new strategy of record for human play.** It is the first rule ship in project history that materially changes the headline ($112/1000h is ~12% of v14's gap to ceiling on the full grid). The Rule 4 + Rule 5 ships were ~$1-5 each by comparison.
+
+2. **Methodology lesson (Session 37):** the `distill_*_trips`-style "always-X structural baseline" surfaced the rule. Future sessions should systematically check for structural always-X baselines on every category, not just trips. Candidates: high_only "always top = max-rank" (already true via v8_hybrid?); pair "always mid = pair" (already Rule 4); two_pair "always split high pair to mid" (deferred); trips_pair "always pair-of-pair to mid" (deferred — likely covered by v12).
+
+3. **The "preserve-v28-when-already-A∪C" variant was tested and lost.** Override-everything captured $111/1000h on the probe; preserve-only-on-B captured $36.9. The Rule 6 heuristic's bot-DS optimization on the A variant beats v14/v8_hybrid's learned routing on average — even when both pick A, the heuristic's choice of which trip → bot (for max DS) is better than v8_hybrid's. Future rule chains should default to override-everything within the rule's scope.
+
+4. **Rule 6 closes the largest single-category gap in the human strategy.** Trips drops from $4,054 (8.4% share at full grid) to $2,010, contributing $112/1000h whole-grid. The next-largest opportunity in the human chain is composite ($10,883 within-category × 0.9% share = $98/1000h whole-grid), but composite is much rarer and harder to rule-encode.
+
+5. **Rule 6 does NOT modify v32 (the ML champion).** v32 already encodes trips routing via the gated `trips_*_g` and `trips_v2_*_g` feature families. v33 is the *human* strategy ship; v32 remains the *ML* strategy of record.

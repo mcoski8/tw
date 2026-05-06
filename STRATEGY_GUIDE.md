@@ -12,7 +12,7 @@
 > 5. Where each rule + model lives in code
 > 6. **The Current Standard** (at the bottom — the rules to memorize, the model to call)
 >
-> Last updated: 2026-05-06 (Session 36 — v30 ships (gated trips, 8th gating success); overnight cascade promotes v31 (capacity-only retrain at depth=32 ml=3, 79 features, 700K leaves) as new champion. v31 is the second-largest single ML ship in project history (+$58/1000h full, +$29/1000h prefix vs v30) with ZERO new features. Methodology: when feature-count grows substantially beyond last capacity-saturation test, RE-TEST capacity.
+> Last updated: 2026-05-06 (Session 37 — TWO ships: **v32_dt** (new ML champion at $1,715/1000h, 731K leaves, 83 features = v31 + 4 trips_v2 round-2 at depth=32 ml=3; cumulative v30→v32 of −$79/1000h beats v26's record as the largest single-session ML ship in project history); **v33_rule6_trips** (new human strategy of record at $2,920/1000h on full grid; +$112/1000h vs v28 on full and +$143/1000h on prefix — the largest single rule ship in project history, codifying "on pure trips, the third trip card never goes to bot").
 
 ---
 
@@ -596,6 +596,71 @@ The biggest gains accrue to PREVIOUSLY-GATED categories (composite, trips_pair, 
 
 ---
 
+## Session 37: v32 ships (round-2 trips at high capacity, completing v30→v32 arc, beats v26 record); v33_rule6 is largest single rule ship in project history
+
+This session executed the v32 hypothesis from Session 36 (stack v31b's round-2 trips features onto v31's high-capacity config) AND surfaced/codified Rule 6 — the structural analog of Rule 4 for trips, which delivers the largest single rule ship the project has ever seen.
+
+**Part A — v32 ships (the v30→v32 ship arc).**
+
+Session 36's overnight cascade produced two independently-positive ML candidates: v31b (trips_v2 round-2 features at depth=30 ml=5, +$15 full / +$13 prefix vs v30) and v31c → v31 (pure capacity expansion, +$58 full / +$29 prefix vs v30). They were graded as alternatives, and the cascade picked v31. But the two improvements come from orthogonal axes: **trips_v2 features add new signal in trips, while capacity expansion expresses already-encoded signal across all 8 categories.** Stacking them should deliver both gains.
+
+v32 = 83 features (79 v30 + 4 trips_v2 round-2) at depth=32, min_samples_leaf=3. Trained at v31's high-capacity config. **731,606 leaves** (+31,833 vs v31, +4.6% capacity).
+
+| Grid | v30 → v31 | v31 → v32 | v30 → v32 (cumulative) |
+|---|---:|---:|---:|
+| Full (N=200) | $1,794 → $1,736 (−$58) | $1,736 → $1,715 (**−$20**) | **−$79** |
+| Prefix (N=1000) | $951 → $921 (−$29) | $921 → $904 (**−$18**) | **−$47** |
+
+**The cumulative v30→v32 ship of $79/1000h on full grid beats v26's record of $70 to become the largest single-session ML ship in project history.**
+
+Per-category at full grid — only trips moves vs v31 (textbook gating signature):
+
+| Category | v30 | v31 | v32 | Δ v32 vs v31 |
+|---|---:|---:|---:|---:|
+| high_only  | $2,862 | $2,816 | $2,816 | $0 |
+| pair       | $1,674 | $1,639 | $1,639 | $0 |
+| two_pair   | $1,145 | $1,037 | $1,037 | $0 |
+| **trips**  | $1,758 | $1,732 | **$1,359** | **−$373** |
+| trips_pair | $1,442 | $1,225 | $1,225 | $0 |
+| three_pair | $1,654 | $1,639 | $1,639 | $0 |
+| quads      | $723   | $645   | $645   | $0 |
+| composite  | $1,733 | $1,387 | $1,386 | −$1 |
+
+**Score: $1,715/1000h on full grid. Improvement: −$351 vs v18e, −$1,317 vs v14_combined. v32 captures 43.5% of the v14→ceiling gap.**
+
+Tripwire footprint for v32: 0/4 trips_v2 in top-30 (positions 55, 60, 72, 73). Bearish, matching v31b at depth=30 ml=5 which placed 0/4 yet shipped +$15. **7 ships now confirm tripwire predicts conversion rate (~10-15%), not absolute opportunity.**
+
+**Part B — Rule 6 verification + v33_rule6 ships (the largest single rule ship in project history).**
+
+Session 36's `distill_v29_trips.py` had identified that v29 was $85/1000h whole-grid worse than the structural baseline "Always A_paired_mid" on pure trips. Session 37 wrote `verify_rule6_v14_trips.py` to trace the same baseline against the human strategy chain (v14_combined + Rule 4 + Rule 5 = v28).
+
+The probe surfaced three findings on a 30K pure-trips sample:
+
+1. **v14 picks "mid is pair-of-trip-rank" (A or C variant) on only 94.3% of pure trips.** The remaining 5.43% goes to B_bot_pair_trip routings (the 3rd trip card on bot, breaking the mid-pair). 0.24% goes to other archetypes.
+2. **v14's A-vs-C decision is empirically correct on the 94.3% it gets right** — equivalent to `top = max(trip_rank, max_kicker_rank)`. The bug is purely in the 5.4% B-bleed.
+3. **The cleanest rule: "On pure trips, the third trip card never goes to bot."** This is "always A∪C" (mid is pair of trip-rank, top free). The oracle ceiling for this rule is **$197/1000h whole-grid over v14** — bigger than any prior rule ship combined.
+
+**Rule 6 statement:** *"With pure trips (one rank with count 3, no other pairs/quads), mid is always 2 of the 3 trip-rank cards. The third trip card goes to top (when trip_rank > max_kicker_rank, i.e. the C variant) or to bot (otherwise, the A variant). Within the A variant, choose which trip → bot to maximize bot DS-ness."*
+
+**v33_rule6_trips ships:**
+
+| Grid | v28 (current human champ) | v33 | Δ |
+|---|---:|---:|---:|
+| Full (N=200, 6.0M hands) | $3,032 / 39.64% | **$2,920 / 40.68%** | **−$112 / +1.04 pp** |
+| Prefix (N=1000, 500K hands) | $2,037 / 47.61% | **$1,894 / 48.81%** | **−$143 / +1.20 pp** |
+
+The trips category alone drops $4,054 → $2,010 within-trips on the full grid (almost halved), with 19.9% → 39.0% optimal-pick rate. Probe → full agreement is essentially perfect (1% drift).
+
+**The 56% capture of the $197 oracle ceiling** is the heuristic's limit (no peeking at oracle EVs). Override-everything beat preserve-A∪C-when-already-good ($111 vs $37 on the probe) — the heuristic's bot-DS optimization on the A variant beats v14/v8_hybrid's learned routing on average, even when both pick A.
+
+**Methodology lesson — "always-X" structural baselines surface Rule-N candidates worth shipping.** The trips diagnostic surfaced Rule 6 worth $112-143/1000h whole-grid; the Session 34 Rule 4 boundary probe surfaced Rule 5. **Future sessions should systematically probe each category for an always-X baseline** — every category with a learned ML feature family should have its rule-chain analog tested. Candidates: high_only "always top = max-rank" (likely already true via v8_hybrid); two_pair "always split high pair to mid" (deferred); trips_pair "always pair-of-pair to mid" (probably already covered by v12 detect logic but worth verifying).
+
+**Methodology lesson — orthogonal axis stacking works (v32 confirms).** v31's capacity expansion ($58) and v31b's trips_v2 features ($15) stacked additively to v32's $79 cumulative (with a small extra $6 from interaction). The template for future ships: **standalone diagnostic-driven feature design at v31's default depth=32 ml=3, then re-test capacity at depth=34 ml=2 if leaf-count grows substantially.**
+
+**Methodology lesson — rule chain ships should default to override-everything within the rule's scope.** The "preserve v14 when already-A∪C" variant of Rule 6 captured only $37/1000h vs the override-everything $112. Rule heuristics should fully replace the learned strategy within their gate, not just patch its mistakes — because the heuristic's structural reasoning often beats the learned strategy's fine-grained choices.
+
+---
+
 # Part 2 — ML champion progression (the full table)
 
 Every model trained, side-by-side, on both validation grids:
@@ -626,21 +691,22 @@ Every model trained, side-by-side, on both validation grids:
 | v30 | S36 | 30 | 5 | 79 (73+6 trips-gated) | 493,057 | $1,794 | $951 | superseded by v31 |
 | v31a | S36-overnight | 30 | 5 | 83 (79+4 pair_r4v3 KK/AA-tight) | 500,722 | $1,788 | $951 | ARCHIVED — minimal headline gain ($6 full / $0 prefix) |
 | v31b | S36-overnight | 30 | 5 | 83 (79+4 trips_v2 round 2) | 507,692 | $1,779 | $938 | ARCHIVED — solid trips round-2 ($15 full / $13 prefix) but lost vs v31 in cascade |
-| **v31** | **S36-overnight** | **32** | **3** | **79 (same as v30)** | **699,773** | **$1,736** | **$921** | **CURRENT CHAMPION** — capacity-only retrain; second-largest ship (after v26) with zero new features |
+| v31 | S36-overnight | 32 | 3 | 79 (same as v30) | 699,773 | $1,736 | $921 | superseded by v32 — capacity-only retrain shipped second-largest ship (after v26) with zero new features |
+| **v32** | **S37** | **32** | **3** | **83 (79 v30 + 4 trips_v2 round 2)** | **731,606** | **$1,715** | **$904** | **CURRENT ML CHAMPION** — stacks trips_v2 round-2 features on v31's high-capacity config; cumulative v30→v32 of −$79 is the largest single-session ML ship in project history |
 
 **Per-category breakdown** (full grid, N=200): how each category's
 regret has dropped across the flagship versions:
 
-| Category | v14 | v16 | v18e | v20 | v25 | v26 | v27 | v29 | v30 | v31 | Δ v31 vs v14 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| high_only | $4,082 | $3,785 | $3,307 | $2,894 | $2,894 | $2,894 | $2,863 | $2,862 | $2,862 | **$2,816** | **−$1,266** |
-| pair | $2,011 | $2,127 | $1,873 | $1,873 | $1,771 | $1,771 | $1,771 | $1,674 | $1,674 | **$1,639** | **−$372** |
-| two_pair | $3,371 | $2,005 | $1,458 | $1,458 | $1,458 | $1,145 | $1,145 | $1,145 | $1,145 | **$1,037** | **−$2,334** |
-| trips | $4,054 | $2,347 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,758 | **$1,732** | **−$2,322** |
-| trips_pair | $5,417 | $2,438 | $1,608 | $1,608 | $1,446 | $1,445 | $1,445 | $1,443 | $1,442 | **$1,225** | **−$4,192** |
-| three_pair | $4,529 | $1,975 | $1,653 | $1,653 | $1,654 | $1,654 | $1,654 | $1,654 | $1,654 | **$1,639** | **−$2,890** |
-| quads | $9,670 | $2,233 | $724 | $724 | $723 | $723 | $723 | $723 | $723 | **$645** | **−$9,025** |
-| composite | $10,883 | $5,260 | $2,100 | $2,100 | $1,869 | $1,741 | $1,741 | $1,741 | $1,733 | **$1,387** | **−$9,496** |
+| Category | v14 | v16 | v18e | v20 | v25 | v26 | v27 | v29 | v30 | v31 | v32 | Δ v32 vs v14 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| high_only | $4,082 | $3,785 | $3,307 | $2,894 | $2,894 | $2,894 | $2,863 | $2,862 | $2,862 | $2,816 | **$2,816** | **−$1,266** |
+| pair | $2,011 | $2,127 | $1,873 | $1,873 | $1,771 | $1,771 | $1,771 | $1,674 | $1,674 | $1,639 | **$1,639** | **−$372** |
+| two_pair | $3,371 | $2,005 | $1,458 | $1,458 | $1,458 | $1,145 | $1,145 | $1,145 | $1,145 | $1,037 | **$1,037** | **−$2,334** |
+| trips | $4,054 | $2,347 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,758 | $1,732 | **$1,359** | **−$2,695** |
+| trips_pair | $5,417 | $2,438 | $1,608 | $1,608 | $1,446 | $1,445 | $1,445 | $1,443 | $1,442 | $1,225 | **$1,225** | **−$4,192** |
+| three_pair | $4,529 | $1,975 | $1,653 | $1,653 | $1,654 | $1,654 | $1,654 | $1,654 | $1,654 | $1,639 | **$1,639** | **−$2,890** |
+| quads | $9,670 | $2,233 | $724 | $724 | $723 | $723 | $723 | $723 | $723 | $645 | **$645** | **−$9,025** |
+| composite | $10,883 | $5,260 | $2,100 | $2,100 | $1,869 | $1,741 | $1,741 | $1,741 | $1,733 | $1,387 | **$1,386** | **−$9,497** |
 
 Eight category-gated wins are now visible across the v18e → v31
 progression, plus one capacity-only ship (v31):
@@ -660,6 +726,10 @@ progression, plus one capacity-only ship (v31):
   in project history.
 - **v30 → trips:** −$239 vs v29 (6 gated trips features). 8th gating-
   template instance. First trips-category gating ship.
+- **v32 → trips round-2:** −$373 vs v31 (4 gated trips_v2 features stacked
+  on v31's capacity config). 9th gating-template instance and the FIRST
+  within-trips iteration; same template-second-iteration pattern as v25→v29
+  for pair.
 
 Each gating upgrade lifted ONLY its targeted category and kept every other
 category bit-identical (or within N=200 noise) — the cleanest possible
@@ -873,7 +943,7 @@ print(result.summary())
 
 # Part 6 — THE CURRENT STANDARD
 
-> Everything below this line is the active rule set as of Session 36.
+> Everything below this line is the active rule set as of Session 37.
 > If you only read one section, read this one.
 >
 > **Human-memorizable strategy of record: v14_combined + Rule 4 + Rule 5.**
@@ -940,8 +1010,7 @@ Look for the strongest "shape" in your hand:
 |---|---|---|
 | Quads | 4 of one rank | (no rule yet — rare, ~0.2% of hands) |
 | Trips + pair | 3 of one rank + 2 of another | **Rule 3** |
-| Trips of K or A (no other pair) | 3 Kings or 3 Aces | **Rule 4 (extended)** — keep 2-of-3 in mid as a pair |
-| Trips (other ranks, no pair) | 3 of one rank, no other pair | (no simple rule yet — multi-archetype) |
+| Trips (any rank, no other pair) | 3 of one rank, no other pair | **Rule 6** — mid is always 2 of the 3 trip cards |
 | Two pairs | 2 of one rank + 2 of another | **Rule 2** |
 | One pair (KK or AA) | 2 Kings or 2 Aces | **Rule 4** (default), check **Rule 5** for rainbow override |
 | One pair (other ranks) | 2 of one rank, no other multiples | **Rule 1** (gates apply) |
@@ -1138,43 +1207,91 @@ memorizing the strategy doesn't accidentally split the pair.
 
 ---
 
-## Rule 4 (extended) — Premium trips (KKK or AAA): keep 2-of-3 in mid as a pair
+## Rule 6 — Pure trips: mid is always 2 of the 3 trip cards (the third NEVER goes to bot)
 
-**Fires whenever you have trips of K or A (and no second pair).** Three
-of one rank means you MUST split the trips somehow — only 2 fit in
-mid. Rule 4 (extended) says split 2-into-mid as a pair, treating it
-like KK/AA.
+**Fires whenever you have trips of any rank (and no second pair, no quads).**
+This rule supersedes the prior Rule 4 (extended), which covered only KKK/AAA.
+The principle is the same — mid is paired with the trip rank — but Rule 6
+extends it to all 13 trip ranks AND distinguishes between two clean variants
+based on whether the trip rank or your highest kicker is stronger.
+
+**The decision:**
+
+1. **Identify the highest non-trip-rank card you hold** (`max_kicker_rank`).
+2. **Compare to the trip rank:**
+   - If **trip rank > max_kicker_rank** → use the **C variant** (top = trip rank).
+   - Else → use the **A variant** (top = the highest kicker).
 
 **The play:**
-- **Mid** = 2 of the 3 trip-rank cards (forming a KK or AA pair in mid)
-- **Top** = the highest non-trip-rank card
-- **Bot** = the 3rd trip-rank card + the 3 lowest non-trip kickers
 
-**Worked example (AAA):** `4♣ 7♦ 9♥ Q♠ A♣ A♦ A♠`
-- Trips = AAA. Highest non-A = Q♠.
-- **Play**: top=Q♠, mid=A♣+A♦ (or any 2 of 3 — they're equivalent for mid evaluation), bot=A♠+4♣+7♦+9♥.
+| Variant | When | Top | Mid | Bot |
+|---|---|---|---|---|
+| **A** | trip rank ≤ max kicker | highest kicker | 2 of the 3 trip cards | 3rd trip card + 3 lower kickers |
+| **C** | trip rank > max kicker | one of the trip cards | other 2 trip cards | the 4 kickers |
+
+**Within the A variant** (when 3 trips don't all fit in mid), pick which
+one of the 3 trip cards goes to bot to maximize bot DS-ness. With 3 trips
+of different suits and 3 lower kickers, you'll usually have one specific
+trip card that makes the bot 2+2 double-suited — pick that one.
+
+**Worked example (A variant — trips J, A is higher):** `4♣ 7♦ 9♥ J♣ J♦ J♠ A♥`
+- Trips = JJJ. Max kicker = A♥ (rank 14 > J's 11) → A variant.
+- Top = A♥. Mid = 2 of J's. Bot = 1 J + {4♣, 7♦, 9♥}.
+- Pick the J for bot whose suit makes bot most DS-friendly.
+  Bot suits available: ♣, ♦, ♥, plus one J's suit.
+  - J♠ → bot {J♠, 4♣, 7♦, 9♥} = rainbow (no pair of suits).
+  - J♣ → bot {J♣, 4♣, 7♦, 9♥} = single-suited (2♣).
+  - J♦ → bot {J♦, 4♣, 7♦, 9♥} = single-suited (2♦).
+  Pick J♣ or J♦ (tied SS — pick either). Mid = the other 2 J's.
+- **Play**: top=A♥, mid=J♠+J♦, bot=J♣+4♣+7♦+9♥.
+
+**Worked example (C variant — trips K, no Ace kicker):** `4♣ 7♦ 9♥ Q♠ K♣ K♦ K♠`
+- Trips = KKK. Max kicker = Q♠ (rank 12 < K's 13) → C variant.
+- Top = one of K's (any — they're equivalent on top tier suit-wise; pick K♣).
+- Mid = K♦ + K♠ (the other 2 K's).
+- Bot = 4 kickers = 4♣, 7♦, 9♥, Q♠ (rainbow but it's what you have).
+- **Play**: top=K♣, mid=K♦+K♠, bot=Q♠+9♥+7♦+4♣.
+
+**Worked example (A variant — trips K, with Ace kicker):** `4♣ 7♦ 9♥ A♥ K♣ K♦ K♠`
+- Trips = KKK. Max kicker = A♥ (rank 14 > K's 13) → A variant.
+- Top = A♥. Mid = 2 of K's. Bot = 1 K + {4♣, 7♦, 9♥}.
+- Suits: pick the K whose suit makes bot's suit profile best. 4♣ + 7♦ + 9♥ are rainbow → adding any K just makes it 2+1+1 (single-suited). All 3 ties — pick any.
+- **Play**: top=A♥, mid=K♣+K♦, bot=K♠+4♣+7♦+9♥.
+
+**Worked example (C variant — low trips with weak kickers):** `2♥ 3♣ 4♦ 6♠ 7♣ 7♦ 7♠`
+- Trips = 777. Max kicker = 6♠ (rank 6 < 7) → C variant.
+- Top = one 7 (pick 7♣). Mid = 7♦ + 7♠. Bot = 2♥, 3♣, 4♦, 6♠.
+- **Play**: top=7♣, mid=7♦+7♠, bot=6♠+4♦+3♣+2♥.
+- Note bot has a low connected run (3-4-...-6 with 2 in the wheel slot) — possible wheel straight if board hits 5+A.
 
 **Why it works:**
-- AAA in mid plays as AA in Hold'em (paired-mid) — wins ~80% on unpaired boards, same as Rule 4's KK/AA.
-- The leftover trip-rank card in bot still helps: it makes the bot a "trip-style" hand (e.g., A on bot pairs the board for a set draw).
-- Probe data (Session 34, `probe_trips_kkk_aaa_routing.py`): A_paired_mid is **BR-optimal on 79.18% of KKK/AAA hands** (83.84% AAA, 74.53% KKK).
+- **2-of-3 trips on mid is a paired mid** — Hold'em equity ~80% on unpaired boards (same as KK/AA stay-in-mid logic for Rule 4).
+- **Never put the 3rd trip card on bot:** that breaks the paired mid. Empirical measurement: on the human chain (v28), 5.4% of pure-trips hands route the 3rd trip card to bot, and those hands lose $3,609/1000h within-trips ($197/1000h whole-grid) vs the always-paired-mid baseline. **Always-A∪C is the largest single-rule gain ever measured in this project.**
+- **A vs C decision = "which is the higher rank for the top tier?"** A's top = max kicker, C's top = trip rank. The single-card top tier is purely a high-card battle (against opponent's similarly random top card on a 5-board), so the higher-rank top wins ~52% more often — in a 2-player long-run that's a meaningful edge.
 
-**Edge case (DS-bot exception, ~24% of geometrically-eligible hands):**
-When the bot can be made double-suited by anchoring it with 2 of the 3 trip-rank cards (a 2-2-2-1 hand suit profile with broadway concentration), the split-bot routing can beat paired-mid by mean +0.36 EV. This is hard to evaluate manually pre-flop. **For human play: ignore the exception and always follow Rule 4 (extended).** The DT (v25/v26/v27) routes correctly on the majority of these via existing trips_rank + suit features. Upper bound from leaving this exception on the table: ~$5/1000h whole-grid (KKK/AAA is 0.84% of hands).
+**Probe data (Session 37, `verify_rule6_v14_trips.py`):**
+- v14 picks "mid is paired" on only 94.3% of pure trips. The 5.4% B-routings (3rd trip → bot) are the systematic error.
+- v14's A-vs-C decision is already correct on the 94.3% it gets right (top = max(trip_rank, max_kicker_rank)).
+- Always-A∪C oracle ceiling: $+197/1000h whole-grid over v14.
+- v33's heuristic captures **$+112/1000h whole-grid on full N=200 grid** and **$+143/1000h on prefix N=1000** (56% of the oracle ceiling — the heuristic limit for "no peeking at oracle EVs").
 
-**Fires on:** 0.84% of all hands (KKK 0.42% + AAA 0.42%).
+**Empirical lift over v28:** **+$112/1000h whole-grid (full N=200)** — the largest single rule ship in project history. The v28→v33 ship is bigger than the cumulative Rule 4 + Rule 5 ships combined.
+
+**Fires on:** 5.46% of all hands (~1 in 18 you're dealt). Pure trips covers all 13 trip ranks; the headline gain is concentrated on low-rank trips (2-9) where the B-bleed was largest.
+
+**Subsumes Rule 4 (extended):** the prior KKK/AAA rule was a special case of Rule 6's A or C variant. KKK with no Ace kicker → C variant. KKK with Ace kicker → A variant (top=A). AAA always → C variant (no card beats A). Rule 6 generalizes cleanly to all 13 trip ranks.
 
 ---
 
 ## Default (no rule fires)
 
-For every hand not covered above — single pair outside the rule's gates, no-pair hands, plain trips, three pairs, quads — **play it the obvious way:**
+For every hand not covered above — single pair outside the rule's gates, no-pair hands, three pairs, quads — **play it the obvious way:**
 
 - **Top** = your highest singleton card (especially an Ace if you have one)
 - **Mid** = your strongest 2-card Hold'em combination from what's left (pair > broadway > suited connector)
 - **Bot** = whatever's left, ideally with at least 2 of one suit for some Omaha equity
 
-This is the v8_hybrid play. It's not optimal on every hand but it's adequate. The v31 ML champion captures meaningful additional EV here (especially on high_only, pair, two_pair, trips_pair, and composite hands), but no clean human-memorizable rule has been extracted yet. Two boundary probes (Session 34) confirmed Rule 4 holds for KK, AA, KKK, and AAA but identified an exception (~24-28% of DS-bot-eligible hands prefer split-bot) that has consistently resisted clean rule extraction. Session 36's trips diagnostic showed **Always A_paired_mid** (Rule 6 candidate) captures $85/1000h whole-grid as the structural analog of Rule 4 for trips — verification of whether v14_combined already encodes this implicitly is the next human-strategy work item.
+This is the v8_hybrid play. It's not optimal on every hand but it's adequate. The v32 ML champion captures meaningful additional EV here (especially on high_only, pair, two_pair, trips_pair, and composite hands), but no clean human-memorizable rule has been extracted yet. Two boundary probes (Session 34) confirmed Rule 4 holds for KK, AA, KKK, and AAA but identified an exception (~24-28% of DS-bot-eligible hands prefer split-bot) that has consistently resisted clean rule extraction. Session 37's Rule 6 closed the trips category gap with the largest single rule ship in project history; the next-largest opportunity in the human chain is composite (~$98/1000h whole-grid) but composite is much rarer and harder to rule-encode.
 
 ---
 
