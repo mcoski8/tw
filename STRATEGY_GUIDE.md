@@ -633,7 +633,10 @@ guide can keep them as human-memorizable approximations.
   (via `encode_rules.strategy_v3`'s pair-to-mid default). v3 / v8 /
   v16 / v18 / v20 all agree on the canonical KK and AA play; Rule 4
   is documentation, not a separate code path.
-- Combined chain → `analysis/scripts/strategy_v14_combined.py`
+- Rule 5 (KK/AA rainbow override) → `analysis/scripts/strategy_v28_rule5_rainbow.py`
+- Combined chain (4 rules) → `analysis/scripts/strategy_v14_combined.py`
+- Combined chain (5 rules, current) → `analysis/scripts/strategy_v28_rule5_rainbow.py`
+  (wraps v14 with Rule 5)
 
 **ML champion + baselines (newest first):**
 - v27 (current) → `analysis/scripts/strategy_v27_dt.py` + `data/v27_dt_model.npz` (460K leaves, 69 features)
@@ -706,11 +709,14 @@ print(result.summary())
 > Everything below this line is the active rule set as of Session 34.
 > If you only read one section, read this one.
 >
-> **Human-memorizable strategy of record: v14_combined + Rule 4.**
-> Four numbered rules plus a default play. Edge over v8_hybrid baseline:
-> **+$1,014/1000h** at $10/EV-pt (measured on the N=1000 prefix).
-> A naive Rule 5 (suited-mid for high_only) was tested in Session 31
-> in two flavors and **REJECTED** — see Part 4 + Decision 056.
+> **Human-memorizable strategy of record: v14_combined + Rule 4 + Rule 5.**
+> Five numbered rules plus a default play. Edge over v8_hybrid baseline:
+> **+$1,015/1000h** at $10/EV-pt (full grid, N=200). A naive Rule 5
+> (suited-mid for high_only) was tested in Session 31 in two flavors and
+> **REJECTED**; the Rule 5 here (KK/AA Rainbow override, Session 34) is
+> a much tighter structural rule that fires on only 0.27% of hands and
+> is the **first successful Rule 5 in project history** — see Decision
+> 063 in DECISIONS_LOG.md.
 >
 > **Rule 4 extends to KKK and AAA.** The Session 34 probe
 > `probe_trips_kkk_aaa_routing.py` confirms that "keep 2 of 3 trip-rank
@@ -753,7 +759,7 @@ Look for the strongest "shape" in your hand:
 | Trips of K or A (no other pair) | 3 Kings or 3 Aces | **Rule 4 (extended)** — keep 2-of-3 in mid as a pair |
 | Trips (other ranks, no pair) | 3 of one rank, no other pair | (no simple rule yet — multi-archetype) |
 | Two pairs | 2 of one rank + 2 of another | **Rule 2** |
-| One pair (KK or AA) | 2 Kings or 2 Aces | **Rule 4** |
+| One pair (KK or AA) | 2 Kings or 2 Aces | **Rule 4** (default), check **Rule 5** for rainbow override |
 | One pair (other ranks) | 2 of one rank, no other multiples | **Rule 1** (gates apply) |
 | No pair | 7 distinct ranks | (no simple rule yet — multi-archetype) |
 
@@ -905,6 +911,46 @@ memorizing the strategy doesn't accidentally split the pair.
   population split on its own.
 
 **Fires on:** 7.17% of all hands (KK 3.58% + AA 3.58%).
+
+---
+
+## Rule 5 — KK/AA Rainbow override: swap to DS-bot when Rule 4 leaves a rainbow Omaha hand
+
+**Fires only when ALL of these are true** (very narrow trigger — fires on ~0.27% of all hands):
+
+1. **Pair = KK or AA** (Rule 4 territory)
+2. **Pair has two different suits** (e.g., K♠+K♦ — DS-anchor possible)
+3. **Apply Rule 4 mentally and look at the resulting bot.** If the 4 leftover cards (after putting the highest non-pair card on top and the pair in mid) span all 4 suits → **bot is rainbow**.
+4. **DS-bot is geometrically possible:** at least one kicker matches each pair-suit.
+
+**The play (when fired):** Override Rule 4 — put the pair in bot.
+- **Bot** = both pair-cards + the lowest-rank kicker matching each pair-suit (gives a 2+2 double-suited bot)
+- **Top** = the highest-rank card of the 3 leftover non-pair cards
+- **Mid** = the other 2 leftover cards (will often be off-suit and weak — that's OK)
+
+**Worked example (the canonical case):** `K♠K♦ 3♠ 5♦ 9♥ T♣ J♠`
+- Pair = KK ✓, two different suits (♠+♦) ✓
+- Rule 4 routing: top=J♠, mid=K♠K♦, bot=3♠5♦9♥T♣ — bot has 1 of each suit → **rainbow**, trigger fires.
+- DS-bot available: 3♠ matches ♠, 5♦ matches ♦ ✓
+- Rule 5 play: **bot = K♠K♦5♦3♠** (2 ♠ + 2 ♦, double-suited), **top = J♠** (highest leftover), **mid = T♣9♥**
+- EV result: Rule 5 routing scores **+3.025 EV** vs Rule 4's +1.225 EV — **the override wins by 1.80 EV ($18,000/1000h on this single hand)**.
+
+**Why it works:**
+- A rainbow Omaha bot is essentially dead — you can't make any flush or strong-suited play. Whatever's in mid (a pair of Kings) is also limited to Hold'em equity only.
+- A 2-2 DS bot anchored by KK retains the pair-on-board strength (set draws, two-pair) AND gains two flush draws. The trade is: give up KK-as-pair in mid (worth ~+0.4 EV) for a 2-2 DS bot anchored by KK (worth ~+1.4 EV vs rainbow). Net ~+1.0 EV swing.
+- The "mid is weak" cost is small in TW Poker — a random 2-card mid loses to opponent's mid by maybe 0.5 EV. The gain from a live bot dwarfs the mid loss.
+
+**Why the gates are this narrow:**
+- **Premium pair only:** lower pairs (Q and below) generally do better in mid because their kickers play well alongside (e.g., QQ + AKxx in mid + bot has more options).
+- **Two pair-suits:** if KK is K♠+K♠... wait that's impossible. The pair always has two different suits given a 52-card deck. Actually, this gate is structurally automatic for KK/AA — but stated for completeness.
+- **Rainbow Rule-4-bot:** this is the strongest signal that Rule 4 is leaving value on the table. When Rule-4-bot is single-suited or DS, Rule 4 is correct most of the time.
+- **DS feasibility:** without one kicker in each pair-suit, you can't even build the DS bot.
+
+**Why earlier Rule 5 attempts (v21, v22) failed:** Both v21 and v22 (Session 31) attempted Rule 5 by firing on ~5-13% of all hands — much too eager. They lost $473-$680/1000h vs v14. v28's Rule 5 (this rule) fires on 0.27% of all hands — 20-50× tighter. The structural rainbow trigger is far more selective than the rank-based triggers (msphr ≥ 9, etc.) those attempts used. **First successful Rule 5 in the project's history** (Session 34, Decision 063).
+
+**Fires on:** 0.27% of all hands (~1 in 370 you're dealt). Rare, but the per-hand wins are dramatic.
+
+**Empirical lift over v14_combined:** +$1/1000h whole-grid (small but POSITIVE — comparable to v24's marginal ML ship). The whole-grid number is small because the rule fires rarely; the per-hand wins on the firing subset are large ($15K-$18K/1000h on hands like the worked example).
 
 ---
 

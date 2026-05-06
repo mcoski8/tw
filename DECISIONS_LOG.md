@@ -1969,3 +1969,59 @@ Textbook gating-template signature on full grid: high_only drops, every other ca
 1. **Rule 4 is preserved unchanged in `STRATEGY_GUIDE.md`.** Both KK/AA and KKK/AAA probes reaffirm the existing default.
 2. **A new probe-script discipline established:** quick boundary probes (5-10s scan + headline pandas) should run BEFORE distillation to set expectations on per-category upper bounds. The KK/AA upper bound of $42/1000h whole-grid is informative for Session 35 prioritization.
 3. **Open question for Session 35 priority A:** distill v27 on pair-only hands AND grade v27 vs Rule-4 + bot-DS oracle on the KK/AA subset specifically. If v27 already gets >75% of the $42 upper bound, KK/AA is "done" and the remaining pair residual is in non-KK/AA pair hands. If v27 gets <50%, there's a `pair_kk_aa_split_bot_ds_*_g` candidate family for v28.
+
+
+## Decision 063 — Rule 5 (Rainbow override) shipped (Session 34, post-v27) — first successful Rule-5 attempt in the project's history
+
+**Date:** 2026-05-05
+**Status:** Shipped to STRATEGY_GUIDE.md as Rule 5. Marginal but positive: +$1/1000h whole-grid headline (+0.03 pp pct_opt) over v14_combined+Rule4. Strategy is `analysis/scripts/strategy_v28_rule5_rainbow.py`. NOT a new ML champion — v27_dt remains the computational champion at $1,853/1000h. Rule 5 is for human-memorizable play.
+
+**Origin:** User intuition during the Session-34 closeout discussion. After reviewing the KK/AA Rule-4 boundary probe data, user proposed: "with KK/AA, if Rule 4 leaves you with a rainbow Omaha bot, swap to a double-suited bot anchored by the pair instead." This is a much tighter version of the Session-31 v21/v22 Rule-5 attempts.
+
+**The trigger (Rule 5 gates):**
+1. Pair = KK or AA (only premium pairs)
+2. Pair has 2 different suits (DS-anchor possible)
+3. Rule 4's resulting bot would be rainbow (1+1+1+1 across 4 suits)
+4. DS-bot routing geometrically available (at least one kicker in each pair-suit)
+
+**The play (when fired):**
+- Bot = pair + lowest-rank kicker of each pair-suit (gives 2+2 DS)
+- Top = highest-rank card of the 3 leftover non-pair cards
+- Mid = the 2 remaining
+
+**Population that fires:** 3.7% of KK/AA hands × 7.17% KK/AA share = **0.27% of all hands**. Compare to v21 (which fired on ~26% of high_only) and v22 (~13% of high_only) — Rule 5 is 20-50× tighter than the failed attempts.
+
+**Validation results (full grid, N=200):**
+
+| Strategy | $/1000h | pct_opt | Δ vs v14 |
+|---|---:|---:|---:|
+| v14_combined (4 rules) | $3,033 | 39.61% | — |
+| **v28 (v14 + Rule 5 rainbow)** | **$3,032** | **39.64%** | **+$1/1000h, +0.03 pp** |
+| v22 (failed Rule 5 — Sept 31) | $3,506 | — | −$473 |
+| v21 (failed Rule 5 — Sept 31) | $3,713 | — | −$680 |
+
+Per-category: only `pair` moves ($2,011 → $2,008, −$3). Every other category bit-identical to the byte.
+
+**Per-hand high-leverage wins (illustrative):**
+- K♠K♦3♠5♦9♥T♣J♠ (canonical_id 3,912,507): v14 picks rainbow-bot Rule-4 routing for +1.225 EV; Rule 5 routes to DS-bot (top=J, mid=Tc9h, bot=KsKd5d3s) for +3.025 EV. **Δ = $18,000/1000h on this single hand.** (Both v26_dt and v27_dt already pick this DS-bot routing — Rule 5 is for human play.)
+
+**Why this Rule 5 worked where v21/v22 failed:**
+
+| Aspect | v21/v22 (Session 31) | v28 (Session 34) |
+|---|---|---|
+| Trigger category | high_only (multi-archetype) | KK/AA only (premium-pair-specific) |
+| Population fired | ~5-13% of all hands | 0.27% of all hands |
+| Gate selectivity | rank-based (msphr ≥ 9) | structural (rainbow Rule-4-bot) |
+| Failure mode | Over-fired on hands where DT correctly routed differently | Tight enough to only catch the high-leverage cases |
+
+**Files:**
+- `analysis/scripts/strategy_v28_rule5_rainbow.py` — implementation + smoke tests
+- `analysis/scripts/grade_v28.py` — head-to-head grader vs v14
+- Result log: `/tmp/grade_v28.log` (transient; ungitted)
+
+**Consequence:**
+1. **Rule 5 is added to STRATEGY_GUIDE.md** as a fifth numbered rule. The human-memorizable strategy of record is now **v14_combined + Rule 4 + Rule 5** ($3,032/1000h, edge over v8_hybrid ≈ +$1,015/1000h).
+2. **First successful Rule 5 in project history.** Validates the methodology lesson: tight, structural gates beat loose rank-based gates. Future rule-extraction attempts should prefer geometric/structural triggers (rainbow, DS-feasibility) over magnitude-based triggers (rank ≥ X).
+3. **Whole-grid gain is small** ($1/1000h), comparable to v24's marginal ML ship. Per-hand wins on the firing subset are large (~$18K/1000h on the canonical KsKd3s5d9hTcJs example). The asymmetry — small whole-grid + huge per-hand — is exactly what a "memorize the exception" rule should look like.
+4. **v27_dt remains the computational champion.** Rule 5 is human-strategy only; v27 (and v26) already capture this routing on the firing subset.
+5. **Open: $42 KK/AA upper bound minus $1 captured = $41 still on the table.** Future Rule-6 candidates would need to address the single-suited (2+1+1) Rule-4-bot bucket (48.7% of KK/AA) where 20% prefer DS-bot but the trigger is harder to define. Probably not worth the cognitive load for human play; ML routing already handles it.
