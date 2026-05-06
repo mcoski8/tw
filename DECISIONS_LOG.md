@@ -2259,3 +2259,78 @@ The rainbow stratum (where Rule 5 lives) is the only one where v29 BEATS Rule-4.
 | v28 | Rule 5 (Rainbow override, human strategy) | +$1 vs v14_combined | SHIPPED (rule-only) |
 | v29 | gated pair_r4 (round 2 of pair) on v27 | +$46 / +$37 vs v27 | SHIPPED |
 | **v30** | **gated trips on v29** | **+$13 / +$15 vs v29** | **SHIPPED — current ML champion** |
+
+## Decision 066 — v31_dt is the new ML champion (Session 36 overnight) — high-capacity v30 retrain produces second-largest ship in project history with ZERO new features
+
+**Date:** 2026-05-06
+**Status:** Shipped (overnight cascade from Session 36 → 37 morning). v31 = v30's 79 features trained at depth=32, min_samples_leaf=3 instead of v30's depth=30 ml=5. Ships +$58/1000h on full grid, +$29/1000h on prefix. Second-largest single ML ship after v26 (+$70). Zero new features — pure capacity expansion. Beat both v31a (pair_r4v3 KK/AA-tight, +$6 full) and v31b (trips_v2 round 2, +$15 full) head-to-head in the same overnight cascade.
+
+**Origin:** The Session 36 v30 ship was small (+$13 full / +$15 prefix) despite trips having $109/1000h whole-grid opportunity and despite 6 diagnostic-driven features. Tripwire was bearish (0/6 in top-30). Rather than chase further feature design, the overnight cascade tested the alternative hypothesis: **maybe the gating-template features were already encoded but not fully expressed because the tree didn't have enough leaves**.
+
+The v20 vs v20b finding (Session 31, depth=32 saturation) had been at 43 features with 308K leaves. By v30, the count was 79 features at 493K leaves — substantially more structure to encode. The "capacity is saturated" conclusion was true at v20's 43 features but not at v30's 79.
+
+**What v31 is:**
+- 79 features: identical to v30 (37 base + 6 gated suited + 6 gated trips_pair + 4 gated composite + 6 gated pair-v1 + 6 gated two_pair + 4 gated high_only + 4 gated pair_r4 + 6 gated trips).
+- Hyperparameters: **depth=32, min_samples_leaf=3** (vs v30's depth=30 ml=5).
+- **699,773 leaves** (+206,716 vs v30's 493,057, **+42% capacity expansion**). Largest single-ship leaf delta in project history.
+- Model file: `data/v31_dt_model.npz` (450 MB, +120 MB vs v30).
+
+**Validation results:**
+
+| Grid | v30 $/1000h | v31 $/1000h | Δ |
+|---|---:|---:|---:|
+| Full (N=200, 6.0M hands) | $1,794 / 49.98% | **$1,736 / 50.92%** | **−$58 / +0.94 pp** |
+| Prefix (N=1000, 500K hands) | $951 / 61.53% | **$921 / 62.07%** | **−$29 / +0.54 pp** |
+
+Per-category at full grid — **ALL 8 categories improve** (no isolated-category gating signature this time; capacity helps across the board):
+
+| Category | v30 | v31 | Δ |
+|---|---:|---:|---:|
+| high_only  | $2,862 | $2,816 | −$46 |
+| pair       | $1,674 | $1,639 | −$35 |
+| **two_pair** | $1,145 | $1,037 | **−$108** |
+| trips      | $1,758 | $1,732 | −$26 |
+| **trips_pair** | $1,442 | $1,225 | **−$217** |
+| three_pair | $1,654 | $1,639 | −$15 |
+| quads      | $723   | $645   | −$78 |
+| **composite** | $1,733 | $1,387 | **−$346** |
+
+The biggest gains accrue to the previously-gated categories (composite, trips_pair, two_pair) — the tree's previously-encoded gating features can now express more structure. This validates the hypothesis that **gating features had been adding signal that v30's depth/leaf budget couldn't fully express**.
+
+Per-category at prefix grid: pair −$4, two_pair −$41, trips −$7, trips_pair −$184, composite −$230. Same pattern: previously-gated categories drop most.
+
+**Full:prefix ratio: 2.0:1.** Higher than recent ships (v25: 2.6:1, v26: 1.35:1, v29: 1.24:1, v30: 0.87:1). The 2:1 ratio is at the edge of overfitting territory but still within reasonable bounds. The clean per-category improvements across all 8 categories (rather than spiky) suggest the gain is structural, not noise.
+
+**Overnight cascade context:**
+
+| Candidate | Strategy | Full Δ vs v30 | Prefix Δ vs v30 | Tripwire | Leaves |
+|---|---|---:|---:|---:|---:|
+| v31a | pair_r4v3 KK/AA-tight (4 features) | +$6 | $0 | 0/4 in top-30 | 500,722 (+8K) |
+| v31b | trips_v2 round 2 (4 features) | +$15 | +$13 | 0/4 in top-30 | 507,692 (+15K) |
+| **v31** (was v31c) | **v30 features at depth=32 ml=3** | **+$58** | **+$29** | n/a (no new features) | **699,773 (+207K)** |
+
+v31a's tight gating produced minimal gain — within-pair moved $1,674 → $1,661 (−$13 within-pair on full, $0 on prefix). The KK/AA-tight features did inject signal but the marginal headline was modest.
+
+v31b's trips round-2 features captured $277 within-trips on full (clean second iteration of trips). At higher capacity (v32 candidate) v31b's features would likely add ~$15 to v31's headline, suggesting v32 = v31 + v31b features at depth=32 ml=3 could ship ~$70-75/1000h vs v30 (rivaling v26's record).
+
+**Files:**
+- `analysis/scripts/strategy_v31_dt.py` — inference wrapper (delegates to strategy_v30_dt with v31 model path)
+- `data/v31_dt_model.npz` (450 MB; was data/v31c_dt_model.npz pre-promotion)
+- `analysis/scripts/overnight_v31_cascade.sh` — the runner that produced this ship
+- `analysis/scripts/train_v30_dt.py` — same trainer used; just `--max-depth 32 --min-samples-leaf 3`
+
+**Consequence:**
+
+1. **v31 is the new ML champion.** Use `strategy_v31_dt(hand_bytes) -> setting_index`. Cumulative improvement from v18e → v31: $2,066 → $1,736 = −$330/1000h over 6 ML ships (v20 / v23 / v24 / v25 / v26 / v27 / v29 / v30 / v31). Total improvement vs v14_combined: −$1,297/1000h.
+
+2. **Methodology rule (Session 36): when feature set grows ≥40 above the last capacity-saturation test, RE-TEST capacity.** The v20/v20b "capacity saturated" finding has a feature-count ceiling; it doesn't apply unbounded. Future ML champion ships should default to `depth=32 ml=3` going forward (or test depth=34 ml=2 as the next ceiling).
+
+3. **The "diagnostic-first design vs pure capacity" tradeoff is now clearer.** v25-v30 were 6 sequential diagnostic-first ships (each adding 4-6 features per category) totaling $-260 cumulative. v31 alone (capacity-only) ships $-58. **Capacity unlocks ~22% of what the cumulative feature work added.** This is a strong yield for one config change; future sessions should run a capacity sweep (depth ∈ {30, 32, 34}, ml ∈ {2, 3, 5, 10}) before considering more features whenever leaf-count growth has stalled below historical norms.
+
+4. **Tripwire confirmed 5×, with caveats.** v31a (0/4 → +$6) and v31b (0/4 → +$15) both shipped in line with the tripwire. v31 itself didn't go through the tripwire because it added no new features. The tripwire is a feature-design quality signal; capacity expansions are orthogonal and should be evaluated independently.
+
+5. **v32 candidate = stack v31b features (trips_v2 round 2) onto v31's high-capacity config.** Expected ship: ~$15 incremental (v31b's full-grid gain) on top of v31's $58. Total v32 vs v30: ~$73, which would tie v26 as the largest single ship in project history. Train at depth=32 ml=3.
+
+6. **v31a (pair_r4v3 KK/AA-tight) is archived.** Within-pair gain was small and didn't propagate to prefix. The categorical-encoding hypothesis (v29's pair_r4_bot_suit_profile being too coarse) remains plausible but the tight gating did not unlock the expected value. The KK/AA single-suited Rule-4-bot stratum (52.9% of KK/AA, $37 below oracle) remains an open optimization target — but the next attempt should use a fundamentally different angle (e.g., a meta-classifier feature predicting "DS-bot beats Rule 4" trained on probe data, or a sub-tree dedicated to KK/AA hands).
+
+7. **v31a/v31b model files retained but archived.** `data/v31a_dt_model.npz` and `data/v31b_dt_model.npz` are kept on disk (gitignored) for future cross-strategy comparisons but are not exposed via strategy modules.

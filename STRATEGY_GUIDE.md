@@ -12,7 +12,7 @@
 > 5. Where each rule + model lives in code
 > 6. **The Current Standard** (at the bottom — the rules to memorize, the model to call)
 >
-> Last updated: 2026-05-05 (Session 35 — v29 ships, pair-gated v2 (`pair_r4_*_g`) is the 7th gating success and the largest diagnostic-driven win to date. Rule 5 (Rainbow override) shipped to human strategy chain (+$1/1000h vs v14_combined, first successful Rule 5 in project history).
+> Last updated: 2026-05-06 (Session 36 — v30 ships (gated trips, 8th gating success); overnight cascade promotes v31 (capacity-only retrain at depth=32 ml=3, 79 features, 700K leaves) as new champion. v31 is the second-largest single ML ship in project history (+$58/1000h full, +$29/1000h prefix vs v30) with ZERO new features. Methodology: when feature-count grows substantially beyond last capacity-saturation test, RE-TEST capacity.
 
 ---
 
@@ -505,6 +505,95 @@ strong pre-grade tripwire signal.
 
 Total pair improvement since v18e: **−$199/1000h within-pair**. Each iteration targeted a distinct signal axis; neither superseded the other (v29 BUILDS ON v25, doesn't replace).
 
+## Session 36: v30 ships (gated trips, 8th gating) + v31 ships (capacity expansion, 2nd-largest ship in project history)
+
+This session produced TWO ships back-to-back: a gating-template ship (v30, trips) followed overnight by a CAPACITY-ONLY ship (v31). The pair sets a methodological precedent worth recording in detail.
+
+**Part A — v29 KK/AA round-2 audit + v30 trips ship.**
+
+The session opened with `distill_v29_pair.py` running the round-2 KK/AA audit on the v29 champion. v29 closed only $7/1000h of v27's $14 KK/AA Rule-4 deficit. Stratification by Rule-4-bot suit profile revealed:
+
+| Rule-4-bot profile | KK/AA share | v29 | Rule-4 alone | Oracle | v29-oracle gap |
+|---|---:|---:|---:|---:|---:|
+| rainbow (1+1+1+1)        |  8.8% | $12.0 | $15.4 | $3.8  | **$8.2** |
+| **single-suited (2+1+1)** | **52.9%** | **$51.0** | **$38.1** | **$14.1** | **$36.9** |
+| double-suited (2+2)      | 15.4% | $3.6 | $2.0 | $1.0 | $2.6 |
+| three-of-suit (3+1)      | 20.6% | $14.4 | $11.9 | $6.3 | $8.0 |
+| four-of-suit             |  2.2% | $1.0 | $0.8 | $0.7 | $0.3 |
+
+v29's `pair_r4_bot_suit_profile_g` (categorical 0..5) treats single-suited as one bucket — but the single-suited stratum (52.9% of KK/AA, 3.7% of grid) needs FINER encoding (which suit, dominant-suit max rank, pair-suit alignment). Rainbow is captured well because Rule 5 fires there; single-suited is the dominant residual leak. **Deferred** to v31a candidate (overnight cascade).
+
+The session pivoted to a fresh diagnostic: `distill_v29_trips.py`. The trips category (5.46% of grid, $109/1000h whole-grid contribution) had been entirely untouched by gating. The diagnostic produced the **largest gap-to-baseline ever measured in this project**:
+
+| Strategy | Within-trips regret | Whole-grid contribution |
+|---|---:|---:|
+| Always A_paired_mid (mid is trip pair)  | $24/1000h | $24/1000h |
+| Always B_paired_bot_any                 | $625/1000h | $341/1000h |
+| Always C_top_trip                       | $1,107/1000h | $605/1000h |
+| Oracle (max over A∪B_any∪C)             | $0 (perfect routing exists) | $0 |
+| **v29 actual**                          | **$1,997/1000h** | **$109** |
+
+**v29 was $85/1000h whole-grid WORSE than always-A_paired_mid** — the analog of "v27 was $20 worse than Rule 4 on KK/AA" but 4× larger. v29 picks A on 79.9% of trips, B on 4.8%, C on 15.3%; the 20.1% non-A picks are systematically wrong, especially on low-rank trips (2-9 each leak $7-8/rank-share, totaling ~$60 of the $85 deficit).
+
+**v30 ships — 6 new trips-gated features** (prefix `trips_*_g`, distinct from v23's `tp_*_g` which is trips_pair):
+
+- `trips_b_ds_avail_g` (0/1) — is B-DS routing structurally feasible (≥1 kicker in each of 2 trip-suits)?
+- `trips_b_ds_n_routings_g` (0..3) — count of {a,b} trip-suit pairs admitting B-DS
+- `trips_kickers_max_suit_count_g` (0..4) — max suit count among 4 kickers
+- `trips_kickers_max_rank_g` (0..14) — highest kicker rank
+- `trips_n_broadway_kickers_g` (0..4) — count of T-A among kickers
+- `trips_n_low_kickers_g` (0..4) — count of 2-5 among kickers
+
+79 features total (73 v29 + 6 trips-gated), depth=30 ml=5, **493,057 leaves** (+6,715 vs v29, +1.4% capacity expansion). **0/6 new features placed in top-30 importance** — tripwire predicted small headline.
+
+- Full grid: $1,794/1000h. **−$13 vs v29** (trips drops $1,997 → $1,758, **−$239 within-trips**).
+- Prefix: $951/1000h. **−$15 vs v29** (trips drops $1,763 → $1,474, **−$289 within-trips**).
+- All other categories bit-identical or within N=200 noise. pct_optimal moves 49.80% → 49.98% (full, +0.18 pp) and 61.32% → 61.53% (prefix, +0.21 pp).
+- **Full:prefix ratio 0.87:1** — first ship where prefix gain exceeds full-grid gain. Trips routing has cleaner answers under higher-fidelity grading.
+
+**Part B — overnight v31 cascade: capacity-only retrain produces second-largest ship.**
+
+Three v31 candidates ran sequentially (~80 min total) via `analysis/scripts/overnight_v31_cascade.sh`:
+
+| Candidate | Approach | Full Δ vs v30 | Prefix Δ vs v30 | Tripwire | Leaves |
+|---|---|---:|---:|---:|---:|
+| v31a | pair_r4v3 KK/AA-tight (4 features) | +$6 | $0 | 0/4 in top-30 | 500,722 (+8K) |
+| v31b | trips_v2 round 2 (4 features for C_top + finer A/B) | +$15 | +$13 | 0/4 in top-30 | 507,692 (+15K) |
+| **v31 (was v31c)** | **v30 features at depth=32 ml=3** | **+$58** | **+$29** | n/a (no new features) | **699,773 (+207K)** |
+
+**v31 ships — depth=32, min_samples_leaf=3, 79 features (identical to v30), 699,773 leaves** (+206,716 vs v30 = +42% capacity expansion, the largest single-ship leaf delta in project history).
+
+Per-category at full grid — **ALL 8 categories improve** (no isolated-category gating signature; capacity helps across the board):
+
+| Category | v30 | v31 | Δ |
+|---|---:|---:|---:|
+| high_only  | $2,862 | $2,816 | −$46 |
+| pair       | $1,674 | $1,639 | −$35 |
+| **two_pair** | $1,145 | $1,037 | **−$108** |
+| trips      | $1,758 | $1,732 | −$26 |
+| **trips_pair** | $1,442 | $1,225 | **−$217** |
+| three_pair | $1,654 | $1,639 | −$15 |
+| quads      | $723   | $645   | −$78 |
+| **composite** | $1,733 | $1,387 | **−$346** |
+
+The biggest gains accrue to PREVIOUSLY-GATED categories (composite, trips_pair, two_pair). Capacity expansion lets the existing gating-template features express more structure. Previously-untouched categories (high_only, three_pair, quads) also improve, just less dramatically.
+
+- Full grid: $1,736/1000h. **−$58 vs v30** (second-largest single ship after v26's −$70). pct_opt 49.98% → 50.92% (+0.94 pp).
+- Prefix: $921/1000h. **−$29 vs v30**. pct_opt 61.53% → 62.07% (+0.54 pp).
+- Full:prefix ratio 2.0:1 — at edge of overfitting territory but clean per-category structure rules out pure noise.
+
+**Score: $1,736/1000h on full grid. Improvement: −$728 vs v16, −$1,297 vs v14.**
+
+**Methodology lesson — when feature set grows ≥40 above last capacity-saturation test, RE-TEST capacity.** The v20 vs v20b finding (Session 31, depth=32 produced bit-identical results as depth=30 ml=5) was at 43 features with 308K leaves. That conclusion didn't generalize: at v30's 79 features and 493K leaves, depth=32 ml=3 unlocks $58/1000h of latent signal. Future ML champion sessions should default to **depth=32 ml=3** going forward, and re-test capacity (depth=34 ml=2 as the next ceiling) whenever leaf-count growth stalls below historical norms (~30K leaves per gating-template ship).
+
+**Methodology lesson — diagnostic-first feature design and capacity expansion are orthogonal axes.** v25-v30 were 6 sequential diagnostic-first ships (each adding 4-6 features per category) totaling −$260/1000h cumulative. v31 alone (capacity-only, zero new features) ships −$58. Capacity unlocks ~22% of what the cumulative feature work had added but couldn't fully express. Future sessions should run a capacity sweep BEFORE considering more features whenever a ship has a bearish tripwire AND a leaf-count gain ≤10K — because that pattern signals "feature was added but tree couldn't express it" rather than "feature wasn't useful."
+
+**Methodology lesson — categorical features can be too coarse, but tighter gating doesn't always help.** v31a's pair_r4v3 features were KK/AA-tight (zero outside KK/AA). The hypothesis was that v29's `pair_r4_bot_suit_profile_g` was too coarse for the single-suited stratum. The candidate shipped only +$6 full / $0 prefix. Tight gating did inject signal (within-pair −$13 on full) but the headline was modest. The KK/AA single-suited Rule-4-bot stratum remains an open optimization target ($37 below oracle) but a fundamentally different angle is needed (e.g., meta-classifier feature trained on probe data, or a sub-tree dedicated to KK/AA hands).
+
+**Methodology lesson — "always-X" structural baselines surface Rule-N candidates.** The trips diagnostic surfaced "Always A_paired_mid" as the structural analog of Rule 4 for trips. The Session 34 KK/AA Rule-4 boundary probe surfaced Rule 5 (Rainbow override). Future sessions should systematically check whether each category has a structural always-X baseline that the human strategy could codify — even if it's already implicit in v14_combined, naming it explicitly preserves the strategy chain's coherence.
+
+**Methodology lesson — the gating template now has 8 instances; pair has 2 iterations.** Suited (v20) / trips_pair (v23) / composite (v24) / pair v1 (v25) / two_pair (v26) / high_only (v27) / pair v2 (v29) / trips (v30). v31 is NOT a 9th gating-template instance — it's a capacity-only retrain. The template is established; the capacity dimension is the orthogonal axis going forward.
+
 ---
 
 # Part 2 — ML champion progression (the full table)
@@ -533,24 +622,28 @@ Every model trained, side-by-side, on both validation grids:
 | v25 | S32 | 30 | 5 | 59 (53+6 pair-gated) | 390,626 | $1,929 | $1,054 | superseded by v26 |
 | v26 | S33 | 30 | 5 | 65 (59+6 two_pair-gated) | 459,209 | $1,859 | $1,002 | superseded by v27 |
 | v27 | S34 | 30 | 5 | 69 (65+4 high_only-gated) | 460,375 | $1,853 | $1,002 | superseded by v29 (prefix unchanged because prefix has no high_only hands) |
-| **v29** | **S35** | **30** | **5** | **73 (69+4 pair_r4-gated)** | **486,342** | **$1,807** | **$965** | **CURRENT CHAMPION** — diagnostic-driven from v27 pair distillation |
+| v29 | S35 | 30 | 5 | 73 (69+4 pair_r4-gated) | 486,342 | $1,807 | $965 | superseded by v30 |
+| v30 | S36 | 30 | 5 | 79 (73+6 trips-gated) | 493,057 | $1,794 | $951 | superseded by v31 |
+| v31a | S36-overnight | 30 | 5 | 83 (79+4 pair_r4v3 KK/AA-tight) | 500,722 | $1,788 | $951 | ARCHIVED — minimal headline gain ($6 full / $0 prefix) |
+| v31b | S36-overnight | 30 | 5 | 83 (79+4 trips_v2 round 2) | 507,692 | $1,779 | $938 | ARCHIVED — solid trips round-2 ($15 full / $13 prefix) but lost vs v31 in cascade |
+| **v31** | **S36-overnight** | **32** | **3** | **79 (same as v30)** | **699,773** | **$1,736** | **$921** | **CURRENT CHAMPION** — capacity-only retrain; second-largest ship (after v26) with zero new features |
 
 **Per-category breakdown** (full grid, N=200): how each category's
-regret has dropped across the six flagship versions:
+regret has dropped across the flagship versions:
 
-| Category | v14 | v16 | v18e | v20 | v25 | v26 | v27 | v29 | Δ v29 vs v14 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| high_only | $4,082 | $3,785 | $3,307 | $2,894 | $2,894 | $2,894 | $2,863 | $2,862 | −$1,220 |
-| pair | $2,011 | $2,127 | $1,873 | $1,873 | $1,771 | $1,771 | $1,771 | **$1,674** | **−$337** |
-| two_pair | $3,371 | $2,005 | $1,458 | $1,458 | $1,458 | $1,145 | $1,145 | $1,145 | −$2,226 |
-| trips | $4,054 | $2,347 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | −$2,057 |
-| trips_pair | $5,417 | $2,438 | $1,608 | $1,608 | $1,446 | $1,445 | $1,445 | $1,443 | −$3,974 |
-| three_pair | $4,529 | $1,975 | $1,653 | $1,653 | $1,654 | $1,654 | $1,654 | $1,654 | −$2,875 |
-| quads | $9,670 | $2,233 | $724 | $724 | $723 | $723 | $723 | $723 | −$8,947 |
-| composite | $10,883 | $5,260 | $2,100 | $2,100 | $1,869 | $1,741 | $1,741 | $1,741 | −$9,142 |
+| Category | v14 | v16 | v18e | v20 | v25 | v26 | v27 | v29 | v30 | v31 | Δ v31 vs v14 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| high_only | $4,082 | $3,785 | $3,307 | $2,894 | $2,894 | $2,894 | $2,863 | $2,862 | $2,862 | **$2,816** | **−$1,266** |
+| pair | $2,011 | $2,127 | $1,873 | $1,873 | $1,771 | $1,771 | $1,771 | $1,674 | $1,674 | **$1,639** | **−$372** |
+| two_pair | $3,371 | $2,005 | $1,458 | $1,458 | $1,458 | $1,145 | $1,145 | $1,145 | $1,145 | **$1,037** | **−$2,334** |
+| trips | $4,054 | $2,347 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,758 | **$1,732** | **−$2,322** |
+| trips_pair | $5,417 | $2,438 | $1,608 | $1,608 | $1,446 | $1,445 | $1,445 | $1,443 | $1,442 | **$1,225** | **−$4,192** |
+| three_pair | $4,529 | $1,975 | $1,653 | $1,653 | $1,654 | $1,654 | $1,654 | $1,654 | $1,654 | **$1,639** | **−$2,890** |
+| quads | $9,670 | $2,233 | $724 | $724 | $723 | $723 | $723 | $723 | $723 | **$645** | **−$9,025** |
+| composite | $10,883 | $5,260 | $2,100 | $2,100 | $1,869 | $1,741 | $1,741 | $1,741 | $1,733 | **$1,387** | **−$9,496** |
 
-Seven category-gated wins are now visible across the v18e → v29
-progression:
+Eight category-gated wins are now visible across the v18e → v31
+progression, plus one capacity-only ship (v31):
 - **v20 → high_only-via-suited:** −$413 vs v18e (6 gated suited features).
 - **v23 → trips_pair:** −$161 vs v20 (6 gated trips_pair features).
 - **v24 → composite:** −$216 vs v23 (4 gated composite features).
@@ -565,12 +658,24 @@ progression:
   vs v18e.** Diagnostic-driven from `distill_v27_pair.py`'s
   competing-baseline analysis — the most prescriptive feature design
   in project history.
+- **v30 → trips:** −$239 vs v29 (6 gated trips features). 8th gating-
+  template instance. First trips-category gating ship.
 
-Each upgrade lifted ONLY its targeted category and kept every other
+Each gating upgrade lifted ONLY its targeted category and kept every other
 category bit-identical (or within N=200 noise) — the cleanest possible
 controlled-experiment shape for feature engineering. Every change also
 trivially passes the prefix N=1000 tripwire because the new features
 fire on zero off-archetype hands by design.
+
+**v31 is the exception to the per-category controlled-experiment shape.**
+It's a CAPACITY-ONLY retrain (depth=32 ml=3 vs v30's depth=30 ml=5,
+identical 79 features). All 8 categories improve simultaneously. The
+biggest gains accrue to PREVIOUSLY-GATED categories (composite −$346,
+trips_pair −$217, two_pair −$108, quads −$78), confirming the
+hypothesis that v25-v30's gating features had been encoded but not
+fully expressed within v30's leaf budget. **+42% leaf-count expansion
+(493K → 700K) unlocks $58/1000h whole-grid in one config change** —
+22% of what the cumulative 6-ship gating-template work added.
 
 ---
 
@@ -635,14 +740,14 @@ and v20 is $2,100). v20 has not been formally distilled yet — Session
 
 | Hand type | Frequency | v14 $/1000h | Latest $/1000h | Status |
 |---|---:|---:|---:|---|
-| high_only | 20.4% | $4,082 | $2,863 (v27) | v27 (Session 34) added 4 high_only-gated features (`ho_n_broadway_in_2nd_suit_g` and 3 others); −$31/1000h on the category. Smallest per-category gating gain to date. Diagnostic-to-headline conversion was ~10%; remaining residual at $584/1000h whole-grid share. A naive **Rule 5** (suited middle for high_only) was tested both ways in Session 31 and **REJECTED** — see below. |
-| pair | 46.6% | $2,011 | $1,674 (v29) | TWO gating ships: v25 (Session 32) added 6 features encoding kickers-in-pair-suit / alt-routing rank quality (−$102 within-pair); v29 (Session 35) added 4 features encoding Rule-4-bot suit profile + body-card distribution (−$97 within-pair). v29 was diagnostic-driven from `distill_v27_pair.py`'s competing-baseline analysis (v27 was actually $20/1000h whole-grid WORSE than Rule 4 alone on KK/AA — overgeneralizing v25's features). v29 closes that gap and adds DS-bot-detection capacity. **Rule 5 (Rainbow override) ships to STRATEGY_GUIDE for human play (Decision 063)** as the matching rule-based equivalent. |
-| trips (no pair) | 5.5% | $4,054 | $1,997 | No human rule yet. Multi-archetype. |
-| trips_pair | 2.9% | $5,417 | $1,447 (v23+) | v23 (Session 31) added 6 trips_pair-gated features; −$161/1000h on the category. No hand-coded rule extracted; the DT routing is multi-axis. |
-| three_pair | 1.9% | $4,529 | $1,654 | No human rule yet. |
-| two_pair | 22.3% | $3,371 | $1,145 (v26) | v26 (Session 33) added 6 two_pair-gated features alongside the 3 pre-existing two_pair aug booleans; −$313/1000h on the category. Largest per-category gain since v20→high_only. The 6 features split Layout B (high pair → mid) from Layout C (low pair → mid) which the existing 3 features lumped together. |
-| quads | 0.2% | $9,670 | $723 (v24+) | v20 captures heavily but no human rule. Below noise floor for further gating. |
-| composite | 0.2% | $10,883 | $1,741 (v26) | v24 (Session 31) added 4 composite-gated features for archetype-specific routing. v26's two_pair work also marginally improved composite via tree-shape side effect (likely N=200 noise — prefix saw composite tied). |
+| high_only | 20.4% | $4,082 | $2,816 (v31) | v27 (Session 34) added 4 high_only-gated features (`ho_n_broadway_in_2nd_suit_g` and 3 others); −$31/1000h on the category. v31 (Session 36 capacity-only retrain) brings it to $2,816 (−$46 vs v30 from depth=32 ml=3 capacity expansion). Smallest gating gain to date but capacity-aware retraining unlocks more. A naive **Rule 5** (suited middle for high_only) was tested both ways in Session 31 and **REJECTED** — see below. |
+| pair | 46.6% | $2,011 | $1,639 (v31) | TWO gating ships: v25 (Session 32) added 6 features encoding kickers-in-pair-suit / alt-routing rank quality (−$102 within-pair); v29 (Session 35) added 4 features encoding Rule-4-bot suit profile + body-card distribution (−$97 within-pair). v31 (Session 36 capacity retrain) brings within-pair to $1,639 (−$35 vs v30). v29 was diagnostic-driven from `distill_v27_pair.py`'s competing-baseline analysis (v27 was actually $20/1000h whole-grid WORSE than Rule 4 alone on KK/AA — overgeneralizing v25's features). **Rule 5 (Rainbow override) ships to STRATEGY_GUIDE for human play (Decision 063).** Open: KK/AA single-suited Rule-4-bot stratum (52.9% of KK/AA, $37/1000h below oracle within-stratum). v31a candidate (KK/AA-tight features) tried Session 36 overnight, shipped only +$6 — different angle needed (e.g., meta-classifier or sub-tree dedicated to KK/AA). |
+| trips (no pair) | 5.5% | $4,054 | $1,732 (v31) | v30 (Session 36) added 6 trips-gated features (`trips_*_g`) — first trips gating ship. −$239 within-trips on full grid. Diagnostic surfaced the largest gap-to-baseline in project history: v29 was $85/1000h whole-grid WORSE than always-A_paired_mid. v31 capacity retrain adds another −$26 within-trips. v32 candidate = v31b's trips_v2 round-2 features (C_top + finer A/B routing) at v31's high-capacity config, expected ~$15-20 incremental. **Always-A_paired_mid** is a Rule 6 candidate worth investigating for STRATEGY_GUIDE — captures $85/1000h whole-grid relative to v29's deviations. Likely already implicit in v14_combined; needs verification. |
+| trips_pair | 2.9% | $5,417 | $1,225 (v31) | v23 (Session 31) added 6 trips_pair-gated features; −$161/1000h on the category. v31 capacity retrain adds **another −$217 within-trips_pair** — the SECOND-largest single-category drop from a non-gating ship. The trips_pair gating from v23 had been adding signal but v30's leaf budget couldn't fully express it; capacity unlocks the latent value. No hand-coded rule extracted; the DT routing is multi-axis. |
+| three_pair | 1.9% | $4,529 | $1,639 (v31) | No human rule yet. v31 capacity retrain adds −$15 within-three_pair. Untouched by gating. |
+| two_pair | 22.3% | $3,371 | $1,037 (v31) | v26 (Session 33) added 6 two_pair-gated features alongside the 3 pre-existing two_pair aug booleans; −$313/1000h on the category. v31 capacity retrain adds another −$108 within-two_pair. The 6 features split Layout B (high pair → mid) from Layout C (low pair → mid) which the existing 3 features lumped together. |
+| quads | 0.2% | $9,670 | $645 (v31) | v20 captures heavily; v31 capacity retrain adds −$78 within-quads. No human rule. Below noise floor for further gating. |
+| composite | 0.2% | $10,883 | $1,387 (v31) | v24 (Session 31) added 4 composite-gated features for archetype-specific routing. v31 capacity retrain adds **−$346 within-composite** — the LARGEST single-category drop from any non-gating ship. The composite gating from v24 had been substantially under-expressed; capacity unlocks the latent value. Composite is also the smallest population share (0.245%) so this $346 within-category translates to only $1/1000h whole-grid contribution change. |
 
 **Rule 5 candidates — REJECTED (Session 31):** Two attempts to extract a
 suited-mid rule from v20's gated features both lost head-to-head against
@@ -685,7 +790,9 @@ guide can keep them as human-memorizable approximations.
   (wraps v14 with Rule 5)
 
 **ML champion + baselines (newest first):**
-- v29 (current) → `analysis/scripts/strategy_v29_dt.py` + `data/v29_dt_model.npz` (486K leaves, 73 features)
+- v31 (CURRENT CHAMPION) → `analysis/scripts/strategy_v31_dt.py` + `data/v31_dt_model.npz` (700K leaves, 79 features, depth=32 ml=3 — capacity-only retrain of v30)
+- v30 → `analysis/scripts/strategy_v30_dt.py` + `data/v30_dt_model.npz` (493K leaves, 79 features, depth=30 ml=5)
+- v29 → `analysis/scripts/strategy_v29_dt.py` + `data/v29_dt_model.npz` (486K leaves, 73 features)
 - v27 → `analysis/scripts/strategy_v27_dt.py` + `data/v27_dt_model.npz` (460K leaves, 69 features)
 - v26 → `analysis/scripts/strategy_v26_dt.py` + `data/v26_dt_model.npz` (459K leaves, 65 features)
 - v25 → `analysis/scripts/strategy_v25_dt.py` + `data/v25_dt_model.npz` (391K leaves, 59 features)
@@ -699,7 +806,9 @@ guide can keep them as human-memorizable approximations.
 - v16 → `analysis/scripts/strategy_v16_dt.py` + `data/v16_dt_model.npz` (29K leaves)
 
 **Trainers:**
-- v29 trainer (73 features incl. all 7 gated families) → `analysis/scripts/train_v29_dt.py`
+- v31 trainer = v30 trainer with `--max-depth 32 --min-samples-leaf 3` → `analysis/scripts/train_v30_dt.py` (no separate train_v31 file; v31 differs only in hyperparameters)
+- v30 trainer (79 features incl. all 8 gated families) → `analysis/scripts/train_v30_dt.py`
+- v29 trainer (73 features incl. 7 gated families) → `analysis/scripts/train_v29_dt.py`
 - v27 trainer (69 features incl. 6 gated families) → `analysis/scripts/train_v27_dt.py`
 - v26 trainer (65 features incl. 5 gated families + 3 pre-existing pair-gated booleans + 3 pre-existing two_pair-gated booleans) → `analysis/scripts/train_v26_dt.py`
 - v25 trainer (59 features incl. 4 gated families + 3 pre-existing pair-gated booleans) → `analysis/scripts/train_v25_dt.py`
@@ -721,6 +830,10 @@ guide can keep them as human-memorizable approximations.
 - Gated high_only-direct persist → `analysis/scripts/persist_high_only_aug_gated.py` → `data/feature_table_high_only_aug_gated.parquet`
 - Gated pair_r4 (Session 35, 4 new features, prefix `pair_r4_*`) → `analysis/scripts/pair_aug_v2_features_gated.py`
 - Gated pair_r4 persist → `analysis/scripts/persist_pair_aug_v2_gated.py` → `data/feature_table_pair_aug_v2_gated.parquet`
+- Gated trips (Session 36, 6 new features, prefix `trips_*` — NOT `tp_*` which is trips_pair) → `analysis/scripts/trips_aug_features_gated.py`
+- Gated trips persist → `analysis/scripts/persist_trips_aug_gated.py` → `data/feature_table_trips_aug_gated.parquet`
+- Gated pair_r4v3 (Session 36 overnight, 4 KK/AA-tight features, prefix `pair_r4v3_*` — ARCHIVED, candidate v31a) → `analysis/scripts/pair_aug_v3_features_gated.py`
+- Gated trips_v2 (Session 36 overnight, 4 round-2 features, prefix `trips_v2_*` — ARCHIVED for now, candidate v31b; SLATED for v32 stack on top of v31's high-capacity config) → `analysis/scripts/trips_aug_v2_features_gated.py`
 - Gated suited (high_only-via-suited, Session 30) → `analysis/scripts/suited_aug_features_gated.py`
 - Gated suited persist → `analysis/scripts/persist_suited_aug_gated.py`
 - Gated trips_pair → `analysis/scripts/trips_pair_aug_features_gated.py`
@@ -732,8 +845,11 @@ guide can keep them as human-memorizable approximations.
 - v16 distillation → `analysis/scripts/distill_v16_dt.py`
 - v26 high_only distillation (Session 34) → `analysis/scripts/distill_v26_high_only.py`
 - v27 pair distillation + KK/AA capture analysis (Session 35) → `analysis/scripts/distill_v27_pair.py`
+- v29 pair distillation round-2 + KK/AA round-2 audit (Session 36) → `analysis/scripts/distill_v29_pair.py`
+- v29 trips distillation + routing-baseline analysis (Session 36) → `analysis/scripts/distill_v29_trips.py`
 - KK/AA Rule-4 boundary probe (Session 34) → `analysis/scripts/probe_kk_aa_ds_bot_vs_mid.py` + `data/kk_aa_rule4_probe.csv`
 - KKK/AAA routing probe (Session 34) → `analysis/scripts/probe_trips_kkk_aaa_routing.py` + `data/kkk_aaa_routing_probe.csv`
+- Overnight v31 cascade runner (Session 36 → 37) → `analysis/scripts/overnight_v31_cascade.sh`
 - High_only residual diagnostic → `analysis/scripts/high_only_v16_residual.py`
 - Multi-strategy sweep grader → `analysis/scripts/grade_v18_sweep.py`
 
@@ -757,7 +873,7 @@ print(result.summary())
 
 # Part 6 — THE CURRENT STANDARD
 
-> Everything below this line is the active rule set as of Session 34.
+> Everything below this line is the active rule set as of Session 36.
 > If you only read one section, read this one.
 >
 > **Human-memorizable strategy of record: v14_combined + Rule 4 + Rule 5.**
@@ -777,17 +893,33 @@ print(result.summary())
 > for human play, treat KKK and AAA the same as KK and AA — pair in mid.
 > See Decision 062.
 >
-> **ML champion (not human-memorizable): v29_dt** — 486,342-leaf
-> DecisionTreeRegressor (depth=30, min_samples_leaf=5), 73 features
+> **Open Rule 6 candidate (Session 36 finding, not yet codified):**
+> The trips diagnostic (`distill_v29_trips.py`) showed that **Always
+> A_paired_mid** (set 2 of 3 trip-rank cards in mid as a pair) captures
+> $85/1000h whole-grid relative to v29's 80%-A / 20%-deviation pattern.
+> This is the structural analog of Rule 4 for trips, EXTENDED beyond
+> KKK/AAA to all trip ranks. v14_combined likely already encodes this
+> implicitly via its v3 default; needs verification before formal Rule 6
+> codification. The per-rank deviation cost from v29 is highest on low
+> trips (2-9 each leak $7-8/rank-share). See Decision 065 and 066.
+>
+> **ML champion (not human-memorizable): v31_dt** — 699,773-leaf
+> DecisionTreeRegressor (depth=32, min_samples_leaf=3), 79 features
 > including 6 gated suited-broadway (high_only-via-suited), 6 gated
 > trips_pair, 4 gated composite, 6 gated pair (v1), 6 gated two_pair,
-> 4 gated high_only-direct, and 4 gated pair_r4 (the latter shipped
-> Session 35 — the diagnostic-driven Rule-4-bot-suit-profile family).
-> Beats v14 by **+$1,226/1000h** on the full grid and **+$1,072/1000h**
-> on the prefix N=1000. Lives at `analysis/scripts/strategy_v29_dt.py`
-> + `data/v29_dt_model.npz`. (v27 — the predecessor — is the only
-> model still competitive; use v27 if you need to compare or v26 for
-> a smaller model.)
+> 4 gated high_only-direct, 4 gated pair_r4 (Session 35), and 6 gated
+> trips (Session 36). Beats v14 by **+$1,297/1000h** on the full grid
+> and **+$1,116/1000h** on the prefix N=1000. Lives at
+> `analysis/scripts/strategy_v31_dt.py` + `data/v31_dt_model.npz`.
+> (v30 — the predecessor at depth=30 ml=5 with the same 79 features —
+> remains useful as a "smaller model" reference; v29 if you need a
+> 73-feature comparison; v27 for the 69-feature baseline before pair_r4.)
+>
+> **v31 is a CAPACITY-ONLY ship — zero new features vs v30.** This is
+> the second-largest single ML ship in project history (after v26's
+> +$70). The methodological lesson: when feature-count grows substantially
+> beyond the last capacity-saturation test, RE-TEST capacity. Future ML
+> champion ships should default to `depth=32 ml=3` going forward.
 
 ---
 
@@ -1042,7 +1174,7 @@ For every hand not covered above — single pair outside the rule's gates, no-pa
 - **Mid** = your strongest 2-card Hold'em combination from what's left (pair > broadway > suited connector)
 - **Bot** = whatever's left, ideally with at least 2 of one suit for some Omaha equity
 
-This is the v8_hybrid play. It's not optimal on every hand but it's adequate. The v27 ML champion captures meaningful additional EV here (especially on high_only, pair, and two_pair hands), but no clean human-memorizable rule has been extracted yet. Two boundary probes (Session 34) confirmed Rule 4 holds for KK, AA, KKK, and AAA but identified an exception (~24-28% of DS-bot-eligible hands prefer split-bot) that has consistently resisted clean rule extraction.
+This is the v8_hybrid play. It's not optimal on every hand but it's adequate. The v31 ML champion captures meaningful additional EV here (especially on high_only, pair, two_pair, trips_pair, and composite hands), but no clean human-memorizable rule has been extracted yet. Two boundary probes (Session 34) confirmed Rule 4 holds for KK, AA, KKK, and AAA but identified an exception (~24-28% of DS-bot-eligible hands prefer split-bot) that has consistently resisted clean rule extraction. Session 36's trips diagnostic showed **Always A_paired_mid** (Rule 6 candidate) captures $85/1000h whole-grid as the structural analog of Rule 4 for trips — verification of whether v14_combined already encodes this implicitly is the next human-strategy work item.
 
 ---
 
