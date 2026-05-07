@@ -2457,3 +2457,129 @@ Trips' optimal-pick rate jumps from 19.9% to 39.0% (almost doubled). Same gating
 4. **Rule 6 closes the largest single-category gap in the human strategy.** Trips drops from $4,054 (8.4% share at full grid) to $2,010, contributing $112/1000h whole-grid. The next-largest opportunity in the human chain is composite ($10,883 within-category × 0.9% share = $98/1000h whole-grid), but composite is much rarer and harder to rule-encode.
 
 5. **Rule 6 does NOT modify v32 (the ML champion).** v32 already encodes trips routing via the gated `trips_*_g` and `trips_v2_*_g` feature families. v33 is the *human* strategy ship; v32 remains the *ML* strategy of record.
+
+---
+
+## Decision 069 — v34_dt is the new ML champion (Session 38) — depth=34 ml=2 capacity expansion of v32 unlocks +19.5% more leaves and ships −$34/1000h
+
+**Date:** 2026-05-06
+**Status:** Shipped. v34_dt = v32's exact 83 features (79 v30 + 4 trips_v2 round-2) trained at depth=34, min_samples_leaf=2. **874,548 leaves** (+19.5% over v32's 731,606). **Full grid: $1,681/1000h (vs v32 $1,715, −$34/1000h, 51.31% → 52.02% opt). Prefix grid: $889/1000h (vs v32 $904, −$15/1000h, 62.47% → 62.74% opt).**
+
+**Origin:** Per the Session 37 methodology rule — when a ship adds new features OR leaf-count grows substantially, re-test capacity at depth=34 ml=2 (with depth=34 ml=3 as control). v32 added 4 trips_v2 features over v31 and grew leaf-count by +5%. The capacity sweep in Session 38 was the prescribed retest.
+
+**Sweep design** (`analysis/scripts/train_v32_capacity_sweep.py`):
+- v32_d34ml3 (control): same 83 features, depth=34, min_samples_leaf=3
+- v32_d34ml2 (candidate): same 83 features, depth=34, min_samples_leaf=2
+- Both random_state=42, criterion=squared_error, full 6.0M-grid training set
+- Saved as `data/v32_d34ml3_dt_model.npz` (468 MB) and `data/v32_d34ml2_dt_model.npz` (546 MB); the candidate copied to `data/v34_dt_model.npz` for promotion
+
+**Headline finding — ml=3 was the binding constraint, not depth:**
+
+| Config | Leaves | Achieved depth | Fit time | Picked EV (train) |
+|---|---:|---:|---:|---:|
+| v32 (d32 ml=3) | 731,606 | 32 | (prev) | (prev) |
+| **v32_d34ml3 (control)** | **731,611** | **33** | 818s | +0.5869 |
+| **v32_d34ml2 (candidate)** | **874,548** | **33** | 589s | +0.5903 |
+
+The control adds only +5 leaves over v32 and converges at depth=33 (well below the 34 cap). This means **ml=3 capped the tree, not depth=32** — depth=32 was never the binding constraint at ml=3. Lowering min_samples_leaf to 2 unlocks +142,937 more leaves (+19.5%).
+
+**Validation grades:**
+
+| Grid | v32 | v32_d34ml3 | **v34_dt (= v32_d34ml2)** | Δ v34 vs v32 |
+|---|---:|---:|---:|---:|
+| Full N=200 6.0M | $1,715 / 51.31% | $1,715 / 51.31% | **$1,681 / 52.02%** | **−$34 / +0.71pp** |
+| Prefix N=1000 500K | $904 / 62.47% | $904 / 62.47% | **$889 / 62.74%** | **−$15 / +0.27pp** |
+
+**Per-category at full grid (v34 vs v32) — all 8 categories improve, including 5 of them by ≥−$32 within-category:**
+
+| Category | v32 | v34 | Δ within-cat | share | whole-grid contribution |
+|---|---:|---:|---:|---:|---:|
+| high_only  | $2,816 | $2,806 | −$10  | 20.4% | −$2.0 |
+| pair       | $1,639 | $1,619 | −$20  | 46.6% | −$9.3 |
+| two_pair   | $1,037 | $978   | −$59  | 22.3% | −$13.2 |
+| trips      | $1,359 | $1,291 | −$68  | 5.46% | −$3.7 |
+| trips_pair | $1,225 | $1,057 | −$168 | 2.86% | −$4.8 |
+| three_pair | $1,639 | $1,635 | −$4   | 1.90% | −$0.1 |
+| quads      | $645   | $613   | −$32  | 0.24% | −$0.1 |
+| composite  | $1,386 | $1,173 | −$213 | 0.245% | −$0.5 |
+
+The biggest within-category gains are in trips_pair (−$168) and composite (−$213) — both ML-engineered categories that benefit from finer leaf granularity. The whole-grid contribution is dominated by two_pair (−$13/1000h via 22.3% share) and pair (−$9/1000h via 46.6% share). **Unlike prior gating ships, this ship moves every category — a textbook capacity-only signature, not a gating signature.**
+
+**Files:**
+- `analysis/scripts/train_v32_capacity_sweep.py` — sweep training script
+- `analysis/scripts/grade_v32_capacity_sweep.py` — head-to-head grader
+- `analysis/scripts/strategy_v34_dt.py` — runtime harness (re-exports v31b's harness pointed at `data/v34_dt_model.npz`)
+- `data/v34_dt_model.npz` — 546 MB, 874,548 leaves, depth=33
+
+**Consequence:**
+
+1. **v34_dt is the new ML champion.** Cumulative v30 → v34 of $113/1000h (full grid) is the new largest cumulative arc in project history (beats Session 37's v30→v32 of $79). The arc decomposes as: v30→v31 ($58, capacity), v31→v32 ($20, trips_v2 features), v32→v34 ($34, capacity-only at ml=2).
+
+2. **Methodology lesson — when ml=3 leaves a tree at its natural saturation depth, the next capacity unlock is ml=2, not deeper depth.** The d34ml3 control showing 731,611 leaves (vs v32's 731,606) is the cleanest possible evidence. This refines the Session 37 methodology rule: *future capacity retests should sweep min_samples_leaf in {3, 2} at a generous depth cap (34 or higher), and pick the smaller-ml winner if shape-agreement improves.*
+
+3. **The capacity ship was bigger than the rule-extraction Priority A.** Session 38 also probed v33's Rule 6 A-vs-C boundary (the user's hypothesis that low-trip C-variants are wrong). The probe validated the directional claim at the oracle level (best-A regret $82/1000h whole-grid vs best-C $608) but a heuristic-A-only v34_rule6_v2 could not capture the gain — sweeping the boundary across all 13 trip ranks gave +$0.57/1000h max at trip ≥ T, well within noise. v33's boundary stands. See Decision 070 below.
+
+4. **Tripwire was not run for v34** because no new features were introduced — same 83 features as v32. The leaf-count growth of +19.5% is the relevant capacity signal, and the broad cross-category gains confirm latent signal was leaf-bound, not feature-bound.
+
+---
+
+## Decision 070 — v34_rule6_v2 archived (Session 38) — user's "C variant is wrong at low trip ranks" hypothesis is directionally correct on oracle but cannot be cashed via heuristic-A; v33's boundary stands
+
+**Date:** 2026-05-06
+**Status:** Negative result. v34_rule6_v2 was a candidate v33 successor that flips Rule 6's C variant to A at low trip ranks. **Did NOT ship.** Probe sweep across all 13 trip-rank thresholds gave a maximum gain of $+0.57/1000h whole-grid (at "trip ≥ T → C, else A") — within noise. v33's "trip > max_kicker_rank → C, else A" boundary remains the human strategy of record.
+
+**Origin:** User flagged in the Session 38 prompt that Rule 6's C variant — putting the third trip card on top when `trip_rank > max_kicker_rank` — looked suspect for low/mid trip ranks. The intuition: a 7 on top has only 1 out to pair (the unused fourth 7, which doesn't exist in the deck since we already hold 3 of them; the only way for the 7 on top to pair is via the community board) and gives up the 7's bot contribution (suit synergy, connectivity, pair-on-board).
+
+**Probe** (`analysis/scripts/probe_rule6_c_variant.py`): on the 30K pure-trips sample, stratified by (trip_rank, max_kicker_rank), compute oracle EV for:
+- (a) best C-variant pick (top = trip card, bot = 4 kickers)
+- (b) best A-variant pick (top = highest kicker, mid = 2 of 3 trips, bot = 1 trip + 3 lower kickers)
+- (c) v33's actual pick
+
+**Headline findings:**
+
+| Metric | best-A | best-C |
+|---|---:|---:|
+| Mean regret vs oracle | +$82/1000h whole-grid | **+$608/1000h whole-grid** |
+| Cells where it wins | 84.1% | 15.9% |
+
+A-variant is the dominant routing on average. C-variant only wins at the high end:
+- trip A: C wins in 100% of cells (C-A from +$5,757 to +$14,139)
+- trip K: C wins in 95-100% of cells when feasible (C-A from +$2,131 to +$7,240)
+- trip Q: C wins 56-79% of cells when feasible (C-A from +$815 at maxK=T to +$3,758 at maxK=6); LOSES at maxK=J (-$278)
+- trip J: C wins narrowly at maxK=6,7,8 (small + noisy); LOSES at maxK=5,9,T (-$2,576 to -$3,707)
+- trip ≤ T: A wins in nearly every cell ($1,765 to $17,030 oracle gap)
+
+**Projected whole-grid gain by flipping wrong-C to A using the oracle:** +$12.89/1000h (28.8% of v33's C-fires are wrong by oracle). This is the ceiling for any heuristic-driven correction.
+
+**Empirical sweep** (`analysis/scripts/probe_v34_sweep.py`): for `min_trip_for_C ∈ {3..14, A-only}`, build a Rule 6 v2 candidate and grade vs v33 on the 30K probe:
+
+| Rule | $/1000h whole-grid | Δ vs v33 | Cells changed |
+|---|---:|---:|---:|
+| trip ≥ 6..6 → C (= v33) | $109.83 | baseline | 0 |
+| trip ≥ 7 → C | $109.68 | +$0.15 | 10 |
+| trip ≥ 8 → C | $109.54 | +$0.29 | 27 |
+| trip ≥ 9 → C | $109.32 | +$0.52 | 81 |
+| **trip ≥ T → C (best)** | **$109.27** | **+$0.57** | **226** |
+| trip ≥ J → C | $109.83 | $0.00 | 543 |
+| trip ≥ Q → C | $112.52 | −$2.69 | 1,151 |
+| trip ≥ K → C | $120.01 | −$10.18 | 2,093 |
+| trip ≥ A → C | $137.99 | −$28.15 | 3,642 |
+| Always A (no C) | $181.79 | −$71.96 | 5,928 |
+
+**Why the gap between oracle and heuristic:** the v33/v34 A-variant heuristic optimizes (bot_suit_profile, bot_rank_sum, bot_longest_run) but doesn't always recover the oracle-best A pick. Per-trip-rank loss when forcibly flipping C→A: at trip Q, heuristic-A loses ~$1,857/1000h within-trips on flipped cells (cell-level oracle said only −$278 at maxK=J); at trip J, loses ~$639/1000h within-trips (oracle was barely positive at maxK=6,7,8). The bot-DS optimizer is the rate-limiting step, not the threshold rule.
+
+**Files (archived candidates, not on the strategy hot-path):**
+- `analysis/scripts/probe_rule6_c_variant.py` — per-cell A-vs-C oracle probe
+- `analysis/scripts/strategy_v34_rule6_v2.py` — v33 + corrected boundary candidate (archived)
+- `analysis/scripts/probe_v34_rule6_v2.py` — v33-vs-v34 head-to-head on 30K trips
+- `analysis/scripts/probe_v34_sweep.py` — the sweep across min_trip_for_C ∈ [3..14, A-only]
+
+**Consequence:**
+
+1. **v33's boundary stands.** No human-strategy ship from this Priority A.
+
+2. **The user's hypothesis is preserved as a future ML target.** $12.89/1000h whole-grid is the oracle ceiling for "smarter A-vs-C". The remaining $86/1000h of Rule 6's gap to its full-A∪C ceiling could be closed with a learned A-variant heuristic OR a learned A-vs-C decision tree on (trip_rank, max_kicker_rank, suit profile). Both are ML targets; v32/v34's gated trips features partially capture this signal already (v32 ships within-trips $1,359, v34 ships $1,291).
+
+3. **Methodology lesson — heuristic-realizable ceilings are smaller than oracle ceilings.** For trips, 56% of the oracle ceiling (Rule 6 ships $111 of $197 oracle) is the heuristic limit. Future Always-X probes should report BOTH the oracle ceiling AND the closest heuristic-realizable headline to set realistic expectations.
+
+4. **The directional finding survives:** A-variant IS the right routing for trip ≤ T, and the oracle ceiling agrees with the user. The reason the rule cannot be cashed at the human-strategy level is the A-variant's own routing complexity, not the threshold rule.

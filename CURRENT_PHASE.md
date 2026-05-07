@@ -1,50 +1,60 @@
-# Current: Sprint 8 — Session 37 wrap. **TWO ships, both records:** v32_dt is the new ML champion (cumulative v30→v32 of −$79/1000h on full grid beats v26's $70 to become the largest single-session ML ship in project history); v33_rule6_trips is the new human strategy of record (+$112/1000h vs v28 on full, +$143 on prefix — the largest single rule ship in project history). Rule 6 statement: "On pure trips, the third trip card never goes to bot."
+# Current: Sprint 8 — Session 38 wrap. **One ship, one negative.** v34_dt is the new ML champion ($1,681 full / $889 prefix; depth=34 ml=2 capacity-only retrain of v32's 83 features; +19.5% leaves; cumulative v30→v34 of $113/1000h is the largest cumulative ML arc in project history). Rule 6 v2 (the user's "C variant is wrong at low trip ranks" hypothesis) was validated at the oracle level but cannot be cashed via heuristic-A — sweep across all 13 trip-rank thresholds gave +$0.57/1000h max, within noise. v33's Rule 6 boundary stands.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 38):**
->   (A) **Capacity sweep at v32's higher feature count.** v32 has 83 features and 731,606 leaves. Per the methodology rule, leaf-count grew +5% over v31 — borderline; the next ship that adds ≥6 features should also re-test capacity at depth=34 ml=2 explicitly. Build `train_v32_capacity_sweep.py` that retrains v32's 83 features at depth=34 ml=2 (and depth=34 ml=3 as control). Could potentially unlock another $10-30/1000h.
->   (B) **Always-X structural baseline probes for remaining categories.** Rule 6 came out of the trips diagnostic. Apply the same pattern systematically: write `verify_rule_X_v33_<category>.py` for high_only, two_pair, trips_pair (likely covered by v12 already but verify), three_pair, composite. Each probe checks whether v33 + Rule X (always-X) has a measurable gain. Highest-priority candidates by expected value:
->      - **composite** ($1,386/1000h within-category × 0.245% share = $3.4/1000h whole-grid — small but the per-category regret is highest in the project)
->      - **three_pair** ($1,639 × 1.9% = $31/1000h — moderate, untouched by gating)
->      - **high_only** ($2,816 × 20.4% = $574/1000h — by far the largest residual share; even a $20/1000h within-category improvement = $4/1000h whole-grid)
->      - **two_pair** ($1,037 × 22.3% = $231/1000h — heavily ML-engineered, harder to find rule-extractable structure)
->   (C) **KK/AA single-suited Rule-4-bot residual** ($37/1000h below oracle, 52.9% of KK/AA, 1.95% of grid). v31a's KK/AA-tight features shipped only +$6 — a different angle is needed. Options: (i) meta-classifier feature trained on probe data, (ii) sub-tree dedicated to KK/AA hands, (iii) leave open, focus on Rule X.
->   (D) **v33 → v34 candidate: tighter A-vs-C heuristic.** Rule 6's heuristic captures 56% of the $197 oracle ceiling. The remaining 44% ($86/1000h) requires better A-vs-C choice on edge cases (e.g., trip rank 9-12 where the kicker boundary is closer). Probe-driven decision tree on (trip_rank, max_kicker_rank, suit profile of kickers) might capture another 10-20%.
-
-> **✅ SHIPPED (Decision 067 + 068):** Two ships in Session 37:
+> **🎯 IMMEDIATE NEXT ACTION (Session 39):**
+>   (A) **Always-X structural baseline probes for remaining categories.** Rule 6 came from the trips diagnostic. Apply systematically:
+>      - **three_pair** ($31/1000h whole-grid; untouched by gating; routed by v7_regression). Candidate rule: "always top = unpaired card; mid = highest pair; bot = 2 lower pairs."
+>      - **composite** ($3.4/1000h whole-grid; high per-category regret). Heterogeneous category — may need sub-stratification.
+>      - **two_pair** ($231 share; heavily ML-engineered already). Candidate: "always split high pair to mid".
+>      - **high_only** ($574 share — biggest residual). Already routed via v3 in v8_hybrid; check if v3's structural decisions match the oracle.
+>      Each probe writes `verify_rule_X_v33_<category>.py`, reports BOTH the oracle ceiling AND the closest heuristic-realizable headline (Session 38 lesson — heuristic ceilings are usually 30-95% smaller than oracle ceilings).
 >
-> - **v32_dt** — depth=32, ml=3, **731,606 leaves** (+31,833 vs v31, +4.6% capacity), 83 features (79 v30 + 4 trips_v2 round-2). 9th gating-template instance and FIRST within-trips iteration (analogous to v25→v29 for pair). **−$20/1000h full vs v31, −$18/1000h prefix.** Cumulative v30→v32 of **−$79/1000h on full grid beats v26's record ($70)** as the largest single-session ML ship in project history. Tripwire: 0/4 in top-30 (positions 55, 60, 72, 73). 7 ships in a row now confirm tripwire predicts conversion rate (~10-15%), not absolute opportunity.
+>   (B) **Round-3 within-trips features (or pair-r5 / two_pair-r2).** v34's trips category lifted to $1,291 within-cat — within-trips share is now 4.2% of grid. Diagnostic: write `distill_v34_trips.py` to find the within-trips structure that v34's 4 trips_v2 features still don't capture. If a structural baseline exists (analogous to "Always A∪C" surfacing Rule 6), feed it back into ML as a new gated feature family.
 >
-> - **v33_rule6_trips** — codifies Rule 6 ("On pure trips, the third trip card never goes to bot"). Decision tree: `trip_rank > max_kicker_rank → C variant (top = trip rank); else → A variant (top = highest kicker)`; within A variant, choose which trip → bot for max bot DS-ness. **+$112/1000h on full grid (v28 $3,032 → v33 $2,920), +$143/1000h on prefix.** Trips category drops from $4,054 → $2,010 within-trips (almost halved); trips' optimal-pick rate jumps 19.9% → 39.0%. **Largest single rule ship in project history** — bigger than Rule 4 + Rule 5 combined.
+>   (C) **Learned A-vs-C decision tree for Rule 6.** The Session 38 negative-v34 result reframed the user's hypothesis as an ML target: a small classification tree on (trip_rank, max_kicker_rank, suit profile of kickers) trained against the oracle's A-or-C choice. Could capture another $5-13/1000h whole-grid IF the heuristic-A is replaced or augmented. Defer behind A and B unless trips diagnostic surfaces nothing new.
+>
+>   (D) **KK/AA single-suited Rule-4-bot residual** ($37/1000h below oracle, 52.9% of KK/AA, 1.95% of grid). Defer. v31a's tight gating shipped only +$6 — needs a different angle (meta-classifier feature trained on probe data, or sub-tree dedicated to KK/AA hands).
 
-> **🔬 DIAGNOSTIC + DESIGN CHAIN (Session 37):**
-> 1. **Path A executed:** v32 = stack v31b's trips_v2 round-2 features on v31's high-capacity config. Probe (Session 36 cascade) had predicted ~$15 incremental on top of v31's $58 = $73 vs v30. Actual: $79 vs v30 (slight positive interaction). v32's gain is concentrated in trips: full-grid $1,732 → $1,359 (−$373 within-trips, +$20 whole-grid given 5.5% trips share).
-> 2. **Path B verification surfaced a $197/1000h ceiling.** `verify_rule6_v14_trips.py` traced v14_combined on a 30K pure-trips sample. Three findings: (a) v14 picks "mid is paired" only 94.3% of the time — 5.4% of trips go to B (3rd trip on bot), losing $3,609/1000h within-trips ($197 whole-grid); (b) v14's A-vs-C decision is empirically correct on the 94.3% it gets right — equivalent to top = max(trip_rank, max_kicker_rank); (c) the cleanest rule formulation is "Always A∪C" (mid is paired with trip rank, top is either the 3rd trip card or the highest kicker).
-> 3. **v33 codified Rule 6 with override-everything semantics.** Two variants tested empirically on 30K probe: override-only-when-B captured $37/1000h; override-everything captured $111/1000h. Override-everything wins because the heuristic's bot-DS optimization on the A variant beats v14/v8_hybrid's learned routing on average. **Methodology rule (Session 37): rule chains should default to override-everything within scope, not just patch mistakes.**
-> 4. **Heuristic captures 56% of the oracle ceiling.** The $86/1000h gap is the limit of "no peeking at oracle EVs"; closing it would require a learned routing within A∪C, out of scope for the human rule chain.
-> 5. **Final headlines: v32 + v33 ship simultaneously**, neither modifies the other (v32 already encodes trips routing via the gated `trips_*_g` and `trips_v2_*_g` feature families; v33 is a human-strategy ship targeting the v28 chain).
+> **✅ SHIPPED (Decision 069):** v34_dt = same 83 features as v32, retrained at depth=34, min_samples_leaf=2. **874,548 leaves** (+19.5% over v32's 731,606, +$$5%$ over v31's 700K). 2nd capacity-only ship in project history.
+>
+> | Grid | v32 | **v34_dt** | Δ |
+> |---|---:|---:|---:|
+> | Full N=200 (6.0M) | $1,715 / 51.31% | **$1,681 / 52.02%** | **−$34 / +0.71pp** |
+> | Prefix N=1000 (500K) | $904 / 62.47% | **$889 / 62.74%** | **−$15 / +0.27pp** |
+>
+> **Cumulative v30 → v34 = $113/1000h on full grid** is the largest cumulative ML ship arc in project history (beats Session 37's v30→v32 of $79). Decomposition: v30→v31 (+$58, capacity), v31→v32 (+$20, trips_v2 features), v32→v34 (+$34, capacity at ml=2). All eight categories improve simultaneously — textbook capacity-only signature, not gating signature.
 
-> **📓 METHODOLOGY LESSONS REINFORCED (Session 37):**
-> - **Tripwire confirmed 7×** (v25 5/6→+$47, v26 3/6→+$70, v27 0/4→+$6, v29 3/4→+$46, v30 0/6→+$13, v31a 0/4→+$6, v31b 0/4→+$15, v32 0/4→+$20). Tripwire predicts CONVERSION rate, not absolute opportunity. Round-2 within-category iterations are bearish-tripwire-but-positive-headline by template now.
-> - **Orthogonal axis stacking works.** v31's capacity expansion ($58) and v31b's trips_v2 features ($15) stacked additively to v32's $79 cumulative (with a small extra $6 from interaction). Future template: standalone diagnostic-driven feature design at depth=32 ml=3, then re-test capacity at depth=34 ml=2 if leaf-count grows substantially.
-> - **Always-X structural baselines surface Rule-N candidates worth shipping.** Rule 6 was directly seeded by Session 36's trips diagnostic. Future sessions should systematically probe each category for an always-X baseline — Rule 6's $112-143/1000h ship is the validation that this pattern can produce material gains.
-> - **Rule chain ships should default to override-everything within scope.** The "preserve v14 when already-A∪C" variant captured only $37/1000h vs override-everything's $112. Rule heuristics often have structural reasoning that beats the learned strategy's fine-grained choices, even within the rule's scope.
-> - **Trips is now the 4th-best-handled category in v32** ($1,359 within-trips, behind two_pair $1,037, trips_pair $1,225, and ahead of composite $1,386). The combined v30+v32 trips work has lifted trips by −$638/1000h within-trips (from v18e's $1,997), the second-largest absolute within-category improvement after composite ($2,100 → $1,386 = −$714).
+> **🚫 ARCHIVED (Decision 070):** v34_rule6_v2. The user's Priority A hypothesis — that Rule 6's C variant (3rd trip card on top) is wrong for low/mid trip ranks — was directionally validated at the oracle level (best-A regret $82/1000h whole-grid vs best-C $608) but the heuristic-A could only realize **+$0.57/1000h whole-grid at the best threshold** ("trip ≥ T → C"). Rule 6 v2 sweep across `min_trip_for_C ∈ {3..14, A-only}` showed every threshold ≥ Q LOSES money to v33 (-$2.69 to -$71.96/1000h). v33's "trip > max_kicker → C" boundary stands as the human strategy of record. The remaining ~$5-13/1000h of A-vs-C oracle gap is reframed as a future ML target (learned A-heuristic or learned A-vs-C tree).
 
-> Updated: 2026-05-06 (end of Session 37)
+> **🔬 DIAGNOSTIC + DESIGN CHAIN (Session 38):**
+> 1. **Capacity sweep at v32's 83 features** (Path A): trained two candidates at depth=34. **d34ml3 (control)** produced 731,611 leaves at achieved depth 33 — only +5 leaves vs v32 — proving **ml=3 was the binding leaf constraint, not depth=32**. Result: bit-identical to v32 ($1,715 / 51.31%). **d34ml2 (high-capacity)** produced 874,548 leaves (+19.5%) at achieved depth 33. Result: $1,681/1000h on full / $889 on prefix — ships.
+> 2. **Per-category at v34:** every category lifts. Within-category gains: composite −$213, trips_pair −$168, trips −$68, two_pair −$59, quads −$32, pair −$20, high_only −$10, three_pair −$4. Whole-grid contribution dominated by two_pair (-$13 via 22.3% share) and pair (-$9 via 46.6% share).
+> 3. **Rule 6 A-vs-C oracle probe** (`probe_rule6_c_variant.py`, Path B): on the same 30K trips probe sample as Session 37, computed best-A and best-C oracle EVs stratified by (trip_rank, max_kicker_rank). Best-A regret $82/1000h whole-grid; best-C regret $608/1000h. C wins overwhelmingly only at trip A (100% of cells, +$5,757 to +$14,139); at trip K (+$2,131 to +$7,240); narrowly at trip Q (-$278 to +$3,758 mixed); LOSES at trip ≤ J. **User's hypothesis is correct directionally.**
+> 4. **Heuristic-realizable v34 sweep** (`probe_v34_sweep.py`): for `min_trip_for_C ∈ {3..14, A-only}`, build a Rule 6 v2 candidate and grade vs v33. Best result: **+$0.57/1000h at trip ≥ T → C**. Every tighter threshold (Q, K, A, A-only) LOSES money. The 95% gap between oracle and heuristic ceilings is the v33/v34 A-variant heuristic underperforming on flipped cells (at trip Q, heuristic-A loses ~$1,857/1000h within-trips on flipped cells; at trip J, ~$639/1000h). The bot-DS optimizer is the rate-limiting step.
+> 5. **Ship/no-ship decisions:** v34_dt (capacity ship) shipped. v34_rule6_v2 (rule-extraction ship) archived as a probe-confirmed-but-heuristic-incapable result.
+
+> **📓 METHODOLOGY LESSONS REINFORCED (Session 38):**
+> - **min_samples_leaf=2 can unlock more capacity than depth.** When ml=3 saturates below the depth cap (control hit depth 33 of 34 cap), the next capacity unlock is ml=2, NOT deeper depth. **Refines Session 37's rule:** sweep `min_samples_leaf ∈ {3, 2}` at a generous depth cap (34+) and pick the smaller-ml winner if shape-agreement improves.
+> - **Heuristic-realizable ceilings are smaller than oracle ceilings, sometimes by 95%.** Rule 6 captured 56% of $197 oracle (Session 37); Rule 6 v2 would capture ~5% of $13 oracle (Session 38). Future Always-X probes should report BOTH numbers to set realistic expectations BEFORE building a heuristic.
+> - **Capacity ships move every category; gating ships move one.** v31 and v34 are capacity-only ships (broad cross-category gains, no new features). v20/v23/v24/v25/v26/v27/v29/v30/v32-trips_v2 are gating ships (one category lifts, others bit-identical). 2 + 9 instances now confirm the per-category shape distinguishes the two ship types.
+> - **Tripwire is a feature-design diagnostic.** Capacity ships skip it (no new features); use leaf-count growth + per-category coverage instead. v34 had +19.5% leaves and broad cross-category lifts → both the right capacity-ship signals.
+
+> Updated: 2026-05-06 (end of Session 38)
 
 ---
 
-## Headline state at end of Session 37
+## Headline state at end of Session 38
 
 **Strategies of record:**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
-| **v33_rule6_trips** | Human-memorizable strategy (NEW, +$112/1000h vs v28 on full, +$143 on prefix) | `STRATEGY_GUIDE.md` Part 6 + `analysis/scripts/strategy_v33_rule6_trips.py` |
-| **v32_dt** | ML champion (731,606 leaves, 83 features at depth=32 ml=3 — 37 base + 9 gated families: 6 suited + 6 trips_pair + 4 composite + 6 pair v1 + 6 two_pair + 4 high_only + 4 pair_r4 + 6 trips + 4 trips_v2) | `analysis/scripts/strategy_v32_dt.py` + `data/v32_dt_model.npz` |
-| v31_dt | Predecessor (79 features, depth=32 ml=3, 700K leaves) | `analysis/scripts/strategy_v31_dt.py` + `data/v31_dt_model.npz` |
-| v30_dt | Older baseline (depth=30 ml=5, 79 features, 493K leaves) | `analysis/scripts/strategy_v30_dt.py` + `data/v30_dt_model.npz` |
-| v29_dt / v27_dt / v26 / v25 / v24 / v23 / v20 / v18e / v16 | Superseded baselines; retained | `data/v*_dt_model.npz` |
+| **v34_dt** | ML champion (NEW, 874K leaves, 83 features at depth=34 ml=2 — same feature set as v32) | `analysis/scripts/strategy_v34_dt.py` + `data/v34_dt_model.npz` |
+| v33_rule6_trips | Human-memorizable strategy (Rule 6 ship from Session 37; +$112/1000h vs v28 on full, +$143 on prefix) | `STRATEGY_GUIDE.md` Part 6 + `analysis/scripts/strategy_v33_rule6_trips.py` |
+| v32_dt | Predecessor ML (731,606 leaves at depth=32 ml=3, 83 features) | `analysis/scripts/strategy_v32_dt.py` + `data/v32_dt_model.npz` |
+| v31_dt | 79 features at depth=32 ml=3 | `analysis/scripts/strategy_v31_dt.py` + `data/v31_dt_model.npz` |
+| v30_dt / v29_dt / v27_dt / v26 / v25 / v24 / v23 / v20 / v18e / v16 | Older baselines; retained | `data/v*_dt_model.npz` |
+| v32_d34ml3 | ARCHIVED — Session 38 control retrain (proves ml=3 was binding constraint, not depth=32) | `data/v32_d34ml3_dt_model.npz` |
+| v34_rule6_v2 | ARCHIVED — Session 38 Rule 6 boundary candidate (negative result) | `analysis/scripts/strategy_v34_rule6_v2.py` |
 | v28_rule5_rainbow | Predecessor human chain (v14 + Rule 4 + Rule 5) | `analysis/scripts/strategy_v28_rule5_rainbow.py` |
 | v31a / v31b / v20b / v19 / v21 / v22 | ARCHIVED candidates | various |
 
@@ -62,7 +72,9 @@
 | v29 | 30 | 5 | 73 (69+4 gated pair_r4) | 486,342 | $1,807 | 49.80% | −$46 vs v27 |
 | v30 | 30 | 5 | 79 (73+6 gated trips) | 493,057 | $1,794 | 49.98% | −$13 vs v29 |
 | v31 | 32 | 3 | 79 (same as v30) | 699,773 | $1,736 | 50.92% | −$58 vs v30 (capacity-only) |
-| **v32** | **32** | **3** | **83 (79 + 4 trips_v2)** | **731,606** | **$1,715** | **51.31%** | **−$20 vs v31, −$79 cumulative vs v30 (largest single-session ship)** |
+| v32 | 32 | 3 | 83 (79 + 4 trips_v2) | 731,606 | $1,715 | 51.31% | −$20 vs v31 |
+| v32_d34ml3 | 34 (33 actual) | 3 | 83 (same as v32) | 731,611 | $1,715 | 51.31% | $0 vs v32 (control: ml=3 was leaf-binding) |
+| **v34** | **34 (33 actual)** | **2** | **83 (same as v32)** | **874,548** | **$1,681** | **52.02%** | **−$34 vs v32, −$113 cumulative vs v30 (largest ML arc in project history)** |
 
 **Same sweep on N=1000 prefix:**
 
@@ -75,22 +87,23 @@
 | v29 | $965 | 61.32% | −$37 vs v27 |
 | v30 | $951 | 61.53% | −$15 vs v29 |
 | v31 | $921 | 62.07% | −$29 vs v30 |
-| **v32** | **$904** | **62.47%** | **−$18 vs v31, −$47 cumulative vs v30** |
+| v32 | $904 | 62.47% | −$18 vs v31 |
+| **v34** | **$889** | **62.74%** | **−$15 vs v32, −$62 cumulative vs v30** |
 
 **Per-category breakdown (full grid, N=200):**
 
-| Category | v18e | v20 | v25 | v26 | v27 | v29 | v30 | v31 | v32 | Δ v32 vs v18e |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| high_only  | $3,307 | $2,894 | $2,894 | $2,894 | $2,863 | $2,862 | $2,862 | $2,816 | **$2,816** | **−$491** |
-| pair       | $1,873 | $1,873 | $1,771 | $1,771 | $1,771 | $1,674 | $1,674 | $1,639 | **$1,639** | **−$234** |
-| two_pair   | $1,458 | $1,458 | $1,458 | $1,145 | $1,145 | $1,145 | $1,145 | $1,037 | **$1,037** | **−$421** |
-| **trips**  | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,758 | $1,732 | **$1,359** | **−$638** |
-| trips_pair | $1,608 | $1,608 | $1,446 | $1,445 | $1,445 | $1,443 | $1,442 | $1,225 | **$1,225** | **−$383** |
-| three_pair | $1,653 | $1,653 | $1,654 | $1,654 | $1,654 | $1,654 | $1,654 | $1,639 | **$1,639** | **−$14** |
-| quads      | $724 | $724 | $723 | $723 | $723 | $723 | $723 | $645 | **$645** | **−$79** |
-| composite  | $2,100 | $2,100 | $1,869 | $1,741 | $1,741 | $1,741 | $1,733 | $1,387 | **$1,386** | **−$714** |
+| Category | v18e | v20 | v25 | v26 | v27 | v29 | v30 | v31 | v32 | v34 | Δ v34 vs v18e |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| high_only  | $3,307 | $2,894 | $2,894 | $2,894 | $2,863 | $2,862 | $2,862 | $2,816 | $2,816 | **$2,806** | **−$501** |
+| pair       | $1,873 | $1,873 | $1,771 | $1,771 | $1,771 | $1,674 | $1,674 | $1,639 | $1,639 | **$1,619** | **−$254** |
+| two_pair   | $1,458 | $1,458 | $1,458 | $1,145 | $1,145 | $1,145 | $1,145 | $1,037 | $1,037 | **$978** | **−$480** |
+| **trips**  | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,758 | $1,732 | $1,359 | **$1,291** | **−$706** |
+| trips_pair | $1,608 | $1,608 | $1,446 | $1,445 | $1,445 | $1,443 | $1,442 | $1,225 | $1,225 | **$1,057** | **−$551** |
+| three_pair | $1,653 | $1,653 | $1,654 | $1,654 | $1,654 | $1,654 | $1,654 | $1,639 | $1,639 | **$1,635** | **−$18** |
+| quads      | $724 | $724 | $723 | $723 | $723 | $723 | $723 | $645 | $645 | **$613** | **−$111** |
+| composite  | $2,100 | $2,100 | $1,869 | $1,741 | $1,741 | $1,741 | $1,733 | $1,387 | $1,386 | **$1,173** | **−$927** |
 
-**Nine category-gated wins now visible** plus one capacity-only ship (v31). v32 is the FIRST within-category iteration of the trips template (analogous to v25→v29 for pair).
+**Nine category-gated wins now visible** plus two capacity-only ships (v31, v34). **v34 is a capacity-only ship that lifts every category simultaneously** — textbook capacity signature. Biggest within-category lifts: composite (−$213 vs v32), trips_pair (−$168), trips (−$68), two_pair (−$59).
 
 **Human-strategy progression (full grid, N=200):**
 
@@ -101,100 +114,102 @@
 | v28_rule5_rainbow (+ Rule 4 + Rule 5) | $3,032 | 39.64% | −$1 |
 | **v33_rule6_trips (+ Rule 6)** | **$2,920** | **40.68%** | **−$113** |
 
-The v28 → v33 ship of **−$112/1000h is larger than the cumulative gain from Rules 1-5 combined** (which moved v8_hybrid → v28 by −$121, of which −$120 came from Rules 1-3 in v14 and only −$1 from Rules 4-5).
+The v28 → v33 ship of −$112/1000h (Session 37) remains the largest single rule ship in project history. **Session 38 produced no human-strategy ship** — Rule 6 v2 was archived after sweep showed +$0.57/1000h max gain at heuristic level (well within noise) despite the user's hypothesis being directionally correct on oracle.
 
 ---
 
 ## What this leaves on the table
 
-- v32 captures **43.5% of the v14→ceiling gap** at N=200 fidelity ($1,318/$3,033 vs v14)
-- v32 captures **70.6% of the v14→ceiling gap** at N=1000 fidelity ($1,133/$2,037)
-- Remaining gap to ceiling: **$1,715/1000h (full grid N=200)**, **$904/1000h (prefix N=1000)**
+- v34 captures **44.6% of the v14→ceiling gap** at N=200 fidelity ($1,352/$3,033 vs v14)
+- v34 captures **71.0% of the v14→ceiling gap** at N=1000 fidelity ($1,148/$2,037)
+- Remaining gap to ceiling: **$1,681/1000h (full grid N=200)**, **$889/1000h (prefix N=1000)**
 - v33 captures **3.7% of the v14→ceiling gap** for the human chain at N=200, **7.0%** at N=1000.
 - Biggest residuals at full grid (per-category × share):
-  - **high_only**: 20.4% × $2,816 = **$574 share** — largest residual
-  - **pair**: 46.6% × $1,639 = **$764 share** — KK/AA single-suited Rule-4-bot is the largest sub-stratum (open)
-  - **two_pair**: 22.3% × $1,037 = **$231 share** — already gated + capacity-improved
-  - **trips**: 5.5% × $1,359 = **$75** — both v30 and v32 have shipped; further work needs new diagnostic angles
-  - three_pair: 1.9% × $1,639 = $31 (untouched by gating)
-  - trips_pair: 2.86% × $1,225 = $35 (already gated)
-  - composite: 0.245% × $1,386 = $3.4 (already gated)
-- **Rule 6's heuristic capture is 56% of its oracle ceiling.** Closing the remaining 44% ($86/1000h on the trips slice = $5/1000h whole-grid given 5.5% share) requires probe-driven A-vs-C tiebreaking, an open v34_rule6_v2 candidate.
+  - **high_only**: 20.4% × $2,806 = **$572 share** — largest residual
+  - **pair**: 46.6% × $1,619 = **$754 share** — KK/AA single-suited Rule-4-bot is the largest sub-stratum (open)
+  - **two_pair**: 22.3% × $978 = **$218 share** — capacity-improved at v34
+  - **trips**: 5.5% × $1,291 = **$71 share** — v30, v32, v34 have all shipped; further work needs new diagnostic angles
+  - three_pair: 1.9% × $1,635 = $31 (untouched by gating)
+  - trips_pair: 2.86% × $1,057 = $30 (already gated; v34 capacity expansion)
+  - composite: 0.245% × $1,173 = $2.9 (already gated; v34 capacity expansion)
+- **Rule 6's heuristic capture is 56% of its oracle ceiling.** The remaining $86/1000h is now reframed as a future ML target (Decision 070).
 
 ---
 
-## What Session 37 produced
+## What Session 38 produced
 
-### v32 ship + Rule 6 verification + v33 ship
+### v34 ship + Rule 6 v2 archived
 
-**1. v32 trained and shipped** — 83 features (v30's 79 + 4 trips_v2 round-2) at v31's high-capacity config (depth=32, min_samples_leaf=3). 731,606 leaves. **−$20 full / −$18 prefix vs v31; −$79 full / −$47 prefix cumulative vs v30.** All categories except trips bit-identical (textbook gating signature). 9th gating-template instance, FIRST within-trips iteration.
+**1. Capacity sweep at v32's 83 features** (`train_v32_capacity_sweep.py`):
+- d34ml3 control: 731,611 leaves at depth 33 — **proves ml=3 was the binding leaf constraint**, not depth.
+- d34ml2 candidate: 874,548 leaves at depth 33 (+19.5% capacity).
+- Grading on full + prefix grids: candidate ships −$34 full / −$15 prefix.
+- Promoted to v34_dt; new ML champion.
 
-**2. Rule 6 verification** (`verify_rule6_v14_trips.py`): v14_combined picks "mid is paired with trip rank" on only 94.3% of pure trips. 5.4% B-routings (3rd trip on bot) systematically lose $3,609/1000h within-trips ($197 whole-grid). Always-A∪C oracle ceiling = $197/1000h whole-grid over v14.
+**2. Rule 6 A-vs-C oracle probe** (`probe_rule6_c_variant.py`):
+- best-A regret: $82/1000h whole-grid; best-C regret: $608/1000h.
+- Per-cell stratification: C dominant only at trip ≥ K (+$2k–$14k); A dominant at trip ≤ J (−$1.7k to −$17k); mixed at trip Q (depends on max_kicker).
+- Validates user's directional hypothesis at the oracle level.
 
-**3. v33_rule6_trips designed and shipped** (`strategy_v33_rule6_trips.py`):
-- Decision tree: trip_rank > max_kicker → C variant; else → A variant.
-- Within A: pick which trip → bot to maximize bot DS profile.
-- Override-everything semantics (within-rule scope) — captured $111 vs preserve-A∪C-when-good's $37 on the 30K probe.
-- **Full grid: +$112/1000h vs v28** (trips $4,054 → $2,010 within-trips).
-- **Prefix: +$143/1000h vs v28** (trips $4,576 → $1,744 within-trips).
-- Largest single rule ship in project history; subsumes the prior Rule 4 (extended) for KKK/AAA.
+**3. Rule 6 v2 sweep across boundary thresholds** (`probe_v34_sweep.py`):
+- Tested `min_trip_for_C ∈ {3..14, A-only}` on the 30K probe sample.
+- Best result: +$0.57/1000h at trip ≥ T → C (well within noise).
+- Every threshold ≥ Q LOSES money to v33 (-$2.69 to -$71.96/1000h whole-grid).
+- The bottleneck is the heuristic A-variant's bot-DS optimizer, not the threshold rule.
 
-### Methodology lessons reinforced (Session 37)
+### Methodology lessons reinforced (Session 38)
 
-1. **Orthogonal axis stacking works.** Capacity + features compose additively (v32 = $58 v31 capacity + $20 trips_v2 features = $79 cumulative).
-2. **Always-X structural baselines surface big rule ships.** Rule 6 → +$112-143/1000h. Apply systematically to remaining categories next session.
-3. **Rule heuristics override learned strategy within scope.** Override-everything beats preserve-when-already-OK by 3× on the trips slice.
-4. **Tripwire conversion rate continues to be ~10-15% on round-2 features.** 7 ships now confirm.
+1. **`min_samples_leaf=2` can unlock more capacity than deeper depth.** Specifically, when ml=3 saturates below the depth cap, ml=2 is the next unlock.
+2. **Heuristic-realizable ceilings are typically much smaller than oracle ceilings.** Always-X probes should report both.
+3. **Capacity ships move every category; gating ships move one.** Two clean capacity ships now confirm (v31, v34).
+4. **Tripwire is a feature-design diagnostic; capacity ships skip it** (use leaf-count + per-category coverage).
 
 ---
 
-## Resume Prompt (Session 38)
+## Resume Prompt (Session 39)
 
 ```
-Resume Session 38 of the Taiwanese Poker Solver project at
+Resume Session 39 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context:
 - CLAUDE.md
-- STRATEGY_GUIDE.md (last updated end of Session 37 — Session 37 entry
-  in Part 1 covers BOTH v32 and v33 ships; Part 6 has Rule 6)
-- CURRENT_PHASE.md (rewritten end of Session 37)
-- DECISIONS_LOG.md (latest: Decision 067 v32 ship, Decision 068 v33 ship)
-- analysis/scripts/strategy_v32_dt.py — current ML champion
+- STRATEGY_GUIDE.md (Session 38 entry in Part 1; Part 2 has v34_dt as
+  current champion; Part 6 has Rule 6 unchanged)
+- CURRENT_PHASE.md (rewritten end of Session 38)
+- DECISIONS_LOG.md (latest: Decision 069 v34_dt ship, Decision 070
+  v34_rule6_v2 archived)
+- analysis/scripts/strategy_v34_dt.py — current ML champion harness
 - analysis/scripts/strategy_v33_rule6_trips.py — current human champion
-- analysis/scripts/verify_rule6_v14_trips.py — diagnostic that surfaced Rule 6
-- analysis/scripts/probe_v33_trips.py — fast empirical check (3s on 30K trips)
+- analysis/scripts/probe_rule6_c_variant.py — Rule 6 A-vs-C oracle probe
+- analysis/scripts/probe_v34_sweep.py — Rule 6 boundary sweep (negative)
 
-State (end of Session 37):
-- v32_dt is the new ML champion: $1,715/1000h on full grid (51.31% opt),
-  $904/1000h on prefix (62.47% opt). 731,606 leaves, depth=32, ml=3,
-  83 features (79 v30 + 4 trips_v2 round-2).
-- Cumulative v30→v32 of -$79/1000h on full grid is the largest single-
-  session ML ship in project history (beats v26's $70).
-- v33_rule6_trips is the new human strategy of record: $2,920/1000h on
-  full grid (40.68% opt), $1,894/1000h on prefix (48.81% opt).
-  +$112 vs v28 on full, +$143 on prefix. Largest single rule ship in
-  project history.
+State (end of Session 38):
+- v34_dt is the new ML champion: $1,681/1000h on full grid (52.02% opt),
+  $889/1000h on prefix (62.74% opt). 874,548 leaves, depth=34, ml=2,
+  same 83 features as v32. Cumulative v30 → v34 of -$113/1000h on
+  full grid is the new largest cumulative ML arc in project history.
+- v34_rule6_v2 was probed and archived. v33 remains the human champion.
 
 Next session targets (priority order):
 
-(A) Capacity sweep at v32's higher feature count (depth=34 ml=2 + ml=3
-    control). Per Session 37 methodology rule, leaf-count grew +5% over
-    v31; the next ship that adds ≥6 features should re-test capacity
-    explicitly. Could potentially unlock $10-30/1000h.
-
-(B) Always-X structural baseline probes for remaining categories. Rule 6
-    came out of the trips diagnostic. Apply the same pattern to:
-    - composite (high per-category regret, tiny share)
+(A) Always-X structural baseline probes for remaining categories.
+    Rule 6 came out of the trips diagnostic. Apply systematically:
     - three_pair (untouched by gating, 1.9% share)
-    - high_only (largest residual share, 20.4%)
+    - composite (high per-category regret, tiny share)
     - two_pair (heavily ML-engineered already)
-    Write `verify_rule_X_<category>.py` for each; ship if probe shows
-    measurable gain.
+    - high_only (largest residual share, 20.4%)
+    Each probe writes verify_rule_X_v33_<category>.py; report BOTH
+    oracle ceiling AND heuristic-realizable headline.
 
-(C) v34_rule6_v2 — tighter A-vs-C heuristic on probe-driven decision
-    tree. Captures additional $10-50/1000h on the trips slice (=
-    $0.5-3/1000h whole-grid). Smaller than (A) and (B); deprioritize.
+(B) Round-3 within-trips features (or pair-r5 / two_pair-r2).
+    Diagnose v34's residual within-trips ($1,291) for new structural
+    signal. Feed back into ML as a new gated feature family if found.
+
+(C) Learned A-vs-C decision tree for Rule 6. Reframes Session 38's
+    negative result: a small classification tree on (trip_rank,
+    max_kicker_rank, suit profile) trained against oracle's A-or-C
+    choice. $5-13/1000h ML target.
 
 (D) KK/AA single-suited Rule-4-bot residual ($37/1000h below oracle).
     Different angle needed than v31a's tight gating.
@@ -210,17 +225,17 @@ REMINDERS:
   prefix. Claimed: `_g` (suited), `tp_*_g` (trips_pair), `comp_*_g`
   (composite), `pair_*_g` (pair v1), `t2p_*_g` (two_pair), `ho_*_g`
   (high_only), `pair_r4_*_g` (pair v2), `trips_*_g` (trips), and
-  `trips_v2_*_g` (trips round 2 — shipped in v32). Archived: `pair_r4v3_*_g`.
-- Methodology rule (Session 36+37): default future ML champion ships
-  to depth=32 ml=3. Re-test capacity (depth=34 ml=2) when feature count
-  grows substantially or when a ship has bearish tripwire AND leaf-count
-  gain ≤10K.
+  `trips_v2_*_g` (trips round 2). Archived: `pair_r4v3_*_g`.
+- Methodology rule (Session 38): default future ML champion ships
+  to depth=34 ml=2. When evaluating capacity, sweep ml ∈ {3, 2} at
+  generous depth cap (34+) and pick smaller-ml winner if shape-
+  agreement improves.
 - Methodology rule (Session 37): rule chains should default to override-
   everything within scope, not just patch mistakes.
-- Methodology rule (Session 37): always-X structural baselines surface
-  big rule ships. Apply systematically to remaining categories.
+- Methodology rule (Session 38): always-X probes should report BOTH
+  oracle ceiling AND closest heuristic-realizable headline.
 - Methodology rule (Session 36+37): tripwire predicts conversion rate
-  (~10-15%), not absolute opportunity. 7 ships now confirm.
+  (~10-15%), not absolute opportunity. Capacity ships skip tripwire.
 ```
 
 ---

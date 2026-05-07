@@ -661,6 +661,83 @@ The trips category alone drops $4,054 → $2,010 within-trips on the full grid (
 
 ---
 
+## Session 38: v34_dt ships (capacity-only ml=2 retrain at v32 features); Rule 6 A-vs-C boundary probe validates the user hypothesis at the oracle but cannot be cashed via heuristic-A
+
+This session pursued two priority targets from Session 37's wrap and surfaced one shipping result and one informative negative.
+
+**Part A — v34_dt ships (depth=34 ml=2 capacity expansion).**
+
+Per the Session 37 methodology rule (when feature count grows OR leaf-count grows ≥+5%, retest capacity), Session 38 retrained v32's exact 83 features at depth=34 with two `min_samples_leaf` settings:
+
+- **v32_d34ml3 (control):** 731,611 leaves at achieved depth 33. Exactly +5 leaves vs v32's 731,606. **Result: $1,715/1000h full / $904/1000h prefix — bit-identical to v32.** This proves **ml=3 was the binding constraint, not depth=32** — the natural saturation depth at ml=3 is 33, well below the 34 cap, so depth=32 was never the bottleneck.
+
+- **v32_d34ml2 (candidate, promoted to v34_dt):** 874,548 leaves at achieved depth 33. **+19.5% capacity over v32.** Lowering ml from 3 to 2 unlocks +142,937 more splits.
+
+**Validation grades (full + prefix):**
+
+| Grid | v32 | v32_d34ml3 | **v34_dt** | Δ v34 vs v32 |
+|---|---:|---:|---:|---:|
+| Full N=200 6.0M | $1,715 / 51.31% | $1,715 / 51.31% | **$1,681 / 52.02%** | **−$34 / +0.71pp** |
+| Prefix N=1000 500K | $904 / 62.47% | $904 / 62.47% | **$889 / 62.74%** | **−$15 / +0.27pp** |
+
+**Per-category v34 vs v32 (full grid):** every category improves. Within-category headlines:
+
+| Category | v32 | v34 | Δ within | share | whole-grid |
+|---|---:|---:|---:|---:|---:|
+| high_only  | $2,816 | $2,806 | −$10  | 20.4% | −$2.0 |
+| pair       | $1,639 | $1,619 | −$20  | 46.6% | −$9.3 |
+| two_pair   | $1,037 | $978   | −$59  | 22.3% | −$13.2 |
+| trips      | $1,359 | $1,291 | −$68  | 5.46% | −$3.7 |
+| trips_pair | $1,225 | $1,057 | −$168 | 2.86% | −$4.8 |
+| three_pair | $1,639 | $1,635 | −$4   | 1.90% | −$0.1 |
+| quads      | $645   | $613   | −$32  | 0.24% | −$0.1 |
+| composite  | $1,386 | $1,173 | −$213 | 0.245% | −$0.5 |
+
+The biggest within-category gains are in trips_pair (−$168) and composite (−$213) — both ML-engineered categories that benefit from finer leaf granularity. Whole-grid contribution is dominated by two_pair (−$13/1000h via 22.3% share) and pair (−$9/1000h via 46.6% share). **Unlike prior gating ships, this ship moves every category — a textbook capacity-only signature.**
+
+**Cumulative v30 → v34 of $113/1000h (full grid) is the new largest cumulative arc in project history**, beating Session 37's v30→v32 of $79. The arc decomposes as: v30→v31 ($58, capacity), v31→v32 ($20, trips_v2 features), v32→v34 ($34, capacity-only at ml=2).
+
+**Part B — Rule 6 A-vs-C boundary probe (negative result, archived as v34_rule6_v2).**
+
+Following the user's hypothesis that Rule 6's C variant (3rd trip card on top when `trip_rank > max_kicker_rank`) is suspect at low/mid trip ranks, Session 38 wrote `probe_rule6_c_variant.py` to compute oracle EVs for the best A and best C settings stratified by `(trip_rank, max_kicker_rank)`.
+
+**Oracle-level findings strongly validated the user's hypothesis:**
+
+| Variant | Mean regret vs oracle (whole-grid) | Cells where it wins |
+|---|---:|---:|
+| best-A (top = highest kicker) | $+82/1000h | 84.1% |
+| best-C (top = trip card) | $+608/1000h | 15.9% |
+
+C wins overwhelmingly only at trip A (100% of cells, +$5,757 to +$14,139 over A) and trip K (88-100%, +$2,131 to +$7,240); narrowly at trip Q (mixed); LOSES at trip ≤ J (-$1,765 to -$17,030). The user was directionally right: C is dominated below trip Q.
+
+**But heuristic-realizable gain is ~95% smaller than the oracle ceiling.** A boundary sweep across `min_trip_for_C ∈ {3..14, A-only}` produced max gain of **+$0.57/1000h whole-grid at trip ≥ T**. The 95% gap arises because the v33/v34 A-variant heuristic (bot suit profile → rank sum → run) underperforms relative to v33's "mechanical C" pick on the cells that flip — at trip Q, the heuristic-A loses ~$1,857/1000h within-trips on flipped cells (oracle said only −$278 was even achievable). The bot-DS optimizer is the rate-limiting step, not the threshold rule.
+
+**Sweep table:**
+
+| Rule | $/1000h whole-grid | Δ vs v33 | Cells changed |
+|---|---:|---:|---:|
+| v33 (trip > maxK → C) | $109.83 | baseline | 0 |
+| trip ≥ 9 → C | $109.32 | +$0.52 | 81 |
+| **trip ≥ T → C (best)** | **$109.27** | **+$0.57** | **226** |
+| trip ≥ J → C | $109.83 | $0.00 | 543 |
+| trip ≥ Q → C | $112.52 | −$2.69 | 1,151 |
+| trip ≥ K → C | $120.01 | −$10.18 | 2,093 |
+| Always A | $181.79 | −$71.96 | 5,928 |
+
+**v33's boundary stands as the human strategy of record.** v34_rule6_v2 is archived. The remaining ~$5-13/1000h of unrealized A-vs-C oracle gain is now reframed as a future ML target: a learned A-variant heuristic OR a learned A-vs-C decision tree on (trip_rank, max_kicker_rank, suit profile). v32/v34's gated trips features partially capture this signal already.
+
+**Methodology lessons reinforced (Session 38):**
+
+1. **`min_samples_leaf=2` can unlock more capacity than depth.** When a `ml=3` tree saturates below its depth cap (control: depth=33 actual at depth=34 cap), the next capacity unlock is `ml=2`, NOT deeper depth. **Refines Session 37's rule:** future capacity retests should sweep `min_samples_leaf ∈ {3, 2}` at a generous depth cap, and pick the smaller-ml winner if shape-agreement improves.
+
+2. **Heuristic-realizable ceilings are smaller than oracle ceilings.** Rule 6's heuristic captured 56% of its $197 oracle ceiling (Session 37 finding); Rule 6 v2's would capture only ~5% of its $13 oracle ceiling because the A-heuristic's quality is the rate-limiting step. **Future Always-X probes should report BOTH the oracle ceiling AND the closest heuristic-realizable headline** to set realistic expectations.
+
+3. **Capacity ships are not gating ships.** v34's per-category footprint moves every category simultaneously (textbook capacity signature). Gating ships move ONE category and leave the others bit-identical. This distinction now has 2 instances on each side: capacity-only (v31, v34) vs single-category gating (v20, v23, v24, v25, v26, v27, v29, v30, v32 round-2).
+
+4. **Tripwire was not run for v34 because no new features were introduced.** Same 83 features as v32. The leaf-count growth of +19.5% is the relevant capacity signal, and broad cross-category gains confirm latent signal was leaf-bound, not feature-bound. Tripwire is a feature-design diagnostic; capacity ships use leaf-count + per-category coverage instead.
+
+---
+
 # Part 2 — ML champion progression (the full table)
 
 Every model trained, side-by-side, on both validation grids:
@@ -692,21 +769,23 @@ Every model trained, side-by-side, on both validation grids:
 | v31a | S36-overnight | 30 | 5 | 83 (79+4 pair_r4v3 KK/AA-tight) | 500,722 | $1,788 | $951 | ARCHIVED — minimal headline gain ($6 full / $0 prefix) |
 | v31b | S36-overnight | 30 | 5 | 83 (79+4 trips_v2 round 2) | 507,692 | $1,779 | $938 | ARCHIVED — solid trips round-2 ($15 full / $13 prefix) but lost vs v31 in cascade |
 | v31 | S36-overnight | 32 | 3 | 79 (same as v30) | 699,773 | $1,736 | $921 | superseded by v32 — capacity-only retrain shipped second-largest ship (after v26) with zero new features |
-| **v32** | **S37** | **32** | **3** | **83 (79 v30 + 4 trips_v2 round 2)** | **731,606** | **$1,715** | **$904** | **CURRENT ML CHAMPION** — stacks trips_v2 round-2 features on v31's high-capacity config; cumulative v30→v32 of −$79 is the largest single-session ML ship in project history |
+| v32 | S37 | 32 | 3 | 83 (79 v30 + 4 trips_v2 round 2) | 731,606 | $1,715 | $904 | superseded by v34 — stacks trips_v2 round-2 features on v31's high-capacity config; held the ML record briefly between Session 37 and 38 |
+| v32_d34ml3 | S38 | 34 | 3 | 83 (same as v32) | 731,611 | $1,715 | $904 | ARCHIVED — control retrain at depth=34 ml=3; +5 leaves vs v32 (depth=33 actual saturation) confirms ml=3 was the binding constraint |
+| **v34_dt** | **S38** | **34** | **2** | **83 (same as v32)** | **874,548** | **$1,681** | **$889** | **CURRENT ML CHAMPION** — capacity-only retrain at depth=34 ml=2; +19.5% leaves over v32; ships −$34 full / −$15 prefix and lifts every category. Cumulative v30 → v34 of $113/1000h is the new largest cumulative arc in project history |
 
 **Per-category breakdown** (full grid, N=200): how each category's
 regret has dropped across the flagship versions:
 
-| Category | v14 | v16 | v18e | v20 | v25 | v26 | v27 | v29 | v30 | v31 | v32 | Δ v32 vs v14 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| high_only | $4,082 | $3,785 | $3,307 | $2,894 | $2,894 | $2,894 | $2,863 | $2,862 | $2,862 | $2,816 | **$2,816** | **−$1,266** |
-| pair | $2,011 | $2,127 | $1,873 | $1,873 | $1,771 | $1,771 | $1,771 | $1,674 | $1,674 | $1,639 | **$1,639** | **−$372** |
-| two_pair | $3,371 | $2,005 | $1,458 | $1,458 | $1,458 | $1,145 | $1,145 | $1,145 | $1,145 | $1,037 | **$1,037** | **−$2,334** |
-| trips | $4,054 | $2,347 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,758 | $1,732 | **$1,359** | **−$2,695** |
-| trips_pair | $5,417 | $2,438 | $1,608 | $1,608 | $1,446 | $1,445 | $1,445 | $1,443 | $1,442 | $1,225 | **$1,225** | **−$4,192** |
-| three_pair | $4,529 | $1,975 | $1,653 | $1,653 | $1,654 | $1,654 | $1,654 | $1,654 | $1,654 | $1,639 | **$1,639** | **−$2,890** |
-| quads | $9,670 | $2,233 | $724 | $724 | $723 | $723 | $723 | $723 | $723 | $645 | **$645** | **−$9,025** |
-| composite | $10,883 | $5,260 | $2,100 | $2,100 | $1,869 | $1,741 | $1,741 | $1,741 | $1,733 | $1,387 | **$1,386** | **−$9,497** |
+| Category | v14 | v16 | v18e | v20 | v25 | v26 | v27 | v29 | v30 | v31 | v32 | v34 | Δ v34 vs v14 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| high_only | $4,082 | $3,785 | $3,307 | $2,894 | $2,894 | $2,894 | $2,863 | $2,862 | $2,862 | $2,816 | $2,816 | **$2,806** | **−$1,276** |
+| pair | $2,011 | $2,127 | $1,873 | $1,873 | $1,771 | $1,771 | $1,771 | $1,674 | $1,674 | $1,639 | $1,639 | **$1,619** | **−$392** |
+| two_pair | $3,371 | $2,005 | $1,458 | $1,458 | $1,458 | $1,145 | $1,145 | $1,145 | $1,145 | $1,037 | $1,037 | **$978** | **−$2,393** |
+| trips | $4,054 | $2,347 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,997 | $1,758 | $1,732 | $1,359 | **$1,291** | **−$2,763** |
+| trips_pair | $5,417 | $2,438 | $1,608 | $1,608 | $1,446 | $1,445 | $1,445 | $1,443 | $1,442 | $1,225 | $1,225 | **$1,057** | **−$4,360** |
+| three_pair | $4,529 | $1,975 | $1,653 | $1,653 | $1,654 | $1,654 | $1,654 | $1,654 | $1,654 | $1,639 | $1,639 | **$1,635** | **−$2,894** |
+| quads | $9,670 | $2,233 | $724 | $724 | $723 | $723 | $723 | $723 | $723 | $645 | $645 | **$613** | **−$9,057** |
+| composite | $10,883 | $5,260 | $2,100 | $2,100 | $1,869 | $1,741 | $1,741 | $1,741 | $1,733 | $1,387 | $1,386 | **$1,173** | **−$9,710** |
 
 Eight category-gated wins are now visible across the v18e → v31
 progression, plus one capacity-only ship (v31):
@@ -730,6 +809,12 @@ progression, plus one capacity-only ship (v31):
   on v31's capacity config). 9th gating-template instance and the FIRST
   within-trips iteration; same template-second-iteration pattern as v25→v29
   for pair.
+- **v34 → capacity-only at ml=2:** −$34 whole-grid vs v32 (zero new features;
+  874K leaves vs v32's 731K). 2nd capacity-only ship (after v31); per-category
+  shape moves every category, with biggest gains in the previously-gated
+  composite (−$213 within-cat) and trips_pair (−$168). The control retrain
+  at depth=34 ml=3 reproduced v32 exactly, proving ml=3 was the leaf-binding
+  constraint, not depth.
 
 Each gating upgrade lifted ONLY its targeted category and kept every other
 category bit-identical (or within N=200 noise) — the cleanest possible
