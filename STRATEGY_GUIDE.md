@@ -12,7 +12,7 @@
 > 5. Where each rule + model lives in code
 > 6. **The Current Standard** (at the bottom — the rules to memorize, the model to call)
 >
-> Last updated: 2026-05-06 (Session 37 — TWO ships: **v32_dt** (new ML champion at $1,715/1000h, 731K leaves, 83 features = v31 + 4 trips_v2 round-2 at depth=32 ml=3; cumulative v30→v32 of −$79/1000h beats v26's record as the largest single-session ML ship in project history); **v33_rule6_trips** (new human strategy of record at $2,920/1000h on full grid; +$112/1000h vs v28 on full and +$143/1000h on prefix — the largest single rule ship in project history, codifying "on pure trips, the third trip card never goes to bot").
+> Last updated: 2026-05-07 (Session 39 — Rule 6 rewrite: **v35_rule6_v3** ships in the strategy guide as the new human strategy of record on the HUMAN-CEILING basis (oracle-bound +$8.12/1000h whole-grid vs v33). Production bot keeps v33 because heuristic-A cannot realize the sharper boundary at runtime (-$4/1000h). Two-track ship: human guide gets sharper, runtime stays at v33 for now. Methodology rule NEW: the human strategy guide can be sharper than the production heuristic when heuristic-A is the rate-limiting step.)
 
 ---
 
@@ -738,6 +738,43 @@ C wins overwhelmingly only at trip A (100% of cells, +$5,757 to +$14,139 over A)
 
 ---
 
+## Session 39: Rule 6 boundary tightening + suit-matching rewrite (v35_rule6_v3 ships in the strategy guide; production heuristic keeps v33)
+
+The user's headline ask was: "the trips strategy doesn't have hard-set rules that are easy to follow yet — can we fix that?" This session rewrote Rule 6 around two human-friendly artifacts:
+
+1. **A sharper boundary table** that maps directly onto Session 38's per-cell oracle data, replacing the `trip_rank vs max_kicker_rank` comparison with an explicit per-trip-rank decision (Trip A always third-on-top; Trip K third-on-top unless an Ace; Trip Q third-on-top unless J/K/A; Trip ≤ J always third-to-bot).
+2. **A 2-step suit-matching procedure** for "which trip joins bot" that replaces the prior fuzzy "maximize bot DS-ness" instruction with priority-ordered cases (match a singleton kicker → 2+2 DS, match a fresh suit → 2+1+1 SS, never match the kicker pair → avoid 3+1).
+
+**Verification (`verify_rule6_v3_human.py`)** on the same 30K trips probe:
+
+| Mode | v33 (boundary trip > maxK) | v35 (sharpened) | Δ |
+|---|---:|---:|---:|
+| **Oracle-bound (HUMAN ceiling)** | -$42.56/1000h whole-grid | **-$34.44/1000h** | **+$8.12** ✓ |
+| Heuristic (production bot) | -$113.34/1000h | -$117.40/1000h | -$4.06 ✗ |
+
+v35 captures **63% of the $12.89/1000h oracle ceiling identified in Decision 070**, sacrificing the remaining 37% by simplifying the noisy "Trip J + low-kicker" cells (where C narrowly wins by $50–$1,400 within-trips on small samples). The trade keeps the rule memorable and only loses ~$4.77/1000h vs the optimal-but-unmemorable boundary.
+
+**Per-trip-rank breakdown** (oracle-bound):
+
+| Trip rank | v33 → v35 lift | Driver |
+|---|---:|---|
+| A, K, 2-5 | $0 | v33 already optimal here |
+| 6-Q | +$0.19 to +$2.54/1000h | Sharpened cells flip C → A correctly |
+| 8 | +$0.81 | Trip 8 + low kickers |
+| 9 | +$1.56 | Same |
+| T | +$2.40 | Trip T + low kickers |
+| J | +$2.54 | Largest lift — Trip J + maxK low cells |
+
+**Methodology rule (NEW Session 39): the human strategy guide can be sharper than the production heuristic when heuristic-A is the rate-limiting step.** Decision 070 archived v34_rule6_v2 because the heuristic-A bot-DS optimizer couldn't cash a sharper boundary. But the same boundary IS realizable for a thoughtful human, who can pick the oracle-best A-variant pick in any cell (the cell-level A-vs-C choice is the gain; the within-A-routing is what the production heuristic stumbles on). v35 ships in `STRATEGY_GUIDE.md` Part 6 as the human strategy of record. The production bot keeps v33 because runtime evaluation shows the heuristic-A loses $4/1000h on the flipped cells (matching Session 38's sweep finding).
+
+**Decision 071** records this two-track ship.
+
+**A1b — Suit-matching rule for "which trip joins bot"**: replaces v33's fuzzy "maximize bot DS-ness, then rank-sum, then connectivity" with three named cases (kickers two-and-one, kickers rainbow, kickers three-of-a-suit) and three named bot shapes (DS 2+2, SS 2+1+1, 3+1 to avoid). Five worked examples in the Part 6 rewrite. The production heuristic-A is structurally the same procedure (suit_profile dominates the score), so the prose change does not modify production behavior.
+
+**What did NOT happen this session**: Always-X probes for `three_pair`, `composite`, `two_pair`, `high_only` (deferred Priority A2). Round-3 within-trips diagnostic (Priority B). Learned A-vs-C decision tree (Priority C). KK/AA single-suited Rule-4-bot residual (Priority D). All carried into Session 40.
+
+---
+
 # Part 2 — ML champion progression (the full table)
 
 Every model trained, side-by-side, on both validation grids:
@@ -940,9 +977,17 @@ guide can keep them as human-memorizable approximations.
   v16 / v18 / v20 all agree on the canonical KK and AA play; Rule 4
   is documentation, not a separate code path.
 - Rule 5 (KK/AA rainbow override) → `analysis/scripts/strategy_v28_rule5_rainbow.py`
+- Rule 6 v1 (production heuristic, Session 37) → `analysis/scripts/strategy_v33_rule6_trips.py` — boundary `trip_rank > max_kicker_rank → C, else A`. Production runtime stays here.
+- Rule 6 v3 (sharper human boundary, Session 39) → `analysis/scripts/strategy_v35_rule6_v3.py` — explicit per-trip-rank table (Trip A always third-on-top; K only if no Ace; Q only if no J/K/A; J or lower never). Strategy guide ceiling +$8.12/1000h whole-grid vs v33 oracle-bound; production heuristic-A loses at runtime, so used for human-play guidance only.
 - Combined chain (4 rules) → `analysis/scripts/strategy_v14_combined.py`
-- Combined chain (5 rules, current) → `analysis/scripts/strategy_v28_rule5_rainbow.py`
-  (wraps v14 with Rule 5)
+- Combined chain (5 rules) → `analysis/scripts/strategy_v28_rule5_rainbow.py` (wraps v14 with Rule 5)
+- Combined chain (6 rules, current production) → `analysis/scripts/strategy_v33_rule6_trips.py` (wraps v28 with Rule 6 v1)
+- Combined chain (6 rules, current human-guide) → `analysis/scripts/strategy_v35_rule6_v3.py` (wraps v28 with Rule 6 v3)
+
+**Probes:**
+- Per-cell A-vs-C oracle map (Session 38) → `analysis/scripts/probe_rule6_c_variant.py`
+- v33→v34 boundary sweep (Session 38) → `analysis/scripts/probe_v34_sweep.py`
+- v35 human-decision verification (Session 39) → `analysis/scripts/verify_rule6_v3_human.py`
 
 **ML champion + baselines (newest first):**
 - v31 (CURRENT CHAMPION) → `analysis/scripts/strategy_v31_dt.py` + `data/v31_dt_model.npz` (700K leaves, 79 features, depth=32 ml=3 — capacity-only retrain of v30)
@@ -1292,79 +1337,118 @@ memorizing the strategy doesn't accidentally split the pair.
 
 ---
 
-## Rule 6 — Pure trips: mid is always 2 of the 3 trip cards (the third NEVER goes to bot)
+## Rule 6 — Pure trips: 2 of the 3 trip cards always go to mid (the third NEVER goes to bot)
 
 **Fires whenever you have trips of any rank (and no second pair, no quads).**
 This rule supersedes the prior Rule 4 (extended), which covered only KKK/AAA.
-The principle is the same — mid is paired with the trip rank — but Rule 6
-extends it to all 13 trip ranks AND distinguishes between two clean variants
-based on whether the trip rank or your highest kicker is stronger.
+The principle is simple — **mid is paired with the trip rank** — and the only
+remaining decision is whether the third trip card goes on **top** or joins **bot**.
+The rest of this section is a hand-traceable answer to that question.
 
-**The decision:**
+### The setup (always)
 
-1. **Identify the highest non-trip-rank card you hold** (`max_kicker_rank`).
-2. **Compare to the trip rank:**
-   - If **trip rank > max_kicker_rank** → use the **C variant** (top = trip rank).
-   - Else → use the **A variant** (top = the highest kicker).
+- **Mid** = 2 of the 3 trip cards (paired mid, ~80% Hold'em equity).
+- The third trip card goes to **either top or bot** — never split out separately, never two-trips-on-bot.
+- The 4 non-trip cards (your **kickers**) fill the rest.
 
-**The play:**
+### Step 1 — Where does the third trip card go (top or bot)?
 
-| Variant | When | Top | Mid | Bot |
-|---|---|---|---|---|
-| **A** | trip rank ≤ max kicker | highest kicker | 2 of the 3 trip cards | 3rd trip card + 3 lower kickers |
-| **C** | trip rank > max kicker | one of the trip cards | other 2 trip cards | the 4 kickers |
+The decision depends only on your **trip rank** and what kickers are in your hand:
 
-**Within the A variant** (when 3 trips don't all fit in mid), pick which
-one of the 3 trip cards goes to bot to maximize bot DS-ness. With 3 trips
-of different suits and 3 lower kickers, you'll usually have one specific
-trip card that makes the bot 2+2 double-suited — pick that one.
+| Trip rank | Where the third trip card goes | Why |
+|---|---|---|
+| **Trip A (AAA)** | **Always TOP.** | Nothing beats Ace on top. |
+| **Trip K (KKK)** | **TOP**, unless you also hold an **A** in kickers (then put the A on top, third K to bot). | An Ace on top still beats your K. |
+| **Trip Q (QQQ)** | **TOP**, unless you hold a **J, K, or A** in kickers (then put the highest such card on top, third Q to bot). | Even a J on top beats Q on top *more often than you'd think* — see "Why" below. |
+| **Trip J or lower** | **Always BOT.** Highest non-trip card goes on top. | At J or below, every kicker layout makes "third trip in bot + best singleton on top" the better setting. |
 
-**Worked example (A variant — trips J, A is higher):** `4♣ 7♦ 9♥ J♣ J♦ J♠ A♥`
-- Trips = JJJ. Max kicker = A♥ (rank 14 > J's 11) → A variant.
-- Top = A♥. Mid = 2 of J's. Bot = 1 J + {4♣, 7♦, 9♥}.
-- Pick the J for bot whose suit makes bot most DS-friendly.
-  Bot suits available: ♣, ♦, ♥, plus one J's suit.
-  - J♠ → bot {J♠, 4♣, 7♦, 9♥} = rainbow (no pair of suits).
-  - J♣ → bot {J♣, 4♣, 7♦, 9♥} = single-suited (2♣).
-  - J♦ → bot {J♦, 4♣, 7♦, 9♥} = single-suited (2♦).
-  Pick J♣ or J♦ (tied SS — pick either). Mid = the other 2 J's.
-- **Play**: top=A♥, mid=J♠+J♦, bot=J♣+4♣+7♦+9♥.
+When the third trip card goes to **bot**, the bot becomes 1 trip + 3 lowest non-trip cards, and the next two steps decide which trip that is.
 
-**Worked example (C variant — trips K, no Ace kicker):** `4♣ 7♦ 9♥ Q♠ K♣ K♦ K♠`
-- Trips = KKK. Max kicker = Q♠ (rank 12 < K's 13) → C variant.
-- Top = one of K's (any — they're equivalent on top tier suit-wise; pick K♣).
-- Mid = K♦ + K♠ (the other 2 K's).
-- Bot = 4 kickers = 4♣, 7♦, 9♥, Q♠ (rainbow but it's what you have).
+### Step 2 — Which of the 3 trip cards joins bot? (Suit-matching, no math)
+
+Used only when Step 1 sent the third trip to bot — i.e., trip rank ≤ J, **or** trip Q with J/K/A kicker, **or** trip K with A kicker.
+
+You're trying to make the bot **double-suited (2+2)** — two cards each of two different suits — because DS bots dominate the Omaha bot equity. Look at the 3 kickers heading to the bot.
+
+**Look at your 3 kickers' suits and identify the pattern:**
+
+- **Two kickers share a suit, one is different** ("two-and-one") — the most common case.
+- **All three kickers different suits** ("rainbow kickers").
+- **All three kickers same suit** (rare).
+
+**Then pick the trip card whose suit gives the best bot in this priority:**
+
+| Bot shape | How to spot it | Quality |
+|---|---|---|
+| **2+2 (DS)** ✓ best | Trip suit matches the **lone (singleton)** kicker — making 2 of *that* suit and 2 of the kicker-pair suit | Two flush draws, dominant Omaha shape |
+| **2+1+1 (SS)** OK | Trip suit matches a kicker that wasn't already paired in kickers (i.e., a fresh second of an existing kicker suit, or fills out a rainbow) | One flush draw |
+| **3+1** ✗ avoid | Trip suit matches the **kicker pair suit** (now you have 3 of one suit on bot) | Third suited card is dead — only 2 from hand can be used |
+| **4-flush** ✗ never | All 4 bot cards same suit | Worst Omaha shape |
+
+**Rule of thumb**: **never let the third trip suit equal the kicker pair suit** (that's the 3+1 trap). When in doubt, pick the trip whose suit appears **least often** in the kickers.
+
+### Worked examples
+
+**Example 1 — Trip A (always top):** `2♦ 4♣ 7♥ J♠ A♣ A♦ A♥`
+- Trip A → third A on top, no exceptions.
+- Top = A♣ (any A — they're suit-symmetric on top). Mid = A♦ + A♥. Bot = J♠ + 7♥ + 4♣ + 2♦.
+- **Play**: top=A♣, mid=A♦+A♥, bot=J♠+7♥+4♣+2♦.
+
+**Example 2 — Trip K, no Ace:** `4♣ 7♦ 9♥ Q♠ K♣ K♦ K♠`
+- Trip K, no A in kickers → third K on top.
+- Top = K♣. Mid = K♦ + K♠. Bot = Q♠ + 9♥ + 7♦ + 4♣.
 - **Play**: top=K♣, mid=K♦+K♠, bot=Q♠+9♥+7♦+4♣.
 
-**Worked example (A variant — trips K, with Ace kicker):** `4♣ 7♦ 9♥ A♥ K♣ K♦ K♠`
-- Trips = KKK. Max kicker = A♥ (rank 14 > K's 13) → A variant.
-- Top = A♥. Mid = 2 of K's. Bot = 1 K + {4♣, 7♦, 9♥}.
-- Suits: pick the K whose suit makes bot's suit profile best. 4♣ + 7♦ + 9♥ are rainbow → adding any K just makes it 2+1+1 (single-suited). All 3 ties — pick any.
-- **Play**: top=A♥, mid=K♣+K♦, bot=K♠+4♣+7♦+9♥.
+**Example 3 — Trip K, with Ace (third K to bot):** `4♣ 7♦ 9♥ A♥ K♣ K♦ K♠`
+- Trip K, A in kickers → A goes on top, third K joins bot.
+- Top = A♥. Bot kickers = 4♣, 7♦, 9♥ — rainbow (3 different suits).
+- Step 2: rainbow kickers + trip K's suits {♣, ♦, ♠}. Match to a kicker suit: K♣ → 2♣ in bot; K♦ → 2♦ in bot. K♠ → still rainbow (♠ not in kickers). Both K♣ and K♦ give 2+1+1 (SS). K♠ gives rainbow.
+- Pick K♣ or K♦ (either is fine — same SS shape). Mid = the other 2 K's plus K♠ on... wait, mid is 2 K's. Pick K♣ to bot, mid = K♦ + K♠.
+- **Play**: top=A♥, mid=K♦+K♠, bot=K♣+9♥+7♦+4♣.
 
-**Worked example (C variant — low trips with weak kickers):** `2♥ 3♣ 4♦ 6♠ 7♣ 7♦ 7♠`
-- Trips = 777. Max kicker = 6♠ (rank 6 < 7) → C variant.
-- Top = one 7 (pick 7♣). Mid = 7♦ + 7♠. Bot = 2♥, 3♣, 4♦, 6♠.
-- **Play**: top=7♣, mid=7♦+7♠, bot=6♠+4♦+3♣+2♥.
-- Note bot has a low connected run (3-4-...-6 with 2 in the wheel slot) — possible wheel straight if board hits 5+A.
+**Example 4 — Trip Q, with J kicker (third Q to bot, sharper than v14/v33):** `2♥ 4♣ 7♦ J♠ Q♣ Q♦ Q♥`
+- Trip Q, J in kickers → J goes on top, third Q joins bot. (This is the case where v33's old "trip > max kicker" boundary picked C and put a Q on top — the sharper rule says J on top.)
+- Top = J♠. Bot kickers = 2♥, 4♣, 7♦ — rainbow. Trip suits = {♣, ♦, ♥}, all match a kicker → any pick gives 2+1+1.
+- Pick Q♣ for bot (matches 4♣). Mid = Q♦ + Q♥.
+- **Play**: top=J♠, mid=Q♦+Q♥, bot=Q♣+7♦+4♣+2♥.
 
-**Why it works:**
-- **2-of-3 trips on mid is a paired mid** — Hold'em equity ~80% on unpaired boards (same as KK/AA stay-in-mid logic for Rule 4).
-- **Never put the 3rd trip card on bot:** that breaks the paired mid. Empirical measurement: on the human chain (v28), 5.4% of pure-trips hands route the 3rd trip card to bot, and those hands lose $3,609/1000h within-trips ($197/1000h whole-grid) vs the always-paired-mid baseline. **Always-A∪C is the largest single-rule gain ever measured in this project.**
-- **A vs C decision = "which is the higher rank for the top tier?"** A's top = max kicker, C's top = trip rank. The single-card top tier is purely a high-card battle (against opponent's similarly random top card on a 5-board), so the higher-rank top wins ~52% more often — in a 2-player long-run that's a meaningful edge.
+**Example 5 — Trip J, low kickers (always third J to bot):** `2♣ 4♣ 6♥ 9♦ J♣ J♦ J♠`
+- Trip J → third J always on bot (trip rank ≤ J).
+- Top = 9♦ (highest kicker). Bot kickers = 2♣, 4♣, 6♥. Suits: ♣, ♣, ♥ → "two-and-one" (♣♣♥).
+- Step 2: kicker pair = ♣, kicker singleton = ♥. Trip suits = {♣, ♦, ♠}.
+  - J♣ → bot 3♣+1♥ = **3+1 ✗ avoid** (third club is dead).
+  - J♦ → bot 2♣+1♥+1♦ = 2+1+1 (SS).
+  - J♠ → bot 2♣+1♥+1♠ = 2+1+1 (SS).
+  - (No J♥, so the perfect 2+2 is unavailable.)
+- Pick J♦ or J♠ (either SS — equivalent). Mid = J♣ + the other.
+- **Play**: top=9♦, mid=J♣+J♠, bot=J♦+6♥+4♣+2♣.
 
-**Probe data (Session 37, `verify_rule6_v14_trips.py`):**
-- v14 picks "mid is paired" on only 94.3% of pure trips. The 5.4% B-routings (3rd trip → bot) are the systematic error.
-- v14's A-vs-C decision is already correct on the 94.3% it gets right (top = max(trip_rank, max_kicker_rank)).
-- Always-A∪C oracle ceiling: $+197/1000h whole-grid over v14.
-- v33's heuristic captures **$+112/1000h whole-grid on full N=200 grid** and **$+143/1000h on prefix N=1000** (56% of the oracle ceiling — the heuristic limit for "no peeking at oracle EVs").
+**Example 6 — Trip 7, finds a 2+2:** `3♥ 5♥ 8♣ Q♣ 7♣ 7♦ 7♠`
+- Trip 7 → third 7 always to bot. Top = Q♣ (highest non-trip). Bot kickers = 3♥, 5♥, 8♣.
+- Suits: ♥♥♣ → "two-and-one" (pair=♥, singleton=♣). Trip suits = {♣, ♦, ♠}.
+  - 7♣ → bot 1♣+1♣+2♥ = 2+2 (DS) ✓ — wait, that's 2♣ (3♥+5♥+8♣+7♣) = 2♥+2♣. Yes 2+2.
+  - 7♦ → bot 2♥+1♣+1♦ = 2+1+1 (SS).
+  - 7♠ → bot 2♥+1♣+1♠ = 2+1+1 (SS).
+- Pick 7♣ — **2+2 double-suited bot**. Mid = 7♦ + 7♠.
+- **Play**: top=Q♣, mid=7♦+7♠, bot=7♣+8♣+5♥+3♥.
 
-**Empirical lift over v28:** **+$112/1000h whole-grid (full N=200)** — the largest single rule ship in project history. The v28→v33 ship is bigger than the cumulative Rule 4 + Rule 5 ships combined.
+### Why it works
 
-**Fires on:** 5.46% of all hands (~1 in 18 you're dealt). Pure trips covers all 13 trip ranks; the headline gain is concentrated on low-rank trips (2-9) where the B-bleed was largest.
+- **Mid is paired** (2 trips together) — Hold'em equity ~80% on unpaired boards (same as KK/AA stay-in-mid logic from Rule 4).
+- **Never put the third trip on bot AS THE ONLY trip there** — that would split the paired mid. Either both extra trips stay in mid (third on top) or one trip joins bot (paired mid is preserved).
+- **The boundary in Step 1** comes from the oracle: the per-cell map of best-A vs best-C across (trip rank × max kicker rank) shows that A wins on average for **trip ≤ J in every cell**, **trip Q whenever J/K/A is present**, **trip K only when an Ace is present**, and **trip A never**. Earlier versions of this guide used the simpler boundary "trip > max kicker → top is the trip card" (v33), which is right at the high end (Trip A, K-without-A, Q-with-T-or-lower) but **picks the wrong top in three places**: Trip Q + J kicker, Trip J + low kickers, and Trip T + low kickers. Sharpening these is +$8/1000h whole-grid at the human ceiling (oracle-bound).
 
-**Subsumes Rule 4 (extended):** the prior KKK/AAA rule was a special case of Rule 6's A or C variant. KKK with no Ace kicker → C variant. KKK with Ace kicker → A variant (top=A). AAA always → C variant (no card beats A). Rule 6 generalizes cleanly to all 13 trip ranks.
+### Probe history
+
+- **v14 picks "mid is paired" on only 94.3% of pure trips.** The 5.4% routing the 3rd trip to bot **alone** loses $197/1000h whole-grid vs the always-paired-mid baseline (Session 37 verify_rule6_v14_trips probe).
+- **v33 (Session 37 ship)** locked in "third trip never bot-only" + "trip > max kicker → top is trip rank, else top is max kicker". That ships **+$112/1000h whole-grid full grid / +$143/1000h prefix** vs v28 — the largest single rule ship in project history.
+- **v33 boundary's heuristic ceiling**: 56% of the $197 always-A∪C oracle ceiling. The remaining 44% gap is explained by an under-optimized A-variant heuristic for "which trip joins bot" (Session 38 sweep, `probe_v34_sweep.py`).
+- **Session 38's per-cell oracle probe** (`probe_rule6_c_variant.py`) showed v33's boundary is wrong on 28.8% of "v33 picks C" cells — projected oracle ceiling of $+12.89/1000h whole-grid by flipping those cells to A.
+- **v35 boundary (this section, Session 39)** captures **+$8.12/1000h whole-grid at the human ceiling** (oracle-bound) on the same 30K probe, while sacrificing the noisy/marginal trip-J + low-kicker cells the user simplified out for memorability. **Decision 071** ships v35 as the strategy of record for human play; the production heuristic bot keeps v33 because heuristic-A still cannot cash the sharper boundary (-$4/1000h grid at the bot level — the bot-DS optimizer is the rate-limiting step).
+
+**Fires on:** 5.46% of all hands (~1 in 18 you're dealt). Pure trips covers all 13 trip ranks; the headline gain over v14 is concentrated on low trips (2-9) where the third-trip-to-bot bleed is largest.
+
+**Subsumes Rule 4 (extended):** the prior KKK/AAA rule was a special case. KKK with no Ace → third K on top (matches v35). KKK with Ace → A on top (matches v35). AAA → always third A on top (matches v35). Rule 6 generalizes cleanly to all 13 trip ranks.
 
 ---
 

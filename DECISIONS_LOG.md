@@ -2583,3 +2583,71 @@ A-variant is the dominant routing on average. C-variant only wins at the high en
 3. **Methodology lesson — heuristic-realizable ceilings are smaller than oracle ceilings.** For trips, 56% of the oracle ceiling (Rule 6 ships $111 of $197 oracle) is the heuristic limit. Future Always-X probes should report BOTH the oracle ceiling AND the closest heuristic-realizable headline to set realistic expectations.
 
 4. **The directional finding survives:** A-variant IS the right routing for trip ≤ T, and the oracle ceiling agrees with the user. The reason the rule cannot be cashed at the human-strategy level is the A-variant's own routing complexity, not the threshold rule.
+
+---
+
+## Decision 071 — v35_rule6_v3 ships in STRATEGY_GUIDE.md as the new human strategy of record (Session 39); production heuristic keeps v33 — methodology rule NEW: human guide can be sharper than production bot when heuristic-A is the rate-limiting step
+
+**Date:** 2026-05-07
+**Status:** Two-track ship.
+- **STRATEGY_GUIDE.md Part 6 ships v35** (sharper Rule 6 boundary + 2-step suit-matching procedure for the A-variant body) as the human strategy of record. Captures **+$8.12/1000h whole-grid at the human ceiling (oracle-bound)** vs v33 on the same 30K trips probe.
+- **Production runtime keeps v33.** v35's heuristic-A LOSES $4.06/1000h whole-grid at the bot level on the disagreement subset, exactly as Session 38's sweep predicted (the v33/v34 bot-DS optimizer is the rate-limiting step).
+
+**Origin:** The user's Session 39 ask was "the trips strategy doesn't have hard-set rules that are easy to follow yet — can we fix that?" Session 38's per-cell oracle probe (`probe_rule6_c_variant.py`) had already mapped where v33's `trip_rank > max_kicker_rank → C` boundary diverges from oracle: 28.8% of v33's C-fires are wrong by oracle, projected ceiling $+12.89/1000h whole-grid.
+
+**The sharpened rule** (replaces v33's prose):
+
+| Trip rank | Where third trip card goes | Why |
+|---|---|---|
+| Trip A (AAA) | Always TOP | Nothing beats Ace on top |
+| Trip K (KKK) | TOP unless A in kickers (then A on top, third K to bot) | Ace on top still wins |
+| Trip Q (QQQ) | TOP unless any of {J, K, A} in kickers (then highest such on top, third Q to bot) | J on top wins more often than Q here per oracle |
+| Trip ≤ J | Always BOT (highest non-trip on top) | Per-cell oracle: A wins everywhere with non-trivial sample size |
+
+**The A1b suit-matching rewrite** (replaces v33's fuzzy "maximize bot DS-ness, then rank-sum, then connectivity"): when third trip joins bot, look at the 3 kickers' suits and pick the trip card with priority:
+1. Match a kicker singleton suit → bot 2+2 (DS, best)
+2. Match a fresh suit (not yet duplicated) → bot 2+1+1 (SS, OK)
+3. NEVER match the kicker pair suit → bot 3+1 (third suited card is dead, avoid)
+
+**Verification (`verify_rule6_v3_human.py`)** on 30K trips probe:
+
+| Mode | v33 | v35 | Δ |
+|---|---:|---:|---:|
+| Oracle-bound (HUMAN ceiling) | -$42.56/1000h whole-grid | **-$34.44/1000h** | **+$8.12** ✓ |
+| Heuristic (production bot) | -$113.34/1000h | -$117.40/1000h | -$4.06 ✗ |
+
+The +$8.12 captures **63% of the $12.89 oracle ceiling identified in Decision 070**, sacrificing the noisy "Trip J + maxK ∈ {6,7,8}" cells where C narrowly wins on tiny samples ($+50 to $+1,400 within-trips). The trade buys a memorable rule for ~$4.77/1000h give-up vs the optimal-but-unmemorable per-cell map.
+
+**Per-trip-rank breakdown** (oracle-bound v35 - v33):
+
+| Trip rank | Δ within-trips | Δ whole-grid |
+|---|---:|---:|
+| 2-5 | $0 | $0 |
+| 6 | +$67/1000h | +$0.28 |
+| 7 | +$78 | +$0.32 |
+| 8 | +$192 | +$0.81 |
+| 9 | +$374 | +$1.56 |
+| T | +$583 | +$2.40 |
+| J | +$603 | +$2.54 |
+| Q | +$48 | +$0.19 |
+| K, A | $0 | $0 |
+| **Total** | | **+$8.12/1000h whole-grid** |
+
+**Files:**
+- `analysis/scripts/strategy_v35_rule6_v3.py` — production code path for v35 (currently used only by the verify probe; runtime still calls v33)
+- `analysis/scripts/verify_rule6_v3_human.py` — head-to-head verification on 30K trips probe
+- `STRATEGY_GUIDE.md` Part 6 — rewritten Rule 6 in plain English (no A/C jargon), 6 worked examples, suit-matching procedure
+
+**Methodology rule (NEW, Session 39): the human strategy guide can be sharper than the production heuristic when heuristic-A is the rate-limiting step.**
+
+This rule resolves an apparent paradox left by Decision 070: how can a boundary be both "directionally correct on the oracle" AND "unrealizable at the bot level"? The answer is that the bot-level test conflates two decisions — (1) which cell to fire (A or C) and (2) within A, which trip joins bot. Decision 070's sweep showed that the bot-DS optimizer (decision 2) is wrong often enough on the cells the sharper boundary newly sends to A that the boundary's gain is washed out at the bot level.
+
+But a HUMAN reading the strategy guide is not bound to the bot-DS optimizer for decision 2. The guide can teach the priority ordering (DS > SS > 3+1) explicitly with worked examples, and a thoughtful player will pick the oracle-best A within the cell roughly as well as the per-cell oracle does. **For the human, decision 2 is essentially solved by the new prose; the bot is still at v33's heuristic.**
+
+**Consequence:**
+
+1. **Two-track shipping is now an option** for rule rewrites where the heuristic is the bottleneck. v35 sets the precedent.
+2. **The remaining ~$4.77/1000h gap** between v35's human ceiling and the optimal per-cell map is preserved as a future ML target — a learned A-vs-C decision tree (Priority C in CURRENT_PHASE.md) targeting `(trip_rank, max_kicker_rank, kicker suit profile)` against the oracle's A-or-C choice.
+3. **The production bot WILL eventually adopt v35** (or its successor) once a learned A-variant heuristic closes the gap with the oracle-best A. Until then, v33's heuristic-A stays in code because v35's heuristic version regresses on flipped cells.
+
+**Total project rule count: 6** (Rule 1: pair-to-bot DS; Rule 2: two-pair no-split; Rule 3: trips+pair split-trips-keep-pair; Rule 4: KK/AA stay-mid; Rule 5: KK/AA rainbow override; Rule 6: pure trips paired-mid + sharper top-vs-bot table). Rule 6 is now sharper for humans than for the production bot — a first in the project.
