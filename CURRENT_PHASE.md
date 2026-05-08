@@ -1,17 +1,8 @@
-# Current: Sprint 8 — Session 39 wrap. **One human-strategy ship: v35_rule6_v3 ships in STRATEGY_GUIDE.md Part 6 as the new human strategy of record (oracle-bound +$8.12/1000h whole-grid vs v33).** Production runtime stays at v33 because heuristic-A loses $4/1000h on the flipped cells (the bot-DS optimizer is the rate-limiting step, exactly as Session 38's sweep predicted). Two-track ship — methodology rule NEW: the human strategy guide can be sharper than the production heuristic when heuristic-A is the rate-limiting step. The Rule 6 prose was also rewritten in plain English (dropped A/C variant jargon) with 6 worked examples and a 2-step suit-matching procedure for "which trip joins bot" (priority: DS 2+2 > SS 2+1+1 > 3+1 avoid).
+# Current: Sprint 8 — Session 40 wrap. **Rule 6 low-trips reference table (Trip T down to 2) appended to STRATEGY_GUIDE.md Part 6 as Examples 7–14.** Connectivity probe (`probe_low_trips_connectivity.py`) tested whether bot run-length should add a 4th tier to Step 2's suit-matching priority — verdict NO (connectivity is invariant across the 3 trip-to-bot picks on the same hand; the alt priority "DS > rainbow run≥3 > SS > rainbow run<3 > 3+1" regresses $11/1000h whole-grid; the oracle picks rainbow 0% of the time when SS or DS is available). Per-cell A-vs-C oracle map cross-referenced — A wins ≥99% in every n≥5 cell at trip ≤ T, including low-max-kicker cells. **No production code change.** v33 stays in runtime; v35 stays in the human guide; v34_dt remains the ML champion.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 40):**
->   (A0) **Per-low-trip-rank treatment for Rule 6 (USER-REQUESTED, NEW HEADLINE).** Session 39's Rule 6 rewrite covered Trip A, K, Q, J explicitly with worked examples but lumped trips **T, 9, 8, 7, 6, 5, 4, 3, 2** under the single "always third trip to bot" bucket. The boundary rule IS the same for all trips ≤ J per the oracle (per-cell A wins everywhere with non-trivial sample size), but the human guide should still spell out per-rank treatment. Three sub-tasks:
+> **🎯 IMMEDIATE NEXT ACTION (Session 41):**
 >
->      1. **Worked examples for each rank.** Currently only Trip 7 (Example 6) is shown for trips ≤ J. Add at least one example per rank from T down to 2. Each example should show how the kicker layout and suit-matching procedure plays out at that rank.
->
->      2. **Bot connectivity probe — does straight-draw potential change the optimal trip-to-bot pick at low trips?** Low trips with low kickers can make connected bots (trip 5 + 2-3-4 → wheel made; trip 7 + 4-5-6 → 4-card run; trip 6 + 5-7-8 → open-ended). The current suit-matching rule treats all ranks equivalently. Write `probe_low_trips_connectivity.py` to check whether the oracle prefers a connectivity-aware tie-break for trips ≤ T. If yes, add a 4th tier to the suit-matching priority list.
->
->      3. **Confirm A still beats C at low trips with very weak max_kicker.** When max_kicker is also low (e.g., trip 4 + 6 kicker → top is at most a 6), the top tier is weak no matter which way Rule 6 fires. Verify per-cell C alternative is structurally losing (not noise) for the n≥5 cells. Cross-reference with Session 38's per-cell map to confirm.
->
->      Output: append a "Trips ≤ J reference table" section to STRATEGY_GUIDE.md Part 6 with one worked example per rank + connectivity-bonus rule (if found). Keep all changes additive — don't disturb the existing Trip A/K/Q/J table.
->
->   (A) **Always-X structural baseline probes for remaining categories** (deferred from Sessions 38–39). Apply the Rule 6 / `verify_rule6_v14_trips` template systematically:
+>   (A) **Always-X structural baseline probes for remaining categories** (PRIMARY). Apply the Rule 6 / `verify_rule6_v14_trips` template systematically:
 >      - **three_pair** (UNTOUCHED by gating; $31/1000h whole-grid budget). Likely candidate: "always top = unpaired card; mid = highest pair; bot = 2 lower pairs (paired bot for trips/full-house equity)." Write `verify_rule_X_v33_three_pair.py`.
 >      - **composite** ($3.4/1000h whole-grid; high per-category regret). Heterogeneous category — may need sub-stratification.
 >      - **two_pair** ($218 share; heavily ML-engineered already). Candidate: "always split high pair to mid".
@@ -20,59 +11,43 @@
 >
 >   (B) **Round-3 within-trips features (or pair-r5 / two_pair-r2).** v34's trips category lifted to $1,291 within-cat — within-trips share is now 4.2% of grid. Write `distill_v34_trips.py` to find the within-trips structure that v34's 4 trips_v2 features still don't capture. If a structural baseline exists, feed it back into ML as a new gated feature family.
 >
->   (C) **Learned A-vs-C decision tree for Rule 6.** Reframes Sessions 38–39's negative-heuristic results as an ML target: a small classification tree on `(trip_rank, max_kicker_rank, kicker suit profile)` trained against the oracle's A-or-C choice. **$5-13/1000h whole-grid ceiling per Session 39 (v35 human-ceiling captures $8.12, leaves ~$4.77 of the $12.89 Decision 070 oracle).** Could ship as new gated feature family `rule6_ac_*_g` → v35_dt or v36_dt ML candidate.
+>   (C) **Learned A-vs-C decision tree for Rule 6.** Reframes Sessions 38–39's negative-heuristic results as an ML target: a small classification tree on `(trip_rank, max_kicker_rank, kicker suit profile, kicker suit-sharing pattern)` trained against the oracle's A-or-C choice. **$5-13/1000h whole-grid ceiling.** Session 40's connectivity probe surfaced an additional within-SS disagreement signal ($1,212/1000h_within_low_trips, ≈$19.53/1000h whole-grid mean lift) that can also be input to this tree's training. Could ship as new gated feature family `rule6_ac_*_g` → v35_dt or v36_dt ML candidate.
 >
 >   (D) **KK/AA single-suited Rule-4-bot residual** ($37/1000h below oracle, 52.9% of KK/AA, 1.95% of grid). Defer behind A, B, C. v31a's tight gating shipped only +$6 — needs a different angle (meta-classifier feature trained on probe data, or sub-tree dedicated to KK/AA).
 >
 >   (E) **Production v36_rule6_v3 candidate ship** — replace v33 with v35 in the production runtime IF a learned A-variant heuristic (priority C delivers it) closes the heuristic-A gap. Until then, production stays at v33; v35 is human-guide only.
 
-> **✅ SHIPPED (Decision 071):** v35_rule6_v3 in `STRATEGY_GUIDE.md` Part 6 as the human strategy of record. Headline: oracle-bound human ceiling **+$8.12/1000h whole-grid vs v33** on the 30K trips probe (63% of Decision 070's $12.89 oracle ceiling). Sacrifices ~$4.77/1000h vs the per-cell-optimal map by simplifying noisy Trip J + low-kicker cells away.
->
-> Per-trip-rank lifts (oracle-bound v35 vs v33):
->
-> | Trip rank | Δ within-trips | Δ whole-grid |
-> |---|---:|---:|
-> | 6 | +$67 | +$0.28 |
-> | 7 | +$78 | +$0.32 |
-> | 8 | +$192 | +$0.81 |
-> | 9 | +$374 | +$1.56 |
-> | T | +$583 | +$2.40 |
-> | J | +$603 | +$2.54 |
-> | Q | +$48 | +$0.19 |
-> | A, K, ≤5 | $0 | $0 |
-> | **Total** | | **+$8.12/1000h whole-grid** |
+> **✅ SHIPPED THIS SESSION (no DECISIONS_LOG entry — additive documentation only):**
+> 1. **STRATEGY_GUIDE.md Part 6**: 8 new worked examples (Examples 7–14, Trip T down to Trip 2) appended after the Trip-7 example. Each example illustrates a distinct teaching point (rainbow kickers + all-SS; two-and-one kickers + DS find; 3+1 trap; 4-run incidental bot; wheel-eligible incidental bot; weak-hand acceptance). All 8 examples verified against `strategy_v35_rule6_v3.py` to confirm pick correctness.
+> 2. **STRATEGY_GUIDE.md Part 6 "Why it works" addendum**: documented Session 40's connectivity-tier finding so future readers know why Step 2 doesn't include a run/wheel tier.
+> 3. **STRATEGY_GUIDE.md Part 1 Session 40 entry**: full session log with the two methodology lessons (connectivity invariance + selection-effect awareness).
 
-> **🚫 NOT SHIPPED in production runtime:** v35 heuristic loses $4.06/1000h whole-grid on disagreement cells vs v33. Production still calls `strategy_v33_rule6_trips` for runtime decisions. v35 lives in `analysis/scripts/strategy_v35_rule6_v3.py` and is used only by `verify_rule6_v3_human.py`.
+> **🔬 ARTIFACTS (Session 40):**
+> 1. **`analysis/scripts/probe_low_trips_connectivity.py`** — new probe, 30K trips × low-trip subset (20,849 hands × 3 picks each = 62,547 pick-rows). Reports mean oracle EV per (suit_profile × longest_run), per-hand heuristic-vs-oracle disagreements, alt-priority head-to-head, wheel-eligible bonus test, rainbow-run-4 spotlight.
+> 2. **Per-cell map confirmation** — re-ran `probe_rule6_c_variant.py` against the same 30K trips sample. Verdict unchanged from Session 38: A wins in every n≥5 cell at trip ≤ T, including the lowest max-kicker rows (Trip 6+5: C-A=$-15,585 within-trips; Trip T+5: $-2,871).
 
-> **🔬 ARTIFACTS (Session 39):**
-> 1. **`analysis/scripts/strategy_v35_rule6_v3.py`** — sharpened boundary in code form. Boundary helper `_v35_pick_c(trip_rank, kicker_ranks)` returns True iff the third trip card goes on TOP (C variant). The A-variant body keeps v33's (suit_profile, rank_sum, longest_run) heuristic for now.
-> 2. **`analysis/scripts/verify_rule6_v3_human.py`** — head-to-head verification on the 30K trips probe. Reports v33-oracle-bound, v35-oracle-bound, v33-heuristic, v35-heuristic, and per-trip-rank lifts.
-> 3. **STRATEGY_GUIDE.md Part 6 rewrite** — the trips section now reads in plain English with no A/C jargon. Step 1 = the per-trip-rank table (where third trip card goes). Step 2 = the suit-matching procedure (which trip joins bot, with three named bot shapes DS/SS/3+1 and three named kicker patterns two-and-one/rainbow/three-of-a-suit). Six worked examples.
-> 4. **STRATEGY_GUIDE.md Part 5 rewrite** — separates production rule code path (`strategy_v33_rule6_trips.py`, runtime) from human-guide code path (`strategy_v35_rule6_v3.py`, ceiling-evaluator). Adds probe registry.
+> **📓 METHODOLOGY LESSONS (Session 40):**
+> - **NEW: Candidate-level invariance is a prerequisite for any candidate-level priority.** Step 2's priority orders K candidates that share a fixed rank set (the bot's 4 ranks are determined the moment Step 1 fires). Any feature derived from ranks alone (longest_run, rank_sum, broadway_count, wheel-eligibility) is invariant across the K candidates. Only features that vary between candidates (here, suit assignment) can serve as primary tiers OR tiebreakers. **Future Step-2-style probes should check candidate-level invariance before adding a feature to the priority.** Wasted effort otherwise.
+> - **NEW: When a probe's mean-EV-per-cell shows a "feature predicts bad outcomes", check for selection effects before drawing rule-shaping conclusions.** "Wheel-eligible bots have $-32K mean EV vs $-14K for non-wheel" looks like the wheel is bad; in reality, the population that produces wheel-eligible bots is the population of weak hands. Always test whether the feature is correlating with the population (selection effect) or with within-population settings (true causal signal) before treating it as actionable.
+> - **REINFORCED (Session 38–39): heuristic-realizable ceilings are still ~5–50% of oracle ceilings.** Session 40's $1,212/1000h within-SS disagreement gap is the kind of residual that learned ML (not heuristics) can capture. Reframes Priority C: the learned A-vs-C tree can absorb both the cell-level boundary signal AND the within-SS suit-pick signal in one tree.
 
-> **📓 METHODOLOGY LESSONS REINFORCED + NEW (Session 39):**
-> - **NEW: The human strategy guide can be sharper than the production heuristic when heuristic-A is the rate-limiting step.** Sessions 38 and 39 together establish this. Session 38 archived v34_rule6_v2 because heuristic-A couldn't cash a sharper boundary (-$0.57/1000h max). Session 39 ships v35 in the GUIDE because a HUMAN reading the prose can pick the oracle-best A-variant pick within the cell — they aren't bound to the heuristic. The bot-level test conflated two decisions (which cell fires + within-A routing); the human can decouple them via worked examples.
-> - **Two-track shipping is now in the methodology toolbox.** When the heuristic is the bottleneck, ship the sharper rule in the human guide and keep the simpler heuristic in production. Production catches up later via ML (Priority C).
-> - **Per-cell oracle data unlocks human-friendly rules.** Session 38 mapped (trip_rank, max_kicker_rank); Session 39 translated that map into "if you have an A in your kickers, A goes on top". The data → rule pipeline is replicable for any category with multi-modal optimal-pick structure.
-> - **Heuristic-realizable ceilings are still ~5-50% of oracle ceilings (Session 38 finding holds).** v35 captures 63% of the Decision 070 oracle ceiling because (a) the boundary IS most of the gain and (b) the per-cell map is fairly clean.
-
-> Updated: 2026-05-07 (end of Session 39)
+> Updated: 2026-05-07 (end of Session 40)
 
 ---
 
-## Headline state at end of Session 39
+## Headline state at end of Session 40
 
-**Strategies of record:**
+**Strategies of record (UNCHANGED from Session 39):**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
 | **v34_dt** | ML champion (874K leaves, 83 features at depth=34 ml=2) | `analysis/scripts/strategy_v34_dt.py` + `data/v34_dt_model.npz` |
-| **v35_rule6_v3** | NEW Session 39 — human strategy of record (Rule 6 sharpened boundary + suit-matching procedure). Used in `STRATEGY_GUIDE.md` Part 6. NOT used at runtime. | `analysis/scripts/strategy_v35_rule6_v3.py` + STRATEGY_GUIDE.md Part 6 |
-| v33_rule6_trips | Production runtime Rule 6 path (Session 37 ship; +$112/1000h vs v28). Stays at runtime because v35 heuristic regresses. | `analysis/scripts/strategy_v33_rule6_trips.py` |
+| **v35_rule6_v3** | Human strategy of record (Rule 6 sharpened boundary + suit-matching procedure + Session 40 reference table). Used in `STRATEGY_GUIDE.md` Part 6. NOT used at runtime. | `analysis/scripts/strategy_v35_rule6_v3.py` + STRATEGY_GUIDE.md Part 6 |
+| v33_rule6_trips | Production runtime Rule 6 path (Session 37 ship). Stays at runtime because v35 heuristic regresses. | `analysis/scripts/strategy_v33_rule6_trips.py` |
 | v32_dt | Predecessor ML (731,606 leaves at depth=32 ml=3) | `analysis/scripts/strategy_v32_dt.py` + `data/v32_dt_model.npz` |
 | v31_dt | 79 features at depth=32 ml=3 | `analysis/scripts/strategy_v31_dt.py` + `data/v31_dt_model.npz` |
 | v30_dt / v29_dt / v27_dt / v26 / v25 / v24 / v23 / v20 / v18e / v16 | Older baselines; retained | `data/v*_dt_model.npz` |
-| v34_rule6_v2 | ARCHIVED — Session 38 negative-result candidate (heuristic-bound) | `analysis/scripts/strategy_v34_rule6_v2.py` |
+| v34_rule6_v2 | ARCHIVED — Session 38 negative-result candidate | `analysis/scripts/strategy_v34_rule6_v2.py` |
 | v32_d34ml3 | ARCHIVED — Session 38 control retrain | `data/v32_d34ml3_dt_model.npz` |
 | v28_rule5_rainbow | Predecessor human chain (v14 + Rule 4 + Rule 5) | `analysis/scripts/strategy_v28_rule5_rainbow.py` |
 | v31a / v31b / v20b / v19 / v21 / v22 | ARCHIVED candidates | various |
@@ -96,7 +71,7 @@
 
 **Same sweep on N=1000 prefix:** unchanged from Session 38 — v34 at $889/1000h / 62.74%.
 
-**Per-category breakdown (full grid, N=200):** unchanged from Session 38 — v34 ships within-trips $1,291 (5.5% share). The v35 human-strategy ship does not change runtime per-category EVs because production still calls v33.
+**Per-category breakdown (full grid, N=200):** unchanged from Session 38. Session 40 made no production code change, so the per-category EVs are identical.
 
 **Human-strategy progression (full grid, N=200) — production runtime:**
 
@@ -112,92 +87,82 @@
 | Strategy | Mode | $/1000h whole-grid (lower is better) | Δ vs v33 oracle-bound |
 |---|---|---:|---:|
 | v33 oracle-bound | reader picks best-A or best-C within v33 boundary | $-42.56/1000h | baseline |
-| **v35 oracle-bound (NEW)** | reader picks best-A or best-C within v35 sharper boundary | **$-34.44/1000h** | **+$8.12** |
+| **v35 oracle-bound** | reader picks best-A or best-C within v35 sharper boundary | **$-34.44/1000h** | **+$8.12** |
 | Pure oracle | reader picks any A∪C cell freely | $-3.51/1000h | +$39.05 |
 
-**Note:** the "oracle-bound" numbers are negative (and pure oracle is closest to zero) because they're average-EV-relative-to-zero across the trips sample, scaled by population share. The Δ figures are the relevant comparison — v35's Δ +$8.12 is the headline. Pure oracle's +$39.05 is the unrealizable upper bound (would require Decision 070's learned A-vs-C tree at minimum).
+**Note:** Session 40 did NOT change v35's boundary or any score. The new examples in Part 6 are an additive teaching aid — the underlying strategy is identical. The connectivity probe confirmed Step 2's priority is correct, so no rule change.
 
 ---
 
-## What this leaves on the table
+## What this leaves on the table (UNCHANGED from Session 39)
 
 - **For human play (oracle-bound):** v35 captures 63% of the Decision 070 oracle ceiling. The remaining 37% (~$4.77/1000h) is in the noisy Trip J + low-kicker cells the user simplified out for memorability. Reframed as Priority C (learned A-vs-C tree).
-- **For production runtime:** v33 still misses $86/1000h of Rule 6's full-A∪C oracle ceiling (Decision 068 finding). The v33→v35 boundary sharpening doesn't help at runtime because heuristic-A is the bottleneck (Decision 070 finding). Closing this gap requires a learned A-variant heuristic (Priority C).
-- **For ML champion:** v34 captures 44.6% of the v14→ceiling gap at N=200, 71% at N=1000. Biggest residuals at full grid:
-  - **high_only**: 20.4% × $2,806 = **$572 share** — largest residual
-  - **pair**: 46.6% × $1,619 = **$754 share** — KK/AA single-suited Rule-4-bot is the largest sub-stratum (open)
-  - **two_pair**: 22.3% × $978 = **$218 share** — capacity-improved at v34
-  - **trips**: 5.46% × $1,291 = **$71 share** — v30, v32, v34 have all shipped; round-3 needs new diagnostic angles
-  - three_pair: 1.9% × $1,635 = $31 (untouched by gating)
-  - trips_pair: 2.86% × $1,057 = $30 (already gated; v34 capacity expansion)
-  - composite: 0.245% × $1,173 = $2.9 (already gated; v34 capacity expansion)
+- **For production runtime:** v33 still misses $86/1000h of Rule 6's full-A∪C oracle ceiling. The v33→v35 boundary sharpening doesn't help at runtime because heuristic-A is the bottleneck. Closing this gap requires a learned A-variant heuristic (Priority C). **NEW in Session 40:** the connectivity probe surfaced a $19.53/1000h within-SS suit-pick disagreement signal that's another input for Priority C's training data.
+- **For ML champion:** v34 captures 44.6% of the v14→ceiling gap at N=200, 71% at N=1000. Biggest residuals at full grid: high_only $572, pair $754, two_pair $218, trips $71, three_pair $31, trips_pair $30, composite $2.9.
 
 ---
 
-## What Session 39 produced
+## What Session 40 produced
 
-**1. v35_rule6_v3 strategy** (`analysis/scripts/strategy_v35_rule6_v3.py`):
-- New boundary helper `_v35_pick_c` encodes the per-trip-rank rule (A always C; K only if no A; Q only if no J/K/A; J or lower never).
-- A-variant body inherits v33's (suit_profile, rank_sum, longest_run) bot-DS optimizer for now.
-- Smoke tests confirm: diverges from v33 on exactly 4 of 11 named cases, all matching the oracle-cell-level direction.
+**1. `analysis/scripts/probe_low_trips_connectivity.py`** — new probe (~250 lines). Scope: trip_rank ≤ T A-variant hands. For each hand, enumerates all 3 trip-to-bot picks; computes (suit_profile, longest_run, oracle_ev) per pick; reports per-hand heuristic-vs-oracle disagreement, alt-priority head-to-head, wheel-bonus test, rainbow-run-4 spotlight. Run output saved to `/tmp/probe_low_trips_connectivity.log` (not committed; can be re-run).
 
-**2. Verification probe** (`analysis/scripts/verify_rule6_v3_human.py`):
-- Same 30K trips sample as Sessions 37–38 (RandomState(0)).
-- Reports v33/v35 in BOTH oracle-bound (human ceiling) and heuristic (production bot) modes.
-- Per-trip-rank breakdown shows the lift is concentrated in trips 8–J.
-- Disagreement subset analysis confirms the boundary delta (1,535/30K = 5.12% of trips, +$2,904/1000h within-trips at the human ceiling).
+**2. STRATEGY_GUIDE.md Part 6 — 8 new worked examples (Examples 7–14)**:
+- Example 7 — Trip T (rainbow kickers, all SS)
+- Example 8 — Trip 9 (DS find via two-and-one)
+- Example 9 — Trip 8 (3+1 trap visible)
+- Example 10 — Trip 6 (4-run bot, illustrates connectivity is incidental)
+- Example 11 — Trip 5 (wheel-eligible bot, same point)
+- Example 12 — Trip 4 (rainbow, simple SS, weak-hand acceptance)
+- Example 13 — Trip 3 (rainbow, simple SS)
+- Example 14 — Trip 2 (rainbow, simple SS, lowest possible)
 
-**3. STRATEGY_GUIDE.md rewrite:**
-- Part 6 Rule 6 fully rewritten in plain English (no A/C variant terminology). Two-step structure: (1) per-trip-rank table for top-vs-bot of the third trip card, (2) suit-matching procedure for "which trip joins bot" with three named cases × three named bot shapes. Six worked examples covering all major cases.
-- Part 1 Session 39 entry added.
-- Part 2 unchanged (production strategies' per-grid scores haven't changed).
-- Part 5 split production code path (v33) from human-guide code path (v35), added probe registry.
-- Header date bumped to 2026-05-07.
+All 8 verified against `strategy_v35_rule6_v3.py`.
 
-**4. Decision 071** added to DECISIONS_LOG.md codifying the two-track ship + the new methodology rule.
+**3. STRATEGY_GUIDE.md Part 6 "Why it works" addendum**: documents Session 40's connectivity-tier rejection so future readers/maintainers see why Step 2's priority intentionally excludes run-length.
+
+**4. STRATEGY_GUIDE.md Part 1 Session 40 entry**: full session log with two new methodology lessons.
+
+**5. CURRENT_PHASE.md** rewritten (this file).
 
 ---
 
-## Resume Prompt (Session 40)
+## Resume Prompt (Session 41)
 
 ```
-Resume Session 40 of the Taiwanese Poker Solver project at
+Resume Session 41 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context:
 - CLAUDE.md
-- STRATEGY_GUIDE.md (Session 39 entry in Part 1; Part 2 has v34_dt as
-  current ML champion; Part 6 has REWRITTEN Rule 6 with sharper
-  boundary table + suit-matching procedure)
-- CURRENT_PHASE.md (rewritten end of Session 39)
+- STRATEGY_GUIDE.md (Part 1 Session 40 entry; Part 2 v34_dt is current ML
+  champion; Part 6 has Rule 6 with full Trip A..2 reference table now)
+- CURRENT_PHASE.md (rewritten end of Session 40)
 - DECISIONS_LOG.md (latest: Decision 071 — v35_rule6_v3 ships in
-  the human strategy guide; production keeps v33)
+  the human strategy guide; production keeps v33; no Session 40 decision)
+- analysis/scripts/probe_low_trips_connectivity.py — Session 40 probe
 - analysis/scripts/strategy_v35_rule6_v3.py — human strategy of record
 - analysis/scripts/strategy_v33_rule6_trips.py — production heuristic
-- analysis/scripts/verify_rule6_v3_human.py — Session 39 verification probe
 
-State (end of Session 39):
-- v35_rule6_v3 ships in STRATEGY_GUIDE.md as the human strategy of record:
-  +$8.12/1000h whole-grid at the human ceiling (oracle-bound) vs v33.
-  Production runtime stays at v33 because v35 heuristic regresses
-  ($-4.06/1000h on flipped cells).
-- Methodology rule NEW: human guide can be sharper than production bot
-  when heuristic-A is the rate-limiting step.
+State (end of Session 40):
+- Rule 6 reference table for trips T..2 shipped to STRATEGY_GUIDE.md Part 6
+  as 8 new worked examples (Examples 7–14). Connectivity-tier hypothesis
+  was tested and rejected (`probe_low_trips_connectivity.py`): the alt
+  priority "DS > rainbow run≥3 > SS > rainbow run<3 > 3+1" regresses
+  $11/1000h whole-grid; rainbow is oracle-preferred 0% of the time when
+  SS or DS is available; bot run-length is invariant across the 3
+  trip-to-bot picks on a given hand so cannot be a tiebreaker.
+- A0 work for Rule 6 is now COMPLETE. Trip A through Trip 2 each have
+  explicit per-rank treatment + at least one worked example.
+- Production v33 unchanged. v34_dt unchanged. v35 unchanged (only its
+  documentation deepened).
+- Methodology rule (Session 40 NEW): Candidate-level invariance is a
+  prerequisite for any candidate-level priority/tiebreaker. Check
+  before adding features.
+- Methodology rule (Session 40 NEW): Mean-EV-per-cell aggregates can hide
+  selection effects. Always confirm whether a feature's correlation with
+  poor outcomes is causal-within-population vs population-of-weak-hands.
 
 Next session targets (priority order):
-
-(A0) Per-low-trip-rank treatment for Rule 6. (USER-REQUESTED Session 39 close.)
-    Trip A/K/Q/J got explicit per-rank treatment + worked examples. Trips
-    T, 9, 8, 7, 6, 5, 4, 3, 2 were lumped as "always third trip to bot".
-    Sub-tasks:
-    (1) Add one worked example per rank from T down to 2.
-    (2) Probe whether bot connectivity (straight-draw potential at low
-        trips with low kickers) should add a 4th tier to the suit-matching
-        priority. probe_low_trips_connectivity.py against per-cell oracle.
-    (3) Confirm A still beats C at low trips with very weak max_kicker
-        (n≥5 cells from Session 38 per-cell map).
-    Output: append "Trips ≤ J reference table" section to STRATEGY_GUIDE
-    Part 6, additive (don't disturb the existing Trip A/K/Q/J table).
 
 (A) Always-X structural baseline probes for remaining categories.
     - three_pair (untouched by gating, 1.9% share)
@@ -211,11 +176,13 @@ Next session targets (priority order):
     ($1,291) for new structural signal. Feed back into ML as a new
     gated feature family if found.
 
-(C) Learned A-vs-C decision tree for Rule 6. Reframes Sessions 38–39's
-    negative-heuristic results: a small classification tree on
-    (trip_rank, max_kicker_rank, kicker suit profile) trained against
-    oracle's A-or-C choice. $5-13/1000h ML target. Could finally close
-    Rule 6's heuristic-A gap and let production adopt v35.
+(C) Learned A-vs-C decision tree for Rule 6. Two training signals:
+    (1) the cell-level A-vs-C boundary (Sessions 38–39 oracle map).
+    (2) the within-SS suit-pick disagreement (Session 40 connectivity
+        probe — $19.53/1000h whole-grid mean lift on disagreement
+        subset, dominantly SS→SS suit-rotation). $5-13/1000h whole-grid
+        target. Could finally close Rule 6's heuristic-A gap and let
+        production adopt v35.
 
 (D) KK/AA single-suited Rule-4-bot residual ($37/1000h below oracle).
 
@@ -241,9 +208,13 @@ REMINDERS:
   ships skip tripwire.
 - Methodology rule (Session 38): always-X probes must report BOTH
   oracle ceiling AND heuristic-realizable headline.
-- Methodology rule (Session 39 NEW): the human strategy guide can be
+- Methodology rule (Session 39): the human strategy guide can be
   sharper than the production heuristic when heuristic-A is the
   rate-limiting step. Two-track ship (guide ships, runtime stays).
+- Methodology rule (Session 40 NEW): Candidate-level invariance is a
+  prerequisite for any candidate-level priority/tiebreaker.
+- Methodology rule (Session 40 NEW): Mean-EV-per-cell aggregates can
+  hide selection effects.
 ```
 
 ---

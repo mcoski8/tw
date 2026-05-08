@@ -12,7 +12,7 @@
 > 5. Where each rule + model lives in code
 > 6. **The Current Standard** (at the bottom — the rules to memorize, the model to call)
 >
-> Last updated: 2026-05-07 (Session 39 — Rule 6 rewrite: **v35_rule6_v3** ships in the strategy guide as the new human strategy of record on the HUMAN-CEILING basis (oracle-bound +$8.12/1000h whole-grid vs v33). Production bot keeps v33 because heuristic-A cannot realize the sharper boundary at runtime (-$4/1000h). Two-track ship: human guide gets sharper, runtime stays at v33 for now. Methodology rule NEW: the human strategy guide can be sharper than the production heuristic when heuristic-A is the rate-limiting step.)
+> Last updated: 2026-05-07 (Session 40 — Rule 6 low-trips reference table (Trip T..2) appended to Part 6 as 8 worked examples. Connectivity probe (`probe_low_trips_connectivity.py`) confirmed bot run-length is NOT a valid Step-2 tier: the alt priority "DS > rainbow run≥3 > SS > rainbow run<3 > 3+1" regresses $11/1000h whole-grid vs current DS > SS > rainbow > 3+1. Per-cell A-vs-C oracle map cross-referenced (A wins in every n≥5 cell at trip ≤ T). No code change to `strategy_v35_rule6_v3.py`; production v33 unchanged. Methodology rule NEW: connectivity is invariant across the 3 trip-to-bot picks on a given hand, so it cannot serve as a tiebreaker.)
 
 ---
 
@@ -775,6 +775,32 @@ v35 captures **63% of the $12.89/1000h oracle ceiling identified in Decision 070
 
 ---
 
+## Session 40: Rule 6 low-trips reference table (Trip T..2 worked examples) + connectivity tier rejected
+
+User's Session-39-close ask: "Trip A/K/Q/J got explicit per-rank treatment + worked examples. Trip T..2 got lumped as 'always third trip to bot' — spell out per-rank treatment too." This session delivered three artifacts, all additive (no production code change, no DECISIONS_LOG entry needed).
+
+**A0.1 — Eight new worked examples appended to Part 6.** One per rank from T down to 2 (Examples 7–14), filling in the gap between the existing Trip J (Example 5) and Trip 7 (Example 6). Each example shows a different teaching point: Trip T's rainbow-kickers-all-SS case (no DS available); Trip 9's two-and-one-kickers DS find (the canonical "good" Step 2 outcome); Trip 8's 3+1 trap (where your trip is the kicker-pair suit); Trip 6's 4-card-run bot (illustrating connectivity is incidental); Trip 5's wheel-eligible bot (same point, more dramatic); Trips 4/3/2's plain SS picks on weak hands (illustrating the rule keeps working even when the cards don't). All 8 examples were verified against `strategy_v35_rule6_v3.py` to confirm the picks match the narrative.
+
+**A0.2 — Connectivity tier rejected (`probe_low_trips_connectivity.py`).** Tested the hypothesis that a 4-card run on bot (e.g., trip 5 + 2-3-4 wheel; trip 7 + 4-5-6) should add a connectivity tier between SS and rainbow in Step 2's priority. Three findings:
+
+1. **Connectivity is invariant across the 3 trip-to-bot picks on a given hand.** Within one hand, the bot's longest run is determined by the kicker ranks (which are fixed) plus the trip rank (also fixed) — only suits change between picks. So run-length cannot serve as a tiebreaker; it's identical across candidates.
+2. **Mean oracle EV by (suit_profile × longest_run) shows MORE run = WORSE EV inside every profile.** This is selection: hands eligible to make 4-runs are low-trip + low-kicker hands, which are weak overall. Mean EV at "DS run=4" is $-14,156/1000h_within_low_trips vs "DS run=1" at $-3,912 — the run is a signal of weak cards, not of strong settings.
+3. **The alt priority "DS > rainbow run≥3 > SS > rainbow run<3 > 3+1" regresses $11/1000h whole-grid versus the existing DS > SS > rainbow > 3+1.** And the oracle picks rainbow 0% of the time when SS or DS is available; rainbow-run-4 picks are oracle-preferred 0/196 (0%) of hands where they exist.
+
+The probe also surfaced a **42% disagreement rate** between v33-heuristic-pick and oracle-pick at low trips. Mean lift on the disagreement subset is +$1,212/1000h_within_low_trips (≈$19.53/1000h whole-grid). The bulk (51% of disagreements) is "SS → SS" — same suit profile, different trip-suit pick. This residual gap is real but is **not** a connectivity story; it would take a finer-grained suit/rank correlation feature to capture (note for Priority C — the learned A-vs-C decision tree could absorb this).
+
+**A0.3 — Per-cell A-vs-C oracle map cross-referenced.** Re-ran `probe_rule6_c_variant.py` on the 30K trips probe (same RandomState(0)). For trip ≤ T at every cell with n≥5, A wins ≥99% of the time and the within-cell C-A delta is structurally negative ($-1,765 to $-15,585/1000h_in even at the lowest max-kicker cells). Confirms v35's "Trip ≤ J always A" boundary is structurally correct, not a noise artifact.
+
+**Score impact:** $0/1000h. This session was additive documentation (the strategy guide) plus a probe whose verdict was "no rule change needed". No new ship.
+
+**Methodology lesson — connectivity in same-rank-set picks is invariant; cannot be a tiebreaker.** A general rule that applies whenever a heuristic enumerates K candidates that share a fixed rank set: features that depend only on ranks (run length, rank-sum, broadway count) are constant across candidates. The only signal worth scoring is what differs (here, suit assignment). Future Step-2-style probes should check candidate-level invariance before adding a feature to the priority.
+
+**Methodology lesson — when a probe's mean-EV-per-cell shows a "feature predicts bad outcomes", check for selection effects.** "Wheel-eligible bots have $-32K mean EV vs $-14K for non-wheel" looks like the wheel is bad; in reality, wheel-eligible hands ARE bad hands. Always read selection effects before drawing rule-shaping conclusions from cross-cell aggregates.
+
+**What did NOT happen this session**: Always-X probes for `three_pair`, `composite`, `two_pair`, `high_only` (Priority A still pending). Round-3 within-trips diagnostic (Priority B). Learned A-vs-C decision tree (Priority C — but the within-SS disagreement signal from this session's connectivity probe makes a useful input to that tree's training). KK/AA single-suited Rule-4-bot residual (Priority D). All carry into Session 41.
+
+---
+
 # Part 2 — ML champion progression (the full table)
 
 Every model trained, side-by-side, on both validation grids:
@@ -1432,11 +1458,75 @@ You're trying to make the bot **double-suited (2+2)** — two cards each of two 
 - Pick 7♣ — **2+2 double-suited bot**. Mid = 7♦ + 7♠.
 - **Play**: top=Q♣, mid=7♦+7♠, bot=7♣+8♣+5♥+3♥.
 
+### Trips ≤ J reference table — one worked example per rank
+
+Trip A, K, Q are covered above (Examples 1–4). Trip J and Trip 7 are also covered (Examples 5–6). The 8 examples below fill in **every remaining rank from T down to 2**. The procedure is mechanical at every rank — only the suit layout changes — but seeing one hand at each rank makes it easier to recognize at the table.
+
+Three things to notice as you scan these:
+
+1. **The procedure is the same every time.** Step 1 always sends the third trip to bot (trip ≤ J). Step 2 always uses the suit-matching priority to pick which of the 3 trips joins bot. There is no "different rule for low trips."
+2. **Connectivity (4-card runs, wheel structures) is incidental, not a tier.** Trip 6 with kickers 4-5-7 makes a 4-card run on bot (4-5-6-7); Trip 5 with kickers 2-3-4 makes the wheel-eligible bot 2-3-4-5. In both cases, **every** trip-to-bot pick gives the same run length, so the run is not a tiebreaker. Step 2 still picks by suit. (Confirmed by Session 40 connectivity probe — 0/196 hands where rainbow-run-4 is available does the oracle pick it; an alt tier "DS > rainbow run≥3 > SS" regresses $11/1000h whole-grid.)
+3. **Hand strength drops fast as trip rank drops.** Trip 5 with low kickers is structurally weak no matter how you set it. The rule still tells you the right answer; it just can't make a low-trip hand into a strong hand.
+
+In the suit notation below, "trip suits {♣, ♦, ♥}" means your three trip cards are clubs, diamonds, hearts (no spade). Bot-shape codes: **DS** = 2+2 double-suited, **SS** = 2+1+1 single-suited, **3+1** = three-of-a-suit (avoid), **rainbow** = 1+1+1+1.
+
+**Example 7 — Trip T:** `7♦ 8♣ 9♥ T♣ T♦ T♥ J♠`
+- Trip T → third T to bot (trip ≤ J). Top = J♠. Bot kickers below: 9♥, 8♣, 7♦ — suits ♥♣♦, **rainbow**.
+- Trip suits {♣, ♦, ♥} (no ♠ in trip).
+- T♣ → bot ♣♥♣♦ = SS (♣♣). T♦ → SS (♦♦). T♥ → SS (♥♥). All three give SS — kickers are rainbow, so any trip suit pairs with a kicker suit. **No DS available.**
+- Pick any (they're equivalent). **Play**: top=J♠, mid=T♦+T♥, bot=T♣+9♥+8♣+7♦.
+
+**Example 8 — Trip 9, find a DS:** `2♣ 5♥ 8♥ 9♣ 9♦ 9♥ Q♠`
+- Trip 9 → third 9 to bot. Top = Q♠. Bot kickers: 8♥, 5♥, 2♣ — suits ♥♥♣, **two-and-one** (pair=♥, singleton=♣).
+- Trip suits {♣, ♦, ♥}.
+  - 9♣ → bot ♣♥♥♣ = **DS (2♣+2♥) ✓**
+  - 9♦ → bot ♦♥♥♣ = SS (♥♥)
+  - 9♥ → bot ♥♥♥♣ = **3+1 ✗ avoid** (third heart is dead)
+- Pick **9♣**. **Play**: top=Q♠, mid=9♦+9♥, bot=9♣+8♥+5♥+2♣.
+
+**Example 9 — Trip 8, 3+1 trap visible:** `2♥ 5♣ 7♣ 8♣ 8♦ 8♠ Q♣` (note: trip suits are ♣♦♠, no ♥)
+- Trip 8 → third 8 to bot. Top = Q♣. Bot kickers: 7♣, 5♣, 2♥ — suits ♣♣♥, **two-and-one** (pair=♣, singleton=♥).
+- Trip suits {♣, ♦, ♠} (no ♥ available, so the 2+2 DS that would need a ♥-trip is impossible).
+  - 8♣ → bot ♣♣♣♥ = **3+1 ✗ avoid**
+  - 8♦ → bot ♦♣♣♥ = SS (♣♣) ✓
+  - 8♠ → bot ♠♣♣♥ = SS (♣♣) ✓
+- Both 8♦ and 8♠ give SS — equivalent, pick either. The takeaway: when no 2+2 is available because your trip is missing the singleton's suit, you settle for SS but **never let your trip be the kicker-pair suit** (8♣ here). **Play**: top=Q♣, mid=8♣+8♠, bot=8♦+7♣+5♣+2♥.
+
+**Example 10 — Trip 6, 4-run bot:** `4♦ 5♣ 6♣ 6♦ 6♥ 7♥ T♠`
+- Trip 6 → third 6 to bot. Top = T♠. Bot kickers: 7♥, 5♣, 4♦ — suits ♥♣♦, **rainbow**.
+- Bot ranks once a trip joins: {6, 7, 5, 4} — that's **4-5-6-7, a 4-card run**. Looks juicy, but the run is the same regardless of which 6 you pick.
+- Trip suits {♣, ♦, ♥}. With rainbow kickers, every trip suit gives SS (no DS available).
+  - 6♣ → SS (♣♣). 6♦ → SS (♦♦). 6♥ → SS (♥♥).
+- Pick any. **Play**: top=T♠, mid=6♦+6♥, bot=6♣+7♥+5♣+4♦. Bot has a 4-card straight draw; that's just a bonus.
+
+**Example 11 — Trip 5, wheel-eligible bot:** `2♦ 3♣ 4♥ 5♣ 5♦ 5♥ K♠`
+- Trip 5 → third 5 to bot. Top = K♠. Bot kickers: 4♥, 3♣, 2♦ — suits ♥♣♦, **rainbow**.
+- Bot ranks once a trip joins: {5, 4, 3, 2} — **wheel-eligible** (with an Ace on the board, 2-3-4-5-A is a straight, the wheel). Same wheel structure regardless of which 5 you pick.
+- Trip suits {♣, ♦, ♥}. Rainbow kickers + any trip suit = SS.
+  - 5♣, 5♦, 5♥ all give SS (each pairs with a kicker suit).
+- Pick any. **Play**: top=K♠, mid=5♦+5♥, bot=5♣+4♥+3♣+2♦. The wheel structure adds a real chunk of bot equity, but it's structural — Step 2 didn't have to "find" it.
+
+**Example 12 — Trip 4, weak hand, simple SS:** `2♦ 4♣ 4♦ 4♥ 7♥ 9♣ A♠`
+- Trip 4 → third 4 to bot. Top = A♠ (highest non-trip — your Ace is your one strong card). Bot kickers: 9♣, 7♥, 2♦ — suits ♣♥♦, **rainbow**.
+- Trip suits {♣, ♦, ♥}. Rainbow + any → SS.
+- Pick any. **Play**: top=A♠, mid=4♦+4♥, bot=4♣+9♣+7♥+2♦. Hand is weak overall — Ace scoops top, but mid (a pair of 4s) and bot (low cards) lose to most opponent settings. The rule is doing its job; the cards aren't.
+
+**Example 13 — Trip 3:** `3♣ 3♦ 3♥ 5♦ 8♥ T♣ K♠`
+- Trip 3 → third 3 to bot. Top = K♠. Bot kickers: T♣, 8♥, 5♦ — suits ♣♥♦, **rainbow**.
+- Trip suits {♣, ♦, ♥}. Rainbow + any → SS.
+- Pick any. **Play**: top=K♠, mid=3♦+3♥, bot=3♣+T♣+8♥+5♦.
+
+**Example 14 — Trip 2, lowest possible:** `2♣ 2♦ 2♥ 4♦ 7♥ J♣ A♠`
+- Trip 2 → third 2 to bot. Top = A♠. Bot kickers: J♣, 7♥, 4♦ — suits ♣♥♦, **rainbow**.
+- Trip suits {♣, ♦, ♥}. Rainbow + any → SS.
+- Pick any. **Play**: top=A♠, mid=2♦+2♥, bot=2♣+J♣+7♥+4♦. Trip 2s are about as weak as trips get; the Ace on top is the only material part of the hand.
+
 ### Why it works
 
 - **Mid is paired** (2 trips together) — Hold'em equity ~80% on unpaired boards (same as KK/AA stay-in-mid logic from Rule 4).
 - **Never put the third trip on bot AS THE ONLY trip there** — that would split the paired mid. Either both extra trips stay in mid (third on top) or one trip joins bot (paired mid is preserved).
 - **The boundary in Step 1** comes from the oracle: the per-cell map of best-A vs best-C across (trip rank × max kicker rank) shows that A wins on average for **trip ≤ J in every cell**, **trip Q whenever J/K/A is present**, **trip K only when an Ace is present**, and **trip A never**. Earlier versions of this guide used the simpler boundary "trip > max kicker → top is the trip card" (v33), which is right at the high end (Trip A, K-without-A, Q-with-T-or-lower) but **picks the wrong top in three places**: Trip Q + J kicker, Trip J + low kickers, and Trip T + low kickers. Sharpening these is +$8/1000h whole-grid at the human ceiling (oracle-bound).
+- **Connectivity is not a Step 2 tier (Session 40 confirmation).** Bot 4-card runs and wheel-eligible bots happen incidentally on low-trip + low-kicker hands, but every trip-to-bot pick on the same hand gives the same run length, so connectivity is invariant across the 3 candidates. The Session 40 probe (`probe_low_trips_connectivity.py`) tested the alternative "DS > rainbow run≥3 > SS > rainbow run<3 > 3+1" tier and found it regresses $11/1000h whole-grid versus the existing DS > SS > rainbow > 3+1 priority. The oracle picks rainbow 0% of the time when SS or DS is available; rainbow-run-4 picks are oracle-preferred 0/196 (0%) of the hands where they exist.
 
 ### Probe history
 

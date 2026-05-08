@@ -2651,3 +2651,60 @@ But a HUMAN reading the strategy guide is not bound to the bot-DS optimizer for 
 3. **The production bot WILL eventually adopt v35** (or its successor) once a learned A-variant heuristic closes the gap with the oracle-best A. Until then, v33's heuristic-A stays in code because v35's heuristic version regresses on flipped cells.
 
 **Total project rule count: 6** (Rule 1: pair-to-bot DS; Rule 2: two-pair no-split; Rule 3: trips+pair split-trips-keep-pair; Rule 4: KK/AA stay-mid; Rule 5: KK/AA rainbow override; Rule 6: pure trips paired-mid + sharper top-vs-bot table). Rule 6 is now sharper for humans than for the production bot — a first in the project.
+
+---
+
+## Decision 072 — Rule 6 Step 2 priority stays as DS > SS > rainbow > 3+1; bot connectivity is NOT a tier (Session 40)
+
+**Date:** 2026-05-07
+**Status:** No code change. v35_rule6_v3 priority preserved as-is. Documented in STRATEGY_GUIDE.md Part 6 "Why it works" addendum so future maintainers know why connectivity was rejected.
+
+**Origin:** User's Session 39 close listed three sub-tasks for Priority A0. (1) Add per-rank worked examples for trips T..2 (delivered as Examples 7–14). (2) **Test whether bot connectivity should add a 4th tier to Step 2's suit-matching priority** — i.e., should "rainbow run≥3" or "wheel-eligible" rank above SS? User's intuition: trip 5 + 2-3-4 makes a wheel; trip 7 + 4-5-6 makes a 4-card run; trip 6 + 5-7-8 makes a 4-run-with-gap. (3) Cross-reference Session 38's per-cell A-vs-C map to confirm A still beats C at low trips with weak max_kicker (delivered as a re-run of `probe_rule6_c_variant.py`; verdict unchanged from Session 38).
+
+**Probe (`analysis/scripts/probe_low_trips_connectivity.py`)** on the same 30K trips sample (RandomState(0)) restricted to trip_rank ≤ T (n=20,849 hands × 3 picks each = 62,547 pick-rows). Reports five things:
+
+1. **Mean oracle EV per (suit_profile × longest_run)** — within EVERY profile, more run = WORSE EV. DS run=1: $-3,912/1000h_within_low_trips. DS run=4: $-14,156. SS run=1: $-8,566. SS run=4: $-19,623. Rainbow run=1: $-13,566. Rainbow run=4: $-26,538. **The pattern is selection, not causation:** hands eligible to make a 4-card run are low-trip + low-kicker hands, which are weak hands overall.
+
+2. **Oracle never picks rainbow** when SS or DS is available. Per-hand oracle picks across 20,849 hands: DS 47.2%, SS 35.8%, 3+1 17.9%, 4-flush 5%, **rainbow 0%**.
+
+3. **Alternative priority "DS > rainbow run≥3 > SS > rainbow run<3 > 3+1" REGRESSES.** Mean alt_picked_EV vs heuristic_EV at low trips: $-284.1/1000h_within_low_trips. Whole-grid: **-$11/1000h** vs the existing DS > SS > rainbow > 3+1 priority. Confirmed: rainbow is never the answer regardless of run length.
+
+4. **Wheel-eligible bots: $-32K vs $-14K mean EV.** Same selection effect as (1) — wheel hands are weak hands. Within-hand mixed-pick analysis (when one of the 3 trip picks gives a wheel-eligible bot and others don't): in the rare cases this happens, oracle does not systematically prefer the wheel pick. **No rule change.**
+
+5. **Rainbow-run-4 spotlight:** 196 hands have at least one rainbow-run-4 pick available. Oracle picks rainbow-run-4 in **0/196 (0.0%)** of those hands. The visually appealing "low trips + tight run + rainbow" shape is the structurally weakest pick among the 3 candidates.
+
+**Why connectivity cannot be a Step 2 tier** (the deeper reason, surfaced by this probe):
+
+> **Bot run-length is invariant across the 3 trip-to-bot candidates on a given hand.** Once Step 1 fires "third trip to bot" and we know which 3 kickers go on bot (the 3 lowest non-trip cards), the bot's 4 ranks are fully determined: {trip_rank, kicker1_rank, kicker2_rank, kicker3_rank}. Only the trip's *suit* changes between candidates, not its rank. So `bot_longest_run`, `bot_rank_sum`, `bot_high_count`, and any wheel-eligibility test are CONSTANT across the 3 picks. They cannot tiebreak between candidates because they're identical for all candidates.
+
+**This generalizes** to a methodology rule: any candidate-level priority/tiebreaker must be derived from features that VARY between candidates. Features that depend only on the rank set are invariant in this enumeration pattern.
+
+**Per-cell A-vs-C cross-reference (`probe_rule6_c_variant.py` re-run):** for trip ≤ T at every (trip_rank, max_kicker_rank) cell with n≥5, A wins ≥99% of the time. Lowest-max-kicker cells (where C might be expected to do better):
+
+- Trip 6 + maxK 5: n=10, C-A=$-15,585/1000h_in, A wins 100%
+- Trip 7 + maxK 6: n=13, C-A=$-10,911, A wins 100%
+- Trip 8 + maxK 5: n=6, C-A=$-5,316, A wins 83.3% (small sample)
+- Trip 9 + maxK 6: n=13, C-A=$-4,338, A wins 84.6%
+- Trip T + maxK 5: n=7, C-A=$-2,871, A wins 100%
+- Trip T + maxK 6: n=13, C-A=$-1,765, A wins 76.9%
+
+v35's "trip ≤ J always A" boundary is structurally correct, not noise.
+
+**Residual finding (carries to Priority C):** the connectivity probe surfaced a 42% disagreement rate between v33-heuristic-pick and oracle-pick at low trips. Mean lift on the disagreement subset is +$1,212/1000h_within_low_trips (≈$19.53/1000h whole-grid). The bulk (51% of disagreements) is "SS → SS" — same suit profile, different trip-suit pick. This is a within-SS suit-rotation signal that the current heuristic's tie-break (lowest trip index) misses. **Reframes Priority C input set:** the learned A-vs-C decision tree should also train on (trip_rank, max_kicker, kicker_suit_pattern, candidate_trip_suit) within the SS-tier to capture this gap.
+
+**Files:**
+- `analysis/scripts/probe_low_trips_connectivity.py` — new probe
+- `STRATEGY_GUIDE.md` Part 6 — 8 new worked examples (Trip T..2) + connectivity-rejection note in "Why it works"
+- `STRATEGY_GUIDE.md` Part 1 — Session 40 entry
+
+**Methodology rules (NEW, Session 40):**
+
+1. **Candidate-level invariance check before adding a feature to a priority/tiebreaker.** When the heuristic enumerates K candidates that share a fixed rank set or any other invariant subset, features derived from that invariant subset cannot serve as primary tiers OR tiebreakers. Always check what differs between candidates before designing a priority.
+2. **Distinguish selection effect from causal-within-population signal.** Mean-EV-per-cell aggregates can hide the fact that the cell IS the population of weak hands. Test within-population (e.g., within-hand or within-(rank_set) groupings) before treating a feature as actionable.
+
+**Consequence:**
+
+1. **Step 2 priority stays:** DS > SS > rainbow > 3+1, with bot_rank_sum × 1,000 and bot_longest_run × 100 as continuing tertiary tiebreakers. (The longest_run × 100 term is harmless because it's invariant across candidates.)
+2. **No code change.** v35_rule6_v3 keeps its existing _v35_pick_c boundary and v33-inherited A-variant body.
+3. **Rule 6 documentation is now COMPLETE for human play.** Trip A through Trip 2 each have explicit per-rank treatment + at least one worked example.
+4. **Priority C scope expanded:** the learned A-vs-C decision tree now has two training signals — the cell-level boundary AND the within-SS suit-rotation. Both contribute to the projected $5–$13/1000h whole-grid ML target.
