@@ -1,6 +1,16 @@
 # Current: Sprint 8 — Session 39 wrap. **One human-strategy ship: v35_rule6_v3 ships in STRATEGY_GUIDE.md Part 6 as the new human strategy of record (oracle-bound +$8.12/1000h whole-grid vs v33).** Production runtime stays at v33 because heuristic-A loses $4/1000h on the flipped cells (the bot-DS optimizer is the rate-limiting step, exactly as Session 38's sweep predicted). Two-track ship — methodology rule NEW: the human strategy guide can be sharper than the production heuristic when heuristic-A is the rate-limiting step. The Rule 6 prose was also rewritten in plain English (dropped A/C variant jargon) with 6 worked examples and a 2-step suit-matching procedure for "which trip joins bot" (priority: DS 2+2 > SS 2+1+1 > 3+1 avoid).
 
 > **🎯 IMMEDIATE NEXT ACTION (Session 40):**
+>   (A0) **Per-low-trip-rank treatment for Rule 6 (USER-REQUESTED, NEW HEADLINE).** Session 39's Rule 6 rewrite covered Trip A, K, Q, J explicitly with worked examples but lumped trips **T, 9, 8, 7, 6, 5, 4, 3, 2** under the single "always third trip to bot" bucket. The boundary rule IS the same for all trips ≤ J per the oracle (per-cell A wins everywhere with non-trivial sample size), but the human guide should still spell out per-rank treatment. Three sub-tasks:
+>
+>      1. **Worked examples for each rank.** Currently only Trip 7 (Example 6) is shown for trips ≤ J. Add at least one example per rank from T down to 2. Each example should show how the kicker layout and suit-matching procedure plays out at that rank.
+>
+>      2. **Bot connectivity probe — does straight-draw potential change the optimal trip-to-bot pick at low trips?** Low trips with low kickers can make connected bots (trip 5 + 2-3-4 → wheel made; trip 7 + 4-5-6 → 4-card run; trip 6 + 5-7-8 → open-ended). The current suit-matching rule treats all ranks equivalently. Write `probe_low_trips_connectivity.py` to check whether the oracle prefers a connectivity-aware tie-break for trips ≤ T. If yes, add a 4th tier to the suit-matching priority list.
+>
+>      3. **Confirm A still beats C at low trips with very weak max_kicker.** When max_kicker is also low (e.g., trip 4 + 6 kicker → top is at most a 6), the top tier is weak no matter which way Rule 6 fires. Verify per-cell C alternative is structurally losing (not noise) for the n≥5 cells. Cross-reference with Session 38's per-cell map to confirm.
+>
+>      Output: append a "Trips ≤ J reference table" section to STRATEGY_GUIDE.md Part 6 with one worked example per rank + connectivity-bonus rule (if found). Keep all changes additive — don't disturb the existing Trip A/K/Q/J table.
+>
 >   (A) **Always-X structural baseline probes for remaining categories** (deferred from Sessions 38–39). Apply the Rule 6 / `verify_rule6_v14_trips` template systematically:
 >      - **three_pair** (UNTOUCHED by gating; $31/1000h whole-grid budget). Likely candidate: "always top = unpaired card; mid = highest pair; bot = 2 lower pairs (paired bot for trips/full-house equity)." Write `verify_rule_X_v33_three_pair.py`.
 >      - **composite** ($3.4/1000h whole-grid; high per-category regret). Heterogeneous category — may need sub-stratification.
@@ -174,7 +184,20 @@ State (end of Session 39):
 - Methodology rule NEW: human guide can be sharper than production bot
   when heuristic-A is the rate-limiting step.
 
-Next session targets (priority order — UNCHANGED from Session 39 carry-over):
+Next session targets (priority order):
+
+(A0) Per-low-trip-rank treatment for Rule 6. (USER-REQUESTED Session 39 close.)
+    Trip A/K/Q/J got explicit per-rank treatment + worked examples. Trips
+    T, 9, 8, 7, 6, 5, 4, 3, 2 were lumped as "always third trip to bot".
+    Sub-tasks:
+    (1) Add one worked example per rank from T down to 2.
+    (2) Probe whether bot connectivity (straight-draw potential at low
+        trips with low kickers) should add a 4th tier to the suit-matching
+        priority. probe_low_trips_connectivity.py against per-cell oracle.
+    (3) Confirm A still beats C at low trips with very weak max_kicker
+        (n≥5 cells from Session 38 per-cell map).
+    Output: append "Trips ≤ J reference table" section to STRATEGY_GUIDE
+    Part 6, additive (don't disturb the existing Trip A/K/Q/J table).
 
 (A) Always-X structural baseline probes for remaining categories.
     - three_pair (untouched by gating, 1.9% share)
