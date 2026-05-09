@@ -3392,3 +3392,104 @@ HH-to-bot wins by +$764/1000h within fires. Hybrid (HH preferred, LL fallback) c
 - UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 47 entry) + production-of-record references
 
 **Total project rule count: 12** (Rules 1-11 + Rule 12 = J-low two_pair both-intact + DS).
+
+---
+
+## Decision 081 — Rule 13 (three_pair all-intact + DS-bot, MM/HH only) ships as v44 (Session 48); Rule 12 max≤Q extension (v43b) deferred
+
+**Date:** 2026-05-09
+**Status:** Two findings this session.
+
+**(1) v44 SHIPS as production.** v44 replaces v43 as strategy of record. **Grader-confirmed: +$11/1000h whole-grid (full N=200) and +$29/1000h whole-grid (prefix N=1000).** v43 → v44 score: $2,727 → $2,717 full, $1,550 → $1,522 prefix. pct_opt full: 42.20% → 42.34% (+0.14%). pct_opt prefix: 52.61% → 53.06% (+0.45%). **Within-category three_pair regret $2,268 → $1,696 (−$572, 25% reduction). Three_pair pct_opt 51.5% → 59.3% (+7.8%, the largest single-category pct_opt jump from any rule ship in the project.)** Cumulative v39 → v44 = −$129 full / −$185 prefix.
+
+**(2) v43b (Rule 12 max≤Q extension) DEFERRED.** Tested extending Rule 12 from max≤J to max≤Q. Drill G found V_HH_BOT lift at max=Q is +$1,283/1000h within fires (+$3.06 whole-grid full). Designed v43b with HH-only fallback at max=Q. Grade: full +$14, but prefix REGRESSES −$6/1000h with pct_opt drop 52.61% → 52.45%. Despite passing the strict 2x gate (ratio 0.43x), the qualitative prefix regression (especially pct_opt drop) is enough to defer. v43b files retained as artifacts for future refinement attempts.
+
+---
+
+**Drill G findings (two_pair max≥Q extension, 50K samples per cell):**
+
+| Cell | V_HH_BOT lift | V_LL_BOT lift | B1 oracle vs v43 | Verdict |
+|---|---:|---:|---:|---|
+| max=Q | +$1,283 | −$289 | +$1,553 | extension viable |
+| max=K | −$133 | −$928 | +$544 | marginal |
+| max=A | **−$3,744** | −$1,938 | **−$1,470** | DON'T extend |
+
+At max=A, even B1 oracle LOSES vs v43. Mechanism: at A-high, putting the A on top is more valuable than the pair-bot DS Omaha play. Top-tier wins ~45% of the time vs random opponent.
+
+**Drill H findings (three_pair within-class DS, full pop n=114,400):**
+
+50% of three_pair hands have ≥1 DS-intact-bot configuration achievable.
+
+| Variant | Lift vs v43 within fires (full) | Whole-grid full | Prefix lift |
+|---|---:|---:|---:|
+| **V_MM_MID** (HH+LL in bot) | **+$2,463** | **+$9.38** | **+$2,787** |
+| V_HH_MID (MM+LL in bot) | +$2,227 | +$8.48 | +$1,838 |
+| **V_LL_MID** (HH+MM in bot) | **−$4,117** | **−$15.68** | **−$6,542** |
+| B1 oracle (ceiling) | +$988 | +$9.40 | +$217 |
+
+**Surprising finding: V_LL_MID is catastrophic.** This is OPPOSITE the two_pair pattern (Drill F: HH-to-bot wins). At three_pair, putting LL pair in mid is too weak a Hold'em hand; the HH+MM bot upgrade can't compensate. The mid-tier strength matters MORE for three_pair because three_pair already has a strong bot regardless.
+
+**Achievability distribution:**
+- HH_mid only: 30% of fires
+- MM_mid only: 30% of fires
+- LL_mid only: 30% of fires (TRAP — skip)
+- All 3: 10% of fires (use V_MM_MID)
+
+---
+
+**Rule 13 — design:**
+
+  TRIGGER:
+    cat == three_pair                                      AND
+    (MM_mid_DS achievable OR HH_mid_DS achievable)
+    (skip when ONLY LL_mid is achievable — V_LL_MID trap)
+
+  SETTING BUILDER (priority order):
+    1. If MM_mid_DS achievable:
+         MID = MM pair, BOT = HH+LL pairs, TOP = singleton
+       (V_MM_MID — highest expected lift +$2,463 within fires)
+    2. Else if HH_mid_DS achievable:
+         MID = HH pair, BOT = MM+LL pairs, TOP = singleton
+       (V_HH_MID — second-best +$2,227 within fires)
+    3. Else: fall through to v43 (skip LL_mid-only trap).
+
+**Behavioral verification (50K three_pair sample):**
+- Rule 13 fires on 35.1% (matches Drill H's 50% × (1 − 30% LL-only) = 35%)
+- 100% of fires correctly produce DS-bot AND all-pairs-intact
+- 17.4% of picks differ from v43
+
+**Production ship rationale:**
+- Both grids strongly positive (+$11 full / +$29 prefix), no regression on any other category
+- pct_opt improves on both grids (+0.14% full, +0.45% prefix)
+- Three_pair regret −$572 within category (25% reduction)
+- Three_pair pct_opt +7.8% (largest single-category jump in project)
+- Worst-case regret unchanged (max = $5.74)
+
+---
+
+**Methodology rules NEW (Session 48):**
+
+1. **Within-class DS doesn't always favor "highest pairs in bot".** For two_pair (Drill F), HH-to-bot wins. For three_pair (Drill H), HH+MM-to-bot (V_LL_MID) is catastrophic. The mid-tier strength matters more when the bot is already strong (three_pair).
+
+2. **Skip-the-trap design pattern.** Rule 13 explicitly excludes LL_mid-only cases. Don't try to "fix" the trap; just skip firing. Same pattern as Rule 12's max≤J gate (avoiding max=A pair-bot trap).
+
+3. **Within-category pct_opt jumps are a strong ship signal.** Three_pair pct_opt +7.8% justifies shipping even when whole-grid headline (+$11) is muted by category share.
+
+4. **Extension rules require careful prefix-grid checking.** v43b passed the strict 2x gate but had a prefix pct_opt regression. Be conservative on extensions when the prefix signal is mixed.
+
+5. **The suit-dominance arc has now shipped 5 production rules** (Rule 10 v40b → v3 → Rule 11 → Rule 12 → Rule 13) across 6 sessions. -$129 full / -$185 prefix cumulative. The project's largest multi-rule family from a single methodology breakthrough (S44 within-hand pairwise).
+
+---
+
+**Files:**
+- NEW: `analysis/scripts/strategy_v44_rule13_three_pair_DS.py` (PRODUCTION)
+- NEW: `analysis/scripts/grade_v44_rule13_three_pair.py`
+- NEW: `analysis/scripts/drill_three_pair_DS_within_intact.py` (Drill H)
+- NEW: `analysis/scripts/drill_two_pair_DS_extension.py` (Drill G)
+- NEW: `analysis/scripts/strategy_v43b_rule12_two_pair_extQ.py` (DEFERRED artifact)
+- NEW: `analysis/scripts/grade_v43b_rule12_extQ.py` (artifact)
+- NEW (report): `SESSION_48_RULE13_THREE_PAIR_REPORT.md`
+- UPDATED: `CURRENT_PHASE.md` (rewritten for Session 48)
+- UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 48 entry) + production-of-record references
+
+**Total project rule count: 13** (Rules 1-12 + Rule 13 = three_pair all-intact + DS, MM/HH only).
