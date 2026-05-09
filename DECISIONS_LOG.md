@@ -2970,3 +2970,67 @@ Split the trip to top with a trip-rank boundary controlling which pair joins the
 - UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 42 overnight entry), Part 5 (Rule 9 reference + new probes), Part 6 (Rule 9a/9b/9c sections, Step 1 categorize table updated)
 
 **Total project rule count: 9** (Rules 1-8 unchanged + Rule 9: a=plain quads, b=TT split, c=T2P boundary). Rule 9 is structurally a 3-bundle but conceptually a single "rule of the suit-aware multi-same-rank pattern".
+
+---
+
+## Decision 076 — Rule 10 (J-low single-pair defensive) ships in production as v40 (Session 43)
+
+**Date:** 2026-05-09
+**Status:** SHIPS as production. Rule 10 is the first DEFENSIVE rule in the project — its mechanism is "minimize loss" rather than "maximize EV". v40 replaces v39 as the strategy of record. **Grader-confirmed: +$23/1000h whole-grid (full N=200) + +$37/1000h whole-grid (prefix N=1000)**, both matching the drill prediction (+$22.73 / +$36.70) within sampling noise. Both grids strongly positive — clears the both-grid validation gate decisively. v39 → v40 score: $2,846 → $2,824 full, $1,707 → $1,670 prefix. Largest single-rule prefix lift in project history.
+
+**Origin:** Session 43 was dedicated to the user's weak-hand defensive investigation (~14% of hands have max card ≤ J). Three drills ran:
+1. `drill_high_card_defense.py` — high_only Q1+Q2+Q5
+2. `drill_low_pair_J_high_defense.py` — pair Q3 (this drill produced Rule 10)
+3. `drill_two_pair_J_high_revisit.py` — two_pair Q4 (re-examination through defensive lens)
+
+The user's specific framing questions were answered:
+- **Q1** ("single A + low body — always A on top?"): YES, mathematically validated. Oracle picks top=Ace 96.0% of the time on A-high+weak hands. v3 already implements this.
+- **Q2** ("K/Q-high — break broadway for 4-flush bot?"): NO. Every B_BOT_FLUSH variant regressed by $10-$27/1000h. The high card belongs on top.
+- **Q3** ("J-low + 1 pair — defensive structural pick?"): YES. Rule 10 captures this.
+- **Q4** ("J-low + 2 pairs — re-examine deferred Rule 8 defensively?"): NO. All six deterministic candidates regressed; v33's adaptive splitting confirmed as genuine ML routing, not a hidden defensive rule. Reaffirms Session 42 verdict.
+- **Q5** ("J-high or weaker no-pair — does suited-bot save?"): MIXED. Naive top=lowest works on T-low (+$8/1000h whole-grid full only) but regresses on J-high. high_only category has zero prefix coverage so both-grid validation is impossible. Defer.
+
+---
+
+**Rule 10 — J-low single-pair defensive (342,720 hands, 5.703% of canonical):**
+
+  TRIGGER: category == pair (exactly one pair, no trip, no quad)
+           AND max_rank ≤ J (= 11)
+
+  SETTING:
+    TOP = lowest singleton
+    MID = the pair
+    BOT = the 4 highest non-pair singletons
+
+The pair stays in mid (oracle prefers mid-pair on 60-85% of J-low pair cells). The CHANGE from v3's default is the top: instead of top=highest-singleton, use top=LOWEST-singleton. The 4 highest non-pair singletons go to bot for stronger Omaha kicker-strength. This is the "weak-hand top inversion" applied to the pair category.
+
+**Lift on the J-low pair zone:** +$22.73/1000h whole-grid (full N=200) + +$36.70/1000h whole-grid (prefix N=1000). Per-cell breakdown shows the rule wins on broadly: pair_rank ≤ 6 (across all max ∈ {7..J}) and on pair_rank == max_rank cells. It regresses slightly on cells where pair_rank ∈ (max-4, max-1) — e.g., Jh_p7 to Jh_pT regress by $2-$8/cell. Net aggregate is strongly positive; the regressions are localized.
+
+A gated variant (`strategy_v40b_rule10_gated.py`) with the additional condition "pair_rank ≤ 6 OR pair_rank == max_rank" was also produced and graded. The gated variant captures more upside on the full grid (estimated +$48/1000h) by avoiding the localized regression cells. Prefix lift is identical (+$37/1000h) because the prefix only contains pair=2 cells which always satisfy the gate.
+
+**Production ship choice — simple v40 over gated v40b:** Per Session 42 methodology rule "diminishing returns are observable in boundary search; the structural break is the natural plateau", the simple unrestricted version is preferred for human memorization. The natural break is "J-low pair", not "J-low pair AND (pair ≤ 6 OR pair = max)". The +$26/1000h additional lift from the gate (vs the simple version on full) is below the typical "make-or-break a rule" threshold for project shipping. v40b is retained as a sister artifact for reference and future ML.
+
+---
+
+**Methodology rules (NEW, Session 43):**
+
+1. **Weak-hand top inversion is a unifying structural pattern.** Top tier wins 1 point/board (max 2 across both boards), mid 2/board, bot 3/board. When TOP equity is already <50% (any J-low hand vs random opponent), the opportunity cost of dumping the highest card to top is <1 point, while the gain in bot+mid equity from upgrading kicker strength is >1 point. The math inverts the conventional "highest card to top" reflex. This pattern explains Rule 10's mechanism and may extend to other weak-hand categories (Q5 J-high no-pair has signal but is multi-feature; deferred).
+
+2. **high_only category has zero prefix coverage.** All 7-distinct-rank canonical IDs are >500K; the prefix grid contains 0 high_only hands. The both-grid validation gate is INAPPLICABLE for any rule scoped to no-pair hands. Defensive rules for the no-pair zone can only ship on full-grid validation alone, OR not ship. This is a hard constraint, not a methodology choice.
+
+3. **High-card-to-bot-for-4-flush is a LOSING trade.** Counterintuitive conventional wisdom from human play is empirically wrong: every variant tested (B_BOT_FLUSH, B_BOT_3FLUSH_EXT) regressed by $10-$27/1000h on every weak-hand stratum. The bot's flush draw doesn't compensate for the lost top-tier equity from breaking the high card.
+
+4. **Worst-case regret is a useful sanity check** for defensive rules. A rule with positive mean lift but BIGGER worst-case regret would induce more 20-point scoops. v40's per-cell worst-case regret stays in the +$10-$22 range vs v39's +$15-$25, confirming no scoop-induction risk.
+
+5. **Two_pair is genuinely ML territory (CONFIRMED TWICE).** Session 42 overnight investigation reached this verdict; Session 43 Q4 re-examination through the defensive lens reached the same verdict. v33's adaptive splitting is genuine multi-feature ML routing, not a hidden defensive rule waiting to be extracted.
+
+**Files:**
+- NEW: `analysis/scripts/strategy_v40_rule10.py` (PRODUCTION)
+- NEW: `analysis/scripts/strategy_v40b_rule10_gated.py` (sister candidate)
+- NEW: `analysis/scripts/grade_v40_rule10.py`
+- NEW: `analysis/scripts/grade_v40b_rule10_gated.py`
+- NEW (drills): `drill_high_card_defense.py`, `drill_low_pair_J_high_defense.py`, `drill_two_pair_J_high_revisit.py`
+- NEW (report): `SESSION_43_DEFENSIVE_REPORT.md`
+- UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 43 entry), Part 5 (Rule 10 reference), Part 6 (Rule 10 worked example, Step 1 / cheat sheet updated)
+
+**Total project rule count: 10** (Rules 1-9 unchanged + Rule 10 = J-low single-pair defensive).
