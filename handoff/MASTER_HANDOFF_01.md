@@ -2351,3 +2351,24 @@ Carry over from Session 38–39:
 3. **Learned A-vs-C decision tree for Rule 6** (`rule6_ac_*_g` family). Targets the ~$4.77/1000h gap between v35's human ceiling and the per-cell-optimal map. Could finally let production adopt v35.
 4. **KK/AA single-suited Rule-4-bot residual** ($37/1000h below oracle).
 5. **Production v36_rule6_v3 candidate ship** if Priority 3 closes the heuristic-A gap.
+
+---
+
+## Sessions 40–42 — covered in CURRENT_PHASE.md rewrites + DECISIONS_LOG.md (Decisions 072–074)
+
+Session 40 (2026-05-07): Rule 6 priority/tiebreaker invariance probes; Decision 072 settles bot-priority order (DS > SS > rainbow > 3+1, no connectivity tier). No new strategy ship.
+
+Session 41 (2026-05-08): Rule 7 (three_pair top=singleton + RB-or-RA boundary on highest pair rank) ships as v37. +$43/1000h whole-grid lift on full N=200 + +$141/1000h on prefix. high_only Rule 7 attempt (v36) ARCHIVED — heuristic regression confirmed; high_only is officially ML-only territory. Decision 073.
+
+Session 42 (2026-05-08): Rule 8 (composite quads_pair: top=singleton, mid=2 quads at non-pair-suits) ships as v38. **+$9.42/1000h whole-grid (full) + +$19/1000h (prefix) — both grids positive**, the consistency check the parallel two_pair candidate failed. The two_pair Rule 8 candidate (boundary +$197/1000h on full but -$512/1000h on prefix) was DEFERRED; v33's adaptive splitting on weak hands beats any forced no-split rule on the prefix. **NEW METHODOLOGY RULE**: a rule with prefix regression >2× the full-grid lift does NOT ship. Decision 074.
+
+#### Session 43 priorities
+
+Carry over from Session 42:
+
+1. **Composite TT + T2P heuristic-refinement drills** (highest priority). Both subtypes show +$7-8/1000h whole-grid oracle-ceilings; need deterministic mid/top picks within the structural class. Mirror the Rule 8 QP "non-pair-suit" suit-aware pattern. Ship as Rule 9 v39 if both yield 100% capture.
+2. **two_pair split-allowing rule investigation** (deferred from S42). Walk v33's mid-composition specifically on prefix two_pair hands; design a split-allowing rule that mirrors v33's adaptive structure on weak hands. The +$197/1000h full-grid lift is real and waiting; need to fix the prefix problem.
+3. **Round-3 within-trips features** (carry-over from S38). Diagnose v34's $1,291 within-trips residual.
+4. **Learned A-vs-C decision tree for Rule 6** (carry-over from S38–40). $5–13/1000h whole-grid ML target.
+5. **KK/AA single-suited Rule-4-bot residual** ($37/1000h below oracle, lowest priority).
+6. **v34_dt re-train on v38 baseline** (very small additional ML signal expected since v38 only changes 0.114% of grid).

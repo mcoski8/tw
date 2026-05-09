@@ -2807,3 +2807,95 @@ A 2-condition rule "RB if high ∈ {T,J,Q,K} OR (high=A AND low ≤ 3)" was test
 - UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 41 entry), Part 5 (production reference + probes), Part 6 (Rule 7 section, Default updated, cheat sheet updated)
 
 **Total project rule count: 7** (Rule 1 pair-to-bot DS; Rule 2 two-pair no-split; Rule 3 trips+pair split-2-1; Rule 4 KK/AA stay-mid; Rule 5 KK/AA rainbow override; Rule 6 pure trips paired-mid + boundary; Rule 7 three_pair top=singleton + RB-or-RA boundary).
+
+---
+
+## Decision 074 — Rule 8 (composite quads_pair → quad-in-mid) ships in production as v38; two_pair Rule 8 candidate (boundary search +$197 on full) DEFERRED after prefix-grid regression (Session 42)
+
+**Date:** 2026-05-08
+**Status:** Two outcomes from the same Session 42 always-X probe sweep:
+- **v38_rule8_qp SHIPS** as the new production strategy of record. Replaces v37. +$9.42/1000h whole-grid lift (full N=200) and +$18.63/1000h whole-prefix (N=1000) — both grids positive, the consistency check the two_pair candidate failed.
+- **v38_rule8_two_pair DEFERRED** (renamed `strategy_v38_rule8_two_pair_DEFERRED.py`, retained for next-session investigation). Boundary search found a +$197/1000h whole-grid lift on full but the prefix grade showed -$512/1000h. ALL forced-single-pick variants regressed on prefix. The two_pair territory needs split-allowing rules or remains ML-only.
+
+**Origin:** End of Session 41 queued the always-X probes for the last two un-mined categories (composite + two_pair). Session 42 ran both.
+
+---
+
+**Part A — two_pair (the big residual after high_only): clean +$197 boundary on full, but DEFERRED.**
+
+two_pair is 22.27% of all hands and the largest within-cat residual on the production heuristic at $3,371/1000h within-cat ($751/1000h whole-grid). The full 1.34M two_pair population was probed exhaustively in `verify_rule_X_v33_two_pair.py`:
+
+  - **TP_RA: top=hi-singleton, mid=HIGH pair**:    Δ -$87.71/1000h whole-grid
+  - **TP_RB: top=hi-singleton, mid=LOW pair**:     Δ +$68.46/1000h whole-grid (best of always-rules)
+  - **TP_RC: top=hi-singleton, mid=2 lo-singletons**: Δ -$1,988/1000h whole-grid
+  - **Best per cell (oracle ceiling)**:                Δ +$624.65/1000h whole-grid
+
+`probe_two_pair_boundary.py` mapped all 78 (high_pair, low_pair) cells and tested ~20 boundary rules. The cleanest:
+
+  > **"RC if high ≤ 4, elif T ≤ high ≤ K then RB, else RA"**
+  > Δ = +$196.89/1000h whole-grid (32% of the +$624.65 oracle ceiling)
+  > 4.6× the size of v37's three_pair lift — would have been the biggest rule-layer ship in project history
+
+`grade_v38_rule8.py` (two_pair version) confirmed +$197.00 on full grid. **But the prefix grade showed -$512/1000h regression.**
+
+A 12-variant sweep (narrower boundaries, low-pair gating, no-RC versions, "always RA/RB", etc.) tested every shape: ALL regressed on prefix. Even the "always RA" baseline lost -$863. The fundamental problem: v33's underlying v7_regression sometimes splits pairs (mid is 1 card from each pair), and on the prefix's weak-hand-biased distribution this adaptive splitting happens to be the right move on enough hands that any forced no-split rule loses.
+
+**Decision A:** v38_rule8_two_pair DEFERRED. Strategy file renamed `strategy_v38_rule8_two_pair_DEFERRED.py` and retained for next-session investigation. The two_pair territory needs:
+  1. A split-allowing rule (e.g., "if both pairs ≤ 6, allow mid = 1 card from each pair"), OR
+  2. ML capture only (already the case in v34_dt's gated `tp_*_g` features), OR
+  3. A separate "human guide" track with the boundary-rule and an explicit warning that production runtime keeps v37's two_pair behavior (two-track ship like v35_rule6_v3 was used for trips).
+
+---
+
+**Part B — composite (small but heterogeneous): quads_pair Rule 8 SHIPS as v38.**
+
+composite is 0.245% of canonical hands, 14,742 hands across 4 subtypes (quads_pair 6,863; quads_trip 156; two_trips 4,290; trips_two_pair 6,864). The full population was probed in `verify_rule_X_v33_composite.py`:
+
+| Subtype | n | v33 within-st | Best candidate | Capture |
+|---|---:|---:|---|---|
+| **quads_pair** | 6,863 | $17,101/1000h | QP_quad_in_mid: +$9.42 whole-grid | **100% deterministic** |
+| quads_trip | 156 | $21,524 | QT_quad_split: +$0.21 whole-grid | oracle-ceiling, tiny pop |
+| two_trips | 4,290 | $11,400 | TT_full_house_split: +$7.22 whole-grid | oracle-ceiling, drill pending |
+| trips_two_pair | 6,864 | $7,210 | T2P_split_trip_top: +$7.64 whole-grid | oracle-ceiling, drill pending |
+
+Only the quads_pair subtype has a verified deterministic rule.
+
+**The QP rule:**
+  > For quads_pair (4+2+1):
+  > - TOP = the singleton
+  > - MID = the 2 quad cards whose suits are NOT the pair's suits
+  > - BOT = the other 2 quads + the pair (4 cards)
+
+**Why the suit-aware mid pick:** the 4 quad cards have all 4 suits (one each), and the 2 pair cards have 2 different suits. Putting the QUAD CARDS THAT MATCH THE PAIR'S SUITS into the bot (alongside the pair) makes the bot "2 of suit X + 2 of suit Y" — a perfectly double-suited Omaha hand. The remaining 2 quads (at the OTHER 2 suits) go to mid.
+
+**Verification:** the deterministic rule's regret matches the oracle-within-constraint ($604.9/1000h within-st) EXACTLY across all 6,863 hands. 100% heuristic capture of the quad-in-mid subspace ceiling.
+
+**`grade_v38_rule8.py` (composite-QP version):**
+- Full grid: $2,877 → $2,868/1000h whole-grid (Δ +$9/1000h, matches probe)
+- Prefix grid: $1,753 → $1,735/1000h whole-prefix (Δ +$19/1000h, matches probe)
+- Composite within-cat regret: drops on both grids; pct_optimal on prefix jumps 6.9% → 25.3%
+
+**Decision B:** v38 SHIPS as new production strategy of record. Production strategy chain is now 8 rules deep (Rule 1–7 unchanged + Rule 8 quads_pair top=singleton + non-pair-suit-quads to mid).
+
+---
+
+**Methodology rules (NEW, Session 42):**
+
+1. **Prefix-grid regression as a generalization gate.** Sessions 38–41 happened to ship rules that won on both grids. Session 42 is the first time a rule won big on full ($+197) but lost big on prefix ($-512). The decision: prefix is biased toward weak hands, but a rule that loses there indicates the rule isn't capturing structure, just exploiting a full-grid-only artifact. **A rule with a prefix regression of >2× the full-grid lift does NOT ship**, regardless of how clean the boundary looks on the per-cell breakdown.
+
+2. **Composite is heterogeneous; subtypes need separate rules.** The composite category lumps 4 shapes (quads_pair, quads_trip, two_trips, trips_two_pair). Only quads_pair has a verified deterministic rule. The others have promising oracle-ceilings (+$7-8 whole-grid each) but need follow-up heuristic-refinement drills (Session 43 priority).
+
+3. **v33 on weak hands is doing something non-trivial.** v33 inherits two_pair routing from v8_hybrid → v7_regression (a learned tree). On the prefix's weak-hand distribution, v33 picks splits/non-Rule-2 settings that any forced rule can't match. v33 is already capturing fine-grained suit/kicker structure on weak hands. Some categories may need ML rather than another rule.
+
+4. **The "boundary search beats v33 on average" measurement is necessary but not sufficient.** Session 42 probe found a clean rule that wins on FULL grid by $197. Naive interpretation: ship it. Correct interpretation: validate that the rule's per-cell agreement with the oracle holds on the prefix sub-distribution too. A rule can be correct-on-average yet wrong on a specific hand class.
+
+**Files:**
+- DEFERRED: `analysis/scripts/strategy_v38_rule8_two_pair_DEFERRED.py` (with DEFERRED docstring)
+- NEW (PRODUCTION): `analysis/scripts/strategy_v38_rule8_qp.py`
+- NEW: `analysis/scripts/verify_rule_X_v33_two_pair.py`
+- NEW: `analysis/scripts/probe_two_pair_boundary.py`
+- NEW: `analysis/scripts/verify_rule_X_v33_composite.py`
+- NEW: `analysis/scripts/grade_v38_rule8.py`
+- UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 42 entry), Part 5 (production reference + probes), Part 6 (Rule 8 section, Default updated, cheat sheet updated, Step 1 categorize table updated)
+
+**Total project rule count: 8** (Rule 1 pair-to-bot DS; Rule 2 two-pair no-split; Rule 3 trips+pair split-2-1; Rule 4 KK/AA stay-mid; Rule 5 KK/AA rainbow override; Rule 6 pure trips paired-mid + boundary; Rule 7 three_pair top=singleton + RB-or-RA boundary; Rule 8 quads_pair top=singleton + non-pair-suit-quads to mid).
