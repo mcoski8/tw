@@ -97,6 +97,35 @@ The pair category (46.6% of hands, $754/1000h within-cat residual) was profiled,
 
 **Verdict: existing Rule 3 is already near-optimal.** No easy refinement.
 
+### 7. KK/AA single-suited Rule-4-bot residual — RULE 4 CONFIRMED CORRECT
+
+Drilled the 430K KK+AA pair population (`drill_kk_aa_single_suited.py`). Two key findings:
+
+- **All canonical KK/AA pairs have DISTINCT suits.** The "single-suited" terminology in project memory refers to bot suit-distribution (when KK/AA stays in mid, the bot's 4 cards form various suit patterns). Same-suit pairs are impossible since each card is unique.
+- **0 KK/AA hands in prefix** (same as QQ/JJ — all broadway pairs are in higher canonical IDs).
+- "Pair-to-bot oracle ceiling" on KK/AA: +$4,321/h within-cat **WORSE** than v37 baseline ($1,858). Pair-to-bot LOSES by -$2,462/h within-cat = -$176/1000h whole-grid.
+- AA: P2B-oracle worse by +$3,965/h. KK: P2B-oracle worse by +$959/h.
+
+**Verdict: Rule 4 (KK/AA stays in mid) is decisively correct.** The $37/1000h project-memory residual must refer to a very specific multi-feature sub-case (e.g., "AA + suited connector body"). No clean rule extension.
+
+---
+
+## Final Session 42 conclusion
+
+**Structural rule territory is exhausted at this resolution.** Six investigations + two follow-ups all confirmed:
+- 3 categories yielded ship-able rules (Rule 9 a/b/c)
+- 5 categories confirmed ML-only (two_pair, pair extension, trips_pair, KK/AA, plain quads-vs-trip-pair edges)
+
+The remaining residuals on the largest 3 categories (high_only $4,082/h, pair $2,008/h, two_pair $3,371/h) are multi-feature ML territory. The v34_dt model captures 44.6% of the v14→ceiling gap; further structural rule mining yields <$5/1000h whole-grid lifts that fall below the human-memorability threshold.
+
+**Session 43 forward path:**
+1. ML retrain on v39 baseline (small but free incremental gain)
+2. Round-3 within-trips features (carryover, ML feature engineering)
+3. Learned A-vs-C decision tree for Rule 6 (carryover, +$5-13/1000h ML target)
+4. Optionally: Rule 1 retune (drop Q,J from gate, add no-Ace QQ/JJ extension) for ~+$5/1000h cleanup
+
+The "rule mining" phase of the project has reached its natural plateau. Remaining gains are ML.
+
 ---
 
 ## Shipped vs deferred — what's next
