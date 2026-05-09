@@ -3126,3 +3126,100 @@ These questions go beyond the bot's structural classification — they ask wheth
 - UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 44 entry — to be added in commit)
 
 **Total project rule count: 10** (unchanged). Methodology rule count: refined.
+
+---
+
+## Decision 078 — Rule 10 v3 (suit-aware bot) ships as v41 (Session 45)
+
+**Date:** 2026-05-09
+**Status:** SHIPS as production. v41 replaces v40b as the strategy of record. **Grader-confirmed: +$29/1000h whole-grid (full N=200) and +$54/1000h whole-grid (prefix N=1000).** v40b → v41 score: $2,798 → $2,769 full, $1,670 → $1,616 prefix. pct_opt full: 41.48% → 41.91% (+0.43%); pct_opt prefix: 50.64% → 51.81% (+1.17%). Cumulative v39 → v41: −$77 full / −$91 prefix. Both grids strongly positive with no per-category regression.
+
+**Origin:** Session 45 was scoped to the user's verbatim direction (S44 closure): "now that we have a definitive answer for defensive J-high no-pair hands, we need to compare that to J-high hands with a pair... do we favor DS on bottom even at the cost of breaking a pair?". Three drills ran:
+
+1. `drill_J_low_pair_DS_break.py` — J-low single-pair (n=342,720)
+2. `drill_J_low_two_pair_DS_break.py` — J-low two_pair (n=262,080)
+3. `drill_DS_one_gap_vs_run4_other_cats.py` — S44 carryover validation
+
+**Definitive findings (Drill A, full grid, n=342,720):**
+
+The user's "should we break the pair to enable DS bot?" question is answered NO:
+
+| Comparison | Lift ($/1000h) |
+|---|---:|
+| A3 − A2: DS via pair-break vs non-DS pair-anchor | **−$10,304** (catastrophic) |
+| A5 − A2: DS via pair-to-bot vs non-DS pair-anchor | **+$8.9** (essentially tied) |
+| **A1 − A2: DS premium WITHIN pair-mid** | **+$2,756** |
+| A4 − A2: pair-split non-DS vs pair-mid non-DS | −$11,878 |
+
+**Pair structure dominates suit structure.** Breaking the pair to enable DS bot is catastrophic. But keeping pair-in-mid AND choosing singletons that yield a DS bot is +$2,756/1000h within-hand on the 47.8% of J-low pair hands where it's achievable.
+
+Per-pair-rank tipping point on A5 (pair-to-bot DS): mostly negative for P=2..9, but **P=J = +$2,975** (clear win). Pair-to-bot DS at P=J is a Rule 11 candidate but requires a separate setting-builder; deferred to Session 46+.
+
+**Drill B (J-low two_pair, n=262,080)** confirmed the same pattern with even larger margins:
+- B3 − B2 (split-LL for DS) = −$9,030
+- B5 − B2 (split-HH for DS) = −$12,042
+- B7 − B2 (both-split for DS) = −$23,165
+- **B1 − B2 (DS WITHIN both-intact) = +$1,864**
+
+The "two_pair is ML territory" verdict (S42 + S43, twice) holds for cross-class rules. The within-class suit-aware-bot opportunity (B1−B2 = +$1,864) is queued as a future candidate but requires careful setting-builder design.
+
+**Drill C: S44's "DS one-gap-4 ≥ DS run-4 by +$376" finding does NOT generalize.** With 200K samples per category, sign flips by category (high_only −$233, pair +$344, two_pair +$361, trips −$518). The S44 result was likely inside noise on its sample (n=1,680). Don't extract as a universal structural feature.
+
+---
+
+**Rule 10 v3 — design:**
+
+  TRIGGER (unchanged from v40b):
+    cat == pair                AND
+    max_rank ≤ J               AND
+    (P ≤ 6 OR P == max_rank)
+
+  SETTING (changed):
+    Among the 5 non-pair singletons, identify all candidate TOP-picks
+    such that the remaining 4 singletons form a DS bot (suit pattern 2+2).
+
+    IF any DS-achievable TOP exists:
+      TOP = lowest-rank singleton among DS-achievable picks
+            (preserves v40b's weak-hand top-inversion intent)
+    ELSE:
+      TOP = lowest-rank singleton (v40b fallback)
+
+    MID = the pair (always)
+    BOT = the remaining 4 non-pair singletons
+
+**Behavioral verification on 50K J-low gated-pair sample:**
+- v40b (suit-blind) picks DS bot on 15.7% of fired hands
+- v41 picks DS bot on 47.4% of fired hands (matches A1 achievability ≈ 47.8%)
+- Picks differ on 31.8% of fired hands
+
+**Production ship rationale:**
+- Both grids strongly positive (+$29 full / +$54 prefix), no regression on any category
+- pct_opt improves on both grids
+- Worst-case regret unchanged (max_regret = $5.74)
+- Mechanism is interpretable and follows existing methodology (weak-hand top inversion + S44 suit-dominance, applied within-class)
+
+---
+
+**Methodology rules NEW (Session 45):**
+
+1. **Pair structure dominates suit structure universally in J-low pair / two_pair.** Breaking a pair to enable DS-bot is catastrophic by ~$10K-$23K/1000h. The within-class suit-aware refinement is the right axis for further extraction.
+
+2. **Within-class suit-aware bot is a generalizable rule pattern.** Same mechanism that ships Rule 10 v3 has a sister candidate in two_pair (B1−B2 = +$1,864).
+
+3. **DS one-gap-4 ≥ DS run-4 (S44) does NOT generalize.** Sign flips by category. This is a category-specific noise effect, not a universal structural feature.
+
+4. **Tie-break by preserving prior intent.** Where multiple valid choices exist, prefer the one closest to the existing baseline (Rule 10 v3 picks lowest singleton among DS-achievable TOPs to preserve v40b's top-inversion intent).
+
+5. **Pair-to-bot + DS at P=J is a real Rule 11 candidate** (+$2,975/1000h) but requires a separate setting-builder; deferred.
+
+---
+
+**Files:**
+- NEW: `analysis/scripts/strategy_v41_rule10_v3_ds.py` (PRODUCTION)
+- NEW: `analysis/scripts/grade_v41_rule10_v3_ds.py`
+- NEW (drills): `drill_J_low_pair_DS_break.py`, `drill_J_low_two_pair_DS_break.py`, `drill_DS_one_gap_vs_run4_other_cats.py`
+- NEW (report): `SESSION_45_RULE10_V3_REPORT.md`
+- UPDATED: `CURRENT_PHASE.md` (rewritten for Session 45 wrap)
+- UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 45 entry) + production-of-record references
+
+**Total project rule count: 10** (Rule 10 evolved v40 → v40b → v41).

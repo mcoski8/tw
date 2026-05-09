@@ -12,7 +12,7 @@
 > 5. Where each rule + model lives in code
 > 6. **The Current Standard** (at the bottom — the rules to memorize, the model to call)
 >
-> Last updated: 2026-05-09 (Session 43 — **Rule 10 (J-low single-pair defensive, GATED variant) ships in production** as v40b — the FIRST defensive rule of the project. Trigger: pair hands with max card ≤ J AND (pair_rank ≤ 6 OR pair_rank == max_rank). Setting: TOP = lowest singleton, MID = the pair, BOT = 4 highest non-pair singletons. **Lift: +$48/1000h whole-grid (full N=200) + +$37/1000h whole-grid (prefix N=1000)** — both grids strongly positive. **Largest single-rule full-grid lift since v33's Rule 6 (Session 37, +$113/1000h)**. The simple ungated variant (v40) ships +$23 full / +$37 prefix and is retained as sister artifact for human-memorization fork. The gate adds one condition that doubles the lift by excluding the per-cell regression zone (pair_rank ∈ (max-4, max-1), e.g., 99 on J-high). Mechanism: the **weak-hand top inversion** — when the highest card cannot reliably win the top tier (top wins only 1 point/board vs mid's 2 and bot's 3), dumping the LOWEST card on top costs less than the gain in bot+mid equity from upgrading kicker strength. Discovered in `drill_low_pair_J_high_defense.py`. Other Session 43 findings: Q1 (A-high "always Ace on top") confirmed — v3 already at 96% optimality, no rule needed; Q2 (K/Q-high "break broadway for 4-flush bot") FAILED — every variant regressed $10-27/1000h; Q4 (J-low two_pair defensive re-examination) confirmed Session 42's "two_pair is ML territory" verdict (all 6 deterministic candidates regress); Q5 (J-high no-pair top=lo) deferred — works on T-low (+$8 full only) but regresses on J-high; high_only has zero prefix coverage so both-grid gate inapplicable.)
+> Last updated: 2026-05-09 (Session 45 — **Rule 10 v3 ships in production as v41**: same trigger + gate as v40b (cat=pair, max≤J, P≤6 OR P==max), but with **suit-aware bot construction** — pick the TOP-candidate singleton such that the remaining 4 form a DS bot when achievable; fall back to v40b's "TOP = lowest singleton" otherwise. **Lift: +$29/1000h whole-grid (full N=200) + +$54/1000h whole-grid (prefix N=1000)**, both grids strongly positive with no per-category regression. v40b → v41 score: $2,798 → $2,769 full, $1,670 → $1,616 prefix. pct_opt: 41.48% → 41.91% full / 50.64% → 51.81% prefix. Mechanism: keeping pair-in-mid AND picking singletons that yield a DS bot is +$2,756/1000h within-hand on the 47.8% of J-low pair hands where DS is achievable without breaking the pair (Drill A's A1−A2). Drill A also confirmed **pair structure dominates suit structure universally** — breaking the pair to enable DS-bot is catastrophic (A3−A2 = −$10,304/1000h). Drill B (J-low two_pair) confirmed the same answer with even larger margins (B3−B2 = −$9,030, B7−B2 = −$23,165); within-class B1−B2 = +$1,864 is a sister Rule 11+ candidate. Drill C (S44 carryover) showed DS one-gap-4 ≥ DS run-4 does NOT robustly generalize across categories — sign flips by category. Earlier Session 43 ship (v40b, +$48 full / +$37 prefix) and Session 42 overnight ship (v39, Rule 9 a/b/c) cumulate to v39 → v41 = −$77 full / −$91 prefix.) (Earlier: Session 43 — **Rule 10 (J-low single-pair defensive, GATED variant) ships in production** as v40b — the FIRST defensive rule of the project. Trigger: pair hands with max card ≤ J AND (pair_rank ≤ 6 OR pair_rank == max_rank). Setting: TOP = lowest singleton, MID = the pair, BOT = 4 highest non-pair singletons. **Lift: +$48/1000h whole-grid (full N=200) + +$37/1000h whole-grid (prefix N=1000)** — both grids strongly positive. **Largest single-rule full-grid lift since v33's Rule 6 (Session 37, +$113/1000h)**. The simple ungated variant (v40) ships +$23 full / +$37 prefix and is retained as sister artifact for human-memorization fork. The gate adds one condition that doubles the lift by excluding the per-cell regression zone (pair_rank ∈ (max-4, max-1), e.g., 99 on J-high). Mechanism: the **weak-hand top inversion** — when the highest card cannot reliably win the top tier (top wins only 1 point/board vs mid's 2 and bot's 3), dumping the LOWEST card on top costs less than the gain in bot+mid equity from upgrading kicker strength. Discovered in `drill_low_pair_J_high_defense.py`. Other Session 43 findings: Q1 (A-high "always Ace on top") confirmed — v3 already at 96% optimality, no rule needed; Q2 (K/Q-high "break broadway for 4-flush bot") FAILED — every variant regressed $10-27/1000h; Q4 (J-low two_pair defensive re-examination) confirmed Session 42's "two_pair is ML territory" verdict (all 6 deterministic candidates regress); Q5 (J-high no-pair top=lo) deferred — works on T-low (+$8 full only) but regresses on J-high; high_only has zero prefix coverage so both-grid gate inapplicable.)
 
 ---
 
@@ -1055,6 +1055,31 @@ No tipping point exists. The thinnest margin (DS-scattered vs SS-run-2+strays) i
 
 ---
 
+## Session 45: Rule 10 v3 ships (suit-aware bot construction) as v41 — +$29 full / +$54 prefix
+
+The user's S44 closure direction was to apply suit-dominance findings to paired weak hands: do we favor pair-mid still? does DS-bot beat keeping pairs intact even at the cost of breaking pairs? Three drills ran, all using S44's within-hand pairwise methodology.
+
+**Drill A — J-low single-pair DS-break (n=342,720, full grid).** Six-class within-hand pairwise (pair_state × bot_suit). The user's "should we break the pair to enable DS-bot?" question is answered NO: A3−A2 (pair-break for DS vs pair-mid non-DS) = **−$10,304/1000h** (catastrophic). A5−A2 (pair-to-bot for DS vs pair-mid non-DS) = **+$8.9** (essentially tied overall, but **P=J flips to +$2,975**). The unambiguous opportunity: **A1−A2 = +$2,756/1000h** — keeping pair-in-mid AND choosing singletons that yield a DS bot beats the suit-blind pair-mid pick by ~$2.8K within-hand on the 47.8% of J-low pair hands where it's achievable.
+
+**Drill B — J-low two_pair DS-break (n=262,080, full grid).** Eight-class within-hand pairwise. Same answer with even larger margins: B3−B2 (split-LL for DS) = −$9,030, B5−B2 (split-HH for DS) = −$12,042, B7−B2 (both-split for DS) = −$23,165. The "two_pair is ML territory" verdict (S42 + S43, twice) holds for cross-class rules. The within-class B1−B2 = **+$1,864/1000h** is a future candidate.
+
+**Drill C — DS one-gap-4 vs DS run-4 across categories (200K/cat sample).** S44's +$376 finding does NOT robustly generalize. Sign flips by category (high_only −$233, pair +$344, two_pair +$361, trips −$518). The S44 result was likely inside noise on its sample (n=1,680). Don't extract as a universal structural feature.
+
+**Rule 10 v3 design.** Same trigger + gate as v40b (cat=pair, max≤J, P≤6 OR P==max). The change: among the 5 non-pair singletons, pick the candidate TOP such that the remaining 4 form a DS bot. Tie-break by lowest-rank singleton (preserves v40b's weak-hand top-inversion intent). If no DS-achievable TOP exists, fall back to v40b's "TOP = lowest singleton". MID = the pair (always); BOT = the remaining 4. On a 50K J-low gated-pair sample, v40b picks DS bot 15.7% of the time (suit-blind random hits) vs v41's 47.4% (matches A1 achievability ≈ 47.8%); 31.8% of picks differ.
+
+**Per-category breakdown (full grid):**
+
+| Category | v40b | v41 | Δ |
+|---|---:|---:|---:|
+| pair | $1,905 | **$1,843** | **−$62** |
+| (all others unchanged) | — | — | $0 |
+
+**Score: $2,769/1000h on full grid. Improvement: −$29 vs v40b, −$77 vs v39, $384 vs v14_combined.** Prefix grid: $1,616 (−$54 vs v40b, −$91 vs v39). pct_opt full: 41.91% (+0.43%). pct_opt prefix: 51.81% (+1.17%). Worst-case regret unchanged (max = $5.74).
+
+**Methodology lesson — pair structure dominates suit structure universally in J-low pair / two_pair zones.** Breaking a pair to enable DS-bot is catastrophic (−$10K to −$23K/1000h within-hand). The right extraction axis is **within-class suit-aware bot**: keeping the pair anchor while picking singletons that form a DS bot ships clean lift on both grids. The S44 within-hand pairwise methodology correctly identified the within-class DS premium without misleading the cross-class question. Same pattern applies to two_pair (B1−B2 = +$1,864 within both-pairs-intact) — sister candidate for Session 46+. **Side methodology lesson — small-sample within-hand findings need replication on larger samples before being elevated to "rules"**: S44's DS one-gap-4 ≥ DS run-4 (+$376, n=1,680) did not robustly replicate at higher sample sizes; sign flips by category.
+
+---
+
 # Part 2 — ML champion progression (the full table)
 
 Every model trained, side-by-side, on both validation grids:
@@ -1263,7 +1288,8 @@ guide can keep them as human-memorizable approximations.
 - Rule 8 (composite quads_pair, Session 42 morning) → `analysis/scripts/strategy_v38_rule8_qp.py` — "for quads_pair (4+2+1), top = singleton, mid = the 2 quad cards whose suits are NOT the pair's suits, bot = the other 2 quads + the pair". 100% deterministic-realizable. +$9.42/1000h whole-grid lift vs v37 (+$18.63/1000h on prefix). Bot is always double-suited.
 - Rule 9 (Session 42 overnight) → `analysis/scripts/strategy_v39_rule9.py` — three sub-rules covering plain quads, TT (two_trips), and T2P (trips_two_pair). Combined +$22/1000h whole-grid + +$28/1000h prefix. See Rule 9a/9b/9c above in Part 6.
 - Rule 10 simple variant (Session 43, sister) → `analysis/scripts/strategy_v40_rule10.py` — J-low single-pair defensive: TOP=lowest singleton, MID=pair, BOT=4 highest non-pair singletons. Trigger: pair AND max ≤ J (no further gate). +$23/1000h full / +$37/1000h prefix. Retained as the human-memorizable single-condition variant.
-- **Rule 10 gated variant (Session 43, CURRENT PRODUCTION)** → `analysis/scripts/strategy_v40b_rule10_gated.py` — same setting + extra gate `pair_rank ≤ 6 OR pair_rank == max_rank`. **+$48/1000h whole-grid (full) + +$37/1000h whole-grid (prefix) — grader-confirmed both grids.** Largest single-rule full-grid lift since v33's Rule 6.
+- Rule 10 gated variant (Session 43) → `analysis/scripts/strategy_v40b_rule10_gated.py` — same setting + extra gate `pair_rank ≤ 6 OR pair_rank == max_rank`. **+$48/1000h whole-grid (full) + +$37/1000h whole-grid (prefix) — grader-confirmed both grids.** Largest single-rule full-grid lift since v33's Rule 6. **Superseded by v41 (Session 45) — Rule 10 v3 with suit-aware bot.**
+- **Rule 10 v3 — suit-aware bot (Session 45, CURRENT PRODUCTION)** → `analysis/scripts/strategy_v41_rule10_v3_ds.py` — same trigger + gate as v40b, but pick the singleton-to-drop-as-TOP that yields a DS bot when achievable; tie-break by lowest singleton (preserves v40b top-inversion intent); fall back to v40b's "TOP=lowest" otherwise. **+$29/1000h whole-grid (full) + +$54/1000h whole-grid (prefix) — grader-confirmed both grids.** Cumulative v40b → v41 = −$29 full / −$54 prefix; v39 → v41 = −$77 full / −$91 prefix.
 - Combined chain (4 rules) → `analysis/scripts/strategy_v14_combined.py`
 - Combined chain (5 rules) → `analysis/scripts/strategy_v28_rule5_rainbow.py` (wraps v14 with Rule 5)
 - Combined chain (6 rules) → `analysis/scripts/strategy_v33_rule6_trips.py` (wraps v28 with Rule 6 v1)
@@ -1272,7 +1298,8 @@ guide can keep them as human-memorizable approximations.
 - Combined chain (8 rules) → `analysis/scripts/strategy_v38_rule8_qp.py` (wraps v37 with Rule 8)
 - Combined chain (9 rules) → `analysis/scripts/strategy_v39_rule9.py` (wraps v38 with Rule 9 a/b/c)
 - Combined chain (10 rules, simple variant) → `analysis/scripts/strategy_v40_rule10.py` (wraps v39 with Rule 10, no gate)
-- **Combined chain (10 rules, CURRENT PRODUCTION, gated variant)** → `analysis/scripts/strategy_v40b_rule10_gated.py` (wraps v39 with Rule 10 + gate `pair ≤ 6 OR pair == max`)
+- Combined chain (10 rules, gated variant) → `analysis/scripts/strategy_v40b_rule10_gated.py` (wraps v39 with Rule 10 + gate `pair ≤ 6 OR pair == max`). Superseded by v41.
+- **Combined chain (10 rules, CURRENT PRODUCTION, suit-aware bot)** → `analysis/scripts/strategy_v41_rule10_v3_ds.py` (wraps v39 with Rule 10 v3 — same trigger + gate as v40b, but suit-aware bot construction picks singletons that yield DS bot when achievable)
 - **DEFERRED (Session 42, reaffirmed Session 43)**: `analysis/scripts/strategy_v38_rule8_two_pair_DEFERRED.py` — would-be Rule 8 for two_pair (+$197 full / -$512 prefix). Confirmed ML-only after Session 42 overnight investigation; reaffirmed Session 43 Q4 defensive re-examination.
 
 **Probes:**
@@ -1299,6 +1326,10 @@ guide can keep them as human-memorizable approximations.
 - v39 Rule 9 grade → `analysis/scripts/grade_v39_rule9.py`
 - v40 Rule 10 grade → `analysis/scripts/grade_v40_rule10.py`
 - v40b Rule 10 gated grade → `analysis/scripts/grade_v40b_rule10_gated.py`
+- v41 Rule 10 v3 grade → `analysis/scripts/grade_v41_rule10_v3_ds.py`
+- J-low pair DS-break drill (Session 45) → `analysis/scripts/drill_J_low_pair_DS_break.py`
+- J-low two_pair DS-break drill (Session 45) → `analysis/scripts/drill_J_low_two_pair_DS_break.py`
+- DS one-gap-4 vs DS run-4 across categories (Session 45) → `analysis/scripts/drill_DS_one_gap_vs_run4_other_cats.py`
 
 **ML champion + baselines (newest first):**
 - v31 (CURRENT CHAMPION) → `analysis/scripts/strategy_v31_dt.py` + `data/v31_dt_model.npz` (700K leaves, 79 features, depth=32 ml=3 — capacity-only retrain of v30)
