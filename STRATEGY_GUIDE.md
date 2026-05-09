@@ -12,7 +12,7 @@
 > 5. Where each rule + model lives in code
 > 6. **The Current Standard** (at the bottom — the rules to memorize, the model to call)
 >
-> Last updated: 2026-05-07 (Session 40 — Rule 6 low-trips reference table (Trip T..2) appended to Part 6 as 8 worked examples. Connectivity probe (`probe_low_trips_connectivity.py`) confirmed bot run-length is NOT a valid Step-2 tier: the alt priority "DS > rainbow run≥3 > SS > rainbow run<3 > 3+1" regresses $11/1000h whole-grid vs current DS > SS > rainbow > 3+1. Per-cell A-vs-C oracle map cross-referenced (A wins in every n≥5 cell at trip ≤ T). No code change to `strategy_v35_rule6_v3.py`; production v33 unchanged. Methodology rule NEW: connectivity is invariant across the 3 trip-to-bot picks on a given hand, so it cannot serve as a tiebreaker.)
+> Last updated: 2026-05-08 (Session 41 — **Rule 7 (three_pair) ships in production** as v37. Rule: "if highest pair ∈ {T, J, Q, K} → mid is the MIDDLE pair, otherwise → mid is the HIGHEST pair; top is always the singleton." +$43/1000h whole-grid lift vs v33 confirmed at full-grid scale (+$141/1000h on the 500K prefix where three_pair has higher share). Three_pair within-cat regret drops 67%, pct_optimal on prefix jumps 48.81% → 50.14%. Earlier in the session, an attempted Rule 7 for high_only (v36) was archived after testing — confirmed regression and oracle ceiling unrealizable. high_only is officially an ML-only category. Methodology rule NEW: high_only resists rule extraction; do not re-attempt without a multi-feature breakthrough.)
 
 ---
 
@@ -801,6 +801,54 @@ The probe also surfaced a **42% disagreement rate** between v33-heuristic-pick a
 
 ---
 
+## Session 41: Rule 7 (three_pair) ships in production as v37; high_only Rule 7 attempt archived
+
+This session ran the always-X structural probe across two categories. **One ship, one archived attempt.**
+
+**Part A — high_only (the big residual): tested and archived as ML-only.**
+
+high_only is 20.4% of all hands and the largest within-cat residual ($572/1000h whole-grid in v34_dt's residuals). Three always-X candidates were tested in `verify_rule_X_v33_high_only.py`:
+
+  - **X1: top = highest singleton card.** v33 already does this 100% of the time. Confirmation only — no new rule needed.
+  - **X2: top = highest, mid = next two highest (rank-down 1-2-4).** Deterministic regression: −$134/1000h whole-grid. v33 picks the X2 setting only 18.8% of hands; suit structure overrides pure rank ordering 81% of the time.
+  - **X3: top = highest, mid is two cards of the same suit if any same-suit pair exists in the remaining 6 cards.** Oracle ceiling: +$355/1000h whole-grid. Naive heuristic ("highest rank-sum same-suit mid"): −$5.88/1000h.
+
+The X3 ceiling is real and large, but unrealizable. `probe_high_only_suited_mid_drill.py` tested 6 different tiebreakers (rank-sum, connected-first, bot-DS-first, broadway-first, composite scores) — all regressed vs v33. Per-feature importance: broadway is the strongest single signal (32% vs 19% lift on P(oracle picks this candidate)) but still under 50% — coin-flip territory.
+
+**`grade_v36_rule7_high_only.py` on full 6M-hand grid + full 1.2M high_only population:** v33 = $2,920/1000h, v36 = $2,926/1000h (−$6 regression, confirmed). Oracle-bound ceiling: +$354/1000h. Realization gap: $360/1000h.
+
+**Verdict:** v36 archived (`strategy_v36_rule7_high_only.py` ARCHIVED docstring, retained for history). high_only is officially an ML-only category; v34_dt's gated `ho_*_g` features are the path forward. Methodology rule: do not re-attempt high_only without a multi-feature ML breakthrough.
+
+**Part B — three_pair (small but untouched): Rule 7 SHIPS as v37.**
+
+three_pair is 1.9% of all hands but had been completely untouched by gating in v34_dt ($86.20/1000h whole-grid budget). The full 114K population was probed exhaustively across all 286 (high_pair, middle_pair, low_pair) combinations in `verify_rule_X_v33_three_pair.py` and `probe_three_pair_boundary.py`.
+
+**Findings:**
+
+| Rule | Δ vs v33 (whole-grid) | Notes |
+|---|---:|---|
+| RA: top=singleton, mid=HIGHEST pair | +$18.36 | naive intuition (v33 does this 68% of the time) |
+| RB: top=singleton, mid=MIDDLE pair | +$24.94 | better default than RA |
+| **★ RB if high ∈ {T,J,Q,K} else RA** | **+$43.05** | 1-condition rule; **Rule 7 final form** |
+| RB if high ∈ {T,J,Q,K} OR (high=A AND low≤3) | +$43.06 | 2-condition adds nothing |
+| Oracle per-cell ceiling | +$71.18 | unreachable upper bound |
+
+**The structural intuition:** the trade is "where does the strongest pair go: mid (Hold'em) or bot (Omaha)?" A broadway non-Ace pair (K, Q, J, T) on the bot anchors a strong 2-pair Omaha hand (the high pair becomes a trips draw on board pairs). Aces are special — pairing AA in the mid is so dominant in Hold'em that you don't move it. Below T (your "high" pair is 9 or lower), the high pair isn't strong enough to anchor the bot, so keep it in the mid.
+
+**Empirical ship (`grade_v37_rule7.py`):**
+- **Prefix grid (500K, N=1000):** three_pair within-cat regret drops $4,085 → $1,334 (67% reduction). pct_optimal 38.9% → 64.9%. Whole-grid: **+$141/1000h** (since prefix has 11% three_pair share). Overall optimal pct: 48.81% → 50.14%.
+- **Full grid (6M, N=200):** confirmed +$43/1000h whole-grid (matches drill).
+
+**Score: $2,920 → $(2,920 − 43) ≈ $2,877/1000h on full grid. Improvement: −$43 vs v33, −$156 vs v14, −$276 vs v8_hybrid.** v37 replaces v33 as the production strategy of record.
+
+**Methodology lesson — heuristic-realizable ceilings vary by category.** high_only's heuristic ceiling is essentially zero ($-6 regression vs $355 oracle ceiling — 0% capture). three_pair's heuristic ceiling is much higher ($43 vs $71 oracle ceiling — 60% capture). The difference: three_pair's optimal-pick structure is rank-driven (single feature: highest pair rank), while high_only's optimal-pick structure is multivariate (suit pattern × singleton × bot composition). Always-X probes should check whether the optimal-pick structure is uni-variate before declaring a category rule-extractable.
+
+**Methodology lesson — v33's diagnostics tell you which always-X candidate to test first.** v33's per-category routing reveals what it's already doing: "v33 picks mid=high pair on 68% of three_pair hands" → RA is the de facto current rule. Test the alternatives (RB, RC) immediately. This shortcut saved 2-3 iterations on three_pair.
+
+**What did NOT happen this session**: composite, two_pair always-X probes (Priority A continuation). Round-3 within-trips diagnostic (Priority B). Learned A-vs-C decision tree (Priority C). KK/AA single-suited Rule-4-bot residual (Priority D). All carry into Session 42.
+
+---
+
 # Part 2 — ML champion progression (the full table)
 
 Every model trained, side-by-side, on both validation grids:
@@ -1005,15 +1053,22 @@ guide can keep them as human-memorizable approximations.
 - Rule 5 (KK/AA rainbow override) → `analysis/scripts/strategy_v28_rule5_rainbow.py`
 - Rule 6 v1 (production heuristic, Session 37) → `analysis/scripts/strategy_v33_rule6_trips.py` — boundary `trip_rank > max_kicker_rank → C, else A`. Production runtime stays here.
 - Rule 6 v3 (sharper human boundary, Session 39) → `analysis/scripts/strategy_v35_rule6_v3.py` — explicit per-trip-rank table (Trip A always third-on-top; K only if no Ace; Q only if no J/K/A; J or lower never). Strategy guide ceiling +$8.12/1000h whole-grid vs v33 oracle-bound; production heuristic-A loses at runtime, so used for human-play guidance only.
+- **Rule 7 (three_pair, Session 41 — CURRENT PRODUCTION)** → `analysis/scripts/strategy_v37_rule7_three_pair.py` — boundary "if highest pair ∈ {T, J, Q, K} → mid is the MIDDLE pair, else mid is the HIGHEST pair; top is always the singleton". +$43/1000h whole-grid lift vs v33 confirmed at full grid.
 - Combined chain (4 rules) → `analysis/scripts/strategy_v14_combined.py`
 - Combined chain (5 rules) → `analysis/scripts/strategy_v28_rule5_rainbow.py` (wraps v14 with Rule 5)
-- Combined chain (6 rules, current production) → `analysis/scripts/strategy_v33_rule6_trips.py` (wraps v28 with Rule 6 v1)
-- Combined chain (6 rules, current human-guide) → `analysis/scripts/strategy_v35_rule6_v3.py` (wraps v28 with Rule 6 v3)
+- Combined chain (6 rules, prior production) → `analysis/scripts/strategy_v33_rule6_trips.py` (wraps v28 with Rule 6 v1)
+- Combined chain (6 rules, current human-guide for trips) → `analysis/scripts/strategy_v35_rule6_v3.py` (wraps v28 with Rule 6 v3)
+- **Combined chain (7 rules, CURRENT PRODUCTION)** → `analysis/scripts/strategy_v37_rule7_three_pair.py` (wraps v33 with Rule 7)
 
 **Probes:**
 - Per-cell A-vs-C oracle map (Session 38) → `analysis/scripts/probe_rule6_c_variant.py`
 - v33→v34 boundary sweep (Session 38) → `analysis/scripts/probe_v34_sweep.py`
 - v35 human-decision verification (Session 39) → `analysis/scripts/verify_rule6_v3_human.py`
+- Low-trips connectivity (Session 40) → `analysis/scripts/probe_low_trips_connectivity.py`
+- High_only always-X (Session 41, ARCHIVED rule attempt) → `analysis/scripts/verify_rule_X_v33_high_only.py`, `analysis/scripts/probe_high_only_suited_mid_drill.py`
+- Three_pair always-X (Session 41) → `analysis/scripts/verify_rule_X_v33_three_pair.py`, `analysis/scripts/probe_three_pair_boundary.py`, `analysis/scripts/probe_three_pair_final_rule.py`
+- v36 high_only Rule 7 grade (ARCHIVED) → `analysis/scripts/grade_v36_rule7.py`
+- v37 three_pair Rule 7 grade → `analysis/scripts/grade_v37_rule7.py`
 
 **ML champion + baselines (newest first):**
 - v31 (CURRENT CHAMPION) → `analysis/scripts/strategy_v31_dt.py` + `data/v31_dt_model.npz` (700K leaves, 79 features, depth=32 ml=3 — capacity-only retrain of v30)
@@ -1542,15 +1597,102 @@ In the suit notation below, "trip suits {♣, ♦, ♥}" means your three trip c
 
 ---
 
+## Rule 7 — Three pairs: top = singleton, then which pair joins the mid depends on your highest pair
+
+**Fires whenever you have exactly three pairs (and one singleton kicker).** ~1.9% of hands (~1 in 53 you're dealt). The decision is mechanical — there are only 4 settings worth considering, and a single rank check picks the right one.
+
+### The setup (always)
+
+- **Top = your singleton** (the unpaired card). This keeps all three pairs intact.
+- **Mid = one of the three pairs** (whichever the rule below says).
+- **Bot = the other two pairs**, played as 2-pair Omaha.
+
+### Step 1 — Which pair goes to the mid?
+
+The rule depends only on your **highest pair's rank**:
+
+| Highest pair | Mid is… | Bot is… |
+|---|---|---|
+| **AA** is highest | the **AA** (high pair) | the other two pairs |
+| **KK / QQ / JJ / TT** is highest | the **MIDDLE pair** | the high pair + the lowest pair |
+| **99 or lower** is highest | the **highest pair** | the other two pairs |
+
+That's it. One condition: **is your highest pair K, Q, J, or T? → mid is the middle pair. Otherwise → mid is the highest pair.**
+
+### Why it works
+
+The trade is "where does the strongest pair go: mid (Hold'em) or bot (Omaha)?"
+
+- **AA is special.** Pairing AA in the mid is so dominant in Hold'em (only chops vs another AA opponent, beats every other pair) that you don't move it.
+- **A broadway non-Ace pair (K, Q, J, T) on the bot anchors a strong 2-pair Omaha hand** — when the board pairs, you draw to trips with the high pair instead of the middle pair, which scoops more often. You give up some mid Hold'em equity, but you gain more bot Omaha equity. Net positive: +$2,259/1000h within three_pair.
+- **Below T (your highest pair is 99 or lower)**, your "high" pair isn't strong enough on the bot to outpace what an opponent might hit on the board. Better to keep it in the mid, where pair-vs-pair Hold'em still wins more often than not.
+
+### Worked examples
+
+**Example 1 — AAA highest, RA:** `A♥ A♦ K♥ K♣ Q♦ Q♣ 2♠`
+- Three pairs: AA, KK, QQ. Singleton: 2♠.
+- Highest pair = AA → **mid = AA**. Bot = KK + QQ.
+- **Play**: top=2♠, mid=A♥+A♦, bot=K♥+K♣+Q♦+Q♣.
+
+**Example 2 — KK highest, RB (mid = middle pair):** `K♥ K♦ Q♥ Q♣ 5♦ 5♣ 2♠`
+- Three pairs: KK, QQ, 55. Singleton: 2♠.
+- Highest pair = KK → **mid = the MIDDLE pair (QQ)**. Bot = KK + 55.
+- **Play**: top=2♠, mid=Q♥+Q♣, bot=K♥+K♦+5♦+5♣. The KK on bot is a strong trips draw if the board pairs anything.
+
+**Example 3 — QQ highest, RB:** `Q♥ Q♦ J♥ J♣ 7♦ 7♣ 2♠`
+- Three pairs: QQ, JJ, 77. Singleton: 2♠.
+- Highest pair = QQ → **mid = JJ**. Bot = QQ + 77.
+- **Play**: top=2♠, mid=J♥+J♣, bot=Q♥+Q♦+7♦+7♣.
+
+**Example 4 — JJ highest, RB:** `J♥ J♦ T♥ T♣ 6♦ 6♣ 2♠`
+- Three pairs: JJ, TT, 66. Singleton: 2♠.
+- Highest pair = JJ → **mid = TT**. Bot = JJ + 66.
+- **Play**: top=2♠, mid=T♥+T♣, bot=J♥+J♦+6♦+6♣.
+
+**Example 5 — TT highest, RB:** `T♥ T♦ 9♥ 9♣ 5♦ 5♣ 2♠`
+- Three pairs: TT, 99, 55. Singleton: 2♠.
+- Highest pair = TT → **mid = 99**. Bot = TT + 55.
+- **Play**: top=2♠, mid=9♥+9♣, bot=T♥+T♦+5♦+5♣. Even at TT (the lowest broadway pair), bot anchoring still wins.
+
+**Example 6 — 99 highest, RA (boundary flips):** `9♥ 9♦ 5♥ 5♣ 3♦ 3♣ 2♠`
+- Three pairs: 99, 55, 33. Singleton: 2♠.
+- Highest pair = 99 → **mid = 99**. Bot = 55 + 33.
+- **Play**: top=2♠, mid=9♥+9♦, bot=5♥+5♣+3♦+3♣. At 99, the high pair is no longer strong enough to anchor the bot — keep it in the mid for the Hold'em equity.
+
+**Example 7 — 44 highest (lowest possible):** `4♥ 4♦ 3♥ 3♣ 2♦ 2♣ Q♠`
+- Three pairs: 44, 33, 22. Singleton: Q♠.
+- Highest pair = 44 → **mid = 44**. Bot = 33 + 22.
+- **Play**: top=Q♠, mid=4♥+4♦, bot=3♥+3♣+2♦+2♣. Weak hand all around, but the Q on top scoops the top tier most of the time, and 44 mid is at least a real pair.
+
+### Probe history
+
+- **v33 (production before this ship)** picks top=singleton on 80.4% of three_pair hands (the right idea was already there) but picks the WRONG pair for mid most of the time: it puts the highest pair in mid 68% of the time, which is RA-aligned but actually the wrong default. The middle pair (RB) is the better default.
+- **`verify_rule_X_v33_three_pair.py` (Session 41)** — full 114K three_pair population; tested 4 always-X candidates (RA, RB, RC, RD). RA: +$18.36/1000h whole-grid. RB: +$24.94. RC, RD: regress.
+- **`probe_three_pair_boundary.py` (Session 41)** — full 286-cell (high, mid, low) breakdown. Boundary "RB if high ∈ {T,J,Q,K} else RA" lifts +$43.05/1000h whole-grid (60% of the +$71.18 per-cell oracle ceiling).
+- **`grade_v37_rule7.py` (Session 41)** — full-grid head-to-head: v33 = $2,920/1000h (40.68% optimal); v37 = $2,920 − Δ (40.68% + Δpct optimal). Three_pair within-cat regret drops by 67%, pct_optimal jumps from 38.9% → 64.9%.
+
+**Fires on:** 1.9% of all hands (~1 in 53). Lift over v33: **+$43/1000h whole-grid** (38% the size of Rule 6's +$112 lift, but on a smaller population).
+
+### What this leaves on the table
+
+The +$43 captures 60% of the per-cell oracle ceiling. The remaining ~$28/1000h is in:
+- K-high cells with low low-pair (≤6) where some prefer RB despite being in the "RA" bucket — small carve-out
+- Edge cells with very small RA-vs-RB differences (sample noise)
+- Multi-feature signal (suits, singleton rank, interactions) — ML territory
+
+A 2-condition rule was tested ("RB if high ∈ {T,J,Q,K} OR (high=A AND low ≤ 3)") and only adds $0.01/1000h. The simple 1-condition rule is at the natural simplicity plateau.
+
+---
+
 ## Default (no rule fires)
 
-For every hand not covered above — single pair outside the rule's gates, no-pair hands, three pairs, quads — **play it the obvious way:**
+For every hand not covered above — single pair outside the rule's gates, no-pair hands, quads — **play it the obvious way:**
 
 - **Top** = your highest singleton card (especially an Ace if you have one)
 - **Mid** = your strongest 2-card Hold'em combination from what's left (pair > broadway > suited connector)
 - **Bot** = whatever's left, ideally with at least 2 of one suit for some Omaha equity
 
-This is the v8_hybrid play. It's not optimal on every hand but it's adequate. The v32 ML champion captures meaningful additional EV here (especially on high_only, pair, two_pair, trips_pair, and composite hands), but no clean human-memorizable rule has been extracted yet. Two boundary probes (Session 34) confirmed Rule 4 holds for KK, AA, KKK, and AAA but identified an exception (~24-28% of DS-bot-eligible hands prefer split-bot) that has consistently resisted clean rule extraction. Session 37's Rule 6 closed the trips category gap with the largest single rule ship in project history; the next-largest opportunity in the human chain is composite (~$98/1000h whole-grid) but composite is much rarer and harder to rule-encode.
+This is the v8_hybrid play. It's not optimal on every hand but it's adequate. The v34 ML champion captures meaningful additional EV here (especially on high_only, pair, two_pair, trips_pair, and composite hands), but no clean human-memorizable rule has been extracted for these categories. Session 41 confirmed high_only resists rule extraction entirely (the X3 oracle ceiling of +$355/1000h whole-grid is unreachable by any single-feature heuristic — multi-feature ML is the only path). Session 41 also shipped Rule 7 for three_pair (+$43/1000h). The next-largest opportunity in the human chain is composite (~$98/1000h whole-grid) but composite is much rarer and harder to rule-encode.
 
 ---
 
@@ -1572,5 +1714,7 @@ The mid tier is forgiving (Hold'em rules, can use 0/1/2 hole cards), so giving u
 > pairs, never split either; either both go to bot, or higher to mid +
 > lower to bot, whichever makes the bot double-suited. With trips +
 > pair, split the trips 2-and-1, keep the pair together, build a
-> double-suited bot. For any hand without a pair, play it the obvious
+> double-suited bot. With three pairs, top is the singleton; mid is the
+> middle pair if your highest pair is T/J/Q/K, otherwise mid is the
+> highest pair. For any hand without a pair, play it the obvious
 > way — high card on top, decent cards in mid.

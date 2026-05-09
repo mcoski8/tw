@@ -2708,3 +2708,102 @@ v35's "trip ≤ J always A" boundary is structurally correct, not noise.
 2. **No code change.** v35_rule6_v3 keeps its existing _v35_pick_c boundary and v33-inherited A-variant body.
 3. **Rule 6 documentation is now COMPLETE for human play.** Trip A through Trip 2 each have explicit per-rank treatment + at least one worked example.
 4. **Priority C scope expanded:** the learned A-vs-C decision tree now has two training signals — the cell-level boundary AND the within-SS suit-rotation. Both contribute to the projected $5–$13/1000h whole-grid ML target.
+
+---
+
+## Decision 073 — Rule 7 (three_pair) ships in production as v37; high_only Rule 7 attempt (v36) ARCHIVED; high_only is officially ML-only territory (Session 41)
+
+**Date:** 2026-05-08
+**Status:** Two outcomes from the same Session 41 always-X probe sweep:
+- **v37_rule7_three_pair SHIPS** as the new production strategy of record. Replaces v33. +$43/1000h whole-grid lift confirmed at full-grid scale (+$141/1000h on prefix).
+- **v36_rule7_high_only ARCHIVED**. Heuristic regression of $6/1000h whole-grid confirmed on full grid; the +$354/1000h X3 oracle ceiling is multivariate and not capturable by any rule.
+
+**Origin:** End of Session 40 queued the always-X structural baseline probes for the four remaining un-rule-mined categories (high_only, three_pair, composite, two_pair) per the Session 38 methodology rule. Session 41 ran the first two of those four.
+
+---
+
+**Part A — high_only (the big residual): tested, archived as ML-only.**
+
+high_only is 20.4% of all hands and the largest within-cat residual ($572/1000h whole-grid in v34_dt's residuals). Three always-X candidates were tested in `verify_rule_X_v33_high_only.py`:
+
+  - **X1: top = highest singleton card.** v33 already does this 100% of the time. Confirmation only.
+  - **X2: top = highest, mid = next two highest (rank-down 1-2-4).** Deterministic regression: −$134/1000h whole-grid. v33 picks the X2 setting only 18.8% of hands; suit structure overrides pure rank ordering 81% of the time.
+  - **X3: top = highest, mid is two cards of the same suit if any same-suit combination exists in the remaining 6.** Oracle ceiling: +$355/1000h whole-grid. Naive heuristic ("highest rank-sum same-suit mid"): −$5.88/1000h.
+
+X3's ceiling is real and large but unrealizable. The follow-up `probe_high_only_suited_mid_drill.py` tested 6 different tiebreakers among same-suit mids:
+
+| Heuristic | Δ vs v33 (whole-grid) |
+|---|---:|
+| H1: highest rank-sum same-suit mid | −$5.88 |
+| H2: connected (gap≤1) first | −$78.98 ✗ |
+| H3: bot-DS first | −$0.70 |
+| H4: contains broadway (T+) first | −$6.54 |
+| H5: connected+DS combo | −$77.52 ✗ |
+| H6: composite weighted score | −$6.56 |
+| Oracle ceiling | +$355.24 ✓ |
+
+**All 6 heuristics regressed.** Per-feature importance: broadway is the strongest single signal (P(oracle picks this candidate | candidate is broadway-bearing) = 32% vs 19% for non-broadway = +0.13 lift), but still under 50% — coin-flip territory. Other features: connected +0.07, bot-DS −0.03, rank-sum percentile 0.76 (correlation only).
+
+**`grade_v36_rule7_high_only.py`** confirmed at full-grid scale: v33 = $2,920/1000h (40.68% optimal); v36 = $2,926/1000h (40.16% optimal) — −$6/1000h whole-grid regression. The pct_optimal even goes DOWN (forcing same-suit mid moves us AWAY from oracle agreement on some hands).
+
+**Decision A:** v36 ARCHIVED. ARCHIVED docstring added to `strategy_v36_rule7_high_only.py`; file retained for history but never used at runtime. **high_only is officially ML-only territory** — three rule attempts now (v11 omaha-first −$1,745, v15 DS-patch −$296, v36 same-suit-mid −$6). Methodology rule: do not re-attempt high_only rule extraction without a multi-feature ML breakthrough.
+
+---
+
+**Part B — three_pair (small but untouched): Rule 7 ships as v37.**
+
+three_pair is 1.9% of all hands but had been completely untouched by gating in v34_dt ($86.20/1000h whole-grid budget). The full 114K population was probed exhaustively across all 286 (high_pair, middle_pair, low_pair) combinations.
+
+**`verify_rule_X_v33_three_pair.py`** tested 4 candidates:
+
+| Rule | Description | Δ vs v33 (whole-grid) |
+|---|---|---:|
+| RA | top=singleton, mid=HIGHEST pair, bot=mid+low pairs | +$18.36 |
+| RB | top=singleton, mid=MIDDLE pair, bot=high+low pairs | +$24.94 |
+| RC | top=singleton, mid=LOWEST pair, bot=high+mid pairs | −$96.38 ✗ |
+| RD | top=pair-member (split a pair) | −$81.29 ✗ |
+
+Both RA and RB beat v33. RC and RD are non-starters. Best-per-cell mix lifts +$54.00/1000h whole-grid (oracle ceiling for RA-vs-RB selection).
+
+v33's diagnostics revealed the production strategy was already picking top=singleton 80.4% of the time (the right idea was there), but picking the WRONG pair for mid most of the time: mid=high pair 68% (RA-aligned), mid=middle pair 25% (RB-aligned). RB is the better default.
+
+**`probe_three_pair_boundary.py`** ran the full 286-cell breakdown and tested ~20 boundary rules. The cleanest 1-condition rule:
+
+  > **"if highest_pair ∈ {T, J, Q, K} → mid is the MIDDLE pair, else mid is the HIGHEST pair; top is always the singleton."**
+
+Lift: **+$43.05/1000h whole-grid** (60% of the per-cell oracle ceiling). 64.3% per-hand agreement with the oracle's per-cell choice.
+
+A 2-condition rule "RB if high ∈ {T,J,Q,K} OR (high=A AND low ≤ 3)" was tested and only adds +$0.01/1000h — basically nothing.
+
+**The structural intuition:** the trade is "where does the strongest pair go: mid (Hold'em) or bot (Omaha)?"
+
+- **AA is special.** Pairing AA in the mid is so dominant in Hold'em (only chops vs another AA opponent, beats every other pair) that you don't move it.
+- **A broadway non-Ace pair (K, Q, J, T) on the bot anchors a strong 2-pair Omaha hand** — when the board pairs, you draw to trips with the high pair. You give up some mid Hold'em equity but gain more bot Omaha equity. Net positive.
+- **Below T (your highest pair is 9 or lower)**, your "high" pair isn't strong enough on the bot. Better to keep it in the mid for Hold'em equity.
+
+**`grade_v37_rule7.py`** prefix grade: three_pair within-cat regret drops $4,085 → $1,334 (67% reduction). pct_optimal jumps from 38.9% → 64.9% on three_pair. Whole-grid (prefix has 11% three_pair share): **+$141/1000h**. Overall optimal pct: 48.81% → 50.14%. Full-grid grade: pending at write time, expected ≈ +$43/1000h whole-grid (matches drill).
+
+**Decision B:** v37 SHIPS as new production strategy of record. Production strategy chain is now 7 rules deep (Rule 1 pair-to-bot DS; Rule 2 two-pair no-split; Rule 3 trips+pair split-2-1; Rule 4 KK/AA stay-mid; Rule 5 KK/AA rainbow override; Rule 6 pure trips paired-mid + boundary; Rule 7 three_pair top=singleton + RB-or-RA on highest-pair-rank).
+
+---
+
+**Methodology rules (NEW, Session 41):**
+
+1. **Heuristic-realizable ceilings vary by category.** high_only's heuristic ceiling is essentially zero (−$6 vs +$355 oracle ceiling — 0% capture). three_pair's heuristic ceiling is much higher (+$43 vs +$71 oracle ceiling — 60% capture). The difference: three_pair's optimal-pick structure is rank-driven (single feature: highest pair rank), while high_only's optimal-pick structure is multivariate (suit pattern × singleton × bot composition × rank correlations). **Always-X probes should check whether the optimal-pick structure is uni-variate before declaring a category rule-extractable.**
+2. **v33/current-production diagnostics tell you which always-X candidate to test first.** v33's per-category routing reveals what it's already doing: "v33 picks mid=highest-pair on 68% of three_pair hands" → RA is the de facto current rule. Test the alternatives (RB, RC) immediately; don't waste a probe iteration confirming what v33 already does.
+3. **high_only is officially ML-only.** Three rule attempts have now failed (v11, v15, v36). The X3 oracle ceiling shows +$355/1000h IS available but multivariate. Future high_only work should be ML-only (v34_dt's gated `ho_*_g` features are the path).
+4. **Two-track shipping is no longer the default.** Sessions 38–40 used two-track because Rule 6's heuristic-A was the rate-limiting step. Session 41's v37 ships in BOTH tracks (heuristic captures 60% of ceiling, no two-track needed). Future probes should default-test the heuristic version first; only fall back to two-track if the heuristic regresses.
+
+**Files:**
+- ARCHIVED: `analysis/scripts/strategy_v36_rule7_high_only.py` (with ARCHIVED docstring)
+- NEW: `analysis/scripts/strategy_v37_rule7_three_pair.py` (production)
+- NEW: `analysis/scripts/verify_rule_X_v33_high_only.py`
+- NEW: `analysis/scripts/probe_high_only_suited_mid_drill.py`
+- NEW: `analysis/scripts/grade_v36_rule7.py`
+- NEW: `analysis/scripts/verify_rule_X_v33_three_pair.py`
+- NEW: `analysis/scripts/probe_three_pair_boundary.py`
+- NEW: `analysis/scripts/probe_three_pair_final_rule.py`
+- NEW: `analysis/scripts/grade_v37_rule7.py`
+- UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 41 entry), Part 5 (production reference + probes), Part 6 (Rule 7 section, Default updated, cheat sheet updated)
+
+**Total project rule count: 7** (Rule 1 pair-to-bot DS; Rule 2 two-pair no-split; Rule 3 trips+pair split-2-1; Rule 4 KK/AA stay-mid; Rule 5 KK/AA rainbow override; Rule 6 pure trips paired-mid + boundary; Rule 7 three_pair top=singleton + RB-or-RA boundary).
