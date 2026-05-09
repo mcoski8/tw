@@ -12,7 +12,7 @@
 > 5. Where each rule + model lives in code
 > 6. **The Current Standard** (at the bottom — the rules to memorize, the model to call)
 >
-> Last updated: 2026-05-09 (Session 43 — **Rule 10 (J-low single-pair defensive) ships in production** as v40, the FIRST defensive rule of the project. Trigger: pair hands with max card ≤ J (342,720 hands, 5.7% of grid). Setting: TOP = lowest singleton, MID = the pair, BOT = 4 highest non-pair singletons. **Lift: +$22.73/1000h whole-grid (full N=200) + +$36.70/1000h whole-grid (prefix N=1000)** — both grids strongly positive, prefix lift > full lift (the OPPOSITE of the prefix-regression risk pattern). Largest single-rule prefix lift in project history. Mechanism: the **weak-hand top inversion** — when the highest card cannot reliably win the top tier (top wins only 1 point/board vs mid's 2 and bot's 3), dumping the LOWEST card on top costs less than the gain in bot+mid equity from upgrading kicker strength. Discovered in `drill_low_pair_J_high_defense.py`. Other Session 43 findings: Q1 (A-high "always Ace on top") confirmed — v3 already at 96% optimality, no rule needed; Q2 (K/Q-high "break broadway for 4-flush bot") FAILED — every variant regressed $10-27/1000h; Q4 (J-low two_pair defensive re-examination) confirmed Session 42's "two_pair is ML territory" verdict (all 6 deterministic candidates regress); Q5 (J-high no-pair top=lo) deferred — works on T-low (+$8 full only) but regresses on J-high; high_only has zero prefix coverage so both-grid gate inapplicable.)
+> Last updated: 2026-05-09 (Session 43 — **Rule 10 (J-low single-pair defensive, GATED variant) ships in production** as v40b — the FIRST defensive rule of the project. Trigger: pair hands with max card ≤ J AND (pair_rank ≤ 6 OR pair_rank == max_rank). Setting: TOP = lowest singleton, MID = the pair, BOT = 4 highest non-pair singletons. **Lift: +$48/1000h whole-grid (full N=200) + +$37/1000h whole-grid (prefix N=1000)** — both grids strongly positive. **Largest single-rule full-grid lift since v33's Rule 6 (Session 37, +$113/1000h)**. The simple ungated variant (v40) ships +$23 full / +$37 prefix and is retained as sister artifact for human-memorization fork. The gate adds one condition that doubles the lift by excluding the per-cell regression zone (pair_rank ∈ (max-4, max-1), e.g., 99 on J-high). Mechanism: the **weak-hand top inversion** — when the highest card cannot reliably win the top tier (top wins only 1 point/board vs mid's 2 and bot's 3), dumping the LOWEST card on top costs less than the gain in bot+mid equity from upgrading kicker strength. Discovered in `drill_low_pair_J_high_defense.py`. Other Session 43 findings: Q1 (A-high "always Ace on top") confirmed — v3 already at 96% optimality, no rule needed; Q2 (K/Q-high "break broadway for 4-flush bot") FAILED — every variant regressed $10-27/1000h; Q4 (J-low two_pair defensive re-examination) confirmed Session 42's "two_pair is ML territory" verdict (all 6 deterministic candidates regress); Q5 (J-high no-pair top=lo) deferred — works on T-low (+$8 full only) but regresses on J-high; high_only has zero prefix coverage so both-grid gate inapplicable.)
 
 ---
 
@@ -1004,7 +1004,7 @@ A gated variant `strategy_v40b_rule10_gated.py` (additional condition `pair_rank
 - **High-card-to-bot-for-4-flush is a LOSING trade.** Counterintuitive conventional wisdom is empirically wrong: -$10 to -$27/1000h on every weak-hand stratum.
 - **Worst-case regret is a useful sanity check** for defensive rules. A rule with positive mean lift but BIGGER worst-case regret would induce more 20-point scoops. v40's per-cell worst-case regret stays in the +$10-$22 range, no scoop-induction risk.
 
-**Score: $2,846 → $2,824/1000h on full grid (−$22, +$23/1000h whole-grid lift, grader-confirmed). Prefix: $1,707 → $1,670 (−$37). Improvement vs v8_hybrid: −$329 prefix; −$329 full.** Within-pair-category regret on full grid: $2,008 → $1,959/1000h ($49/h within-cat reduction × 46.6% pair share = $23 aggregate). pct_opt full: 41.17% → 41.15% (slight reduction — defensive rule trades pct_opt for mean-regret minimization, which is expected for a "minimize loss" rule). pct_opt prefix: 50.38% → 50.64% (+0.26%). v40 replaces v39 as the production strategy of record.
+**Score (v40b gated, PRODUCTION): $2,846 → $2,798/1000h on full grid (−$48, +$48/1000h whole-grid lift, grader-confirmed). Prefix: $1,707 → $1,670 (−$37). pct_opt full: 41.17% → 41.48% (+0.31%). pct_opt prefix: 50.38% → 50.64%.** Within-pair-category regret full grid: $2,008 → $1,905/1000h. **Score (v40 simple, sister): $2,846 → $2,824 full (+$23 lift), pct_opt 41.15% (slight regression).** v40b replaces v39 as the production strategy of record; v40 is retained for human-memorization fork.
 
 ---
 
@@ -1215,8 +1215,8 @@ guide can keep them as human-memorizable approximations.
 - Rule 7 (three_pair, Session 41) → `analysis/scripts/strategy_v37_rule7_three_pair.py` — boundary "if highest pair ∈ {T, J, Q, K} → mid is the MIDDLE pair, else mid is the HIGHEST pair; top is always the singleton". +$43/1000h whole-grid lift vs v33 confirmed at full grid.
 - Rule 8 (composite quads_pair, Session 42 morning) → `analysis/scripts/strategy_v38_rule8_qp.py` — "for quads_pair (4+2+1), top = singleton, mid = the 2 quad cards whose suits are NOT the pair's suits, bot = the other 2 quads + the pair". 100% deterministic-realizable. +$9.42/1000h whole-grid lift vs v37 (+$18.63/1000h on prefix). Bot is always double-suited.
 - Rule 9 (Session 42 overnight) → `analysis/scripts/strategy_v39_rule9.py` — three sub-rules covering plain quads, TT (two_trips), and T2P (trips_two_pair). Combined +$22/1000h whole-grid + +$28/1000h prefix. See Rule 9a/9b/9c above in Part 6.
-- **Rule 10 (Session 43 — CURRENT PRODUCTION)** → `analysis/scripts/strategy_v40_rule10.py` — J-low single-pair defensive: TOP=lowest singleton, MID=pair, BOT=4 highest non-pair singletons. Trigger: pair AND max ≤ J. **+$22.73/1000h whole-grid (full N=200) + +$36.70/1000h whole-grid (prefix N=1000).** Both grids strongly positive; the largest single-rule prefix lift in project history.
-- Rule 10 gated variant (Session 43, sister candidate) → `analysis/scripts/strategy_v40b_rule10_gated.py` — same trigger plus `pair_rank ≤ 6 OR pair_rank == max_rank`. Same prefix lift as v40 (+$37); estimated +$48/1000h full-grid by avoiding localized regression cells. Retained as ML / future-use artifact.
+- Rule 10 simple variant (Session 43, sister) → `analysis/scripts/strategy_v40_rule10.py` — J-low single-pair defensive: TOP=lowest singleton, MID=pair, BOT=4 highest non-pair singletons. Trigger: pair AND max ≤ J (no further gate). +$23/1000h full / +$37/1000h prefix. Retained as the human-memorizable single-condition variant.
+- **Rule 10 gated variant (Session 43, CURRENT PRODUCTION)** → `analysis/scripts/strategy_v40b_rule10_gated.py` — same setting + extra gate `pair_rank ≤ 6 OR pair_rank == max_rank`. **+$48/1000h whole-grid (full) + +$37/1000h whole-grid (prefix) — grader-confirmed both grids.** Largest single-rule full-grid lift since v33's Rule 6.
 - Combined chain (4 rules) → `analysis/scripts/strategy_v14_combined.py`
 - Combined chain (5 rules) → `analysis/scripts/strategy_v28_rule5_rainbow.py` (wraps v14 with Rule 5)
 - Combined chain (6 rules) → `analysis/scripts/strategy_v33_rule6_trips.py` (wraps v28 with Rule 6 v1)
@@ -1224,7 +1224,8 @@ guide can keep them as human-memorizable approximations.
 - Combined chain (7 rules) → `analysis/scripts/strategy_v37_rule7_three_pair.py` (wraps v33 with Rule 7)
 - Combined chain (8 rules) → `analysis/scripts/strategy_v38_rule8_qp.py` (wraps v37 with Rule 8)
 - Combined chain (9 rules) → `analysis/scripts/strategy_v39_rule9.py` (wraps v38 with Rule 9 a/b/c)
-- **Combined chain (10 rules, CURRENT PRODUCTION)** → `analysis/scripts/strategy_v40_rule10.py` (wraps v39 with Rule 10)
+- Combined chain (10 rules, simple variant) → `analysis/scripts/strategy_v40_rule10.py` (wraps v39 with Rule 10, no gate)
+- **Combined chain (10 rules, CURRENT PRODUCTION, gated variant)** → `analysis/scripts/strategy_v40b_rule10_gated.py` (wraps v39 with Rule 10 + gate `pair ≤ 6 OR pair == max`)
 - **DEFERRED (Session 42, reaffirmed Session 43)**: `analysis/scripts/strategy_v38_rule8_two_pair_DEFERRED.py` — would-be Rule 8 for two_pair (+$197 full / -$512 prefix). Confirmed ML-only after Session 42 overnight investigation; reaffirmed Session 43 Q4 defensive re-examination.
 
 **Probes:**
@@ -1409,8 +1410,9 @@ Look for the strongest "shape" in your hand:
 | Trips (any rank, no other pair) | 3 of one rank, no other pair | **Rule 6** — mid is always 2 of the 3 trip cards |
 | Two pairs | 2 of one rank + 2 of another | **Rule 2** |
 | One pair (KK or AA) | 2 Kings or 2 Aces | **Rule 4** (default), check **Rule 5** for rainbow override |
-| One pair (other ranks), MAX card ≤ J | 2 of one rank + max ≤ J, no other multiples | **Rule 10** (defensive: top=lowest, mid=pair, bot=4 highest) |
+| One pair (other ranks), MAX ≤ J AND (pair ≤ 6 OR pair == max) | 2 of one rank + max ≤ J + low-pair-or-pair-is-max | **Rule 10 (gated)** — defensive: top=lowest, mid=pair, bot=4 highest non-pair |
 | One pair (other ranks), MAX card ≥ Q | 2 of one rank + at least one Q/K/A, no other multiples | **Rule 1** (gates apply) — Rule 10 does NOT fire here |
+| One pair (other ranks), MAX ≤ J AND pair ∈ {7,8,9,T} (and pair ≠ max) | 2 of one rank, max ≤ J, mid-rank pair below max | Default play (Rule 10's gate excludes this — v3-style top=highest) |
 | No pair | 7 distinct ranks | (no simple rule yet — multi-archetype) |
 
 ---
@@ -1987,11 +1989,20 @@ The mid is a paired hand (2 of the quad rank). The bot is a double-suited 2-pair
 
 ## Rule 10 — J-low single-pair defensive (the FIRST defensive rule)
 
-**Setup**: 1 pair (no trips, no quads, no second pair). Max card on the hand is **J or lower** (the "weak-hand defensive zone"). 342,720 hands — 5.7% of canonical, ~1 in 17.
+**Setup**: 1 pair (no trips, no quads, no second pair). Max card on the hand is **J or lower** (the "weak-hand defensive zone"). 342,720 hands total at this max-J zone — 5.7% of canonical.
 
+**Gate** (production v40b): the rule fires only when ONE of these is true:
+1. **Pair rank ≤ 6** (low pair: 22 / 33 / 44 / 55 / 66), OR
+2. **Pair rank EQUALS max rank** (e.g., JJ on J-high body, TT on T-high body — the pair IS the highest card in the hand).
+
+The gate excludes the "pair is high but not the max" zone (e.g., 99 on J-high, TT on J-high) where the per-cell drill data showed the rule regresses by $2-$8/cell.
+
+**Setting (when fired):**
 - **Top** = your **LOWEST** singleton. (Yes, lowest. This inverts the conventional top=highest reflex.)
 - **Mid** = the pair (paired Hold'em mid).
 - **Bot** = the 4 HIGHEST non-pair singletons.
+
+**Simple variant (v40, retained as sister artifact for human-memorization fork):** same setting but with NO gate condition (fires on every J-low pair hand). Smaller lift (+$23 full vs the gated v40b's +$48), but only ONE condition to memorize ("max ≤ J AND pair"). Use when the pair-rank gate is too much cognitive load mid-game.
 
 **Why it works**: When even your highest card cannot reliably win the top tier (any J-or-lower hand vs random opponent), the conventional "top=highest" play gives away kicker strength to the bot for 1 point per board of marginal top equity. By dumping the lowest singleton to top, you accept guaranteed top-tier loss but stack the strong cards into mid + bot — where they earn 2-3 points per board.
 
@@ -2036,9 +2047,11 @@ Bot is rainbow + low kickers. The JJ in mid is the value driver here; top = 2 sa
 - Two-pair, trips, three-pair, quads, trips-pair, no-pair: different categories, different rules.
 - Hands where Rule 1 fires (single pair + Ace + balanced kickers + DS feasibility): Rule 1 takes precedence (but Rule 1 requires an Ace, which J-low pair can never have, so they don't actually conflict).
 
-**Lift over v39**: +$22.73/1000h whole-grid (full N=200) + +$36.70/1000h whole-grid (prefix N=1000). Per-cell breakdown: rule wins broadly on pair_rank ≤ 6 (across all max ∈ {7..J}) and on pair_rank == max_rank cells. Localized regressions on cells where pair_rank ∈ (max-4, max-1), e.g., Jh_p7-T regress by $2-$8/cell. Net aggregate is strongly positive; the regressions are localized.
+**Lift over v39 (gated v40b — production, grader-confirmed both grids):** **+$48/1000h whole-grid (full N=200) + +$37/1000h whole-grid (prefix N=1000)**. pct_opt full: 41.17% → 41.48% (+0.31%). v39 → v40b score: $2,846 → $2,798 full, $1,707 → $1,670 prefix.
 
-A gated variant ("pair_rank ≤ 6 OR pair_rank == max_rank", `strategy_v40b_rule10_gated.py`) excludes the localized regression cells and captures more upside (~+$48/1000h full estimated) but adds memorization burden. Per "diminishing returns at structural break" methodology, the production runtime ships the simple version; v40b is a sister artifact for ML / future use.
+**Lift of the simple v40 variant (no gate, sister artifact):** +$23/1000h full + +$37/1000h prefix. The simple variant fires on the localized regression cells (pair_rank ∈ (max-4, max-1)) where the rule loses; the gate avoids those cells. The gate's "pair == max" branch captures the JJ / TT / 99 / etc. cells where the pair IS the max rank (and oracle-favored top=lo even there).
+
+**Why the gate works:** the per-cell drill (drill_low_pair_J_high_defense.py) showed that the structural-inversion mechanism breaks down in the narrow zone where the pair is high enough to anchor a strong mid (against random opponents) but not the max card. Examples: J-high pair=9 (Jh_p9, regresses −$5.76/cell), T-high pair=8 (Th_p8, −$1.33/cell). In those zones, the conventional top=highest still wins because the J/T high card has marginal but real top-tier equity AND the pair (9/8) gets value from BOT in the alternative configuration. The gate avoids precisely these cells.
 
 **Mechanism connection (why this generalizes)**: The "weak-hand top inversion" is the mechanism. It applies most cleanly to the pair category (where Rule 10 captures it), partially to no-pair hands (where T-low has signal but J-high is multi-feature; Q5 deferred), and not at all to the two_pair category (Q4 confirmed all defensive variants regress; v33's adaptive splitting is genuine multi-feature ML routing, not a hidden defensive rule).
 
@@ -2093,10 +2106,13 @@ The mid tier is forgiving (Hold'em rules, can use 0/1/2 hole cards), so giving u
 > rank 4 or lower, mid is the LOW pair (high pair to bot for stronger
 > Omaha anchor), otherwise mid is the HIGH pair (low pair to bot).
 > **DEFENSIVE — when your max card is J-or-lower AND you have one pair
-> (no trip / no second pair / no quad), INVERT the conventional top:
+> (no trip / no second pair / no quad), AND the pair is rank-6-or-
+> lower OR the pair IS your max card, INVERT the conventional top:
 > top is the LOWEST singleton, mid is the pair, bot is the 4 highest
 > non-pair singletons.** The mid-pair stays as the structural anchor;
 > the top is sacrificed because a J-or-lower top is going to lose to
 > most opponents anyway, and the strong cards earn more points in
-> mid+bot than top. For any hand without a pair, play it the obvious
+> mid+bot than top. (For the simpler ungated variant — fire whenever
+> max ≤ J and you have a pair — see v40_rule10.py; smaller lift but
+> only one condition.) For any hand without a pair, play it the obvious
 > way — high card on top, decent cards in mid.

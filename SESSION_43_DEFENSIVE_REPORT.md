@@ -10,7 +10,8 @@ two confirmed-ML-territory zones.
 
 | Finding | Population | Verdict | Lift (full / prefix) |
 |---|---:|---|---:|
-| **Rule 10: J-low single-pair defensive** | **342K (5.7%)** | **SHIPS as v40** | **+$23 full / +$37 prefix (grader-confirmed)** |
+| **Rule 10 (gated): J-low single-pair defensive** | **342K (5.7%) gate-eligible: ~47%** | **SHIPS as v40b PRODUCTION** | **+$48 full / +$37 prefix (grader-confirmed)** |
+| Rule 10 (simple): same setting, no gate | 342K (100%) | sister artifact | +$23 full / +$37 prefix |
 | Q1: A-high+weak (single Ace, low body) | 660K | Already optimized — no rule needed | n/a |
 | Q4: J-low two_pair (re-examined defensively) | 262K | Confirmed ML territory | all candidates regress |
 | Q5: J-high or weaker no-pair | 86K | Multi-feature signal but no clean rule | regresses on J-high; small full-only lift on T-low |
@@ -82,10 +83,18 @@ reduces top-tier loss without sacrificing the mid).
 **Population:** 342,720 hands (5.703% of grid)
 
 **Lift (grader-confirmed, both grids):**
-- Full N=200: $2,846 → $2,824/1000h (−$22 mean regret, **+$23/1000h whole-grid lift**)
+
+PRODUCTION (v40b — gated, "pair_rank ≤ 6 OR pair_rank == max_rank"):
+- Full N=200: $2,846 → $2,798/1000h (−$48 mean regret, **+$48/1000h whole-grid lift**)
 - Prefix N=1000: $1,707 → $1,670/1000h (−$37 mean regret, **+$37/1000h whole-grid lift**)
-- Both numbers match the drill prediction (+$22.73 / +$36.70) within sampling noise
-- Within-pair-category full-grid regret: $2,008 → $1,959/1000h ($49/h reduction × 46.6% share = $23)
+- pct_opt full: 41.17% → 41.48% (+0.31%); pct_opt prefix: 50.38% → 50.64% (+0.26%)
+- Within-pair-category full-grid regret: $2,008 → $1,905/1000h ($103/h reduction × 46.6% share = $48)
+
+SISTER (v40 — simple, no gate):
+- Full: +$23/1000h, pct_opt 41.15% (slight regression — fires on per-cell regression zones)
+- Prefix: +$37/1000h (identical to gated; prefix only contains pair=2 cells which always satisfy the gate)
+
+The gated v40b is **the largest single-rule full-grid lift since v33's Rule 6** (Session 37, +$113/1000h whole-grid). The simple v40 still ships clean on prefix; it's retained for human-memorization fork (pattern echoes Session 39 v33/v35 split).
 
 **Why it works:**
 The pair-mid Hold'em anchor stays (oracle prefers mid-pair 60-85% across
