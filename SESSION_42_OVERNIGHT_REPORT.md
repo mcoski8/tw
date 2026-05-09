@@ -67,16 +67,28 @@ The Session 42 morning's deferred two_pair Rule 8 candidate (+$197 full / -$512 
 
 **Verdict: two_pair is genuinely ML territory.** No rule-based rescue for the prefix loss is possible. The +$197 full-grid lift is real but inseparable from the prefix regression.
 
-### 5. Pair (Rule 1 extension) — UNDERWAY, NEEDS MORE WORK
+### 5. Pair (Rule 1 extension) — DEEP DRILL COMPLETED, NO CLEAN SHIP AVAILABLE
 
-The pair category (46.6% of hands, $754/1000h within-cat residual) was profiled:
+The pair category (46.6% of hands, $754/1000h within-cat residual) was profiled, then the QQ/JJ subset specifically was drilled:
 
-- 73.7% of oracle picks have top=highest-singleton
-- 9.9% have top=2nd-singleton, 8.9% have top=lowest-singleton
-- **QQ has the biggest v33 loss** at $2,833/h (50/50 split between mid=P_pair vs unpaired)
+**Initial profile (`drill_pair_rule1_extension.py`):**
+- 73.7% of oracle picks have top=highest-singleton; 9.9% top=2nd-singleton; 8.9% top=lowest-singleton
+- QQ has the biggest v33 loss at $2,833/h (50/50 split between mid=P_pair vs unpaired-mid)
 - JJ similar at $2,541/h, mid 51%/49% split
 
-**Findings worth a Session 43 follow-up:** the QQ/JJ split suggests an extension to Rule 1 ("when QQ or JJ has 2 distinct suits and balanced kickers, move to bot for DS"). Current Rule 1 covers this only narrowly. Could capture significant value but requires careful gate design and the prefix-regression-as-gate test.
+**Deep drill (`drill_pair_qq_jj_to_bot.py`, 430K QQ+JJ hands):**
+- Crucial finding: **QQ + JJ has ZERO hands in the prefix grid.** Their canonical IDs are all > 500K (prefix bias toward weak hands excludes broadway pairs entirely).
+- "Always pair-to-bot": -$112/1000h within-cat (REGRESSION)
+- "M2 with balanced kickers + no-Ace gate": +$4.13/1000h whole-grid (small but positive)
+- **Existing Rule 1 (with-Ace) is REGRESSING -$14.15 on QQ+JJ specifically.** Rule 1's gate is too aggressive on these ranks.
+- M2 oracle within (best top + mid for pair-to-bot): +$55.57 whole-grid ceiling — capturable only with smarter multi-feature heuristic
+- Per-pair-rank: QQ v37 $2,847/h → M2_det $4,192 (worse) → M2_oc $1,826 (oracle); JJ similar pattern
+
+**Verdict:** the "50/50 oracle split" I initially observed was between mid=P_pair vs "unpaired_mid" — but unpaired_mid wasn't necessarily pure pair-to-bot. It could be pair-split or split-with-singleton. The pure pair-to-bot subspace gives only a small +$4 lift when carefully gated, with a +$55 oracle ceiling unreachable by single-condition heuristic.
+
+**Possible Session 43 ship:** a Rule 1 retune (drop Q,J from existing Rule 1's gate + add a no-Ace QQ/JJ extension) → ~+$5/1000h whole-grid. Below the diminishing-returns threshold for human memorization but worth a "cleanup" ship if combined with other small findings.
+
+**Bigger conclusion:** pair-category-rule-extraction beyond Rules 1, 4, 5 yields diminishing returns. The remaining $754/1000h pair residual is multi-feature ML territory.
 
 ### 6. Trips_pair (Rule 3) refinement — NO IMPROVEMENT
 
