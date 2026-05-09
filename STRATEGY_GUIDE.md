@@ -1008,6 +1008,53 @@ A gated variant `strategy_v40b_rule10_gated.py` (additional condition `pair_rank
 
 ---
 
+## Session 44: Bot suit×connectivity priority refined — SUIT DOMINATES CONNECTIVITY (methodology investigation, no new ship)
+
+User devil's-advocate questioning of Rule 10's bot construction triggered a methodology investigation. Two drills ran:
+
+**Drill 1 — `drill_bot_suit_run_priority.py` (CONFOUNDED).** Cross-product 5×7 (suit × connectivity) of bot classifications. Results showed surprising-but-suspicious findings: 4-flush-run-4 outranked SS-run-4, DS-scattered outranked SS-run-4 — both contradicted Omaha first-principles.
+
+**Drill 2 — `drill_bot_suit_run_pairwise.py` (DEFINITIVE).** Same scope, but within-hand pairwise comparison (for each hand, compute EV(best in A) − EV(best in B) for every achievable pair). Eliminates the cross-class hand-population confounder.
+
+Gemini consultation (`mcp__pal__chat` with `gemini-2.5-pro`) confirmed: cross-class average regret is confounded by hand-population differences. Within-hand pairwise is the right methodology for cross-class priority ranking.
+
+**Definitive findings (J-low no-pair, n=85,800):**
+
+The original methodology rule "DS > SS > rainbow > 3+1 > 4-flush" came from trips territory (Rule 6 Step 2 + Session 40 connectivity probe) and was structurally incomplete. The refined rule: **suit dominates connectivity at every level. DS-scattered (worst DS) beats every non-DS class within-hand.**
+
+Key tipping-point comparisons (DS-scattered vs each non-DS class):
+
+| Vs class | n co-achievable | Lift |
+|---|---:|---:|
+| SS run-2+strays | 37,332 | **+$111** (basically tied, DS wins) |
+| 4-flush run-4 | 672 | +$622 |
+| SS run-4 | 16,904 | +$1,603 |
+| Rainbow run-4 | 3,588 | +$6,981 |
+
+No tipping point exists. The thinnest margin (DS-scattered vs SS-run-2+strays) is +$111/1000h — essentially tied but DS still wins.
+
+**Within DS, connectivity matters but less than suit dominance:** DS run-4 vs DS scattered = +$2,554; DS-vs-SS at run-4 = +$4,457. Suit premium > connectivity premium.
+
+**Curious side-finding:** DS one-gap-4 beats DS run-4 by +$376/1000h within-hand. A missing internal rank creates a board-bridging straight bonus. Counterintuitive — worth confirming in trips territory in a follow-up.
+
+**4-flush mystery resolved:** 4-flush-run-4 vs SS-run-4 = +$907 within-hand (vs +$1,646 in confounded drill — smaller effect). Plausible mechanism: flush HEIGHT compensates for flush probability. With 4-flush, when board brings 3 spades you use the highest 2 spades from hand for a higher-kicker flush.
+
+**Refined priority hierarchy:**
+- Tier 1 (any DS): all DS variants beat all non-DS within-hand
+- Tier 2 (close cluster, ~tied with DS-scattered): SS run-2+strays, SS one-gap-4, 4-flush run-4, SS run-4
+- Tier 3: 3+1 variants, weaker SS
+- Tier 4 (avoid): all rainbow
+
+**No new rule shipped.** v40b remains production. The findings inform Session 45+ work — the user's direction is to apply suit dominance to J-low pair (does pair-stays-in-mid hold if breaking the pair enables DS-bot?) and J-low two_pair (does DS-bot beat keeping both pairs intact?).
+
+**Methodology rules NEW (Session 44):**
+- Cross-class regret averaging is confounded by hand-population differences. Always validate cross-class comparisons via within-hand pairwise.
+- Suit dominates connectivity universally in J-low no-pair (no tipping point).
+- First-principles arguments must check payoff height in addition to probability.
+- DS one-gap-4 ≥ DS run-4 — board-bridging straight bonus dominates consecutive-rank value.
+
+---
+
 # Part 2 — ML champion progression (the full table)
 
 Every model trained, side-by-side, on both validation grids:

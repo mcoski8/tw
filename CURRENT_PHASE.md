@@ -1,50 +1,47 @@
-# Current: Sprint 8 — Session 43 ships **Rule 10 (J-low single-pair defensive, GATED variant)** as v40b — production swapped from v40-simple to v40b-gated after v40b's full-grade revealed 2x the lift with same prefix performance. **v40b lift: +$48/1000h whole-grid full + +$37/1000h prefix, grader-confirmed** (vs simple v40's +$23 / +$37). The gated trigger adds one condition `pair_rank ≤ 6 OR pair_rank == max_rank` to the simple "max ≤ J AND pair" base — capturing the per-cell structural break where the rule wins (low pairs OR pair-equals-max) while excluding the localized regression zone (pair_rank ∈ (max-4, max-1)). v40b also gains pct_opt +0.31% on full (vs v40-simple's slight regression −0.02%). Largest single-rule full-grid lift since v33's Rule 6 ($113/1000h, Session 37). v40-simple is retained as sister artifact for human-memorization fork. The user's weak-hand defensive investigation (~14% of hands, max card ≤ J) yielded ONE clean structural rule: for pair hands with max ≤ J, set top=lowest-singleton, mid=pair, bot=4-highest-non-pair. Discovered in `drill_low_pair_J_high_defense.py`; aggregated +$22.73/1000h whole-grid (full N=200) + **+$36.70/1000h whole-grid (prefix N=1000)** across 342,720 J-low pair hands. Both grids strongly positive — passes the both-grid validation gate decisively (prefix lift > full lift, the OPPOSITE of the prefix-regression risk pattern). The other three weak-hand zones investigated: (Q1) A-high+weak — already optimized at 96% top=Ace; (Q4) J-low two_pair re-examined defensively — confirmed Session 42's "two_pair is ML territory" verdict (all 6 deterministic candidates regress, including v33's adaptive splitting which turned out to be genuine ML routing not a hidden defensive rule); (Q5) J-high or weaker no-pair — naive "top=lowest" works on T-low (~+$8/1000h full-only, no prefix coverage) but regresses on J-high. The high-card-to-bot-for-4-flush hypothesis (Q2 user instinct) FAILS empirically: every variant regressed by $10-$27/1000h. Methodology lesson NEW: high_only category has ZERO prefix coverage (all canonical IDs >500K); the both-grid gate is INAPPLICABLE for no-pair rules — they ship full-only or not at all. Methodology lesson NEW: the **weak-hand top inversion** is a unifying structural pattern — when the highest card cannot reliably win the top tier, the GTO play is to dump the LOWEST card on top and stack the strong cards into mid+bot. Oracle confirms this inverts at the K-high → T-high boundary (96% top=hi on A-high, 47% top=lo on 9-high).
+# Current: Sprint 8 — Session 44 closes a methodology investigation triggered by user devil's-advocate questioning of Rule 10's bot construction. Ran two drills on the bot suit×connectivity priority hierarchy. The first (cross-product mean regret) showed surprising-but-confounded results (4-flush-run-4 outranking SS-run-4, contradicting Omaha first-principles). Consulted Gemini, who confirmed the **confounding hypothesis**: cross-class average regret is biased by hand-population differences. The second drill (within-hand pairwise) eliminated the confounder and produced a **definitive** suit×connectivity hierarchy: **suit dominates connectivity at every level** in the J-low no-pair zone. DS-scattered (worst DS) beats every non-DS class within-hand, including SS-run-4 (best SS) by +$1,603/1000h. The thinnest margin is DS-scattered vs SS-run-2+strays at +$111/1000h — basically tied but DS still wins. Within DS, connectivity matters but less than suit dominance: DS-run-4 vs DS-scattered = +$2,554, vs DS-vs-SS-at-run-4 = +$4,457. **No new rule shipped** — Session 44 invalidated the previous methodology rule "DS > SS > rainbow > 3+1 > 4-flush" (which came from trips territory) and replaced it with "suit dominates connectivity universally" via within-hand pairwise validation. v40b remains production. Surprising side-finding: **DS one-gap-4 beats DS run-4** by +$376/1000h within-hand — a missing internal rank creates a board-bridging straight bonus. Methodology lesson NEW: cross-class regret averaging is confounded by hand-population differences; within-hand pairwise comparison is the right methodology. Methodology lesson NEW: first-principles arguments must check payoff height in addition to probability — 4-flush-run-4 vs SS-run-4 was almost a wash because higher flush kicker compensates for lower flush probability.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 44):**
+> **🎯 IMMEDIATE NEXT ACTION (Session 45 — USER PRIORITY):**
 >
->   (A) **v40 ML retrain** — feed v34_dt with v40 baseline. Rule 10 changes 5.7% of grid (J-low pair). Some marginal ML signal expected.
+>   (A) **Apply suit-dominance findings to J-low PAIR hands.** Rule 10 currently puts the pair in mid (anchored Hold'em) and the 4 highest non-pair singletons in bot. Session 44's within-hand pairwise drill showed that suit dominance is universal in J-low no-pair — but Rule 10's pair population was NOT covered by the within-hand pairwise drill (the drill restricted pair pop to mid=pair settings, eliminating bot configurations that would break the pair). The user's direction: drill the J-low single-pair zone for **"DS-bot at cost of breaking the pair" vs "pair-in-mid + non-DS bot"** within-hand pairwise. If breaking the pair to enable DS-bot wins, Rule 10 v3 should allow pair-breaking when DS-bot is achievable.
 >
->   (B) **Q5 J-high no-pair deep-dive** — biggest unrealized oracle ceiling (+$54/1000h whole-grid on 60K hands) but requires multi-feature decomposition. Top-position split is non-binary (27% top=hi, 34% top=lo, 39% other). Likely ML territory but worth a focused drill.
+>   (B) **Extend to J-low two_pair zone.** Same question: does DS-bot beat keeping both pairs intact? Drill the J-low two_pair zone within-hand pairwise comparing "DS-bot built by breaking one or both pairs" vs "RA/RB/RC keeping pairs intact". If DS-bot wins, the Session 42/43 "two_pair is ML territory" verdict may need re-examination through the suit-dominance lens.
 >
->   (C) **T-low high_only naive top=lo rule** — ~+$8/1000h whole-grid full-only lift. Methodology question: should we ship rules that lack prefix coverage? The category is genuinely full-only by canonical-ID coincidence.
+>   (C) **DS one-gap-4 vs DS run-4 follow-up.** Confirm in trips and other categories that one-gap-4 truly beats run-4. If so, this is a generalizable structural finding (board-bridging straight bonus dominates consecutive-rank straight value).
 >
->   (D) **Round-3 within-trips features** (Session 42 carryover). Diagnose v34's $1,291/1000h within-trips residual.
->
->   (E) **Learned A-vs-C decision tree for Rule 6** (Sessions 38–40 carryover). $5–13/1000h whole-grid ML target.
->
->   (F) **Trips_pair G3 oracle exploration** (Session 42 finding, +$85/1000h ceiling). Multi-feature ML or drill.
->
->   (G) **KK/AA single-suited Rule-4-bot residual** ($37/1000h). Defer behind A-F.
+>   (D) **Carryover from Session 43:**
+>     - v40 ML retrain (feed v34_dt with v40 baseline)
+>     - Q5 J-high no-pair multi-feature deep dive ($54/1000h ceiling)
+>     - T-low high_only naive top=lo rule (~+$8 full-only — methodology question on shipping full-only rules)
+>     - Round-3 within-trips features (S42 carryover)
+>     - Learned A-vs-C decision tree for Rule 6 (S38-40 carryover)
+>     - Trips_pair G3 oracle exploration (+$85 ceiling)
+>     - KK/AA single-suited Rule-4-bot residual
 
-> **✅ SHIPPED (Decision 076):** **v40_rule10** as the new production strategy of record. Replaces v39 in `STRATEGY_GUIDE.md` Part 5 + Part 6 + cheat sheet. Lives at `analysis/scripts/strategy_v40_rule10.py`. Production strategy chain is now 10 rules deep (Rules 1-9 unchanged + Rule 10 = J-low single-pair defensive). v40b_rule10_gated (the gated variant, "pair_rank ≤ 6 OR pair_rank == max_rank") graded as a sister candidate; the production runtime chooses simple v40 for human-memorability per Session 42 "diminishing returns at structural break" methodology rule.
+> **✅ NO NEW SHIP (Session 44):** v40b remains the production strategy of record. Session 44 was a methodology investigation that produced a refined priority hierarchy but did not yet translate into a new rule. The findings inform Session 45's planned drills.
 
-> **🔬 ARTIFACTS (Session 43):**
-> 1. **`analysis/scripts/drill_high_card_defense.py`** — Q1+Q2+Q5 high_only investigation; oracle distribution shows weak-hand top inversion (96% top=Ace on A-high → 47% top=lo on 9-high)
-> 2. **`analysis/scripts/drill_low_pair_J_high_defense.py`** — Q3 J-low pair drill; produced the Rule 10 candidate (+$22.73 full / +$36.70 prefix)
-> 3. **`analysis/scripts/drill_two_pair_J_high_revisit.py`** — Q4 J-low two_pair re-examination; confirmed all deterministic candidates regress (ML territory)
-> 4. **`analysis/scripts/strategy_v40_rule10.py`** — NEW PRODUCTION STRATEGY (v40)
-> 5. **`analysis/scripts/strategy_v40b_rule10_gated.py`** — gated variant (sister candidate)
-> 6. **`analysis/scripts/grade_v40_rule10.py`** + **`grade_v40b_rule10_gated.py`** — graders for both variants
-> 7. **`SESSION_43_DEFENSIVE_REPORT.md`** — repo-root standalone report
+> **🔬 ARTIFACTS (Session 44):**
+> 1. **`analysis/scripts/drill_bot_suit_run_priority.py`** — cross-product 5×7 (suit × connectivity) drill with mean regret per cell (CONFOUNDED — kept for diagnostic purposes; do not use for production decisions)
+> 2. **`analysis/scripts/drill_bot_suit_run_pairwise.py`** — within-hand pairwise drill (DEFINITIVE — used to derive the priority hierarchy)
+> 3. **`SESSION_44_SUIT_CONNECTIVITY_REPORT.md`** — repo-root standalone report with full findings and tipping-point analysis
 
-> **📓 METHODOLOGY LESSONS (Session 43):**
-> - **NEW: Weak-hand top inversion is a unifying structural pattern.** Top tier wins 1 point/board (max 2 across two boards), mid 2/board, bot 3/board. When TOP equity is already <50% (any J-low hand vs a random opponent), the opportunity cost of dumping the highest card to top is <1 point, while the gain in bot+mid equity from upgrading kicker strength is >1 point. The math inverts the conventional "highest card to top" reflex.
-> - **NEW: high_only category has zero prefix coverage** (all 7-distinct-rank canonical IDs are >500K). The both-grid validation gate is INAPPLICABLE for no-pair rules. Defensive rules for the no-pair zone can only ship on full-grid validation alone, OR not ship.
-> - **REINFORCED: Two_pair is genuinely ML territory.** Q4's defensive re-examination confirmed Session 42's verdict — all six deterministic candidates (RA, RB, RC, RA_TOP_LO, RC_TOP_LO, F_SPLIT) regressed materially on both grids. v33's adaptive splitting on prefix is genuine multi-feature ML routing, not a hidden defensive rule.
-> - **NEW: High-card-to-bot-for-4-flush is a LOSING trade.** Counterintuitive conventional wisdom — building a 4-flush bot at the cost of breaking the high card regressed by $10-$27/1000h on every weak-hand stratum tested. The bot's flush draw doesn't compensate for the lost top-tier equity.
-> - **NEW: Worst-case regret is a useful sanity check** for defensive rules. A rule with positive mean lift but BIGGER worst-case regret would induce more 20-point scoops. v40's per-cell worst-case regret stays in the +$10-$22 range (compared to v39's +$15-$25), confirming no scoop-induction risk.
+> **📓 METHODOLOGY LESSONS (Session 44 NEW):**
+> - **Cross-class average regret is confounded by hand-population differences.** "Mean best EV in class" averaged across hands where the class is achievable mixes hand-overall-EV variance into the per-class metric. Different classes have different achievability populations. Always validate cross-class comparisons via within-hand pairwise.
+> - **Suit dominates connectivity at every level (J-low no-pair).** No tipping point exists where non-DS suit beats DS within-hand. DS-scattered ≥ all SS, 4-flush, 3+1, rainbow.
+> - **First-principles arguments must check payoff height, not just probability.** The "4-flush has fewer deck outs → SS wins" argument was incomplete. 4-flush-run-4 ≈ SS-run-4 within-hand because flush HEIGHT compensates for flush probability.
+> - **DS one-gap-4 ≥ DS run-4** (counterintuitive but real, +$376/1000h within-hand). A missing internal rank creates board-bridging straight value that beats consecutive-rank value.
+> - **Original "DS > SS > rainbow > 3+1 > 4-flush" methodology rule was incomplete.** Refined: "DS > everything (suit dominates), then 4-flush ≈ SS at strong connectivity, 3+1 ≈ SS, all rainbow at the bottom." More importantly, the priority should be checked against BOT-level achievability per hand, not assumed universally.
 
-> Updated: 2026-05-09 (Session 43)
+> Updated: 2026-05-09 (Session 44)
 
 ---
 
-## Headline state at end of Session 43
+## Headline state at end of Session 44
 
-**Strategies of record:**
+**Strategies of record (UNCHANGED from end of Session 43):**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
-| **v40b_rule10_gated** | NEW PRODUCTION strategy of record (10 rules: v39 + Rule 10 with gate "pair ≤ 6 OR pair == max"). +$48 full / +$37 prefix lift over v39. | `analysis/scripts/strategy_v40b_rule10_gated.py` |
+| **v40b_rule10_gated** | PRODUCTION strategy of record (10 rules: v39 + Rule 10 with gate "pair ≤ 6 OR pair == max"). +$48 full / +$37 prefix lift over v39. | `analysis/scripts/strategy_v40b_rule10_gated.py` |
 | **v34_dt** | ML champion (874K leaves, 83 features at depth=34 ml=2) | `analysis/scripts/strategy_v34_dt.py` + `data/v34_dt_model.npz` |
 | v40_rule10 | Simple variant of Rule 10 (no gate). +$23 full / +$37 prefix. Retained for human-strategy memorability fork. | `analysis/scripts/strategy_v40_rule10.py` |
 | v39_rule9 | Predecessor production (Session 42 overnight ship) | `analysis/scripts/strategy_v39_rule9.py` |
@@ -57,15 +54,13 @@
 | v38_rule8_two_pair_DEFERRED | DEFERRED — Session 42 two_pair Rule 8 candidate. Confirmed ML-only twice (S42 overnight + S43 Q4). | `analysis/scripts/strategy_v38_rule8_two_pair_DEFERRED.py` |
 | v36_rule7_high_only | ARCHIVED — Session 41 failed Rule 7 attempt for high_only | `analysis/scripts/strategy_v36_rule7_high_only.py` |
 
-**Capacity + feature progression (full 6M grid, N=200) — UNCHANGED from Session 41:**
+**Capacity + feature progression — UNCHANGED:**
 
 | Strategy | Depth | min_leaf | Features | Leaves | $/1000h | pct_opt | Δ vs prev |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | **v34** | **34 (33 actual)** | **2** | **83** | **874,548** | **$1,681** | **52.02%** | (latest) |
 
-**Same sweep on N=1000 prefix:** unchanged from Session 38 — v34 at $889/1000h / 62.74%.
-
-**Human-strategy progression (full grid, N=200) — production runtime:**
+**Human-strategy progression (full grid, N=200) — production runtime UNCHANGED:**
 
 | Strategy | $/1000h | pct_opt | Δ vs v14 |
 |---|---:|---:|---:|
@@ -79,96 +74,103 @@
 | v40_rule10 (+ Rule 10, simple variant) — sister candidate | $2,824 | 41.15% | −$209 |
 | **v40b_rule10_gated (+ Rule 10 gated) — CURRENT PRODUCTION** | **$2,798** | **41.48%** | **−$235** |
 
-**Same on prefix:**
-
-| Strategy | Prefix $/1000h | Δ vs v8_hybrid prefix |
-|---|---:|---:|
-| v8_hybrid (prefix) | $3,051 | baseline |
-| v37 (prefix) | $1,753 | −$1,298 |
-| v38 (prefix) | $1,735 | −$1,316 |
-| v39 (prefix) | $1,707 | −$1,344 |
-| **v40 (prefix) — CURRENT PRODUCTION** | **$1,670** | **−$1,381** |
-
 ---
 
-## What this leaves on the table (UPDATED Session 43)
+## What Session 44 produced
 
-- **For human play (open opportunities):** Q5 J-high no-pair has the biggest remaining oracle ceiling (+$54/1000h whole-grid on 60K hands) but requires multi-feature decomposition; top-position split is 3-way (27% hi, 34% lo, 39% other). Likely ML territory but worth a Session 44 deep-dive. T-low high_only naive top=lo rule (~+$8/1000h full-only) is below the both-grid threshold but cheap if we accept full-only validation.
-- **For ML champion:** v34 unchanged. Biggest remaining residuals (full grid):
-  - **high_only**: $572 share — OFFICIALLY ML-ONLY (Session 41); Session 43 confirmed top-pick is the structural lever but no clean rule
-  - **pair**: $754 share — Rule 10 captures J-low subset; KK/AA single-suited Rule-4-bot residual remains
-  - **two_pair**: $218 share — confirmed ML territory TWICE (Session 42 overnight + Session 43 Q4)
-  - **trips**: $71 share — round-3 needs new diagnostic angles
-  - **trips_pair**: $30 (already gated; G3 oracle +$85 ceiling open for ML exploration)
-  - three_pair: ~$28 share (after v37 ship)
-  - **composite**: ~$10 share total **after v39 ships** (~$30 left across remaining subtypes mostly via TT/T2P heuristic-vs-oracle gaps)
-  - quads: ~$5 share **after v39 ships** (down from $23/1000h)
-
----
-
-## What Session 43 produced
-
-**Code (drills + production):**
-- 3 new drill scripts (high_only Q1+Q2+Q5; J-low pair Q3; J-low two_pair Q4 revisit)
-- 2 production strategies: `strategy_v40_rule10.py` (simple) + `strategy_v40b_rule10_gated.py` (gated variant)
-- 2 graders: `grade_v40_rule10.py`, `grade_v40b_rule10_gated.py`
+**Code:**
+- 2 new drill scripts (`drill_bot_suit_run_priority.py` confounded; `drill_bot_suit_run_pairwise.py` definitive)
+- 0 new strategy candidates
+- 0 new graders
 
 **Documentation:**
-- `STRATEGY_GUIDE.md` Part 1 — Session 43 entry (TODO during session-end commit)
-- `STRATEGY_GUIDE.md` Part 5 — Rule 10 reference (TODO)
-- `STRATEGY_GUIDE.md` Part 6 — Rule 10 worked example + cheat sheet update (TODO)
-- `STRATEGY_GUIDE.md` header — bumped Last updated (TODO)
+- `STRATEGY_GUIDE.md` Part 1 — Session 44 entry (TODO during commit)
 - `CURRENT_PHASE.md` — rewritten (this file)
-- `DECISIONS_LOG.md` — Decision 076 added
-- `SESSION_43_DEFENSIVE_REPORT.md` — repo-root standalone report
+- `DECISIONS_LOG.md` — Decision 077 added
+- `SESSION_44_SUIT_CONNECTIVITY_REPORT.md` — repo-root standalone report
 
 ---
 
-## Resume Prompt (Session 44)
+## Resume Prompt (Session 45)
 
 ```
-Resume Session 44 of the Taiwanese Poker Solver project at
+Resume Session 45 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context:
 - CLAUDE.md
-- STRATEGY_GUIDE.md (Session 43 entry in Part 1; Part 5 lists v40 as
-  current production; Part 6 has Rule 10 with worked example)
-- CURRENT_PHASE.md (rewritten end of Session 43)
-- DECISIONS_LOG.md (latest: Decision 076 — v40 Rule 10 ships)
-- SESSION_43_DEFENSIVE_REPORT.md (standalone weak-hand defensive report)
-- analysis/scripts/strategy_v40_rule10.py — current production
-- analysis/scripts/strategy_v34_dt.py — ML champion
+- CURRENT_PHASE.md (rewritten end of Session 44)
+- DECISIONS_LOG.md (latest: Decision 077 — bot suit×connectivity priority,
+  methodology investigation; no new ship)
+- SESSION_44_SUIT_CONNECTIVITY_REPORT.md (standalone report on the
+  within-hand pairwise drill that produced the definitive priority)
+- SESSION_43_DEFENSIVE_REPORT.md (the Rule 10 ship that triggered
+  this line of investigation)
+- STRATEGY_GUIDE.md (Session 44 entry in Part 1)
+- analysis/scripts/strategy_v40b_rule10_gated.py — current production
+- analysis/scripts/drill_bot_suit_run_pairwise.py — the definitive S44 drill
+- analysis/scripts/drill_low_pair_J_high_defense.py — Rule 10's underlying drill
 
-State (end of Session 43):
-- Production strategy of record is now **v40_rule10** (10 rules: v39 +
-  Rule 10 J-low pair defensive). +$37/1000h prefix lift confirmed
-  (full grade pending; drill predicted +$22.73 full / +$36.70 prefix).
-- Q4 (J-low two_pair re-examination) confirmed Session 42's "two_pair
-  is ML territory" verdict. v33's adaptive splitting is genuine ML
-  routing, not a hidden defensive rule.
-- Q1 already-optimized; Q2/Q5 high-card-to-bot-for-flush hypothesis
-  FAILED empirically.
-- v34_dt remains ML champion. v40 changes 5.7% of grid (the J-low
-  pair zone); some marginal ML signal expected from a v34 retrain.
+State (end of Session 44):
+- Production unchanged: v40b_rule10_gated (Rule 10, J-low pair defensive,
+  gated by "pair ≤ 6 OR pair == max"). +$48 full / +$37 prefix vs v39.
+- Session 44 produced no new ship — it was a methodology investigation
+  triggered by user devil's-advocate questioning of Rule 10.
+- Definitive finding: SUIT DOMINATES CONNECTIVITY in J-low no-pair
+  bot construction. DS-scattered (worst DS) beats every non-DS class
+  within-hand. No tipping point exists.
+- Surprising side-finding: DS one-gap-4 ≥ DS run-4 (+$376/1000h within
+  hand) — a missing internal rank creates a board-bridging straight bonus.
 
-Next session targets (priority order):
+USER-PRIORITY DIRECTION FOR SESSION 45 (verbatim):
+"Now that we have a definitive answer for defensive J-high no-pair
+hands, we need to compare that to J-high hands with a pair and see how
+to play these. Do we favor the pair in the middle still? What about if
+it breaks double-suited on bottom? Does that mean DS on bottom even at
+the cost of breaking a pair is our best option? And then this can flow
+into J-high with two pair, do we favor DS on bottom STILL? What if it
+means breaking our two pair? Etc."
 
-(A) v40 ML retrain — feed v34_dt with v40 baseline.
+Translation into drills:
 
-(B) Q5 J-high no-pair deep-dive — biggest unrealized oracle ceiling
-    (+$54/1000h on 60K hands) but multi-feature; likely ML.
+(A) drill_J_low_pair_DS_break.py — for J-low single-pair hands, drill
+    "best DS-bot config" vs "best non-DS-bot config with pair-in-mid"
+    within-hand pairwise. Categories of comparison:
+      A1: pair-in-mid + DS-bot achievable (rare; hand has 2+2 suit
+          pattern across 4 non-pair singletons) — Rule 10 baseline
+      A2: pair-in-mid + non-DS-bot (Rule 10's typical case)
+      A3: pair-split (one pair-member to bot, the other to mid or top)
+          + DS-bot achievable
+      A4: pair-to-bot (both pair-members in bot) + DS-bot achievable
+    Find the lift of A3/A4 over A1/A2 within-hand. If positive,
+    Rule 10 v3 should allow pair-breaking when DS-bot is achievable.
 
-(C) T-low high_only naive top=lo rule (~+$8/1000h full-only).
-    Methodology question: ship rules without prefix coverage?
+(B) drill_J_low_two_pair_DS_break.py — same question for two_pair:
+    B1: both-pairs-intact + best-bot
+    B2: split one pair (one member moved out) + DS-bot
+    B3: both pairs split + DS-bot
+    Within-hand pairwise lift of B2/B3 over B1. If positive, the
+    Session 42/43 "two_pair is ML territory" verdict needs revisiting
+    through the suit-dominance lens.
 
-(D) Round-3 within-trips features (Session 42 carryover).
+(C) Validate findings on FULL grid (N=200) AND PREFIX grid (N=1000).
+    J-low pair has prefix coverage (~10% of prefix is J-low pair=2
+    cells); J-low two_pair has prefix coverage too.
 
-(E) Learned A-vs-C decision tree for Rule 6 (Sessions 38-40 carryover).
+(D) If suit-dominance-over-pair-anchor pattern holds: design Rule 10 v3
+    (or new Rule 11) that conditionally breaks pairs for DS-bot.
+    If pattern doesn't hold (pair-anchor is more important): document
+    the boundary and refine the human-strategy guide.
 
-(F) Trips_pair G3 oracle exploration.
-
-(G) KK/AA single-suited Rule-4-bot residual.
+Carryover from Session 44 (lower priority):
+- DS one-gap-4 vs DS run-4 follow-up: confirm in trips category
+- v40 ML retrain
+- Q5 J-high no-pair multi-feature deep dive
+- T-low high_only naive top=lo rule
+- Round-3 within-trips features
+- Learned A-vs-C decision tree for Rule 6
+- Trips_pair G3 oracle exploration
+- KK/AA single-suited Rule-4-bot residual
 
 REMINDERS:
 - Auto mode is on; minimize interruptions.
@@ -177,23 +179,26 @@ REMINDERS:
 - Session-end protocol: commit + push to origin/main (pre-authorized).
 - For long Python scripts: PYTHONUNBUFFERED=1 or python3 -u.
 - Validate ALL rules on BOTH full grid (N=200) AND prefix (N=1000)
-  WHEN PREFIX COVERAGE EXISTS. high_only category has ZERO prefix
-  coverage — full-only validation only.
-- Methodology rule (Session 43 NEW): weak-hand top inversion is a
-  unifying structural pattern. When highest card can't win top tier,
-  dump LOWEST card to top and stack mid+bot.
-- Methodology rule (Session 43 NEW): high_only category has zero
-  prefix coverage; both-grid gate is INAPPLICABLE.
+  WHEN PREFIX COVERAGE EXISTS. high_only category has ZERO prefix.
+- Methodology rule (Session 44 NEW): cross-class regret averaging is
+  confounded by hand-population differences. Always validate cross-class
+  comparisons via within-hand pairwise.
+- Methodology rule (Session 44 NEW): suit dominates connectivity at every
+  level (J-low no-pair). No tipping point.
+- Methodology rule (Session 44 NEW): first-principles arguments need to
+  check payoff height in addition to probability.
+- Methodology rule (Session 43 NEW): weak-hand top inversion.
+- Methodology rule (Session 43 NEW): high_only zero prefix coverage.
 - Methodology rule (Session 43 NEW): high-card-to-bot-for-flush is
-  a losing trade. Don't propose it.
+  a losing trade.
 - Methodology rule (Session 42 NEW): a rule with prefix regression
   >2× the full-grid lift does NOT ship.
 - Methodology rule (Session 42 overnight NEW): suit-aware "non-X-suit"
-  insight is a generalizable rule family. Watch for opportunities.
-- Methodology rule (Session 42 overnight NEW): two_pair is ML territory
-  (confirmed twice now — S42 overnight + S43 Q4).
-- Methodology rule (Session 38): default ML champion ships use
-  depth=34 ml=2.
+  insight is a generalizable rule family.
+- Methodology rule (Session 42 overnight NEW): two_pair was previously
+  declared ML territory (twice — S42 overnight + S43 Q4) but Session 45's
+  pair-breaking-for-DS drill may revisit this through the suit-dominance lens.
+- Methodology rule (Session 38): default ML champion ships use depth=34 ml=2.
 ```
 
 ---
