@@ -3493,3 +3493,50 @@ At max=A, even B1 oracle LOSES vs v43. Mechanism: at A-high, putting the A on to
 - UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 48 entry) + production-of-record references
 
 **Total project rule count: 13** (Rules 1-12 + Rule 13 = three_pair all-intact + DS, MM/HH only).
+
+---
+
+## Decision 082 — Trips_pair within-class DS investigation (NO SHIP, methodology lesson) (Session 49)
+
+**Date:** 2026-05-09
+**Status:** No production change. v44 remains strategy of record. Session 49 investigated trips_pair within-class DS but no shippable rule emerged. Two methodology lessons recorded for future drill discipline.
+
+**Origin:** Continuing the suit-dominance "DS premium within X" lens to trips_pair (cat=4, 171,600 hands, 2.86% of grid).
+
+**Drill I (within-hand pairwise, n=171,600) — DEFINITIVE:**
+- v44 already picks pair-bot 85% of fires (60% pair-bot + DS, 25% pair-bot + non-DS)
+- V3 (pair-bot DS) is universally optimal: V3 vs V5 (pair-split DS) = +$13,397/1000h within fires
+- v44 vs best-in-V3 (oracle within DS pair-bot) = **+$1,992/1000h within fires** — the residual oracle opportunity
+
+**Drill J (sub-config sweep) — POPULATION-CONFOUNDED:**
+Tested 7 sub-config × top-pos variants. Reported V_B_TOP_SING_HI as winner at +$4,293/1000h within fires. **This was a methodology error:** the variant's mean EV was computed on hands where the variant is achievable (n=60,060), while v44's mean was computed on ALL V3-achievable hands (n=128,700). Different populations → confounded means (S44 methodology rule violated).
+
+**Rule 14 attempt (v45) — NO-OP:**
+Designed v45 to pick V_B_TOP_SING_HI when achievable. Sanity check on 50K trips_pair sample: Rule 14 fires on 17,498 hands, **differs from v44's pick on 0 of those hands** (0%). Grade confirmed: v45 vs v44 = $0/1000h on prefix.
+
+**Why v44 already picks V_B_TOP_SING_HI:** v44 falls through to v3's Rule 3 ("split the trips, keep the pair") for trips_pair. The existing tie-break apparently matches V_B_TOP_SING_HI when achievable.
+
+---
+
+**Methodology rules NEW (Session 49):**
+
+1. **Cross-class means are CONFOUNDED — always within-hand pairwise.** Re-iterating S44 because I violated it in Drill J. The variant's mean EV cannot be compared to v44's mean EV unless both are computed on the SAME population.
+
+2. **Sanity-check pick-difference rate BEFORE grading.** A simple test ("does the rule actually pick differently from production on its trigger hands?") catches no-op rules early. Rule 14 fired on 17,498 hands but differs from v44 on 0 — clear no-op signal.
+
+3. **The right ship target is "where production differs from oracle".** Instead of "pick variant X when achievable", target "production picks something OTHER than the oracle's best variant on this hand". The +$1,992 oracle gap from Drill I lives in this residual subset.
+
+4. **Happy-accident upstream tie-breaks can already capture optimization potential.** v3's Rule 3 trips_pair logic was apparently picking V_B_TOP_SING_HI all along. Don't try to ship a rule that does the same thing.
+
+---
+
+**Files (all retained as artifacts):**
+- NEW: `analysis/scripts/drill_trips_pair_DS_within_intact.py` (Drill I — DEFINITIVE within-hand pairwise)
+- NEW: `analysis/scripts/drill_trips_pair_pbot_DS_subconfig.py` (Drill J — POPULATION-CONFOUNDED, kept for diagnostic reference)
+- NEW: `analysis/scripts/strategy_v45_rule14_trips_pair_DS.py` (no-op artifact)
+- NEW: `analysis/scripts/grade_v45_rule14_trips_pair.py`
+- NEW (report): `SESSION_49_TRIPS_PAIR_REPORT.md`
+- UPDATED: `CURRENT_PHASE.md` (rewritten for Session 49)
+- UPDATED: `STRATEGY_GUIDE.md` (Session 49 methodology entry; production-of-record references unchanged from v44)
+
+**Total project rule count: 13** (UNCHANGED). v44 remains production. The trips_pair within-class opportunity (+$1,992 oracle gap) is queued for a future Rule 14 v2 with adaptive heuristic.

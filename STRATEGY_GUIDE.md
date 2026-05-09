@@ -1192,6 +1192,28 @@ At max=A, even the B1 oracle LOSES to v43's pick. Mechanism: at A-high, putting 
 
 ---
 
+## Session 49: Trips_pair within-class DS investigation — NO SHIP (methodology lesson)
+
+Continued the suit-dominance "DS premium within X" lens to trips_pair (cat=4, 171,600 hands, 2.86% of grid). Two findings, no production change.
+
+**Drill I (within-hand pairwise, n=171,600) — DEFINITIVE.** v44 already picks pair-bot 85% of fires (60% pair-bot + DS, 25% pair-bot + non-DS). V3 (pair-bot DS) is universally optimal: V3 vs V5 (pair-split DS) = +$13,397/1000h within fires. **v44 vs best-in-V3 = +$1,992/1000h within fires** (the residual oracle gap).
+
+**Drill J (sub-config sweep) — POPULATION-CONFOUNDED.** Tested 7 sub-configs × top variants. Reported V_B_TOP_SING_HI as winner at +$4,293/1000h within fires. **Methodology error:** the variant's mean EV was computed on its achievability subset (n=60,060), while v44's mean was on ALL V3-achievable hands (n=128,700). Cross-class confounding (S44 rule violated).
+
+**Rule 14 attempt (v45) — NO-OP.** Designed v45 to pick V_B_TOP_SING_HI when achievable. Sanity check on 50K trips_pair: Rule 14 fires on 17,498 hands, **differs from v44 on 0 of them** (0%). Grade confirmed: v45 vs v44 = $0/1000h on prefix. **v44 already picks V_B_TOP_SING_HI when achievable** (apparently as a happy accident of v3's Rule 3 tie-break logic for trips_pair).
+
+**Decision:** No ship. v45 retained as artifact. The +$1,992 oracle gap is real but requires a more adaptive heuristic than fixed-variant selection.
+
+**Methodology lessons NEW (Session 49):**
+- **Cross-class means are CONFOUNDED — always within-hand pairwise.** Re-iterating S44 because I violated it in Drill J. The variant's mean EV cannot be compared to v44's mean EV unless both are computed on the SAME population.
+- **Sanity-check pick-difference rate BEFORE grading.** A simple "does the rule actually pick differently from production?" test catches no-op rules early.
+- **The right ship target is "where production differs from oracle".** Not "pick variant X when achievable" but "production picks something OTHER than the oracle's best variant on this hand".
+- **Happy-accident upstream tie-breaks can already capture optimization potential.** v3's Rule 3 trips_pair logic was apparently picking V_B_TOP_SING_HI all along.
+
+**Score: $2,717/1000h on full grid (UNCHANGED from v44).** Production state of record remains v44 with cumulative v39 → v44 = −$129 full / −$185 prefix.
+
+---
+
 # Part 2 — ML champion progression (the full table)
 
 Every model trained, side-by-side, on both validation grids:
