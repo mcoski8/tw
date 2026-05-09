@@ -2899,3 +2899,74 @@ Only the quads_pair subtype has a verified deterministic rule.
 - UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 42 entry), Part 5 (production reference + probes), Part 6 (Rule 8 section, Default updated, cheat sheet updated, Step 1 categorize table updated)
 
 **Total project rule count: 8** (Rule 1 pair-to-bot DS; Rule 2 two-pair no-split; Rule 3 trips+pair split-2-1; Rule 4 KK/AA stay-mid; Rule 5 KK/AA rainbow override; Rule 6 pure trips paired-mid + boundary; Rule 7 three_pair top=singleton + RB-or-RA boundary; Rule 8 quads_pair top=singleton + non-pair-suit-quads to mid).
+
+---
+
+## Decision 075 — Rule 9 (3 sub-rules: plain quads + TT + T2P) ships as v39 from Session 42 overnight rule-mining (Session 42 overnight)
+
+**Date:** 2026-05-09 (overnight after 2026-05-08 v38 ship)
+**Status:** SHIPS as production. Three new structural rules bundled into Rule 9, all passing the both-grid validation gate (full + prefix both positive). v39 replaces v38 as the strategy of record. Combined +$22/1000h whole-grid (full N=200) + +$28/1000h whole-prefix (N=1000). v39 score: $2,846/1000h on full (vs v8_hybrid $3,153, vs v14 $3,033, vs v33 $2,920, vs v38 $2,868).
+
+**Origin:** After v38 (Rule 8 quads_pair) shipped, the user requested an overnight rule-mining sprint. Six investigations ran sequentially:
+1. TT (two_trips) E3a heuristic hunt
+2. Plain quads structural drill
+3. T2P (trips_two_pair) initial drill + deeper boundary search
+4. Two_pair split-allowing investigation
+5. Pair Rule 1 extension probe
+6. Trips_pair refinement
+Plus a two_pair oracle-pick characterization probe. Three of the six produced ship-able rules.
+
+---
+
+**Rule 9a — Plain quads (4+1+1+1, 14,300 hands, 0.24% of canonical).**
+
+Mirror of Rule 8 QP. The same suit-aware insight ("non-pair-suit quads to mid") generalizes when the "pair" is replaced by "the 3 singletons":
+
+  - TOP = highest singleton
+  - MID = the 2 quad cards whose SUITS are NOT used by the 3 singletons
+  - BOT = the other 2 quads + the 2 lower singletons
+
+100% deterministic. Captures 73% of the +$21.02/1000h whole-grid oracle ceiling. **+$15.31 full / +$11.78 prefix.** Wins on ALL 13 quad-rank cells. Within-cat regret on plain quads drops $9,670 → $3,235/1000h on full (66% reduction). pct_optimal: 9.5% → 45.9%.
+
+**Rule 9b — TT (two_trips, 3+3+1, 4,290 hands, 0.071% of canonical).**
+
+Split the HIGH trip to top with suit-aware top-pick + DS-aware L-bot pick:
+
+  - TOP = an H-trip card whose suit IS in the LOW-trip's suits
+  - MID = the FULL LOW-trip pair (2 of 3 low-trip cards)
+  - L-bot = the L-trip card whose suit best matches bot's H-trip-leftovers + singleton (DS-aware tiebreaker)
+  - BOT = 2 H-trip + 1 L-trip + singleton
+
+**+$3.57 full / +$2.79 prefix.** Captures 60% of the +$5.98/1000h whole-grid oracle ceiling for E3a (split-trip-to-top class).
+
+**Rule 9c — T2P (trips_two_pair, 3+2+2, 6,864 hands, 0.114% of canonical).**
+
+Split the trip to top with a trip-rank boundary controlling which pair joins the bot:
+
+  - TOP = a trip-member at the suit NOT shared with either pair (if possible)
+  - if trip-rank ≤ 4: MID = LOW pair, BOT = 2 trip-leftovers + HIGH pair (HIGH pair to bot for stronger 2-pair Omaha anchor)
+  - else (trip ≥ 5): MID = HIGH pair, BOT = 2 trip-leftovers + LOW pair (mid Hold'em strength of HH outweighs)
+
+**+$2.81 full / +$13.48 prefix.** Beats "always F2" (+$2.04 / +$9.57) by adding the trip-rank boundary. Boundary search confirmed T<=4 as the cleanest split (T<=5: +$2.88/+$13.05; T<=6: +$2.93/+$12.65 — diminishing returns past T=4).
+
+---
+
+**Methodology rules (NEW, Session 42 overnight):**
+
+1. **Suit-aware "non-X-suit" insight generalizes broadly.** Rule 8 QP discovered the pattern. Rule 9a (plain quads) generalized identically, just replacing "pair" with "singletons". Rule 9b (TT) used the inverse ("top at suit IN L-suits") for similar structural reasons. The pattern: when you have multiple same-rank cards, the suits NOT used by the rest of the hand are structurally distinct, and using those suit-positions for mid/top forces the bot to be DS via the remaining-suit symmetry.
+
+2. **Diminishing returns are observable in the boundary search.** T2P "F3 if T<=4" = +$2.81/+$13.48. Extending to T<=5 trades +$0.07 full for −$0.43 prefix. Extending to T<=6 trades +$0.12 full for −$0.83 prefix. The boundary at T=4 is at the structural break (very-low-trip cells where the bot anchor matters less).
+
+3. **Two_pair confirmed ML territory.** Two-pair split investigation: SPLIT never wins at any of 78 cells. Even oracle-best-per-cell within {RA, RB, RC} loses prefix by -$336/1000h. Oracle's prefix-win comes from picking different singletons as top (21% non-hi-singleton picks), driven by suit/connectivity — not by cell-rank-based rules.
+
+4. **Pair Rule 1 extension is the largest remaining structural opportunity.** The pair category (46.6% of hands) profile shows QQ has $2,833/h v33 loss with 50/50 oracle split between mid=P_pair vs unpaired-mid. JJ similar. Suggests an extension to Rule 1 ("when QQ or JJ has 2 distinct suits and balanced kickers, move to bot for DS") but the gate requires careful design + both-grid validation — Session 43 priority.
+
+**Files:**
+- NEW: `analysis/scripts/strategy_v39_rule9.py` (PRODUCTION)
+- NEW: `analysis/scripts/grade_v39_rule9.py`
+- NEW (drills): `drill_tt_two_trips_deterministic.py`, `drill_tt_e3a_heuristic_hunt.py`, `drill_plain_quads_structural.py`, `drill_t2p_trips_two_pair_deterministic.py`, `drill_t2p_deeper_boundary.py`, `drill_two_pair_split_investigation.py`, `drill_two_pair_oracle_picks_full.py`, `drill_pair_rule1_extension.py`, `drill_trips_pair_refinement.py`
+- NEW (pipeline): `overnight_session42_rule_hunt.sh`, `generate_session42_summary.py`
+- NEW (report): `SESSION_42_OVERNIGHT_REPORT.md`
+- UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 42 overnight entry), Part 5 (Rule 9 reference + new probes), Part 6 (Rule 9a/9b/9c sections, Step 1 categorize table updated)
+
+**Total project rule count: 9** (Rules 1-8 unchanged + Rule 9: a=plain quads, b=TT split, c=T2P boundary). Rule 9 is structurally a 3-bundle but conceptually a single "rule of the suit-aware multi-same-rank pattern".

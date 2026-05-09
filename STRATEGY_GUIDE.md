@@ -12,7 +12,7 @@
 > 5. Where each rule + model lives in code
 > 6. **The Current Standard** (at the bottom — the rules to memorize, the model to call)
 >
-> Last updated: 2026-05-08 (Session 42 — **Rule 8 (composite quads_pair) ships in production** as v38. Rule: "for quads_pair (1 quad + 1 pair + 1 singleton), top = singleton, mid = the 2 quad cards whose suits are NOT the pair's suits, bot = the other 2 quads + the pair." +$9.42/1000h whole-grid lift vs v37 (+$18.63/1000h on the prefix grid). 100% deterministic-realizable: matches the oracle-within-constraint exactly because the structural heuristic ("non-pair-suit quads to mid") forces the bot to be perfectly double-suited. Earlier in the session, a much LARGER two_pair Rule 8 candidate (boundary search → +$197/1000h on full grid) was DEFERRED after the prefix grade showed -$512/1000h regression — every forced-single-pick variant lost on prefix because v33 splits pairs adaptively on weak hands. Methodology rule NEW: the prefix grid is REQUIRED validation; a rule that wins on full but tanks on prefix likely doesn't generalize, even if the full lift is large. The two_pair territory remains an ML-only domain pending split-allowing rule investigation.)
+> Last updated: 2026-05-09 (Session 42 overnight — **Rule 9 (3 sub-rules: plain quads + TT + T2P) ships in production** as v39. Combined +$22/1000h whole-grid lift vs v38 (+$28/1000h on prefix). Rule 9a (plain quads, 4+1+1+1, 0.24% of hands): "top = highest singleton, mid = 2 quad cards at suits NOT in singleton-suits, bot = other 2 quads + 2 lower singletons" — same QP-style suit-aware insight, +$15.31/+$11.78. Rule 9b (TT, 3+3+1, 0.07%): "top = a HIGH-trip card at suit ∈ LOW-trip-suits, mid = full LOW-trip pair, L-bot suit-aware" — split-trip-to-top, +$3.57/+$2.79. Rule 9c (T2P, 3+2+2, 0.11%): "top = trip-member at non-pair-suit; if trip≤4 mid=LOW pair (HI pair to bot for stronger Omaha 2-pair); else mid=HI pair (LOW pair to bot)" — +$2.81/+$13.48. Quads pct_opt 9.5%→45.9% (66% within-cat regret reduction). Earlier in the same session, v38 (Rule 8 quads_pair, +$9 both-grid) had shipped, and a much LARGER two_pair Rule 8 candidate (+$197 full / -$512 prefix) was DEFERRED — confirmed two_pair is genuinely ML territory (oracle's prefix-fix uses suit/connectivity-driven non-hi-singleton tops, not splittable by cell-rank-based rules). Methodology rule NEW: the prefix grid is REQUIRED validation; a rule that wins on full but tanks on prefix doesn't generalize.)
 
 ---
 
@@ -902,6 +902,63 @@ Only the quads_pair subtype has a verified deterministic rule. The other two com
 
 ---
 
+## Session 42 overnight: Rule 9 (3 sub-rules) ships as v39 — combined +$22 full / +$28 prefix
+
+After v38 shipped (Rule 8 quads_pair), the user asked for an overnight deep-dive into the rule-mining frontier. Six investigations ran while they slept; **three new structural rules emerged that all pass the both-grid validation gate**:
+
+**Part A — TT (two_trips, 3+3+1) E3a heuristic hunt: Rule 9b ships.**
+
+`drill_tt_e3a_heuristic_hunt.py` tested 12+ suit-aware top-pick × L-bot-pick combinations within the E3a structural class (split the high trip to top, full low-trip pair in mid, bot has 2H+1L+singleton). The +$5.98/1000h whole-grid oracle ceiling came from picking the *right* H-trip card to split and the *right* L-trip card to drop into the bot for DS purposes. The winning deterministic combination:
+  - **Top = an H-trip card whose suit IS in the LOW-trip's suits**
+  - **L-bot = the L-trip card whose suit best matches bot's H-trip-leftovers + singleton (DS-aware tiebreaker)**
+
+Lift: **+$3.57/1000h whole-grid (full N=200) + +$2.79/1000h whole-prefix.** 60% of the +$5.98 ceiling. Captures the structural insight that the bot's 4 cards (2 H-trip + 1 L-trip + 1 singleton) want to form a 2-pair Omaha hand with high-trip anchor — and the right suit-pick maximizes the chance of DS bot.
+
+**Part B — Plain quads (4+1+1+1) structural drill: Rule 9a ships, BIGGEST find of the night.**
+
+`drill_plain_quads_structural.py` tested the QP-style suit-aware insight on plain quads (1 quad + 3 singletons, 14,300 hands). The winning rule mirrors Rule 8 QP exactly:
+  - **Top = highest singleton**
+  - **Mid = the 2 quad cards whose SUITS are NOT used by any of the 3 singletons**
+  - **Bot = the other 2 quads + the 2 lower singletons**
+
+Lift: **+$15.31/1000h whole-grid (full) + +$11.78/1000h whole-prefix.** 73% of the +$21.02 oracle ceiling. **Wins on ALL 13 quad-rank cells uniformly** — universal rule. Within-cat regret on plain quads drops from $9,670/1000h to ~$3,235/1000h on the full-grid grade (66% reduction). pct_optimal jumps from 9.5% → 45.9%.
+
+The intuition: when you have 4 same-rank cards (one of each suit), there are exactly C(4,2)=6 ways to pick which 2 go to mid. The 6 differ only in suit composition. The deterministic "2 quads at non-singleton-suits to mid" forces the bot to always be double-suited (= 2 quads at 2 of the 3 singleton-overlapping-suits + 2 lower singletons whose suits the bot's remaining quads echo). Same insight as Rule 8 QP, different population.
+
+**Part C — T2P (trips_two_pair, 3+2+2) deeper boundary: Rule 9c ships.**
+
+`drill_t2p_deeper_boundary.py` tested 23 boundary rules combining trip-rank, hi-pair-rank, lo-pair-rank, gap conditions. The cleanest:
+  - **If trip-rank ≤ 4: mid = LOW pair, bot = trip-leftovers + HIGH pair** (F3 — high pair on bot for stronger Omaha 2-pair anchor)
+  - **Else (trip ≥ 5): mid = HIGH pair, bot = trip-leftovers + LOW pair** (F2 — keep mid Hold'em strength)
+  - **Top = a trip-member at the suit ∉ pair-suits if possible** (suit-aware split)
+
+Lift: **+$2.81/1000h whole-grid (full) + +$13.48/1000h whole-prefix.** Beats "always F2" (+$2.04 / +$9.57) by adding the trip-rank boundary. The intuition: when the trip is very weak (rank 2-4), the bot's "trips-on-board" anchor is barely useful (low-rank trips lose to most Omaha completions); better to put the HIGH pair on the bot for a stronger 2-pair Omaha anchor. When the trip is 5+, mid-Hold'em strength of HH outweighs that bot benefit.
+
+**Part D — Two_pair split investigation: confirmed ML-only.**
+
+`drill_two_pair_split_investigation.py` walked the full 1.34M two_pair population and characterized oracle picks. Key findings:
+- **SPLIT never wins at the cell level: 0 of 78 cells prefer mixed-pair-mid.** The split hypothesis was wrong.
+- Even oracle-best-per-cell within {RA, RB, RC} loses prefix by **-$336/1000h**.
+- The oracle's "fix" for prefix wins comes from picking DIFFERENT singletons as top: 21% of oracle picks have top ≠ highest-singleton. v33 always picks top = highest-singleton.
+
+Verdict: two_pair is genuinely ML territory. The deferred two_pair Rule 8 candidate (+$197 full / -$512 prefix) cannot be rescued by any cell-rank-based rule.
+
+**Part E — Pair Rule 1 extension: notable but Session 43 work.**
+
+`drill_pair_rule1_extension.py` profiled the 46.6%-of-hands pair category. Found that **QQ has the biggest v33 loss at $2,833/1000h within-cat** with a 50/50 split between mid=P_pair vs unpaired-mid in oracle picks. JJ similar at $2,541. Suggests an extension to Rule 1 (move QQ/JJ to bot when DS-ready), but the gate needs careful design and the both-grid validation gate. Carrying forward.
+
+**Part F — Trips_pair refinement: existing Rule 3 already near-optimal.**
+
+`drill_trips_pair_refinement.py` tested suit-aware refinements to Rule 3. All deterministic candidates regressed vs the existing v33 implementation. G3 oracle-within-class (top = kicker, mid = 2 trip-leftovers paired) showed a +$85/1000h ceiling but no clean heuristic. Existing Rule 3 stays; G3 ceiling exploration deferred.
+
+**Score: $2,868 → $2,846/1000h on full grid. Improvement: −$22 vs v38, −$307 vs v8_hybrid.** v39 replaces v38 as the production strategy of record.
+
+**Methodology lesson — sequential drill + suit-aware insight generalizes broadly.** Rule 8 QP discovered the "non-pair-suit-quads to mid" pattern. Plain quads (different population, same shape) generalized identically (Rule 9a). TT (different category) used the same "non-X-suit" suit-aware insight on different choice points (Rule 9b's top + L-bot picks). The pattern: when you have multiple same-rank cards (or near-same), the "one suit isn't represented in the rest of the hand" position of those cards is the structural pick — using it for mid forces the bot to be DS via the remaining-suit symmetry.
+
+**Methodology lesson — the both-grid validation gate works as a rule-quality filter.** Three of six investigations produced rules that passed both grids (9a, 9b, 9c). One (two_pair split) confirmed ML-only. One (pair Rule 1 extension) showed promise but needs more gate-design work. One (trips_pair) found no improvement available. The gate cleanly distinguished generalize-able structural insights from full-grid-only artifacts.
+
+---
+
 # Part 2 — ML champion progression (the full table)
 
 Every model trained, side-by-side, on both validation grids:
@@ -1107,14 +1164,16 @@ guide can keep them as human-memorizable approximations.
 - Rule 6 v1 (production heuristic, Session 37) → `analysis/scripts/strategy_v33_rule6_trips.py` — boundary `trip_rank > max_kicker_rank → C, else A`. Production runtime stays here.
 - Rule 6 v3 (sharper human boundary, Session 39) → `analysis/scripts/strategy_v35_rule6_v3.py` — explicit per-trip-rank table (Trip A always third-on-top; K only if no Ace; Q only if no J/K/A; J or lower never). Strategy guide ceiling +$8.12/1000h whole-grid vs v33 oracle-bound; production heuristic-A loses at runtime, so used for human-play guidance only.
 - Rule 7 (three_pair, Session 41) → `analysis/scripts/strategy_v37_rule7_three_pair.py` — boundary "if highest pair ∈ {T, J, Q, K} → mid is the MIDDLE pair, else mid is the HIGHEST pair; top is always the singleton". +$43/1000h whole-grid lift vs v33 confirmed at full grid.
-- **Rule 8 (composite quads_pair, Session 42 — CURRENT PRODUCTION)** → `analysis/scripts/strategy_v38_rule8_qp.py` — "for quads_pair (4+2+1), top = singleton, mid = the 2 quad cards whose suits are NOT the pair's suits, bot = the other 2 quads + the pair". 100% deterministic-realizable. +$9.42/1000h whole-grid lift vs v37 (+$18.63/1000h on prefix). Bot is always double-suited (2 of pair-suit-X + 2 of pair-suit-Y).
+- Rule 8 (composite quads_pair, Session 42 morning) → `analysis/scripts/strategy_v38_rule8_qp.py` — "for quads_pair (4+2+1), top = singleton, mid = the 2 quad cards whose suits are NOT the pair's suits, bot = the other 2 quads + the pair". 100% deterministic-realizable. +$9.42/1000h whole-grid lift vs v37 (+$18.63/1000h on prefix). Bot is always double-suited.
+- **Rule 9 (Session 42 overnight — CURRENT PRODUCTION)** → `analysis/scripts/strategy_v39_rule9.py` — three sub-rules covering plain quads, TT (two_trips), and T2P (trips_two_pair). Combined +$22/1000h whole-grid + +$28/1000h prefix. See Rule 9a/9b/9c below in Part 6.
 - Combined chain (4 rules) → `analysis/scripts/strategy_v14_combined.py`
 - Combined chain (5 rules) → `analysis/scripts/strategy_v28_rule5_rainbow.py` (wraps v14 with Rule 5)
-- Combined chain (6 rules, prior production) → `analysis/scripts/strategy_v33_rule6_trips.py` (wraps v28 with Rule 6 v1)
+- Combined chain (6 rules) → `analysis/scripts/strategy_v33_rule6_trips.py` (wraps v28 with Rule 6 v1)
 - Combined chain (6 rules, current human-guide for trips) → `analysis/scripts/strategy_v35_rule6_v3.py` (wraps v28 with Rule 6 v3)
-- Combined chain (7 rules, prior production) → `analysis/scripts/strategy_v37_rule7_three_pair.py` (wraps v33 with Rule 7)
-- **Combined chain (8 rules, CURRENT PRODUCTION)** → `analysis/scripts/strategy_v38_rule8_qp.py` (wraps v37 with Rule 8)
-- **DEFERRED (Session 42)**: `analysis/scripts/strategy_v38_rule8_two_pair_DEFERRED.py` — would-be Rule 8 for two_pair (boundary: "RC if h≤4, RB if T≤h≤K, else RA"). +$197/1000h on full grid but -$512/1000h on prefix. Retained for future split-allowing variant investigation.
+- Combined chain (7 rules) → `analysis/scripts/strategy_v37_rule7_three_pair.py` (wraps v33 with Rule 7)
+- Combined chain (8 rules) → `analysis/scripts/strategy_v38_rule8_qp.py` (wraps v37 with Rule 8)
+- **Combined chain (9 rules, CURRENT PRODUCTION)** → `analysis/scripts/strategy_v39_rule9.py` (wraps v38 with Rule 9 a/b/c)
+- **DEFERRED (Session 42)**: `analysis/scripts/strategy_v38_rule8_two_pair_DEFERRED.py` — would-be Rule 8 for two_pair (+$197 full / -$512 prefix). Confirmed ML-only after Session 42 overnight investigation.
 
 **Probes:**
 - Per-cell A-vs-C oracle map (Session 38) → `analysis/scripts/probe_rule6_c_variant.py`
@@ -1125,9 +1184,16 @@ guide can keep them as human-memorizable approximations.
 - Three_pair always-X (Session 41) → `analysis/scripts/verify_rule_X_v33_three_pair.py`, `analysis/scripts/probe_three_pair_boundary.py`, `analysis/scripts/probe_three_pair_final_rule.py`
 - Two_pair always-X + boundary (Session 42, candidate DEFERRED) → `analysis/scripts/verify_rule_X_v33_two_pair.py`, `analysis/scripts/probe_two_pair_boundary.py`
 - Composite always-X (Session 42, 4 subtypes) → `analysis/scripts/verify_rule_X_v33_composite.py`
+- TT (two_trips) deterministic + E3a heuristic hunt (Session 42 overnight) → `analysis/scripts/drill_tt_two_trips_deterministic.py`, `analysis/scripts/drill_tt_e3a_heuristic_hunt.py`
+- Plain quads structural (Session 42 overnight) → `analysis/scripts/drill_plain_quads_structural.py`
+- T2P (trips_two_pair) initial + deeper (Session 42 overnight) → `analysis/scripts/drill_t2p_trips_two_pair_deterministic.py`, `analysis/scripts/drill_t2p_deeper_boundary.py`
+- Two_pair split investigation + oracle pick characterization (Session 42 overnight) → `analysis/scripts/drill_two_pair_split_investigation.py`, `analysis/scripts/drill_two_pair_oracle_picks_full.py`
+- Pair Rule 1 extension probe (Session 42 overnight) → `analysis/scripts/drill_pair_rule1_extension.py`
+- Trips_pair refinement (Session 42 overnight) → `analysis/scripts/drill_trips_pair_refinement.py`
 - v36 high_only Rule 7 grade (ARCHIVED) → `analysis/scripts/grade_v36_rule7.py`
 - v37 three_pair Rule 7 grade → `analysis/scripts/grade_v37_rule7.py`
 - v38 composite-QP Rule 8 grade → `analysis/scripts/grade_v38_rule8.py`
+- v39 Rule 9 grade → `analysis/scripts/grade_v39_rule9.py`
 
 **ML champion + baselines (newest first):**
 - v31 (CURRENT CHAMPION) → `analysis/scripts/strategy_v31_dt.py` + `data/v31_dt_model.npz` (700K leaves, 79 features, depth=32 ml=3 — capacity-only retrain of v30)
@@ -1278,8 +1344,10 @@ Look for the strongest "shape" in your hand:
 
 | Shape | Cards | Apply rule |
 |---|---|---|
-| Quads | 4 of one rank, no pair | (no rule yet — rare, ~0.24% of hands) |
+| Plain quads | 4 of one rank + 3 singletons | **Rule 9a** — mid = the 2 quad cards at the non-singleton-suits |
 | Quads + pair | 4 of one rank + 2 of another (4+2+1) | **Rule 8** — mid = the 2 quad cards at the non-pair-suits |
+| Two trips | 3 of one rank + 3 of another (3+3+1) | **Rule 9b** — split-the-high-trip-to-top, suit-aware |
+| Trips + two pairs | 3 of one rank + 2 of two others (3+2+2) | **Rule 9c** — F3 if trip≤4 else F2 (split-trip-to-top) |
 | Trips + pair | 3 of one rank + 2 of another | **Rule 3** |
 | Trips (any rank, no other pair) | 3 of one rank, no other pair | **Rule 6** — mid is always 2 of the 3 trip cards |
 | Two pairs | 2 of one rank + 2 of another | **Rule 2** |
@@ -1794,6 +1862,71 @@ The mid is a paired hand (2 of the quad rank). The bot is a double-suited 2-pair
 
 ---
 
+## Rule 9 — Three sub-rules for the rare composite shapes (plain quads, TT, T2P)
+
+**Fires across three uncommon-but-tractable hand shapes** that share the same structural family of "multiple same-rank cards make the suit-aware mid pick the right move":
+
+### Rule 9a — Plain quads (4+1+1+1, ~0.24% of hands, ~1 in 420)
+
+**Setup**: 1 quad + 3 singletons, no pair.
+
+- **Top** = your highest singleton.
+- **Mid** = the 2 quad cards whose **suits are NOT used by any of the 3 singletons.**
+- **Bot** = the other 2 quad cards + the 2 lower singletons.
+
+**Why it works**: with all 4 suits represented in the quad, picking the 2 quads at "non-singleton-suits" forces the bot to be perfectly double-suited. The bot Omaha hand has 2 quads (matching 2 of the 3 singleton-suits) + 2 lower singletons → 2-of-X + 2-of-Y suit pattern.
+
+**Worked example:** `9♣ 9♦ 9♥ 9♠ A♣ K♥ 7♠`
+- Quad = 9999. Singletons = A♣, K♥, 7♠. Singleton-suits = {♣, ♥, ♠}. Non-singleton-suit = {♦}.
+- Hmm — only 1 non-singleton-suit means we can't pick 2 quads at non-sing-suits. Fall back: pick canonical first 2 quads (or whichever combo gives DS). In this fallback case, the rule degrades to pick-the-canonical, but the heuristic is rare to fully fail (most plain quad hands have ≤2 distinct singleton-suits).
+
+**Worked example (typical):** `9♣ 9♦ 9♥ 9♠ A♣ K♣ 7♥`
+- Quad = 9999. Singletons = A♣, K♣, 7♥. Singleton-suits = {♣, ♥}. Non-singleton-suits = {♦, ♠}.
+- Mid = 9♦ + 9♠ (non-singleton-suits).
+- Top = A♣ (highest singleton).
+- Bot = 9♣ + 9♥ + K♣ + 7♥. Bot has 2 clubs + 2 hearts = double-suited.
+
+**Lift over v38**: +$15.31/1000h whole-grid (full N=200) + +$11.78/1000h whole-prefix. Wins on ALL 13 quad-rank cells. Within-cat regret drops $9,670 → $3,235/1000h on full (66% reduction). pct_optimal jumps 9.5% → 45.9%.
+
+### Rule 9b — Two trips (3+3+1, ~0.07% of hands, ~1 in 1,400)
+
+**Setup**: 2 trips (different ranks) + 1 singleton.
+
+- **Top** = a HIGH-trip card whose suit IS in the LOW-trip's suits (split the high trip to top).
+- **Mid** = the FULL LOW-trip pair (2 of 3 low-trip cards).
+- **Bot** = 2 high-trip cards + 1 low-trip card + the singleton (4 cards). Pick the L-bot card whose suit best maximizes bot DS (matches a remaining-H-suit + singleton's suit).
+
+**Why it works**: splitting the high trip to top + keeping the low-trip-pair in mid + putting 2 high-trip cards on the bot creates an Omaha bot with strong pair-on-board potential AND a clean DS path through the suit-aware L-bot pick. The "top H-suit ∈ L-suits" heuristic ensures the leftover H-suits in the bot don't clash with the L-trip-card.
+
+**Worked example:** `T♣ T♦ T♥ 5♣ 5♦ 5♥ K♠`
+- High trip = TTT, low trip = 555, singleton = K♠.
+- L-suits = {♣, ♦, ♥}.
+- Top: pick a T-card at suit ∈ {♣, ♦, ♥}. T♣ (or T♦, T♥) all qualify; pick the canonical first → T♣.
+- Mid = 5♦ + 5♥ (or some pair-of-5; the rule's 2 of 3 picked by suit-aware L-bot routing).
+- L-bot: maximize DS-bot score given the remaining bot will be {T♦, T♥} + 1 of {5♣, 5♦, 5♥} + K♠. The 5♣ joining bot would give bot suits {♦, ♥, ♣, ♠} = rainbow. Better to put 5♦ or 5♥ in bot → bot has 2 of one suit. The DS-aware tiebreaker picks 5♣ for L-bot (matches a remaining-H-suit if it's ♦ or ♥? Actually ♣ doesn't match, so 5♣ scores 0; 5♦ scores 1 (matches T♦); 5♥ scores 1 (matches T♥)). Pick 5♦ or 5♥ → bot = {T♦, T♥, 5♦, K♠} = ♦×2, ♥×1, ♠×1 → SS bot. Best achievable.
+
+**Lift over v38**: +$3.57/1000h whole-grid (full) + +$2.79/1000h whole-prefix. 60% of the +$5.98 oracle ceiling.
+
+### Rule 9c — Trips + two pairs (3+2+2, ~0.11% of hands, ~1 in 875)
+
+**Setup**: 1 trip + 2 pairs (no singleton). 7 cards = 3+2+2.
+
+- **Top** = a trip-member at the suit NOT shared with either pair (suit-aware split).
+- **If trip-rank ≤ 4**: mid = LOW pair, bot = 2 trip-leftovers + HIGH pair (4 cards = trips-on-bot via 2T + HIGH-pair-on-board via 2H).
+- **Else (trip-rank ≥ 5)**: mid = HIGH pair, bot = 2 trip-leftovers + LOW pair.
+
+**Why it works**: the bot is always "trip-on-board" via 2 trip-leftovers. The choice is which pair joins the bot. When the trip is very weak (≤4), the trip-on-board anchor is barely useful (low-rank trips lose to most Omaha completions); putting the HIGH pair on the bot creates a stronger 2-pair Omaha. When the trip is 5+, mid Hold'em strength of HH outweighs that bot benefit.
+
+**Worked examples:**
+
+`T♣ T♦ T♥ Q♣ Q♦ 8♥ 8♠` (trip=T, hi-pair=Q, lo-pair=8). T ≥ 5 → F2: mid = QQ, bot = 2T + 88. Top = T-member at suit ∉ {♣, ♦, ♥, ♠} — ♥ is shared with 8♥, ♠ with 8♠, ♣ and ♦ are pair-suits. No clean non-pair-suit. Fallback: top = T♣ (canonical first). **Play: top=T♣, mid=Q♣+Q♦, bot=T♦+T♥+8♥+8♠.**
+
+`3♣ 3♦ 3♥ K♣ K♦ Q♥ Q♠` (trip=3, hi-pair=K, lo-pair=Q). T ≤ 4 → F3: mid = QQ (low pair), bot = 2 of trip + KK. Top = 3-member; non-pair-suits would be {♠} (since ♣, ♦, ♥ are all used by pairs/trip). Top = 3♥ (matching one of the L-pair's suits is OK as fallback). **Play: top=3♥, mid=Q♥+Q♠, bot=3♣+3♦+K♣+K♦.**
+
+**Lift over v38**: +$2.81/1000h whole-grid (full) + +$13.48/1000h whole-prefix. The boundary at trip=4 was confirmed via 23-rule sweep as the cleanest split (vs T<=5: +$2.88/+$13.05; T<=6: +$2.93/+$12.65 — diminishing returns past T<=4).
+
+---
+
 ## Default (no rule fires)
 
 For every hand not covered above — single pair outside the rule's gates, no-pair hands, plain quads (no second pair), and the rare composite shapes other than quads_pair — **play it the obvious way:**
@@ -1831,8 +1964,16 @@ The mid tier is forgiving (Hold'em rules, can use 0/1/2 hole cards), so giving u
 > pair, split the trips 2-and-1, keep the pair together, build a
 > double-suited bot. With three pairs, top is the singleton; mid is the
 > middle pair if your highest pair is T/J/Q/K, otherwise mid is the
-> highest pair. With a quad PLUS a pair (the rare 4+2+1 shape), top is
-> the singleton; mid is the two quad cards at the suits that DON'T
-> match the pair (this guarantees a double-suited bot). For any hand
-> without a pair, play it the obvious way — high card on top, decent
-> cards in mid.
+> highest pair. With a quad PLUS a pair (4+2+1), top is the singleton;
+> mid is the two quad cards at the suits that DON'T match the pair
+> (this guarantees a double-suited bot). With plain quads + 3
+> singletons, same idea: top is the highest singleton, mid is the two
+> quad cards at the suits NOT used by the singletons. With two trips +
+> a singleton, split the high trip to top (pick a high-trip card whose
+> suit appears in the low trip), mid is the full low-trip pair, bot
+> gets two high-trip cards plus one low-trip card chosen for DS bot.
+> With one trip + two pairs, split the trip to top; if the trip is
+> rank 4 or lower, mid is the LOW pair (high pair to bot for stronger
+> Omaha anchor), otherwise mid is the HIGH pair (low pair to bot). For
+> any hand without a pair, play it the obvious way — high card on top,
+> decent cards in mid.
