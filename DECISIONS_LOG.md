@@ -3304,3 +3304,91 @@ v41 picks A5 0% of fired hands at J-pair-J (47.8% A1, 52.2% A2). Rule 11 surgica
 - UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 46 entry) + production-of-record references
 
 **Total project rule count: 11** (Rules 1-10 + Rule 11 = J-pair pair-to-bot DS — first single-cell rule).
+
+---
+
+## Decision 080 — Rule 12 (J-low two_pair both-intact + DS-bot) ships as v43 (Session 47)
+
+**Date:** 2026-05-09
+**Status:** SHIPS as production. v43 replaces v42 as strategy of record. **Grader-confirmed: +$35/1000h whole-grid (full N=200) and +$66/1000h whole-grid (prefix N=1000).** v42 → v43 score: $2,763 → $2,727 full, $1,616 → $1,550 prefix. pct_opt full: 41.93% → 42.20% (+0.27%). pct_opt prefix: 51.81% → 52.61% (+0.80%). Two_pair regret $3,371 → $3,211 (−$160 within two_pair). **Largest single-rule full-grid lift since v33's Rule 6 (Session 37, +$113).** Cumulative v39 → v43 = −$118 full / −$157 prefix.
+
+**Origin:** Drill B (Session 45) found B1−B2 = +$1,864/1000h within-hand at J-low two_pair. The pattern matched Rule 10 v3's "DS within pair-anchor" structural insight — applied to the two_pair category. Session 47 ran two parallel investigations:
+
+1. **Drill E — Rule 11 heuristic sweep (NEGATIVE).** Tested 6 simple tie-break combinations for Rule 11. v42's V_LOLO is empirically optimal; no variant beats it. The +$1,794/1000h gap to A5 oracle requires more sophisticated logic than simple tie-breaks.
+
+2. **Drill F — two_pair within-class DS variants (DEFINITIVE).** Tested HH-to-bot vs LL-to-bot tie-breaks on the J-low two_pair pop (n=262,080).
+
+**Drill F findings (full grid):**
+
+| Variant | n_fires | Perfect% | Lift vs v42 | Whole-grid full |
+|---|---:|---:|---:|---:|
+| **V_HH_BOT** | 75,600 | 69.1% | **+$1,808** | **+$22.75** |
+| V_LL_BOT | 75,600 | 65.6% | +$1,044 | +$13.14 |
+| B1 oracle (ceiling) | — | 100% | +$2,505 | +$50.42 |
+
+HH-to-bot wins by +$764/1000h within fires. Hybrid (HH preferred, LL fallback) covers all 120,960 fires (46.2% of J-low two_pair).
+
+---
+
+**Rule 12 — design:**
+
+  TRIGGER:
+    cat == two_pair       AND
+    max_rank ≤ J          AND
+    DS-bot achievable with both pairs intact (HH or LL to bot)
+
+  SETTING BUILDER:
+    Try HH-to-bot first:
+      pair-cards = the 2 HH cards
+      Find 2 singletons completing 2+2 DS suit pattern.
+      If found: use HH-to-bot configuration.
+    Else try LL-to-bot:
+      pair-cards = the 2 LL cards
+      Same DS-completion search.
+      If found: use LL-to-bot configuration.
+    Else: fall through to v42.
+
+    Tie-break (when multiple sing-pairs work):
+      Pick lowest rank-sum (preserves mid + top strength).
+
+    BOT = chosen pair + 2 chosen singletons
+    MID = the OTHER pair (pair-anchor preserved in mid)
+    TOP = the leftover singleton (deterministic, no choice)
+
+**Behavioral verification (30K J-low two_pair sample):**
+- Rule 12 fires on 47.3% (matches Drill F's 46.2%)
+- 100% of fired picks correctly produce DS-bot
+- 100% of fired picks correctly preserve both pairs intact
+- 27.6% of picks differ from v42
+
+**Production ship rationale:**
+- Both grids strongly positive (+$35 full / +$66 prefix), no regression on any other category
+- pct_opt improves on both grids substantially
+- Worst-case regret unchanged (max = $5.74)
+- Largest single-rule full-grid lift since v33's Rule 6
+- Mechanism interpretable and consistent with the suit-dominance family (Rule 10 v3, Rule 11)
+
+---
+
+**Methodology rules NEW (Session 47):**
+
+1. **Simple tie-break sweeps cap quickly.** Drill E showed v42's existing heuristic was already optimal among 6 simple variants. Further refinement requires structural complexity. Hard-cap signal for Rule 11 simple-sweep work.
+
+2. **Cross-class within-pop rules from "DS premium within X" lens ship reliably.** Drill A → Rule 10 v3 (+$29). Drill D → Rule 11 (+$6). Drill F → Rule 12 (+$35). The "within-class DS premium" axis is the project's most productive rule-discovery axis right now.
+
+3. **HH-to-bot wins over LL-to-bot for two_pair.** Counter to "lowest pair to bot for kicker preservation" intuition. HH in bot creates a stronger 2-pair-with-kicker Omaha hand; LL in mid still anchors Hold'em mid because pair-mid beats most non-pair mid combos.
+
+4. **Cumulative ship arcs >$100/1000h come from structural-axis families.** v30→v34 was the ML capacity arc. v39→v43 is the suit-dominance arc (4 ships, all from S44's within-hand pairwise insight). Both are multi-rule families sharing one underlying mechanism.
+
+---
+
+**Files:**
+- NEW: `analysis/scripts/strategy_v43_rule12_two_pair_DS_intact.py` (PRODUCTION)
+- NEW: `analysis/scripts/grade_v43_rule12_two_pair.py`
+- NEW: `analysis/scripts/drill_two_pair_DS_within_intact.py` (Drill F)
+- NEW: `analysis/scripts/drill_rule11_heuristic_sweep.py` (Drill E, negative result)
+- NEW (report): `SESSION_47_RULE12_TWO_PAIR_REPORT.md`
+- UPDATED: `CURRENT_PHASE.md` (rewritten for Session 47)
+- UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 47 entry) + production-of-record references
+
+**Total project rule count: 12** (Rules 1-11 + Rule 12 = J-low two_pair both-intact + DS).
