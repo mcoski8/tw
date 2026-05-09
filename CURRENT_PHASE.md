@@ -2,9 +2,11 @@
 
 > **🎯 IMMEDIATE NEXT ACTION (Session 43):**
 >
->   (A) **Pair Rule 1 extension (BIGGEST remaining structural opportunity).** The pair category is 46.6% of hands. QQ has $2,833/h v33 loss with 50/50 oracle split between mid=P_pair vs unpaired-mid. JJ similar at $2,541/h with 51/49 split. Suggests an extension to Rule 1: "when QQ or JJ has 2 distinct suits and balanced kickers, move to bot for DS." Current Rule 1 covers this only narrowly. **Critical: must pass both-grid validation gate** (the methodology rule from earlier in S42). Walk per-(QQ-suit-pattern, kicker-config) cells; find conditions where the "to-bot" move wins on both grids; design the gate carefully. Drill artifact: `drill_pair_rule1_extension.py` is a starting point.
+>   (A) **Weak-hand defensive play investigation (USER PRIORITY).** ~14% of hands are J-high or lower — a massive unmined territory. See `docs/SESSION_43_WEAK_HAND_DEFENSE.md` for the full scope, sub-bucket stats, and the user's specific framing questions. Key drills: high-card-to-top-vs-to-bot decision when bot can be 4-flush; defensive structural picks for J-high pair / two-pair / no-pair sub-populations; re-examine the J-high two_pair zone through a defensive lens (overlaps with the deferred Rule 8 territory — v33's adaptive splitting may have been correct defensive play). The key uncertainty: do clean defensive rules exist as structural patterns, or is it multi-feature ML?
 >
->   (B) **Round-3 within-trips features.** Diagnose v34's residual within-trips ($1,291) for new structural signal. Feed back into ML as new gated feature family if found.
+>   (B) **Pair Rule 1 cleanup (deferred from S42).** Drop Q,J from existing Rule 1 gate + add no-Ace QQ/JJ extension → ~+$5/1000h whole-grid. Below standalone-ship threshold but cheap; bundle with weak-hand findings.
+>
+>   (C) **Round-3 within-trips features.** Diagnose v34's residual within-trips ($1,291) for new structural signal. Feed back into ML as new gated feature family if found.
 >
 >   (C) **Learned A-vs-C decision tree for Rule 6** (deferred from Sessions 38–40). $5–13/1000h whole-grid ML target.
 >
@@ -154,12 +156,16 @@ State (end of Session 42 overnight):
 
 Next session targets (priority order):
 
-(A) Pair Rule 1 extension (QQ/JJ to bot) — BIGGEST remaining opportunity.
-    Walk per-(QQ-suit-pattern, kicker-config) cells; design gate;
-    validate on both grids. Likely worth $50-100/1000h whole-grid if
-    clean gate found.
+(A) Weak-hand defensive play (USER PRIORITY). ~14% of hands are
+    J-high or lower — biggest unmined territory. See
+    docs/SESSION_43_WEAK_HAND_DEFENSE.md for the full scope. Key
+    drill: high-card-to-top-vs-to-bot when bot can be made 4-flush.
 
-(B) Round-3 within-trips features. Diagnose v34's residual within-trips
+(B) Pair Rule 1 cleanup (deferred from S42). Drop Q,J from existing
+    Rule 1 gate + add no-Ace QQ/JJ extension → ~+$5/1000h. Bundle
+    with weak-hand findings.
+
+(C) Round-3 within-trips features. Diagnose v34's residual within-trips
     ($1,291) for new structural signal.
 
 (C) Learned A-vs-C decision tree for Rule 6 (deferred from S38–40).
