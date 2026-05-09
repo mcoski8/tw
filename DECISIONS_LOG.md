@@ -3223,3 +3223,84 @@ The "two_pair is ML territory" verdict (S42 + S43, twice) holds for cross-class 
 - UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 45 entry) + production-of-record references
 
 **Total project rule count: 10** (Rule 10 evolved v40 → v40b → v41).
+
+---
+
+## Decision 079 — Rule 11 (J-pair pair-to-bot DS) ships as v42 (Session 46)
+
+**Date:** 2026-05-09
+**Status:** SHIPS as production. v42 replaces v41 as strategy of record. **Grader-confirmed: +$6/1000h whole-grid (full N=200) and $0 (prefix unchanged — Rule 11 fires on 0 prefix hands).** v41 → v42 score: $2,769 → $2,763 full, $1,616 → $1,616 prefix. pct_opt full: 41.91% → 41.93% (+0.02%). pct_opt prefix: unchanged. Cumulative v39 → v42: −$83 full / −$91 prefix.
+
+**Origin:** Drill A's per-pair-rank breakdown (Session 45) found A5−A2 = +$2,975/1000h at P=J specifically (vs negative for P=2..T). Session 46 ran a focused J-pair-J drill (Drill D, n=34,272) to validate the apples-to-apples comparison and shipped Rule 11.
+
+**Drill D findings (J-pair-J, P=11 AND max=11, n=34,272):**
+
+| Comparison | Lift ($/1000h) | Verdict |
+|---|---:|---|
+| **A5 − A1** (pair-to-bot DS vs pair-mid DS) | **+$1,004** | apples-to-apples Rule 11 question |
+| A5 − A2 (S45 headline) | +$2,975 | confirmed |
+| **A5 vs v41 production pick** | **+$3,769** | largest cross-class override at J-pair-J |
+| A1 − A2 (Rule 10 v3 internal lift) | +$2,553 | confirmed |
+| A5 − A6 (DS WITHIN pair-bot) | +$2,211 | DS premium real |
+
+v41 picks A5 0% of fired hands at J-pair-J (47.8% A1, 52.2% A2). Rule 11 surgically overrides at this single cell.
+
+---
+
+**Rule 11 — design:**
+
+  TRIGGER:
+    cat == pair        AND
+    P == 11            AND
+    max_rank == 11     AND
+    DS-bot achievable with both J's in bot
+
+  SETTING BUILDER:
+    Both J's go to BOT.
+    Among the 5 non-pair singletons, pick 2 for BOT such that the bot's
+    4-card suit pattern is 2+2 (DS):
+      Case A (J's same suit X): need 2 singletons of same non-X suit
+        Y. Pick the lowest-rank pair (keep mid + top strength).
+      Case B (J's different suits X, Y): need 1 of suit X + 1 of suit
+        Y. Pick the lowest-rank of each.
+    TOP = lowest-rank singleton among the 3 remaining (top-inversion).
+    MID = the 2 remaining singletons.
+
+    If no DS-achievable pair-in-bot config exists, fall through to v41.
+
+**Behavioral verification (5K J-pair-J sample):**
+- Rule 11 fires on 49.8% of J-pair-J (A5 achievability ≈ 55.1%; ~5% gap is sampling + canonical suit-symmetry)
+- 100% of fired picks correctly have pair-in-bot AND DS-bot
+- 100% of fired picks differ from v41
+
+**Heuristic captures 56% of oracle ceiling.** Whole-grid lift +$6/1000h translates to +$2,105/1000h within fires (vs A5-best vs v41's +$3,769 ceiling). The remaining ~+$5/1000h whole-grid is heuristic-vs-oracle gap. Refinement candidates queued (sweep alternative tie-breaks for singleton-pair selection and top-placement).
+
+**Production ship rationale:**
+- Both grids non-regressive (+$6 full, $0 prefix unchanged)
+- pct_opt improves on full
+- Per-category: pair −$14/1000h, all others unchanged
+- Worst-case regret unchanged (max = $5.74)
+- First single-cell rule of project — surgical override at the largest cross-class residual identified by the drill methodology
+- Same precedent as v38 (Rule 8 quads_pair) which shipped at +$9.42/1000h full
+
+**Methodology rules NEW (Session 46):**
+
+1. **Cross-class override opportunities are ranked by "best-in-class minus production pick".** Drill D's "v41 vs best-in-class" view directly identified A5's +$3,769 lift as 6× the next-best class. Use this lens for single-cell rule discovery.
+
+2. **Single-cell rules can ship at <$10/1000h whole-grid lift.** Rule 11 fires on 0.285% of grid; the within-fires lift is +$2,105/1000h. Both numbers are meaningful — small whole-grid lifts can be clean single-cell wins.
+
+3. **Single-cell rules at extreme P-rank cells have natural prefix immunity.** J-pair-J has zero prefix coverage (no canonical ID < 500K is J-pair-J). Rule 11 fires on 0 prefix hands → prefix unchanged. Same precedent as Session 41/43 high_only-zero-prefix.
+
+4. **Don't hold rules for "perfect heuristic-vs-oracle".** v42's 56%-of-ceiling capture is a clean ship; the remaining ~+$5/1000h is queued as a separate refinement.
+
+---
+
+**Files:**
+- NEW: `analysis/scripts/strategy_v42_rule11_jpair_pbot_ds.py` (PRODUCTION)
+- NEW: `analysis/scripts/grade_v42_rule11_jpair_pbot_ds.py`
+- NEW: `analysis/scripts/drill_J_pair_pair_to_bot_DS.py`
+- NEW (report): `SESSION_46_RULE11_JPAIR_REPORT.md`
+- UPDATED: `CURRENT_PHASE.md` (rewritten for Session 46 wrap)
+- UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 46 entry) + production-of-record references
+
+**Total project rule count: 11** (Rules 1-10 + Rule 11 = J-pair pair-to-bot DS — first single-cell rule).
