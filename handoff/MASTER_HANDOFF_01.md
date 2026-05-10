@@ -2372,3 +2372,24 @@ Carry over from Session 42:
 4. **Learned A-vs-C decision tree for Rule 6** (carry-over from S38–40). $5–13/1000h whole-grid ML target.
 5. **KK/AA single-suited Rule-4-bot residual** ($37/1000h below oracle, lowest priority).
 6. **v34_dt re-train on v38 baseline** (very small additional ML signal expected since v38 only changes 0.114% of grid).
+
+## Sessions 43–55 — covered in CURRENT_PHASE.md rewrites + DECISIONS_LOG.md (Decisions 075–090) + SESSION_NN_*.md reports
+
+Sessions 43–55 produced 9 additional production rules in the human-memorizable chain (Rules 10 through 17, plus v52's high_only_handler generalization), and 6 ML champion iterations (v32 → v34 → v36 → v39 → v40 → v41). The work follows the established pattern of per-session DECISIONS_LOG entries + CURRENT_PHASE rewrites + per-session SESSION_NN_*.md reports, rather than appending to this handoff. The current state-of-record at end of S55 is:
+
+- **Rule chain production:** `v52_full_high_only_handler` (17 rules; $2,498 full / $1,522 prefix). UNCHANGED since S53.
+- **ML champion:** `v41_dt` ($1,270 full / $686 prefix; 95 features, 2,015,413 leaves at depth=36 ml=1).
+- **Cumulative v14 → v52 rule chain:** −$535/1000h full.
+- **Cumulative v32 → v41 ML:** −$445/1000h full / −$218 prefix.
+- **The two production tracks diverge by $1,228/1000h.**
+
+Session 55 highlights:
+- **TWO ML champions in one session** (v40_dt + v41_dt) via the Session 54 diagnostic-driven feature engineering playbook transferred to trips_pair and two_pair zones.
+- v40_dt: +$18 full / +$29 prefix. Trips_pair within-cat $909 → $281 (−69%).
+- v41_dt: +$124 full / +$86 prefix. Two_pair within-cat $918 → $363 (−60%).
+- Cumulative session arc: −$142 full / −$115 prefix — second-largest combined session lift after S54.
+- Methodology validation: the S54 playbook is transferable across ML residual zones. Identical Phase 1 drill, Phase 1b hand-level inspection, and 4-feature design shape works in trips_pair and two_pair with no modifications.
+- Decisions 089 + 090 appended to DECISIONS_LOG.md.
+- `SESSION_55_V41_DT_REPORT.md` is the standalone session report.
+
+Session 56 priority: **high_only zone** ($2,796/1000h within-cat × 40.4% share = $1,131/1000h whole-grid = ~63% of v41's total regret). Different feature types likely needed (top-card placement, defensive-pair triggers, broadway connectivity). The methodology pipeline is mature; the next zone awaits.

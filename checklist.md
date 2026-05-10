@@ -192,12 +192,18 @@
 
 ---
 
-> **STALENESS NOTICE (last updated end of Session 35, 2026-05-05):** This
+> **STALENESS NOTICE (last updated end of Session 55, 2026-05-10):** This
 > checklist was authored pre-build. The actual project has advanced through
-> Sprint 7 with **v29_dt as current ML champion** ($1,807/1000h full grid,
-> $965 prefix) and **7 gating-template wins** shipped (high_only-via-suited/v20,
-> trips_pair/v23, composite/v24, pair-v1/v25, two_pair/v26, high_only-direct/v27,
-> pair-v2/v29). Rule 5 (Rainbow override) shipped for human play.
+> Sprint 8 with **v41_dt as current ML champion** ($1,270/1000h full grid /
+> $686 prefix; 95 features, 2.02M leaves at depth=36 ml=1) and **11
+> gating-template wins** shipped (high_only-via-suited/v20, trips_pair/v23,
+> composite/v24, pair-v1/v25, two_pair/v26, high_only-direct/v27, pair-v2/v29,
+> trips/v30, trips_v2/v32, pair_aug_v5/v39, trips_pair_aug_v2/v40,
+> two_pair_aug_v2/v41). 17 production rules shipped in the human-memorizable
+> chain (v52_full_high_only_handler at $2,498 full / $1,522 prefix).
+> Cumulative ML arc v32 → v41 = −$445 full / −$218 prefix (6 ML ships).
+> Cumulative rule chain v14 → v52 = −$535 full. Rule 5 (Rainbow override)
+> shipped for human play; superseded within the chain.
 > Most engine + best-response items above are complete via the Full Oracle
 > Grid (Session 24); CFR Tier 2 was deferred. The "AI Consensus" sub-tasks
 > were superseded by direct DT regression (v16+) and pattern-mining via

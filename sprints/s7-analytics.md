@@ -134,3 +134,52 @@ This is the MOST IMPORTANT sprint. The solver produces data. This sprint turns d
 
 **Deliberate non-action:**
 - Did NOT start single-model pattern mining or feature extraction. The 4 models exist specifically to compare strategy shifts under different opponent assumptions; any pattern conclusion from Model 1 alone would mislead and likely need to be re-derived once all 4 are in. That's also why the hand-feature extractor is pending — easier to design with four files in hand.
+
+### Sessions 09–54 — covered in CURRENT_PHASE.md rewrites + DECISIONS_LOG.md (Decisions 029–088) + SESSION_NN_*.md reports
+
+The ML champion + rule chain work between Session 09 (oracle grid foundation) and Session 54 (v39_dt ML champion via diagnostic-driven feature engineering) was logged in DECISIONS_LOG.md and per-session SESSION_NN reports rather than this file. See `DECISIONS_LOG.md` and the `SESSION_NN_*.md` files at the repo root for per-session details. STRATEGY_GUIDE.md Part 1 has the strategy-of-record narrative.
+
+### Session 55 — 2026-05-10 — Two ML champions in one session via the S54 playbook transferred to trips_pair + two_pair zones
+
+**Context:** Session 54 had shipped v39_dt by applying a diagnostic-driven feature engineering playbook to the pair zone (+$237/1000h), with the explicit hypothesis that the methodology would generalize. Session 55 tested that hypothesis on the next two largest within-category residuals: trips_pair ($909/1000h) and two_pair ($918/1000h). Both shipped.
+
+**Completed:**
+
+*Track A — trips_pair (v40_dt ships +$18 full / +$29 prefix):*
+- `analysis/scripts/drill_trips_pair_zone_v39_diagnostic.py` (Drill TP, Phase 1)
+- `analysis/scripts/drill_trips_pair_v39_mismatch_handlevel.py` (Drill TP2, Phase 1b)
+- `analysis/scripts/trips_pair_aug_v2_features_gated.py` + persist
+- `analysis/scripts/train_v40_dt.py` + `strategy_v40_dt.py` + `grade_v40_dt.py`
+- `data/v40_dt_model.npz` (91 features, 1.57M leaves) + `data/feature_table_trips_pair_aug_v2_gated.parquet`
+- **trips_pair within-cat $909 → $281 (−$628, −69%); pct_opt 64.2% → 85.1%**
+- All other categories byte-identical to v39 (surgical gating)
+
+*Track B — two_pair (v41_dt ships +$124 full / +$86 prefix; NEW ML CHAMPION):*
+- `analysis/scripts/drill_two_pair_zone_v39_diagnostic.py` (Drill T2P, Phase 1)
+- `analysis/scripts/drill_two_pair_v39_mismatch_handlevel.py` (Drill T2P2, Phase 1b)
+- `analysis/scripts/two_pair_aug_v2_features_gated.py` + persist
+- `analysis/scripts/train_v41_dt.py` + `strategy_v41_dt.py` + `grade_v41_dt.py`
+- `data/v41_dt_model.npz` (95 features, 2.02M leaves) + `data/feature_table_two_pair_aug_v2_gated.parquet`
+- **two_pair within-cat $918 → $363 (−$555, −60%); pct_opt 66.6% → 83.2%**
+- 3 of 4 new features in top-30 importance (#24, #26, #30)
+- All other categories byte-identical to v40 (surgical gating preserved trips_pair $281)
+
+**Cumulative session arc:** v39 → v41 = −$142/1000h full / −$115 prefix. Second-largest combined ML session lift after S54's single +$237. Cumulative v32 → v41 = −$445 full / −$218 prefix (6 ML ships).
+
+**Methodology lessons:**
+- The S54 playbook is **transferable** across ML residual zones: same Phase 1 drill shape, same Phase 1b hand-level inspection shape, same 4-feature design (n_configs, max_top, min_top/auxiliary, max_mid_sum or DS-specific), same depth=36 ml=1 hyperparams.
+- **Asymmetric existing features signal blind spots.** Two_pair had `t2p_n_layout_b_routings_ds_g` (Layout B DS feature) but no Layout C equivalent — that asymmetry pointed directly at the missing design. Audit existing features for missing-mirror gaps.
+- **Low individual importance + surgical gating = real ship.** tp_v2 features ranked at #69-78 individually (0.02-0.04%), but v40 still shipped +$18. Population-weighted utility > individual importance for gated features.
+- **Population size dominates leaf-growth potential.** v40's 4 features added +3.4% leaves (over a 2.86% zone); v41's 4 features added +32% leaves (over a 22.3% zone). Same feature shapes, very different leaf impact — driven by gated population size.
+
+**Documentation:**
+- `SESSION_55_V41_DT_REPORT.md` — repo-root standalone report
+- `CURRENT_PHASE.md` — rewritten
+- `DECISIONS_LOG.md` — Decisions 089 (v40_dt) + 090 (v41_dt)
+- `STRATEGY_GUIDE.md` Part 1 — Session 55 entry; Part 2 ML champion table updated
+
+**End-of-S55 state:**
+- ML champion: **v41_dt** at $1,270/1000h full / $686 prefix
+- Rule chain production: **v52_full_high_only_handler** at $2,498 full / $1,522 prefix (UNCHANGED)
+- Two production tracks diverge by $1,228/1000h
+- Largest remaining residual: **high_only** zone ($2,796 within-cat × 40.4% share = $1,131/1000h whole-grid = ~63% of v41's total regret) — Session 56's highest-leverage target.
