@@ -3653,3 +3653,83 @@ Tested 7 deterministic heuristics for "A on top + best DS/SS bot":
 **Total project rule count: 14** (Rules 1-13 + Rule 14 = A-high no-pair + DS/SS HIMID).
 
 **The S43-S50 arc** has now shipped 6 production rules totaling −$260 full / −$185 prefix, making it the project's largest multi-rule family by both ship count and total lift. The methodology breakthroughs (S44 within-hand pairwise + S46 best-in-class minus production + S49 sanity-check) compose to enable finding offensive ships outside the original defensive zone.
+
+---
+
+## Decision 084 — Rule 15 (K-high no-pair, K-on-top + DS/SS HIMID) ships as v46 (Session 51) — 3rd-LARGEST SINGLE-RULE LIFT IN PROJECT HISTORY
+
+**Date:** 2026-05-09
+**Status:** SHIPS as production. v46 replaces v45 as strategy of record. **Grader-confirmed: +$51/1000h whole-grid (full N=200) and $0 prefix (UNCHANGED — high_only zero prefix coverage).** v45 → v46 score: $2,585 → $2,534 full, $1,522 → $1,522 prefix. pct_opt full: 43.05% → 43.24% (+0.19%). high_only $3,439 → $3,187 (−$252 within high_only, −7.3%). high_only pct_opt 23.3% → 24.2% (+0.9%). p90 regret IMPROVED 0.745→0.730. Max regret unchanged. Cumulative v39 → v46 = −$311 full / −$185 prefix.
+
+**Origin:** Continued the high_only attack from Session 50. Applied same Drill K + Drill L methodology to K-high no-pair (the 2nd-largest residual zone after A-high).
+
+**Drill M (characterization, n=330,330) — DEFINITIVE:**
+
+K-high no-pair = 5.5% of grid with $4,114/1000h regret per hand → **$226/1000h whole-grid contribution** (2nd-largest residual zone). v45 == oracle on only 18.6% of K-high hands.
+
+Critical difference vs A-high: oracle picks K on top only **66.23%** of the time (vs A-high's 93.13%). The other 34% includes Q-on-top (12%), J-on-top (5%), and defensive 2-on-top (7%). K is borderline for top tier (loses to A but wins vs Q-or-lower).
+
+Best-in-class minus v45 (S46 lens): DS class +$2,999/1000h within fires (+$150 wg ceiling), SS +$1,790 (+$90 wg ceiling). Per-fire DS lift is even LARGER than A-high's +$1,937.
+
+**Per-2nd-highest stratification:** 2nd=Q is dominant zone (55% of K-high pop) with $4,408/1000h regret, oracle K-on-top only 64% (Q sometimes wins top tier honor).
+
+---
+
+**Rule 15 — design (parallel to Rule 14):**
+
+  TRIGGER:
+    cat == high_only           AND
+    max_rank == 13 (King)      AND
+    DS-bot OR SS-bot achievable with K on top
+
+  SETTING BUILDER:
+    TOP = the King (always — Rule 15 v1 doesn't address Q/J/2-on-top sub-zone).
+    Try DS-bot first (HIMID — mid keeps highest 2 non-K cards).
+    Else try SS-bot (HIMID).
+    Else fall through to v45.
+
+**Behavioral verification (50K K-high sample) — passed S49 sanity check:**
+- Rule 15 fires on 95.8% of K-high hands
+- v46 differs from v45 on 65.6% of fires (similar to Rule 14's 72.2%)
+- 100% K-on-top, 79% DS bot, 21% SS bot fallback
+
+**Production ship rationale:**
+- 3rd-largest single-rule lift in project history (+$51/1000h)
+- pct_opt full: +0.19%; high_only sub-category pct_opt +0.9%
+- Within-category high_only regret: −7.3%
+- p90 regret IMPROVED (0.745 → 0.730)
+- Max regret unchanged ($5.74)
+- Prefix unchanged (high_only zero prefix coverage)
+- Mechanism: parallel to Rule 14, same HIMID heuristic insight
+
+**Known coverage gaps (Rule 15 v2 candidate):**
+- Doesn't address the 34% of K-high hands where oracle prefers non-K on top
+- Doesn't address weak-hand top inversion (3.16% defensive 2-on-top picks)
+
+These are queued for a future Rule 15 v2 with secondary trigger or branching logic.
+
+---
+
+**Methodology rules NEW (Session 51):**
+
+1. **The Drill K + Drill L playbook generalizes across high-card sub-pops.** Same methodology that produced Rule 14 (A-high) produced Rule 15 (K-high) with similar structure: characterization → "best-in-class minus production" → HIMID heuristic.
+
+2. **High-rank sub-pops have known coverage gaps.** Rule 15 v1 addresses ~66% of K-high optimally; the other 34% (oracle prefers non-K on top) is residual. Pattern likely repeats for Q-high (oracle prefers non-Q on top even more often).
+
+3. **Per-fire lift can exceed the prior sub-pop's** even with smaller whole-grid lift, due to population size differences.
+
+4. **The S43-S51 arc continues to compound.** 7 production rules, average ship −$44/1000h per rule.
+
+---
+
+**Files:**
+- NEW: `analysis/scripts/strategy_v46_rule15_Khigh_DS.py` (PRODUCTION)
+- NEW: `analysis/scripts/grade_v46_rule15_Khigh.py`
+- NEW: `analysis/scripts/drill_K_high_nopair_characterization.py` (Drill M)
+- NEW (report): `SESSION_51_RULE15_KHIGH_REPORT.md`
+- UPDATED: `CURRENT_PHASE.md` (rewritten for Session 51)
+- UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 51 entry) + production-of-record references
+
+**Total project rule count: 15** (Rules 1-14 + Rule 15 = K-high no-pair + DS/SS HIMID).
+
+**The S43-S51 arc** has now shipped 7 production rules totaling −$311 full / −$185 prefix.
