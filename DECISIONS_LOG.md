@@ -3882,3 +3882,80 @@ v52 corrects by:
 **Total project rule count: 17** (v52 = "Rule 17 high_only generalized handler" supersedes the v48 attempt of Rules 17-21).
 
 **The S43-S53 arc** has now shipped 9 production rules totaling −$348 full / −$185 prefix.
+
+---
+
+## Decision 087 — v36_dt new ML champion + Rule 18 attempts deferred (Session 53 overnight Part 2)
+
+**Date:** 2026-05-10
+**Status:** v36_dt SHIPS as new ML champion. Two Rule 18 attempts (v54 HITOP, v55 HIBOT) both REGRESSED and are deferred as artifacts.
+
+**v36_dt — capacity-only ML retrain:**
+- Trained at depth=36, min_samples_leaf=1 (vs v34_dt's depth=34 ml=2)
+- 1,064,442 leaves (+22% over v34_dt's 874,548)
+- Same 83 features (79 v30 + 4 trips_v2 round-2)
+- **Grade: $1,649 full / $891 prefix vs v34_dt's $1,681 / $889**
+- **+$33 full / −$2 prefix** — passes 2× methodology gate (ratio 0.06x)
+- pct_opt full: 52.02% → 53.61% (+1.59% — biggest ML jump since v34's debut)
+
+Per-category full grid:
+- trips_pair: $1,057 → $909 (−$148, biggest gain)
+- composite: $1,173 → $960 (−$213)
+- trips: $1,291 → $1,194 (−$97)
+- quads: $613 → $545 (−$68)
+- two_pair: $978 → $918 (−$60)
+- three_pair: $1,635 → $1,613 (−$22)
+- pair: $1,619 → $1,604 (−$15)
+- high_only: $2,806 → $2,796 (−$10)
+
+Capacity unlock helps rare-shape categories most.
+
+---
+
+**Pair gap analysis findings:**
+
+Per-(max, pair) cell breakdown for the 46.6% pair category revealed $852/1000h whole-grid residual. Top cells (diagonal pair = max):
+- AA: $57.78 wg (215K hands, $1,612 mean regret)
+- KK: $56.52 wg
+- QQ: $49.49 wg
+
+**Rule 18 attempts targeting this gap — both regressed:**
+
+v54 (Rule 18 with HITOP tie-break — TOP=highest non-pair singleton):
+- Fires on 47.8% of AA/KK/QQ (195,780 hands)
+- 67.7% of fires differ from v52
+- Grade vs v52: **−$5/1000h** (regression)
+
+v55 (Rule 18 v2 with HIBOT tie-break — TOP=lowest non-pair singleton):
+- Same population
+- Grade vs v52: **−$42/1000h** (severe regression)
+
+**Diagnosis:** Rule 4 (existing v3 logic) + Rule 5 (KK/AA Rainbow override) are already near-optimal for AA/KK/QQ. Forcing DS-bot via singleton selection BREAKS the existing tie-breaks. The pair gap requires more sophisticated logic than fixed tie-break selection — likely ML territory (which v36_dt's added capacity partially addresses: pair $1,619 → $1,604 in v36_dt).
+
+---
+
+**Methodology rules NEW (Session 53 overnight Part 2):**
+
+1. **Capacity-only ML retrains can ship +$33** even when feature set is unchanged. v36_dt's 22% more leaves added meaningful per-category gains, especially in rare-shape categories.
+
+2. **Pair AA/KK/QQ are ML territory.** Naive suit-aware bot rules (Rule 18 v1 and v2) both regress. The pair zone needs adaptive logic, not fixed tie-breaks.
+
+3. **The rule chain is approaching diminishing returns.** Easy wins are harvested. Future improvement requires more sophisticated heuristics, ML residual fitting, or new feature engineering.
+
+---
+
+**Files:**
+- NEW: `data/v36_dt_model.npz` (640 MB, 1.06M leaves)
+- NEW: `analysis/scripts/strategy_v36_dt.py` (PRODUCTION ML champion)
+- NEW: `analysis/scripts/grade_v36_dt.py`
+- NEW: `analysis/scripts/strategy_v54_rule18_high_pair_DS.py` (sister, regressed)
+- NEW: `analysis/scripts/strategy_v55_rule18_hibot.py` (sister, regressed)
+- NEW: `analysis/scripts/grade_v54_rule18.py`, `grade_v55_rule18_hibot.py`
+- NEW (report): `SESSION_53_OVERNIGHT_PART2_REPORT.md`
+- UPDATED: `CURRENT_PHASE.md`, `STRATEGY_GUIDE.md`
+
+**Two production tracks at end of S53 overnight:**
+- Rule chain: v52_full_high_only_handler ($2,498 full / $1,522 prefix)
+- ML champion: v36_dt (NEW — $1,649 full / $891 prefix)
+
+**Total project rule count: 17** (UNCHANGED from v52). ML champion: v36_dt (new).

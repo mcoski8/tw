@@ -1398,7 +1398,8 @@ Every model trained, side-by-side, on both validation grids:
 | v31 | S36-overnight | 32 | 3 | 79 (same as v30) | 699,773 | $1,736 | $921 | superseded by v32 — capacity-only retrain shipped second-largest ship (after v26) with zero new features |
 | v32 | S37 | 32 | 3 | 83 (79 v30 + 4 trips_v2 round 2) | 731,606 | $1,715 | $904 | superseded by v34 — stacks trips_v2 round-2 features on v31's high-capacity config; held the ML record briefly between Session 37 and 38 |
 | v32_d34ml3 | S38 | 34 | 3 | 83 (same as v32) | 731,611 | $1,715 | $904 | ARCHIVED — control retrain at depth=34 ml=3; +5 leaves vs v32 (depth=33 actual saturation) confirms ml=3 was the binding constraint |
-| **v34_dt** | **S38** | **34** | **2** | **83 (same as v32)** | **874,548** | **$1,681** | **$889** | **CURRENT ML CHAMPION** — capacity-only retrain at depth=34 ml=2; +19.5% leaves over v32; ships −$34 full / −$15 prefix and lifts every category. Cumulative v30 → v34 of $113/1000h is the new largest cumulative arc in project history |
+| v34_dt | S38 | 34 | 2 | 83 (same as v32) | 874,548 | $1,681 | $889 | superseded by v36 — capacity-only retrain at depth=34 ml=2; +19.5% leaves over v32; ships −$34 full / −$15 prefix and lifts every category. |
+| **v36_dt** | **S53 overnight** | **36** | **1** | **83 (same as v32)** | **1,064,442** | **$1,649** | **$891** | **CURRENT ML CHAMPION** — capacity-only retrain at depth=36 ml=1; +21.7% leaves over v34; ships −$33 full / +$2 prefix (slight prefix regression but full lift dominates, passes 2× methodology gate at 0.06x ratio). pct_opt full 52.02% → 53.61% (+1.59% — biggest ML jump since v34's debut). Per-category gains concentrated in rare-shape categories: trips_pair −$148, composite −$213, trips −$97, quads −$68. |
 
 **Per-category breakdown** (full grid, N=200): how each category's
 regret has dropped across the flagship versions:

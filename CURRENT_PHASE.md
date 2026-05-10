@@ -43,7 +43,8 @@
 | Strategy | Use case | Where it lives |
 |---|---|---|
 | **v52_full_high_only_handler** | **PRODUCTION** (17 rules: v47 + Rule 17 = comprehensive high_only). +$17 full / $0 prefix vs v47. Cumulative v39→v52: +$348 full / +$185 prefix. | `analysis/scripts/strategy_v52_full_high_only_handler.py` |
-| **v34_dt** | ML champion (874K leaves, 83 features at depth=34 ml=2) | `analysis/scripts/strategy_v34_dt.py` + `data/v34_dt_model.npz` |
+| **v36_dt** | **NEW ML champion** (Session 53 overnight; 1.06M leaves, 83 features at depth=36 ml=1; +$33 vs v34_dt full) | `analysis/scripts/strategy_v36_dt.py` + `data/v36_dt_model.npz` |
+| v34_dt | Predecessor ML champion (874K leaves, 83 features at depth=34 ml=2; $1,681 full / $889 prefix) | `analysis/scripts/strategy_v34_dt.py` + `data/v34_dt_model.npz` |
 | v47_rule16_Qhigh_DS | Predecessor production (Session 52). | `analysis/scripts/strategy_v47_rule16_Qhigh_DS.py` |
 | v46_rule15_Khigh_DS | Predecessor production (Session 51). | `analysis/scripts/strategy_v46_rule15_Khigh_DS.py` |
 | v45_rule14_Ahigh_DS | Predecessor production (Session 50, LARGEST single-rule lift +$131). | `analysis/scripts/strategy_v45_rule14_Ahigh_DS.py` |
@@ -56,11 +57,12 @@
 | v30_dt / v29_dt / v27_dt / v26 / v25 / v24 / v23 / v20 / v18e / v16 | Older baselines | various |
 | v38_rule8_two_pair_DEFERRED, v45 (S49 no-op), v36_rule7_high_only | Various deferred/archived | various |
 
-**Capacity + feature progression — UNCHANGED:**
+**Capacity + feature progression — NEW v36 ML champion:**
 
 | Strategy | Depth | min_leaf | Features | Leaves | $/1000h | pct_opt |
 |---|---:|---:|---:|---:|---:|---:|
-| **v34** | **34 (33 actual)** | **2** | **83** | **874,548** | **$1,681** | **52.02%** |
+| v34 | 34 (33 actual) | 2 | 83 | 874,548 | $1,681 | 52.02% |
+| **v36** | **36 (33 actual)** | **1** | **83** | **1,064,442** | **$1,649** | **53.61%** |
 
 **Human-strategy progression (full grid, N=200) — production runtime:**
 
@@ -120,7 +122,7 @@ State (end of Session 53 overnight):
 - Cumulative v39 → v52: +$348 full / +$185 prefix.
 - Cumulative v14 → v52: +$535 full.
 - The S43-S53 arc has shipped 9 production rules.
-- v34_dt remains ML champion ($1,681 full / $889 prefix; 874K leaves).
+- ML champion: v36_dt (NEW, S53 overnight) at $1,649 full / $891 prefix; 1.06M leaves at depth=36 ml=1. v34_dt was previous ML champion at $1,681 / $889.
 - The high_only family (Rules 14-17) is now thoroughly covered.
 
 USER-PRIORITY DIRECTION FOR SESSION 54:
