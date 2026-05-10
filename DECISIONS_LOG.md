@@ -4091,3 +4091,215 @@ Established in S53 overnight Part 5 (commit 52ab27c, `analysis/scripts/strategy_
 - ML champion: **v39_dt (NEW)** — $1,412 full / $801 prefix
 
 **Total project rule count: 17** (UNCHANGED from v52, this session was ML-only). ML champion: v39_dt (new — replaces v36_dt).
+
+---
+
+## Decision 089 — v40_dt new ML champion (+$18 full / +$29 prefix) via trips_pair zone collapse (Session 55 Track A)
+
+**Decision:** v40_dt becomes the new ML champion, replacing v39_dt. Adds 4 rank-valued conditional features (`tp_v2_*_g`) targeting the trips_pair zone diagnosed in Phase 1.
+
+**Score (full grid, N=200):**
+- v39_dt: $1,412 / 57.88% pct_opt / 1,518,368 leaves
+- **v40_dt: $1,394 / 58.48% pct_opt / 1,569,848 leaves** (−$18, +0.60% pct_opt, +3.4% leaves)
+
+**Score (prefix grid, N=1000):**
+- v39_dt: $801 / 64.55% pct_opt
+- **v40_dt: $772 / 65.19% pct_opt** (−$29, +0.64%)
+
+**Both grids ship strongly positive — passes 2× methodology gate (prefix:full ratio = 0.62×, well within range).**
+
+**Per-category (full grid) — surgical:**
+| Category | v39 | v40 | Δ |
+|---|---:|---:|---:|
+| **trips_pair** | **$909** | **$281** | **−$628 (−69%)** |
+| trips_pair pct_opt | 64.2% | **85.1%** | **+20.9%** |
+| (all other categories byte-identical to v39 by design via gating) | | | |
+
+**Cumulative ML arc:** v32 → v40 = −$321/1000h on full grid.
+
+---
+
+### Phase 1 — Drill TP (trips_pair zone diagnostic)
+
+Sweep of all 171,600 trips_pair hands. v39_dt vs oracle (Drill TP):
+
+**Top mismatch: v39 picks Pbot_SS while oracle picks Pbot_DS** — 10,398 hands @ $3,580 mean regret = **$6.20/1000h whole-grid contribution from a single mismatch class.**
+
+Total trips_pair whole-grid mismatch contribution: $19/1000h (matches expected $26 from within-cat $909 × share 2.86%).
+
+Class distribution shift:
+- v39 OVER-picks `Pbot_SS` (+8.27%)
+- v39 UNDER-picks `Pbot_DS` (−9.10%)
+
+### Phase 1b — Drill TP2 (hand-level inspection)
+
+Top 20 mismatch hands + aggregate over 10,398:
+- 100% of mismatch hands have pair with 2 distinct suits
+- 100% have R2 or R3 DS-routing available
+- R1 (bot = pair + 2 sings filling pair-suits, captured by existing `tp_pair_routing_is_ds_g`) available in only **0.3%**
+- R2 (bot = pair + 1 trip + 1 sing): available in **85.7%**
+- R3 (bot = pair + 2 trip cards): available in **59.0%**
+- v39 was BLIND to R2 and R3
+
+### Phase 2 v2 — Rank-valued conditional features (SHIPPED — v40_dt)
+
+Mirrored pair_aug_v5 pattern. 4 features encoding the QUALITY of Pbot_DS across ALL routings (R1+R2+R3):
+
+| Feature | What it captures |
+|---|---|
+| `tp_v2_bot_DS_n_configs_g` | Count of (pair + 2 others) 4-card-bot configs yielding DS. Spans R1/R2/R3. |
+| `tp_v2_bot_DS_max_top_rank_g` | Best top-rank achievable across DS configs |
+| `tp_v2_bot_DS_min_top_rank_g` | Lowest top-rank achievable |
+| `tp_v2_bot_DS_max_mid_sum_g` | Best mid rank-sum across configs |
+
+### v40_dt training results
+
+- 91 features (87 + 4 tp_v2)
+- depth=36, ml=1
+- **1,569,848 leaves (+3.4% over v39's 1.52M)** — modest growth, surgical reshape of trips_pair routing
+- Feature importance 0.02-0.04% each (low individually) — importance ≠ utility for gated features in small populations
+
+### Methodology lessons NEW (Session 55 Track A)
+
+1. **The S54 playbook transfers to trips_pair.** Identical Phase 1/1b/2 shape, identical feature suite (n_configs, max_top, min_top, max_mid_sum), identical depth=36 ml=1 hyperparams. The pipeline is now boilerplate.
+
+2. **Low individual importance + surgical gating = small but real ship.** tp_v2 features ranked at #69-78 individually, but the trips_pair zone collapsed 69% within-cat. Population-weighted utility > individual importance for category-gated features.
+
+3. **Existing feature audits reveal missing routings.** `tp_pair_routing_is_ds_g` only captured route R1 of three possible Pbot_DS routings. Auditing existing features for "what does this NOT capture?" is a productive blind-spot search.
+
+### Files (Session 55 Track A)
+
+**Drills (Phase 1):**
+- `analysis/scripts/drill_trips_pair_zone_v39_diagnostic.py` (Drill TP)
+- `analysis/scripts/drill_trips_pair_v39_mismatch_handlevel.py` (Drill TP2)
+
+**Features:**
+- `analysis/scripts/trips_pair_aug_v2_features_gated.py` (PRODUCTION)
+- `analysis/scripts/persist_trips_pair_aug_v2_gated.py`
+
+**Training + grading:**
+- `analysis/scripts/train_v40_dt.py` + `strategy_v40_dt.py` + `grade_v40_dt.py`
+
+**Models:**
+- `data/v40_dt_model.npz` (PRODUCTION intermediate)
+- `data/feature_table_trips_pair_aug_v2_gated.parquet`
+
+---
+
+## Decision 090 — v41_dt new ML champion (+$124 full / +$86 prefix) via two_pair zone collapse (Session 55 Track B)
+
+**Decision:** v41_dt becomes the FINAL ML champion at end of Session 55, replacing v40_dt within-session. Adds 4 rank-valued features (`t2p_v2_*_g`) targeting the two_pair zone, completing the Layout B/C asymmetry diagnosed in Phase 1.
+
+**Score (full grid, N=200):**
+- v40_dt: $1,394 / 58.48% pct_opt / 1,569,848 leaves
+- **v41_dt: $1,270 / 62.18% pct_opt / 2,015,413 leaves** (−$124, +3.70% pct_opt, +28% leaves over v40 / +32% over v39)
+
+**Score (prefix grid, N=1000):**
+- v40_dt: $772 / 65.19% pct_opt
+- **v41_dt: $686 / 67.13% pct_opt** (−$86, +1.94%)
+
+**Both grids ship strongly positive — passes 2× methodology gate (prefix:full ratio = 0.69×, within range).**
+
+**Cumulative session (v39 → v41): −$142 full / −$115 prefix.** Second-largest combined session lift after S54 ($237 single-ship).
+
+**Per-category (full grid) — surgical:**
+| Category | v40 | v41 | Δ |
+|---|---:|---:|---:|
+| **two_pair** | **$918** | **$363** | **−$555 (−60%)** |
+| two_pair pct_opt | 66.6% | **83.2%** | **+16.6%** |
+| trips_pair (preserved from v40) | $281 | $281 | 0 |
+| (all other categories byte-identical to v40 by design via gating) | | | |
+
+**Cumulative ML arc:** v32 → v41 = −$445/1000h on full grid (6 ML ships).
+
+---
+
+### Phase 1 — Drill T2P (two_pair zone diagnostic)
+
+Sweep of all 1,338,480 two_pair hands. Anchor classifier: (h_state × l_state × bot_suit_profile).
+
+**Top mismatch: v39 picks Hbot_Lmid_SS while oracle picks Hmid_Lbot_SS** — 56,206 hands @ $2,655 mean regret = **$24.84/1000h whole-grid contribution** (anchor swap).
+
+Second largest: `Hbot_Lmid_SS → Hbot_Lmid_DS` ($12.77/1000h, same-anchor suit upgrade).
+
+Total two_pair whole-grid mismatch contribution: $187/1000h (matches expected $205 from within-cat $918 × share 22.3%).
+
+Class distribution shift:
+- v39 OVER-picks rainbow + SS + 3+1 configs (anchor-balanced over-spread)
+- v39 UNDER-picks DS configs (−3.19% Hbot_Lmid_DS, −1.15% Hmid_Lbot_DS)
+
+### Phase 1b — Drill T2P2 (hand-level inspection)
+
+Top 20 mismatch hands + aggregate over 17,131 (sampled):
+- 72% of mismatches have pair-suit overlap ≥ 1 (suit-profile tradeoffs exist)
+- 34% have Layout C (Hbot_Lmid) DS routing(s) available
+- v39 has `t2p_n_layout_b_routings_ds_g` (Layout B DS feature) but **NO Layout C equivalent** — asymmetric blind spot
+
+This asymmetry pointed directly at the missing feature design. **The most productive Phase 1b signal of the session: existing features for one routing but not its mirror = missing feature.**
+
+### Phase 2 v2 — Rank-valued conditional features (SHIPPED — v41_dt)
+
+4 features completing the Layout B/C asymmetry:
+
+| Feature | What it captures |
+|---|---|
+| `t2p_v2_layout_C_DS_n_configs_g` | Layout C (Hbot_Lmid) DS routings count (analog of existing Layout B feature) |
+| `t2p_v2_layout_C_max_top_rank_g` | Best top-rank in Layout C across SS+DS routings |
+| `t2p_v2_layout_B_max_top_rank_g` | Best top-rank in Layout B across SS+DS routings |
+| `t2p_v2_layout_C_DS_max_top_rank_g` | Best top-rank specifically when Layout C is DS |
+
+### v41_dt training results
+
+- 95 features (91 + 4 t2p_v2)
+- depth=36, ml=1
+- **2,015,413 leaves (+32% over v40's 1.57M)** — large leaf growth, indicating high info content of new features in the 22.3%-population two_pair zone
+- 3 of 4 new features in top-30 importance:
+  - #24 `t2p_v2_layout_B_max_top_rank_g` (0.29%)
+  - #26 `t2p_v2_layout_C_max_top_rank_g` (0.28%)
+  - #30 `t2p_v2_layout_C_DS_max_top_rank_g` (0.21%)
+  - #73 `t2p_v2_layout_C_DS_n_configs_g` (0.04%)
+
+### Methodology lessons NEW (Session 55 Track B)
+
+1. **Asymmetric existing features signal blind spots.** The single most productive observation: two_pair had Layout B DS feature but no Layout C equivalent. Auditing existing features for missing-mirror gaps is a fast path to identifying the next zone's blind spot.
+
+2. **Population size dominates leaf-growth potential.** v41's 4 features added +32% leaves over a 22.3%-population zone; v40's 4 features added +3.4% over a 2.86%-population zone. Same feature shapes, very different leaf impact — driven by the size of the population the gated features touch.
+
+3. **The playbook is mature.** Phase 1 drill (10-30 min) → Phase 1b hand-level (~30 sec on sample, ~3 min full) → skip booleans → design 4 rank-valued conditional features → persist + train (~10 min) → grade (~10-20 min). Total ~2 hours per ship including diagnostics.
+
+### Pre-flight: v41 is robust, not noise
+
+- **Both grids ship strongly positive:** full +$124, prefix +$86 (passes 2× methodology gate at 0.69× ratio — well within range)
+- **Leaf expansion is structural** (+32%, deterministic with random_state=42)
+- **Surgical via gating** (other categories byte-identical to v40, gating logic confirmed working)
+- **3 of 4 new features in top-30** — ranked higher than noise distributions would predict
+- **Matches Phase 1 diagnosis** — the lift is in the two_pair zone, exactly where the diagnostic identified the gap
+
+### Files (Session 55 Track B)
+
+**Drills (Phase 1):**
+- `analysis/scripts/drill_two_pair_zone_v39_diagnostic.py` (Drill T2P)
+- `analysis/scripts/drill_two_pair_v39_mismatch_handlevel.py` (Drill T2P2)
+
+**Features:**
+- `analysis/scripts/two_pair_aug_v2_features_gated.py` (PRODUCTION)
+- `analysis/scripts/persist_two_pair_aug_v2_gated.py`
+
+**Training + grading:**
+- `analysis/scripts/train_v41_dt.py` + `strategy_v41_dt.py` + `grade_v41_dt.py`
+
+**Models:**
+- `data/v41_dt_model.npz` (PRODUCTION — FINAL ML CHAMPION at end of S55)
+- `data/feature_table_two_pair_aug_v2_gated.parquet`
+
+**Documentation:**
+- `SESSION_55_V41_DT_REPORT.md` (standalone session report covering both ships)
+- `STRATEGY_GUIDE.md` Part 1 — Session 55 entry; Part 2 ML champion table updated
+- `CURRENT_PHASE.md` — rewritten
+- `DECISIONS_LOG.md` — Decisions 089 + 090 (this section)
+
+**Two production tracks at end of S55:**
+- Rule chain: **v52_full_high_only_handler** ($2,498 full / $1,522 prefix) — UNCHANGED
+- ML champion: **v41_dt (NEW)** — $1,270 full / $686 prefix
+
+**Total project rule count: 17** (UNCHANGED from v52, this session was ML-only). ML champion: v41_dt (new — replaces v39_dt; v40_dt was intermediate within-session).
