@@ -3733,3 +3733,53 @@ These are queued for a future Rule 15 v2 with secondary trigger or branching log
 **Total project rule count: 15** (Rules 1-14 + Rule 15 = K-high no-pair + DS/SS HIMID).
 
 **The S43-S51 arc** has now shipped 7 production rules totaling −$311 full / −$185 prefix.
+
+---
+
+## Decision 085 — Rule 16 (Q-high no-pair, Q-on-top + DS/SS HIMID) ships as v47 (Session 52)
+
+**Date:** 2026-05-09
+**Status:** SHIPS as production. v47 replaces v46 as strategy of record. **Grader-confirmed: +$19/1000h whole-grid (full N=200) and $0 prefix (UNCHANGED — high_only zero prefix coverage).** v46 → v47 score: $2,534 → $2,515 full, $1,522 → $1,522 prefix. pct_opt full: 43.24% → 43.30% (+0.06%). high_only $3,187 → $3,096 (−$91 within high_only, −2.9%). high_only pct_opt 24.2% → 24.5% (+0.3%). Cumulative v39 → v47 = −$330 full / −$185 prefix.
+
+**Origin:** Continued the high_only attack. Same Drill K + Drill L methodology applied to Q-high (3rd-largest high_only sub-population at 2.5% of grid, $112/1000h whole-grid regret contribution).
+
+**Drill N findings (n=150,150 Q-high no-pair):**
+
+Critical finding: **Q-on-top is borderline.** Oracle picks Q on top only **49.37%** of the time (vs A 93%, K 66%). The other 51% includes J-on-top (10%), defensive 2-on-top (16%), T (4%), 3 (8%).
+
+Best-in-class minus v46: DS +$3,604/1000h within fires, SS +$2,196, **3+1 +$502 (positive for first time)**, rainbow/4-flush negative.
+
+**Rule 16 design (parallel to Rules 14/15):** trigger = cat=high_only AND max=Q AND DS-bot OR SS-bot achievable with Q on top. Setting builder: TOP=Q always, try DS-bot first then SS-bot, HIMID tie-break.
+
+**Behavioral verification (50K Q-high sample):** Rule 16 fires on 97.2%, v47 differs from v46 on 58.5% of fires (lower than A/K-high but substantial), 100% Q-on-top, 80% DS bot, 20% SS bot fallback.
+
+**Three-session high_only sub-arc (S50-S52) — diminishing returns:**
+
+| Session | Sub-pop | Pop % | Top oracle % | Δ Full |
+|---|---|---:|---:|---:|
+| S50 | A-high | 11% | 93% | −$131 |
+| S51 | K-high | 5.5% | 66% | −$51 |
+| S52 | Q-high | 2.5% | 49% | **−$19** |
+| Combined | A+K+Q-high | 19% | — | −$201 |
+
+Per-fire DS lift INCREASES across sub-pops (lower top-card → larger v46 baseline gap), but pop size DECREASES, leading to shrinking absolute ships. J-high estimated +$8-12; below the threshold for further single-pop ships.
+
+**Methodology rules NEW (Session 52):**
+
+1. **The high_only single-pop arc has diminishing returns.** Each successive sub-pop ships less whole-grid lift due to shrinking population.
+
+2. **3+1 transitions from negative to positive** at Q-high. As top-card oracle fraction drops, oracle uses more bot suit profiles. Future Rule v2's might add 3+1 fallback.
+
+3. **The simple HIMID heuristic is a robust pattern across A/K/Q-high.** Same code structure with only the rank constant changing.
+
+**Files:**
+- NEW: `analysis/scripts/strategy_v47_rule16_Qhigh_DS.py` (PRODUCTION)
+- NEW: `analysis/scripts/grade_v47_rule16_Qhigh.py`
+- NEW: `analysis/scripts/drill_Q_high_nopair_characterization.py` (Drill N)
+- NEW (report): `SESSION_52_RULE16_QHIGH_REPORT.md`
+- UPDATED: `CURRENT_PHASE.md` (rewritten for Session 52)
+- UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 52 entry) + production-of-record references
+
+**Total project rule count: 16** (Rules 1-15 + Rule 16 = Q-high no-pair + DS/SS HIMID).
+
+**The S43-S52 arc** has now shipped 8 production rules totaling −$330 full / −$185 prefix.
