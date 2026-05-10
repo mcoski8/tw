@@ -4303,3 +4303,129 @@ This asymmetry pointed directly at the missing feature design. **The most produc
 - ML champion: **v41_dt (NEW)** — $1,270 full / $686 prefix
 
 **Total project rule count: 17** (UNCHANGED from v52, this session was ML-only). ML champion: v41_dt (new — replaces v39_dt; v40_dt was intermediate within-session).
+
+## Decision 091 — v42_dt new ML champion (+$79 full / $0 prefix) via high_only zone collapse (Session 56)
+
+**Date:** 2026-05-10
+**Question:** Apply the now-proven 4-phase playbook to the LARGEST remaining ML residual zone — high_only at $2,796/1000h within-category × 40.4% population share = $1,131/1000h whole-grid contribution (~63% of v41's total regret). User-prediction was that high_only would need DIFFERENT feature types from prior zones (top-card placement, defensive triggers, broadway connectivity, three-of-a-suit clustering) rather than the same DS-routing pattern as pair/trips_pair/two_pair.
+**Choice:** Apply the same playbook (Phase 1 drill → Phase 1b hand-level → Phase 2 v2 four rank-valued conditional features → train) to high_only. The drill revealed the user-prediction was partially wrong: the DOMINANT high_only blind spot is the SAME DS-routing pattern as prior zones — Ace-top is preserved in 100% of dominant-class mismatches; only the bot suit profile differs. Shipped v42_dt with 4 new `ho_v2_bot_DS_*` features mirroring pair_aug_v5 / trips_pair_v2 / two_pair_v2.
+**Why:**
+
+### Phase 1 Drill (HO) — full 1.23M sweep, $481/1000h whole-grid mismatch contribution
+
+Top-3 mismatch classes (whole-grid contribution):
+1. v41=tA_SS_mu, oracle=tA_DS_ms — 28,014 hands @ $7,774 mean = **$36.24/1000h**
+2. v41=tA_SS_mu, oracle=tA_DS_mu — 41,302 hands @ $4,721 mean = $32.45/1000h
+3. v41=tA_SS_mu, oracle=tA_SS_ms — 41,004 hands @ $4,652 mean = $31.74/1000h
+
+Collapsed by bot-suit-profile swap:
+- **SS → DS = 236,205 hands @ $5,344 mean = $210.08/1000h** (44% of all high_only mismatch contribution)
+- v41 over-routes SS by +14.68% absolute (46.72% v41 vs 32.04% oracle)
+- v41 under-routes DS by −15.51% absolute (36.64% v41 vs 52.16% oracle)
+
+92% of high_only residual concentrated in 6 broadway (h1, h2) cells: AK, KQ, AQ, QJ, KJ, AJ.
+
+### Phase 1b Drill (HO2) — hand-level on tA_SS_mu → tA_DS_ms (28,014 hands)
+
+**The smoking gun, with 100/0 splits:**
+- 100% have ho_v2_bot_DS_max_top_rank = A (Ace-top + DS-bot is ALWAYS achievable)
+- 100% of oracle picks USE that max_top (oracle never sacrifices the Ace)
+- 0% pick min_top
+- 82.7% have suit-distribution (3,2,2,0) yielding 7 DS configs each
+- 17.3% have suit-distribution (2,2,2,1) yielding 3 DS configs each
+
+This was the cleanest Phase 1b validation in the project. Prior sessions had aggregates like "72% have suit overlap" or "85.7% have R2 routing"; S56's 100% match rate confirmed that the ho_v2 feature shape captures the structural delta exactly.
+
+### Phase 2 v2: 4 rank-valued conditional features
+
+Mirror of pair_aug_v5 / trips_pair_v2 / two_pair_v2. Enumerates all C(7,4)=35 candidate 4-card bot subsets, filters to suit profile = 2+2 (DS).
+
+| Feature | What it captures |
+|---|---|
+| `ho_v2_bot_DS_n_configs_g` | Count of DS-bot subsets (typical 0/3/7, max 18) |
+| `ho_v2_bot_DS_max_top_rank_g` | Best top rank achievable across DS configs |
+| `ho_v2_bot_DS_min_top_rank_g` | Lowest top rank achievable |
+| `ho_v2_bot_DS_max_mid_sum_g` | Best mid rank-sum across DS configs |
+
+All zeros for non-high_only hands.
+
+### v42_dt training results
+
+- 99 features (95 v41 + 4 ho_v2)
+- depth=36, ml=1
+- **2,109,330 leaves (+4.7% over v41's 2.02M)** — modest growth, surgical to high_only
+- **3 of 4 new features in top-32 importance:**
+  - #26 `ho_v2_bot_DS_max_mid_sum_g` (0.28%)
+  - #31 `ho_v2_bot_DS_max_top_rank_g` (0.22%)
+  - #32 `ho_v2_bot_DS_min_top_rank_g` (0.21%)
+  - #80 `ho_v2_bot_DS_n_configs_g` (0.03%)
+
+### v42_dt grade
+
+**Full grid (N=200):**
+- v41_dt: $1,270 / 62.18% / 2.02M leaves
+- **v42_dt: $1,192 / 63.08% / 2.11M leaves** (−$79 / +0.91% pct_opt)
+
+**Prefix grid (N=1000):**
+- v41_dt: $686 / 67.13%
+- **v42_dt: $686 / 67.13%** ($0 — by design; prefix slice has zero high_only hands)
+
+**Per-category (full grid) — surgical:**
+| Category | v41 | v42 | Δ |
+|---|---:|---:|---:|
+| **high_only** | **$2,796** | **$2,411** | **−$385 (−13.8%)** |
+| **high_only pct_opt** | **29.0%** | **33.4%** | **+4.4%** |
+| (all other categories byte-identical to v41) | | | |
+
+### Methodology lessons NEW (Session 56)
+
+1. **The playbook is fully transferable to the largest population zone.** Zone size (40.4% population) doesn't break the methodology. Same pipeline that handled trips_pair (1.8% pop) handled high_only (40.4% pop) with no modifications.
+
+2. **Phase 1b can be a 100% confirmation, not just 70-90%.** When feature design exactly matches the structural delta, the percentages collapse to 100/0. S56's "100% have max_top=A; 100% of oracle picks use it" is the strongest Phase 1b validation in the project.
+
+3. **Surgical gating means prefix-grid neutrality is correct, not suspect.** When new features are gated to a category absent from the prefix slice, prefix Δ = $0 by construction. Pre-flight "2× ratio" gates only apply when both grids contain the target population.
+
+4. **User-prediction "different feature types needed" was partially wrong.** The user predicted top-card placement, defensive triggers, broadway connectivity. Reality: the DOMINANT high_only blind spot was the same DS-routing pattern as prior zones; only the bot suit profile differs in 100% of mismatches, not the top-card choice. **Generalizable lesson: when an existing feature family (DS-bot achievability) is missing entirely from a zone, that gap dominates even when other axes also exist.**
+
+5. **Single-axis ships have predictable leaf growth.** v42's +4.7% leaves vs v41's +32% reflects: population × axis-count × info-content determines leaf expansion. high_only has 40% population but the single DS axis touches a narrower split surface than two_pair's Layout B/C asymmetry.
+
+### Pre-flight: v42 is robust, not noise
+
+- **Full grid ships strongly positive:** −$79/1000h, +0.91% pct_opt
+- **Prefix grid neutral by design** (zero high_only hands in prefix slice; gating mathematically guarantees identical metrics on non-targeted populations — every non-high_only category byte-identical on prefix)
+- **Leaf expansion modest and structural** (+4.7%, deterministic with random_state=42)
+- **Surgical via gating** (every other category byte-identical to v41 on both grids)
+- **3 of 4 new features in top-32** — deeper integration than S55 t2p_v2 family (which ranked #24/26/30/73)
+- **Phase 1b 100% match rate** — feature design exactly captures structural delta
+- **Matches Phase 1 diagnosis** — the lift is in the high_only zone, exactly where the diagnostic identified the gap
+
+### Files (Session 56)
+
+**Drills:**
+- `analysis/scripts/drill_high_only_zone_v41_diagnostic.py` (Drill HO, Phase 1)
+- `analysis/scripts/drill_high_only_v41_mismatch_handlevel.py` (Drill HO2, Phase 1b)
+
+**Features:**
+- `analysis/scripts/high_only_aug_v2_features_gated.py` (PRODUCTION)
+- `analysis/scripts/persist_high_only_aug_v2_gated.py`
+
+**Training + grading:**
+- `analysis/scripts/train_v42_dt.py` + `strategy_v42_dt.py` + `grade_v42_dt.py`
+
+**Models:**
+- `data/v42_dt_model.npz` (1188 MB, PRODUCTION — NEW ML CHAMPION)
+- `data/feature_table_high_only_aug_v2_gated.parquet` (19.24 MB)
+
+**Documentation:**
+- `SESSION_56_V42_DT_REPORT.md` (standalone session report)
+- `STRATEGY_GUIDE.md` Part 1 — Session 56 entry; Part 2 ML champion table updated
+- `CURRENT_PHASE.md` — rewritten
+- `DECISIONS_LOG.md` — Decision 091 (this section)
+
+**Two production tracks at end of S56:**
+- Rule chain: **v52_full_high_only_handler** ($2,498 full / $1,522 prefix) — UNCHANGED
+- ML champion: **v42_dt (NEW)** — $1,192 full / $686 prefix
+
+The two tracks now diverge by **$1,306/1000h** — the ML champion beats the human-memorizable rule chain by more than half its EV deficit.
+
+**Total project rule count: 17** (UNCHANGED from v52, this session was ML-only). ML champion: v42_dt (new — replaces v41_dt).

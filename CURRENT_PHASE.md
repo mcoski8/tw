@@ -1,73 +1,67 @@
-# Current: Sprint 8 — Session 55 ships **TWO ML champions in one session — v40_dt then v41_dt — via the Session 54 diagnostic-driven feature engineering playbook applied to TWO RESIDUAL ZONES**. v39_dt → v40_dt → v41_dt score: **$1,412 → $1,394 → $1,270 full / $801 → $772 → $686 prefix**. Cumulative session: **−$142 full / −$115 prefix.** pct_opt 57.88% → 62.18% full / 64.55% → 67.13% prefix. **Trips_pair within-category $909 → $281 (−$628, −69%); two_pair within-category $918 → $363 (−$555, −60%).** All non-targeted categories byte-identical to predecessor (surgical via gating). Leaf count v40: +3.4% (1.52M → 1.57M); v41: +32% (1.57M → 2.02M). Depth saturation 36 in all three. New features: 4 rank-valued tp_v2_* + 4 rank-valued t2p_v2_* = 8 new gated features over 87 base + 4 v5 from S54 = **95 total features in v41_dt**. Cumulative v32 → v41 = **−$445 full / −$218 prefix** (6 ML ships). Rule chain unchanged at v52 ($2,498 full / $1,522 prefix). Methodology validation: the S54 4-phase playbook (drill → hand-level → design rank-valued conditional features → train) is now TRANSFERABLE across ML residual zones. Asymmetric existing features signal blind spots (two_pair had Layout B DS feature but no Layout C equivalent — pointed directly at the missing feature design).
+# Current: Sprint 8 — Session 56 ships **v42_dt as the new ML champion via the user-priority high_only zone collapse, applying the proven 4-phase playbook (drill → hand-level → 4 rank-valued conditional features → train) for the 4th consecutive session**. v41_dt → v42_dt: **$1,270 → $1,192 full / $686 → $686 prefix**. **High_only within-category $2,796 → $2,411 (−$385, −13.8%)**, pct_opt 29.0% → 33.4% (+4.4%). All 7 non-targeted categories byte-identical to v41 on both grids (surgical gating). Leaf count v42: 2.02M → 2.11M (+4.7%). Depth saturated at 36. Four new features: rank-valued `ho_v2_bot_DS_*_g` series mirroring pair_aug_v5 / trips_pair_v2 / two_pair_v2 — total 99 features (95 base + 4 ho_v2). Three of four ranked in top-32 importance (#26, #31, #32). Cumulative v32 → v42 = **−$524 full / −$218 prefix** (7 ML ships). Rule chain unchanged at v52 ($2,498 full / $1,522 prefix). The ML champion now beats the rule chain by **$1,306/1000h** (more than half the rule-chain EV deficit). Phase 1b validation was the cleanest in the project: 100% of dominant-class (tA_SS_mu → tA_DS_ms) mismatches have max_top=A available in DS configs, AND 100% of oracle picks use it — the new feature shape captures the structural delta exactly. **User-prediction "different feature types needed" was partially correct, partially wrong**: the dominant high_only blind spot turned out to be the SAME DS-routing pattern as prior zones; only the bot suit profile differs in 100% of mismatches, not the top-card choice. Methodology validation: **the playbook is fully transferable to the largest population zone (40.4% of canonical hands) without modification.** Prefix-grid neutrality is by design — the prefix slice contains zero high_only hands, so gated features mathematically guarantee identical metrics; this is correct, not a regression.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 56):**
+> **🎯 IMMEDIATE NEXT ACTION (Session 57):**
 >
->   **Apply the same playbook to the largest remaining ML residual: high_only zone.**
+>   **More high_only feature axes — high_only is STILL the dominant residual at $2,411/1000h within-cat × 40.4% share = $975/1000h whole-grid contribution (~82% of v42's total regret).**
 >
->   (A) **High_only zone** — $2,796/1000h within-category in v41_dt (UNCHANGED from v39; 41% of population × $2,796 = $1,145/1000h whole-grid contribution = BY FAR the largest residual). Different feature types likely needed — not just suit-distribution-quality. Candidates:
->      - top-card placement features (when to play A or K on top)
->      - defensive-pair triggers (when to pair the top vs play sing)
->      - broadway connectivity (when the 7 cards form a near-straight)
->      - Run Phase 1 drill on high_only with a hand-structure classifier
->        (Hold'em-strength × bot suit profile)
->      - Phase 1b hand-level inspection of top mismatch
->      - Phase 2 v2 — design 4-6 rank-valued conditional features
->      - Train v42_dt
+>   The ho_v2 features collapsed only the DS-routing axis ($210/1000h whole-grid). The remaining $271/1000h of high_only mismatch contribution (post-v42 estimate) lives in:
+>      - **Top-card placement at non-Ace ranks**: the SS→SS swap ($80/1000h pre-v42) and 31→DS swap ($36) classes
+>      - **Broadway connectivity at non-Ace tops**: tK→tK and tQ→tQ mismatches (still ~$67 + $24 = $91/1000h pre-v42)
+>      - **Defensive-pair triggers** (when 7 cards form a near-straight)
+>      - **Three-of-a-suit clustering quality**
 >
->   (B) **Trips zone** ($1,194/1000h, 4.6% share) — same playbook, smaller zone. Lower priority than high_only.
+>   4-phase plan (Session 57):
+>   Phase 1: Re-drill high_only against v42 (NEW residual matrix; the SS→DS class will be smaller; new dominant classes will emerge)
+>   Phase 1b: Hand-level inspection of new top class
+>   Phase 2 v3: Design 4 rank-valued conditional features (probably mid-suited vs mid-unsuited quality, top-rank kept tA-vs-tK, etc.)
+>   Train v43_dt
 >
->   (C) **Three_pair zone** ($1,613/1000h, 2.2% share) — same playbook, smaller zone.
->
->   (D) **Composite zone** ($960/1000h, 0.2% share) — too small to matter.
+>   Alternative targets: trips zone ($55/1000h whole-grid) or three_pair ($35/1000h) — much smaller potential lift but cleaner playbook fits.
 
-> **✅ NEW SHIPS (Session 55):**
-> 1. **v40_dt** replaces v39_dt as ML champion. **+$18 full / +$29 prefix.** Trips_pair zone collapse.
-> 2. **v41_dt** replaces v40_dt as ML champion. **+$124 full / +$86 prefix.** Two_pair zone collapse.
-> 3. **Cumulative session +$142 full / +$115 prefix.** Both new feature suites fully orthogonal — surgical gating preserves all other categories byte-identical.
+> **✅ NEW SHIPS (Session 56):**
+> 1. **v42_dt** replaces v41_dt as ML champion. **+$79 full / $0 prefix.** High_only zone collapse from $2,796 → $2,411 (−13.8%). Prefix neutrality is by design — prefix slice has zero high_only hands and the new features are gated.
+> 2. **Cumulative session +$79 full / $0 prefix.** New feature suite fully orthogonal — surgical gating preserves all other categories byte-identical on both grids.
 
-> **🔬 ARTIFACTS (Session 55):**
-> 1. **`analysis/scripts/drill_trips_pair_zone_v39_diagnostic.py`** — Drill TP (Phase 1)
-> 2. **`analysis/scripts/drill_trips_pair_v39_mismatch_handlevel.py`** — Drill TP2 (Phase 1b)
-> 3. **`analysis/scripts/trips_pair_aug_v2_features_gated.py`** + persist — PRODUCTION rank-valued features for trips_pair
-> 4. **`analysis/scripts/train_v40_dt.py`** + `strategy_v40_dt.py` + `grade_v40_dt.py` — Track A ship
-> 5. **`analysis/scripts/drill_two_pair_zone_v39_diagnostic.py`** — Drill T2P (Phase 1)
-> 6. **`analysis/scripts/drill_two_pair_v39_mismatch_handlevel.py`** — Drill T2P2 (Phase 1b)
-> 7. **`analysis/scripts/two_pair_aug_v2_features_gated.py`** + persist — PRODUCTION rank-valued features for two_pair
-> 8. **`analysis/scripts/train_v41_dt.py`** + `strategy_v41_dt.py` + `grade_v41_dt.py` — Track B ship (FINAL ML CHAMPION)
-> 9. **`data/v40_dt_model.npz`**, **`data/v41_dt_model.npz`** — saved models
-> 10. **`data/feature_table_trips_pair_aug_v2_gated.parquet`**, **`data/feature_table_two_pair_aug_v2_gated.parquet`** — persisted feature tables
-> 11. **`SESSION_55_V41_DT_REPORT.md`** — repo-root standalone report
+> **🔬 ARTIFACTS (Session 56):**
+> 1. **`analysis/scripts/drill_high_only_zone_v41_diagnostic.py`** — Drill HO (Phase 1)
+> 2. **`analysis/scripts/drill_high_only_v41_mismatch_handlevel.py`** — Drill HO2 (Phase 1b)
+> 3. **`analysis/scripts/high_only_aug_v2_features_gated.py`** + persist — PRODUCTION rank-valued features for high_only
+> 4. **`analysis/scripts/train_v42_dt.py`** + `strategy_v42_dt.py` + `grade_v42_dt.py` — ship
+> 5. **`data/v42_dt_model.npz`** (1188 MB) — PRODUCTION ML champion
+> 6. **`data/feature_table_high_only_aug_v2_gated.parquet`** (19.24 MB) — persisted feature table
+> 7. **`SESSION_56_V42_DT_REPORT.md`** — repo-root standalone report
 
-> **📓 METHODOLOGY LESSONS (Session 55 NEW):**
-> - **The diagnostic + rank-valued conditional feature playbook is transferable.** Two ships in one session validates the S54 methodology generalizes to other ML residual zones. Track A (trips_pair) and Track B (two_pair) used identical feature shapes (n_configs, max_top_rank, etc.) and identical training pipelines.
-> - **Asymmetric existing features signal blind spots.** Two_pair had `t2p_n_layout_b_routings_ds_g` (Layout B DS routings) but no Layout C equivalent. That asymmetry pointed directly at the missing feature design. Audit existing features for missing-mirror gaps when searching for the next zone's blind spot.
-> - **The playbook works at low individual-feature importance.** tp_v2 features ranked at #69-78 with 0.02-0.04% importance each, but v40 still shipped +$18 surgical to the trips_pair zone. Importance ≠ utility for gated features that touch a small population.
-> - **Surgical gating is a force multiplier.** v40 + v41 ships are both byte-identical to predecessors in non-targeted categories. Gating discipline lets us stack ships without regression. Every gated feature module is purely additive.
-> - **Leaf growth scales with feature information density × zone population.** v40's 4 features added +3.4% leaves over a 2.86%-population zone. v41's 4 features added +32% leaves over a 22.3%-population zone. Population size dominates leaf-growth potential when feature info content is high.
-> - **Hand-level top-20 inspection is the source-of-truth.** Aggregate mismatch matrices identify the candidate; only hand-level inspection reveals the precise structural delta. Both Track A (R2/R3 routings) and Track B (Layout C asymmetry) required hand-level proof.
+> **📓 METHODOLOGY LESSONS (Session 56 NEW):**
+> - **The playbook is fully transferable to the largest population zone.** Zone size doesn't break the methodology. high_only at 40.4% of population collapsed via the same pipeline that handled trips_pair (1.8%) and two_pair (14.5%).
+> - **Phase 1b can be a 100% confirmation, not just a 70-90% one.** Prior sessions had aggregates like "72% have suit overlap" or "85.7% have R2 routing." S56's "100% of mismatches have max_top=A AND 100% of oracle picks use it" is the strongest Phase 1b validation yet. When feature design exactly matches the structural delta, the percentages collapse to 100/0.
+> - **Surgical gating means prefix-grid neutrality is correct, not suspect.** When new features are gated to a category absent from the prefix slice, prefix Δ = $0 by construction. Pre-flight "2× ratio" gates only apply when both grids contain the target population.
+> - **User-prediction "different feature types needed" was partially correct, partially wrong.** User predicted top-card placement, defensive triggers, broadway connectivity. Reality: the DOMINANT blind spot was the same DS-routing pattern as prior zones — Ace-top is preserved in 100% of dominant-class mismatches; the structural error is purely the bot suit profile. **Generalizable lesson: when an existing feature family (DS-bot achievability) is missing entirely from a zone, that gap dominates even when other axes also exist.**
+> - **Single-axis ships have predictable leaf growth.** v42's +4.7% leaves vs v41's +32% reflects: population × axis-count × info-content determines leaf expansion. high_only has 40% population but the single DS axis touches a narrower split surface than two_pair's Layout B/C asymmetry.
+> - **Cumulative DT ML arc continues to compound.** v32 → v42 = −$524 across 7 ML ships at depth=36 ml=1 saturation. Feature engineering at saturation continues to ship — the asymptote is not yet visible.
 
-> Updated: 2026-05-10 (Session 55)
+> Updated: 2026-05-10 (Session 56)
 
 ---
 
-## Headline state at end of Session 55
+## Headline state at end of Session 56
 
 **Strategies of record:**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
 | **v52_full_high_only_handler** | **PRODUCTION rule chain** (17 rules; UNCHANGED from S53). $2,498 full / $1,522 prefix. | `analysis/scripts/strategy_v52_full_high_only_handler.py` |
-| **v41_dt** | **NEW ML champion (Session 55).** 2.02M leaves, 95 features at depth=36 ml=1; +$124 full / +$86 prefix vs v40_dt. | `analysis/scripts/strategy_v41_dt.py` + `data/v41_dt_model.npz` |
-| v40_dt | Session 55 first ship; replaced by v41 within-session. 1.57M leaves, 91 features; +$18 full / +$29 prefix vs v39_dt. | `analysis/scripts/strategy_v40_dt.py` + `data/v40_dt_model.npz` |
-| v39_dt | Predecessor ML champion (S54). 1.52M leaves, 87 features. | `analysis/scripts/strategy_v39_dt.py` + `data/v39_dt_model.npz` |
-| v36_dt | Older ML champion (S53 overnight; 1.06M leaves at depth=36 ml=1; $1,649 / $891). | `analysis/scripts/strategy_v36_dt.py` + `data/v36_dt_model.npz` |
-| v34_dt | Older ML champion (874K leaves; $1,681 / $889). | `analysis/scripts/strategy_v34_dt.py` + `data/v34_dt_model.npz` |
+| **v42_dt** | **NEW ML champion (Session 56).** 2.11M leaves, 99 features at depth=36 ml=1; +$79 full / $0 prefix vs v41_dt. | `analysis/scripts/strategy_v42_dt.py` + `data/v42_dt_model.npz` |
+| v41_dt | Predecessor ML champion (S55). 2.02M leaves, 95 features. | `analysis/scripts/strategy_v41_dt.py` + `data/v41_dt_model.npz` |
+| v40_dt | S55 first ship; replaced by v41 within-session. 1.57M leaves, 91 features. | `analysis/scripts/strategy_v40_dt.py` + `data/v40_dt_model.npz` |
+| v39_dt | S54 ML champion. 1.52M leaves, 87 features. | `analysis/scripts/strategy_v39_dt.py` + `data/v39_dt_model.npz` |
+| v36_dt | Older ML champion (S53 overnight; 1.06M leaves; $1,649). | `analysis/scripts/strategy_v36_dt.py` + `data/v36_dt_model.npz` |
+| v34_dt | Older ML champion (874K leaves; $1,681). | `analysis/scripts/strategy_v34_dt.py` + `data/v34_dt_model.npz` |
 | v47_rule16_Qhigh_DS / v46_rule15_Khigh_DS / v45_rule14_Ahigh_DS | Predecessor rule chains. | various |
 | v44_rule13_three_pair_DS / v43_rule12 / v42 / v41 / v40b | Earlier rule chains. | various |
 | v32_dt | Older ML baseline. | various |
 | v30_dt / v29_dt / v27_dt / v26 / v25 / v24 / v23 / v20 / v18e / v16 | Older baselines. | various |
 
-**Capacity + feature progression — NEW v41 ML champion:**
+**Capacity + feature progression — NEW v42 ML champion:**
 
 | Strategy | Depth | min_leaf | Features | Leaves | $/1000h full | pct_opt full |
 |---|---:|---:|---:|---:|---:|---:|
@@ -76,24 +70,25 @@
 | v36 | 36 (33 actual) | 1 | 83 | 1,064,442 | $1,649 | 53.61% |
 | v39 | 36 | 1 | 87 (83+4 pair_v5) | 1,518,368 | $1,412 | 57.88% |
 | v40 | 36 | 1 | 91 (87+4 tp_v2) | 1,569,848 | $1,394 | 58.48% |
-| **v41** | **36** | **1** | **95 (91+4 t2p_v2)** | **2,015,413** | **$1,270** | **62.18%** |
+| v41 | 36 | 1 | 95 (91+4 t2p_v2) | 2,015,413 | $1,270 | 62.18% |
+| **v42** | **36** | **1** | **99 (95+4 ho_v2)** | **2,109,330** | **$1,192** | **63.08%** |
 
-**Cumulative ML arc (v32 → v41):** −$445/1000h on full grid across 6 ships (v34: −$34, v36: −$33, v39: −$237, v40: −$18, v41: −$124). v39 still the largest single ship; v41 is second-largest.
+**Cumulative ML arc (v32 → v42):** **−$524/1000h on full grid across 7 ships** (v34: −$34, v36: −$33, v39: −$237, v40: −$18, v41: −$124, v42: −$79).
 
-**Per-category residuals (within-category, full grid) — END OF SESSION 55:**
+**Per-category residuals (within-category, full grid) — END OF SESSION 56:**
 
-| Category | n_hands | share | v41 within-cat | $/1000h whole-grid |
+| Category | n_hands | share | v42 within-cat | $/1000h whole-grid |
 |---|---:|---:|---:|---:|
-| **high_only** | 1,226,940 | 40.4% | **$2,796** | $1,131 |
+| **high_only** (S56 collapsed) | 1,226,940 | 40.4% | **$2,411** | $975 |
 | pair | 2,800,512 | 36.2% | $1,097 | $396 |
-| **two_pair** (S55 collapsed) | 1,338,480 | 14.5% | $363 | $52 |
 | trips | 328,185 | 4.6% | $1,194 | $55 |
+| two_pair | 1,338,480 | 14.5% | $363 | $52 |
 | three_pair | 114,400 | 2.2% | $1,613 | $35 |
-| **trips_pair** (S55 collapsed) | 171,600 | 1.8% | $281 | $5 |
+| trips_pair | 171,600 | 1.8% | $281 | $5 |
 | composite | 14,742 | 0.2% | $960 | $2 |
 | quads | 14,300 | 0.1% | $545 | $1 |
 
-**high_only is now BY FAR the dominant residual** ($1,131/1000h whole-grid = ~63% of total v41 regret). Session 56's highest-leverage target.
+**high_only is STILL by far the dominant residual** ($975/1000h whole-grid = ~82% of total v42 regret). Session 57's highest-leverage target — but now needs a SECOND axis (the DS-routing axis is collapsed; the residual lives in top-card placement at non-Ace ranks, broadway connectivity, etc.).
 
 **Human-strategy progression — UNCHANGED from end of S53:**
 
@@ -115,88 +110,79 @@
 | v47_rule16_Qhigh_DS (+ Rule 16) | $2,515 | 43.30% | −$518 |
 | **v52_full_high_only_handler (+ Rule 17) — CURRENT PRODUCTION** | **$2,498** | **43.34%** | **−$535** |
 
-**The two production tracks now diverge by $1,228/1000h** (v52 rule chain at $2,498; v41_dt at $1,270). The ML champion now beats the human-memorizable rule chain by nearly half its EV deficit.
+**The two production tracks now diverge by $1,306/1000h** (v52 rule chain at $2,498; v42_dt at $1,192). The ML champion beats the human-memorizable rule chain by more than half its EV deficit.
 
 ---
 
-## What Session 55 produced
+## What Session 56 produced
 
 **Code:**
-- 4 drills (2 Phase 1 + 2 Phase 1b)
-- 2 feature modules (trips_pair_v2 + two_pair_v2) + 2 persistence scripts
-- 2 trainers (v40, v41) + 2 strategies + 2 graders
-- All artifacts ship as production (v41 is the new ML champion)
+- 2 drills (1 Phase 1 + 1 Phase 1b)
+- 1 feature module (high_only_v2) + 1 persistence script
+- 1 trainer (v42) + 1 strategy + 1 grader
 
 **Documentation:**
-- `STRATEGY_GUIDE.md` — Part 1 Session 55 entry appended; Part 2 ML champion table updated (v40 + v41 added, v39 marked superseded).
-- `CURRENT_PHASE.md` — rewritten (this file).
-- `DECISIONS_LOG.md` — Decisions 089 + 090 appended.
-- `SESSION_55_V41_DT_REPORT.md` — repo-root standalone report.
+- `STRATEGY_GUIDE.md` — Part 1 Session 56 entry; Part 2 ML champion table updated
+- `CURRENT_PHASE.md` — rewritten (this file)
+- `DECISIONS_LOG.md` — Decision 091 appended
+- `SESSION_56_V42_DT_REPORT.md` — repo-root standalone report
 
 **Models persisted:**
-- `data/v40_dt_model.npz` (intermediate champion)
-- `data/v41_dt_model.npz` (PRODUCTION ML champion)
-- `data/feature_table_trips_pair_aug_v2_gated.parquet`
-- `data/feature_table_two_pair_aug_v2_gated.parquet`
+- `data/v42_dt_model.npz` (PRODUCTION ML champion)
+- `data/feature_table_high_only_aug_v2_gated.parquet`
 
 ---
 
-## Resume Prompt (Session 56)
+## Resume Prompt (Session 57)
 
 ```
-Resume Session 56 of the Taiwanese Poker Solver project at
+Resume Session 57 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context:
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of Session 55)
-- DECISIONS_LOG.md (latest: Decisions 089 + 090 — v40_dt + v41_dt new ML champions)
-- SESSION_55_V41_DT_REPORT.md
-- STRATEGY_GUIDE.md (Session 55 entry in Part 1; updated ML champion table in Part 2)
-- analysis/scripts/strategy_v41_dt.py — current ML champion
-- analysis/scripts/trips_pair_aug_v2_features_gated.py — template feature suite (trips_pair)
-- analysis/scripts/two_pair_aug_v2_features_gated.py — template feature suite (two_pair)
-- analysis/scripts/drill_*_zone_v39_diagnostic.py — Phase 1 drill templates
-- analysis/scripts/drill_*_v39_mismatch_handlevel.py — Phase 1b drill templates
+- CURRENT_PHASE.md (rewritten end of Session 56)
+- DECISIONS_LOG.md (latest: Decision 091 — v42_dt new ML champion)
+- SESSION_56_V42_DT_REPORT.md
+- STRATEGY_GUIDE.md (Session 56 entry in Part 1; updated ML champion table in Part 2)
+- analysis/scripts/strategy_v42_dt.py — current ML champion
+- analysis/scripts/high_only_aug_v2_features_gated.py — template feature suite
+- analysis/scripts/drill_high_only_zone_v41_diagnostic.py — Phase 1 drill template
+- analysis/scripts/drill_high_only_v41_mismatch_handlevel.py — Phase 1b drill template
 
-State (end of Session 55):
+State (end of Session 56):
 - Rule chain production: v52_full_high_only_handler (17 rules; UNCHANGED) at
   $2,498 full / $1,522 prefix.
-- ML champion: v41_dt (NEW) at $1,270 full / $686 prefix; 2.02M leaves at
-  depth=36 ml=1; 95 features (83 base + 4 pair_v5 + 4 tp_v2 + 4 t2p_v2).
-- Cumulative ML v32 → v41 = −$445 full / −$218 prefix.
-- Trips_pair zone gap collapsed from $909 → $281 (−$628, −69%).
-- Two_pair zone gap collapsed from $918 → $363 (−$555, −60%).
+- ML champion: v42_dt (NEW) at $1,192 full / $686 prefix; 2.11M leaves at
+  depth=36 ml=1; 99 features (95 + 4 ho_v2).
+- Cumulative ML v32 → v42 = −$524 full / −$218 prefix (7 ML ships).
+- High_only zone gap collapsed from $2,796 → $2,411 (−$385, −13.8%).
 
-USER-PRIORITY DIRECTION FOR SESSION 56:
+USER-PRIORITY DIRECTION FOR SESSION 57:
 
-Apply the now-proven 4-phase playbook to the largest remaining ML
-residual zone:
+Continue compressing the high_only zone — STILL the dominant residual at
+$2,411/1000h within-cat × 40.4% share = $975/1000h whole-grid (~82% of
+v42's total regret).
 
-(A) **High_only zone** — $2,796/1000h within-category, 40.4% of
-    population. Whole-grid contribution $1,131/1000h = ~63% of v41's
-    total regret. BY FAR the highest-leverage target.
+The ho_v2 features collapsed the DS-routing axis. The remaining residual
+lives in:
+- Top-card placement at non-Ace ranks (tK→tK and tQ→tQ mismatches were
+  $67 and $24 pre-v42 — what's left after v42 collapsed the SS→DS slice
+  of those?)
+- Broadway connectivity at non-Ace tops
+- Defensive-pair triggers and three-of-a-suit clustering
 
-    Different feature types likely needed (NOT primarily a suit-routing
-    problem):
-    - Top-card placement features (when to play A vs K on top)
-    - Defensive-pair triggers (when pairing the top is right)
-    - Broadway connectivity (when 7 cards form a near-straight)
-    - Three-of-a-suit clustering quality (when 3+ broadway in one suit)
+4-phase plan:
+Phase 1: Re-drill high_only against v42_dt (NEW residual matrix; the
+         SS→DS class will be smaller; new dominant classes will emerge)
+Phase 1b: Hand-level inspection of the new top class
+Phase 2 v3: Design 4 rank-valued conditional features for the
+            highest-leverage NEW axis (likely mid-suited quality OR
+            broadway-when-not-Ace OR something else the drill reveals)
+Train v43_dt
 
-    4-phase plan:
-    Phase 1: Drill high_only mismatch matrix. Classifier candidates:
-             (top_rank × bot_suit × middle_strength). Stratify by
-             (top_rank, second_rank).
-    Phase 1b: Hand-level top-20 inspection. Identify the structural
-             delta (which top card oracle picks differently, what mid
-             structure it favors).
-    Phase 2 v2: SKIP booleans. Design 4-6 rank-valued conditional
-             features. Train v42_dt.
-
-(B) **Trips zone** — $1,194/1000h, 4.6% share. Same playbook. Smaller.
-
-(C) **Three_pair zone** — $1,613/1000h, 2.2% share. Same playbook.
+Alternative targets: trips zone ($55/1000h whole-grid) or three_pair
+($35/1000h) — much smaller potential lift but cleaner playbook fit.
 
 REMINDERS:
 - Auto mode is on; minimize interruptions.
@@ -204,12 +190,19 @@ REMINDERS:
 - cargo lives at ~/.cargo/bin/cargo (not on PATH).
 - Session-end protocol: commit + push to origin/main (pre-authorized).
 - For long Python scripts: PYTHONUNBUFFERED=1 or python3 -u.
-- Methodology rule (Session 55 NEW): the playbook is now TRANSFERABLE.
-  Same shape (n_configs, max_top_rank, etc.) works across zones.
-- Methodology rule (Session 55 NEW): asymmetric existing features
-  (Layout B feature with no Layout C equivalent) signal blind spots.
-- Methodology rule (Session 55 NEW): low individual feature importance
-  (0.02-0.04%) can still ship lift via surgical gating.
+- Methodology rule (Session 56 NEW): the 4-phase playbook is fully
+  transferable to the largest population zone without modification.
+- Methodology rule (Session 56 NEW): when feature design exactly matches
+  the structural delta, Phase 1b confirmation collapses to 100/0.
+- Methodology rule (Session 56 NEW): surgical-gating means prefix-grid
+  neutrality is correct (not suspect) when the prefix slice doesn't
+  contain the targeted population.
+- Methodology rule (Session 55): the playbook is TRANSFERABLE.
+  Same shape works across zones.
+- Methodology rule (Session 55): asymmetric existing features signal
+  blind spots.
+- Methodology rule (Session 55): low individual feature importance can
+  still ship lift via surgical gating.
 - Methodology rule (Session 54): diagnostic-first feature engineering
   works at saturation.
 - Methodology rule (Session 54): boolean features are redundant at
