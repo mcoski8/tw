@@ -3959,3 +3959,135 @@ v55 (Rule 18 v2 with HIBOT tie-break — TOP=lowest non-pair singleton):
 - ML champion: v36_dt (NEW — $1,649 full / $891 prefix)
 
 **Total project rule count: 17** (UNCHANGED from v52). ML champion: v36_dt (new).
+
+---
+
+## Decision 088 — v39_dt new ML champion (+$237 full / +$90 prefix) — LARGEST ML retrain ship in project history (Session 54)
+
+**Decision:** v39_dt becomes the new ML champion, replacing v36_dt. Adds 4 rank-valued conditional features (`pair_aug_v5_*_g`) targeting the pair zone gap diagnosed in Phase 1.
+
+**Score (full grid, N=200):**
+- v36_dt: $1,649 / 53.61% pct_opt / 1,064,442 leaves
+- **v39_dt: $1,412 / 57.88% pct_opt / 1,518,368 leaves** (−$237, +4.27% pct_opt, +43% leaves)
+
+**Score (prefix grid, N=1000):**
+- v36_dt: $891 / 62.61% pct_opt
+- **v39_dt: $801 / 64.55% pct_opt** (−$90, +1.94%)
+
+**Both grids ship strongly positive — passes 2× methodology gate trivially.**
+
+**Per-category (full grid):**
+| Category | v36_dt | v39_dt | Δ |
+|---|---:|---:|---:|
+| **pair** | **$1,604** | **$1,097** | **−$507 (−32%)** |
+| pair pct_opt | 56.6% | **65.7%** | **+9.1%** |
+| (all other categories byte-identical to v36, by design via gating) |
+
+**p90 regret 0.535 → 0.480; p99 regret 1.185 → 1.090.**
+
+**Cumulative ML arc:** v32 → v39 = −$303/1000h on full grid (4 ML champion ships: v32 → v34 → v36 → v39, with v39 being the largest single ship).
+
+---
+
+### Phase 1 — Diagnostic (Drill P + P2)
+
+Sweep of 2.8M pair hands. v36 == oracle on 56.6% of pair hands; per-(max, pair) cell mismatch matrix identified the dominant blind spot:
+
+**v36 picks "pair-mid_SS" while oracle picks "pair-bot_DS" on 162,551 hands @ $3,693 mean regret = $100/1000h whole-grid contribution from a single mismatch class.**
+
+Hand-level inspection of the top 20 mismatches:
+- 100% of mismatch hands have a pair with 2 distinct suits
+- 100% have ≥2 singletons matching pair-suits (so a pair-bot-DS construction is achievable)
+- v36 lacked features describing "what would the pair-bot DS option look like, and how good is it?"
+
+### Phase 2 v1 — Boolean features (FAILED — v38_dt)
+
+Added 2 booleans (`pair_aug_v4_bot_DS_achievable_g`, `pair_aug_v4_n_sings_in_pair_suits_g`).
+
+**Result:** v38_dt training produced same 1,064,442 leaves as v36_dt (saturation unchanged). Booleans landed at #51 and #56 importance. **v38_dt grade: literally identical to v36_dt to multiple decimals on both grids.**
+
+**Diagnosis:** The booleans were redundant with existing suit-distribution features (`suit_2nd`, `suit_3rd`, etc.). At depth=33 saturation with ml=1, the DT was already deriving DS-achievability from existing splits.
+
+### Phase 2 v2 — Rank-valued conditional features (SHIPPED — v39_dt)
+
+Replaced booleans with 4 rank-valued conditional features that encode the **quality** of the pair-bot-DS option, not just its achievability:
+
+| Feature | What it captures |
+|---|---|
+| `pair_aug_v5_bot_DS_n_configs_g` | Count of distinct pair-bot DS configurations |
+| `pair_aug_v5_bot_DS_max_top_rank_g` | Best top-rank achievable across DS configs |
+| `pair_aug_v5_bot_DS_min_top_rank_g` | Min top-rank achievable across DS configs |
+| `pair_aug_v5_bot_DS_max_mid_sum_g` | Best (mid rank-sum) across DS configs |
+
+These encode information **not derivable from existing features** — they require enumerating pair-bot DS configurations and selecting the best across them.
+
+**v39_dt training results:**
+- 87 features (83 base + 4 v5)
+- depth=36, ml=1
+- **1,518,368 leaves (+43% over v36's 1.06M)** — the new features genuinely create new splits
+- **Depth saturated at 36** (vs v36's 33) — the new features broke the saturation wall
+- 3 of 4 new features in top-30 importance:
+  - #19 `pair_aug_v5_bot_DS_min_top_rank_g` (0.50%)
+  - #22 `pair_aug_v5_bot_DS_max_mid_sum_g` (0.34%)
+  - #29 `pair_aug_v5_bot_DS_max_top_rank_g` (0.19%)
+- Other categories byte-identical to v36 (gating worked surgically)
+
+### v37_dt — depth-only sweep (CONFIRMED CAPACITY SATURATION — Session 53 overnight Part 5, referenced here for context)
+
+Established in S53 overnight Part 5 (commit 52ab27c, `analysis/scripts/strategy_v37_dt_SATURATED.py`): re-trained at depth=38 ml=1 with the same 83 features. Result: **byte-identical to v36** (same 1,064,442 leaves, same scores). Confirms depth=33 was already the actual saturation point with 83 features. **At saturation, hyperparameter tuning is fruitless — only feature design unlocks more.** This finding was the direct motivation for Session 54's pivot from "tune the model" to "design new features."
+
+### Methodology lessons NEW (Session 54)
+
+1. **Diagnostic-first approach works.** Per-(max, pair) cell mismatch matrix + hand-level inspection of top 20 mismatches identified the exact blind spot. Without that data, the right feature design wouldn't have been clear.
+
+2. **Boolean features are usually redundant** with existing suit-distribution features at ml=1 saturation. The DT can already derive booleans from existing splits. v38's null result confirmed this empirically.
+
+3. **Rank-valued conditional features unlock saturation.** v39's features describe "what's achievable across alternative configurations" — information not derivable from any existing feature. This created +43% new leaves and broke the depth=33 ceiling.
+
+4. **Feature design beats hyperparameter tuning at saturation.** v37 (depth=38 ml=1) was byte-identical to v36 — same features, same leaves. v39 added 4 features at the SAME hyperparams and gained +$237. Capacity saturation is a feature problem, not a hyperparameter problem.
+
+5. **Conditional features should describe alternative configurations, not the chosen configuration.** The model already had features for the "default" Rule-4-style pair-mid pick. Adding features that describe the ALTERNATIVE (pair-bot DS quality) gives the DT the information to compare options.
+
+### Pre-flight: v39 is robust, not noise
+
+- **Both grids ship strongly positive:** full +$237, prefix +$90 (passes 2× methodology gate at 0.38× ratio — well within range)
+- **Leaf expansion is structural** (+43%, deterministic with random_state=42)
+- **Surgical via gating** (other categories byte-identical, gating logic confirmed working)
+- **Depth saturation broke** (33 → 36) — confirms features add information not derivable from existing
+- **3 of 4 new features in top-30** — ranked higher than noise distributions would predict
+- **Matches Phase 1 diagnosis** mechanism — the lift is in the pair zone, exactly where the diagnostic identified the gap
+
+### Files (Session 54)
+
+**Drills (Phase 1):**
+- `analysis/scripts/drill_pair_zone_v36_diagnostic.py` (Drill P)
+- `analysis/scripts/drill_pair_v36_mismatch_handlevel.py` (Drill P2)
+
+**Features:**
+- `analysis/scripts/pair_aug_v4_features_gated.py` (sister — v38, no lift)
+- `analysis/scripts/persist_pair_aug_v4_gated.py`
+- `analysis/scripts/pair_aug_v5_features_gated.py` (PRODUCTION)
+- `analysis/scripts/persist_pair_aug_v5_gated.py`
+
+**Training + grading:**
+- `analysis/scripts/train_v38_dt.py` + `strategy_v38_dt.py` + `grade_v38_dt.py` (sister — boolean features)
+- `analysis/scripts/train_v39_dt.py` + `strategy_v39_dt.py` + `grade_v39_dt.py` (PRODUCTION ML champion)
+- (Reference: `analysis/scripts/strategy_v37_dt_SATURATED.py` from S53 overnight Part 5 confirmed capacity saturation at 83 features.)
+
+**Models:**
+- `data/v38_dt_model.npz` (sister)
+- `data/v39_dt_model.npz` (PRODUCTION)
+- `data/feature_table_pair_aug_v4_gated.parquet` (intermediate)
+- `data/feature_table_pair_aug_v5_gated.parquet` (PRODUCTION feature persistence)
+
+**Documentation:**
+- `SESSION_54_V39_DT_REPORT.md` (standalone session report)
+- `STRATEGY_GUIDE.md` Part 1 — Session 54 entry; Part 2 ML champion table updated
+- `CURRENT_PHASE.md` — rewritten
+- `DECISIONS_LOG.md` — this entry (Decision 088)
+
+**Two production tracks at end of S54:**
+- Rule chain: **v52_full_high_only_handler** ($2,498 full / $1,522 prefix) — UNCHANGED
+- ML champion: **v39_dt (NEW)** — $1,412 full / $801 prefix
+
+**Total project rule count: 17** (UNCHANGED from v52, this session was ML-only). ML champion: v39_dt (new — replaces v36_dt).
