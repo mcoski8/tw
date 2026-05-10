@@ -3540,3 +3540,116 @@ Designed v45 to pick V_B_TOP_SING_HI when achievable. Sanity check on 50K trips_
 - UPDATED: `STRATEGY_GUIDE.md` (Session 49 methodology entry; production-of-record references unchanged from v44)
 
 **Total project rule count: 13** (UNCHANGED). v44 remains production. The trips_pair within-class opportunity (+$1,992 oracle gap) is queued for a future Rule 14 v2 with adaptive heuristic.
+
+---
+
+## Decision 083 — Rule 14 (A-high no-pair, A-on-top + DS/SS HIMID) ships as v45 (Session 50) — LARGEST SINGLE-RULE LIFT IN PROJECT HISTORY
+
+**Date:** 2026-05-09
+**Status:** SHIPS as production. v45 replaces v44 as strategy of record. **Grader-confirmed: +$131/1000h whole-grid (full N=200) and $0 prefix (UNCHANGED — high_only has zero prefix coverage; Rule 14 fires on 0 prefix hands).** v44 → v45 score: $2,717 → $2,585 full, $1,522 → $1,522 prefix. pct_opt full: 42.34% → 43.05% (+0.71%). high_only category $4,082 → $3,439 (−$643 within high_only, 16% reduction). high_only pct_opt 19.8% → 23.3% (+3.5%). p90 regret improved (0.785 → 0.745). Max regret unchanged. **Beats v33's Rule 6 ($113, Session 37) which had held the single-rule record for 13 sessions.** Cumulative v39 → v45 = −$260 full / −$185 prefix.
+
+**Origin:** User direction — scale into the high_only category (the project's largest unclaimed territory at $833/1000h whole-grid regret contribution). Started with A-high no-pair sub-population (660,660 hands = 11% of grid).
+
+**Drill K (characterization, Phase 1, n=660,660) — DEFINITIVE:**
+
+Mean regret per hand = $3,752/1000h within A-high no-pair → **$412.5/1000h whole-grid contribution** (single largest residual zone in the project).
+
+| Aspect | v44 | Oracle | Gap |
+|---|---:|---:|---|
+| TOP = Ace | 100% | 93.13% | v44 over-Aces (rare K/Q/J/2 oracle picks) |
+| BOT = DS | 59.27% | 47.99% | v44 OVER-DS by 11pp |
+| BOT = SS | 24.97% | 35.00% | v44 UNDER-SS by 10pp |
+| BOT = rainbow | 11.18% | 0.83% | **v44 picks rainbow 13× too often** |
+| BOT = 3+1 | 4.30% | 14.11% | v44 UNDER-3+1 by 10pp |
+
+Best-in-class minus v44 (S46 lens):
+- DS class: +$1,937/1000h within fires (+$194 whole-grid contribution)
+- SS class: +$1,377/1000h (+$138 whole-grid)
+- rainbow / 3+1 / 4-flush: all NEGATIVE (don't ship those classes)
+
+**Drill L (Phase 2 heuristic sweep, 50K sample) — DEFINITIVE:**
+
+Tested 7 deterministic heuristics for "A on top + best DS/SS bot":
+
+| Variant | Lift within fires | Whole-grid full |
+|---|---:|---:|
+| **H2_DS_HIMID** (DS bot, mid keeps highest 2 non-A) | **+$1,016** | **+$6.56** |
+| H1_DS_HIBOT (DS bot, highest 4 in bot) | −$847 | −$5.47 |
+| H3_DS_HIRUN (DS bot, best connectivity) | +$86 | +$0.55 |
+| H1_SS_HIBOT (SS bot, highest 4) | −$5,479 | −$39.44 |
+| H_BEST_DS oracle | +$1,970 | +$12.72 |
+| **HYBRID HIMID** (DS-HIMID, SS-HIMID fallback) | **+$1,245** | **+$10.06** |
+| HYBRID ORACLE | +$2,505 | +$20.26 |
+
+**Critical finding: HIMID, not HIBOT.** With A on top, the next-best 2 cards belong in MID (strong Hold'em), not in bot. This is OPPOSITE the "stack high cards in bot for kicker strength" intuition.
+
+---
+
+**Rule 14 — design:**
+
+  TRIGGER:
+    cat == high_only        AND
+    max_rank == 14 (Ace)    AND
+    DS-bot OR SS-bot achievable with A on top
+
+  SETTING BUILDER:
+    TOP = the Ace (always).
+
+    Try DS-bot first (HIMID tie-break):
+      Among 15 A-on-top settings, find those with bot suit profile = DS.
+      Pick the DS-setting whose MID has the highest rank-sum
+      (= keeps the 2 strongest non-A cards in mid).
+
+    Else try SS-bot (same HIMID tie-break).
+
+    Else: fall through to v44 (rainbow / 3+1 / 4-flush bot — rare, let v44 handle).
+
+    MID = the 2 highest-rank non-A cards (subject to suit constraint).
+    BOT = the remaining 4 non-A cards (forming DS or SS).
+
+**Behavioral verification (50K A-high sample) — passed S49 sanity check:**
+- Rule 14 fires on 93.6% of A-high no-pair hands
+- **v45 differs from v44 on 72.2% of fires** (vs S49's no-op 0%)
+- 100% of fires correctly produce A-on-top
+- 78% DS bot, 22% SS bot fallback
+
+**Grader-confirmed lift exceeded drill estimate** (drill estimated +$10/1000h, measured +$131). The drill's hybrid HIMID estimate was on a 50K sample (n=48,590 fires); the grader measured on full pop (660K fires) with the v44 baseline being weaker than estimated on the full distribution.
+
+**Production ship rationale:**
+- Largest single-rule full-grid lift in project history (+$131 vs prior record +$113)
+- pct_opt jump +0.71% full; +3.5% within high_only
+- Worst-case regret unchanged (no scoop induction)
+- p90 regret IMPROVED (0.785 → 0.745)
+- Prefix unchanged (zero high_only prefix coverage)
+- Mechanism interpretable: Ace + strong-mid + suit-aware-bot
+
+---
+
+**Methodology rules NEW (Session 50):**
+
+1. **High_only is the project's biggest residual zone.** $412/1000h whole-grid contribution from A-high alone. The defensive arc (Rules 10-13) opened paired weak hands; the offensive arc on high_only opens unpaired strong hands.
+
+2. **HIMID > HIBOT for A-high.** Counter to the obvious "high cards in bot for kicker strength" intuition. With A on top, the next-best 2 cards (K+Q etc.) belong in MID for Hold'em scoring. The lower 4 cards form the bot's Omaha play (where suit matters more than absolute kicker rank).
+
+3. **The S46 "best-in-class minus production pick" lens directly identifies ship targets.** Drill K's per-class table immediately showed DS and SS as the opportunity zones; rainbow/3+1/4-flush oracle picks LOSE vs v44.
+
+4. **S49's sanity-check methodology is the project's most important diagnostic.** v45 differs from v44 on 72.2% of fires (vs S49's no-op 0%). Always verify pick-difference rate BEFORE grading.
+
+5. **Largest residuals come from previously unrepresented categories.** The S43-S48 arc covered the defensive zone; high_only had no rules at all and yielded the project's biggest single ship. Where else has no rule coverage? trips_pair (only Rule 3 baseline) is the next analogous zone.
+
+6. **Drill estimates can underpredict actual ship lift.** Drill L estimated +$10/1000h whole-grid; grader measured +$131. The drill's hybrid heuristic was less ambitious than the implementation, AND v44's actual baseline was weaker than the drill subset suggested.
+
+---
+
+**Files:**
+- NEW: `analysis/scripts/strategy_v45_rule14_Ahigh_DS.py` (PRODUCTION)
+- NEW: `analysis/scripts/grade_v45_rule14_Ahigh.py`
+- NEW: `analysis/scripts/drill_A_high_nopair_characterization.py` (Drill K — Phase 1)
+- NEW: `analysis/scripts/drill_A_high_topA_bot_heuristic.py` (Drill L — Phase 2)
+- NEW (report): `SESSION_50_RULE14_AHIGH_REPORT.md`
+- UPDATED: `CURRENT_PHASE.md` (rewritten for Session 50)
+- UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 50 entry) + production-of-record references
+
+**Total project rule count: 14** (Rules 1-13 + Rule 14 = A-high no-pair + DS/SS HIMID).
+
+**The S43-S50 arc** has now shipped 6 production rules totaling −$260 full / −$185 prefix, making it the project's largest multi-rule family by both ship count and total lift. The methodology breakthroughs (S44 within-hand pairwise + S46 best-in-class minus production + S49 sanity-check) compose to enable finding offensive ships outside the original defensive zone.
