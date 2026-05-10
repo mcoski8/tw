@@ -3783,3 +3783,102 @@ Per-fire DS lift INCREASES across sub-pops (lower top-card → larger v46 baseli
 **Total project rule count: 16** (Rules 1-15 + Rule 16 = Q-high no-pair + DS/SS HIMID).
 
 **The S43-S52 arc** has now shipped 8 production rules totaling −$330 full / −$185 prefix.
+
+---
+
+## Decision 086 — Rule 17 (comprehensive high_only handler) ships as v52 (Session 53 overnight)
+
+**Date:** 2026-05-10
+**Status:** SHIPS as production. v52 replaces v47 as strategy of record. **Grader-confirmed: +$17/1000h whole-grid (full N=200) and $0 prefix (UNCHANGED — high_only zero prefix coverage).** v47 → v52 score: $2,515 → $2,498 full, $1,522 → $1,522 prefix. pct_opt full: 43.30% → 43.34% (+0.04%). high_only $3,096 → $3,014 (−$82 within high_only, −2.6%). high_only pct_opt 24.5% → 24.7%. p90 regret IMPROVED 0.725 → 0.720. Cumulative v39 → v52 = −$348 full / −$185 prefix; v14 → v52 = −$535 full.
+
+**Origin:** User-asked overnight investigation. Goal: extend high_only HIMID family to all sub-pops AND address defensive top-inversion zones.
+
+**Multi-strategy investigation:**
+
+Tested 4 different combinations to understand the right design:
+
+| Strategy | Description | Δ vs v47 |
+|---|---|---:|
+| v48 | v47 + HIMID for J-7-high (always max-on-top) | +$8 |
+| v50 | v48 + defensive A/K/Q/J at 2nd-high ≤ 8 | +$2 (regressed −$6 vs v48) |
+| v51 (untested) | v47 + defensive only for max ≤ J | — |
+| **v52** | **smart combo (J-HIMID + max≤T always defensive + K/Q/J defensive when s2≤8)** | **+$17** |
+
+**Critical finding from per-(max, s2) characterization (mini-drill):**
+
+Oracle top-pick distribution by max for high_only no-pair:
+- A-high: max-on-top 93%, 2-on-top 0.3%
+- K-high: 66%, 7%
+- Q-high: 49%, 16%
+- J-high: 27%, 28%
+- T-high: 15%, 35%
+- 9-high: 7%, 42%
+- 8-high: 3%, 45%
+
+**For max ≤ T, oracle picks max-on-top only 3-15%** — defensive (lowest-on-top) dominates. v48's HIMID was wrong on majority. v50 tried to fix by adding defensive overrides but mistakenly included A-high (where A-on-top is right 91-94% even at low s2) — regressed.
+
+v52 corrects by:
+1. Always-defensive for max ∈ {T, 9, 8, 7} (no s2 gate)
+2. Gated defensive for max ∈ {J, Q, K} only when 2nd-high ≤ 8
+3. SKIP A-high defensive entirely (A-on-top is universally optimal)
+
+---
+
+**Rule 17 — design:**
+
+  TRIGGER + SETTING (cascading priority order for cat=high_only):
+  
+  Priority 1 — Defensive zones (lowest-on-top + DS-bot HIMID, SS fallback):
+    max ∈ {T, 9, 8, 7}: ALWAYS defensive
+    max ∈ {J, Q, K}: defensive ONLY when 2nd-high ≤ 8
+  
+  Priority 2 — HIMID for max=J (offensive):
+    cat=high_only AND max=11 AND not in defensive zone above
+
+  Priority 3 — Fall through to v47:
+    max ∈ {Q, K, A} (Rules 14-16 unchanged)
+
+**Behavioral verification:**
+- v52 fires on 93,130 hands (1.55% of grid)
+- 33,036 picks differ from v47 (35% of fires)
+- Mix: 53,515 use HIMID (max-on-top), 39,615 use defensive (lowest-on-top)
+
+**Production ship rationale:**
+- +$17/1000h whole-grid full (clean both grids)
+- pct_opt improves on both grids
+- high_only sub-category improves by −$82 (−2.6%)
+- p90 regret improves
+- Max regret unchanged
+- Sister strategies (v48 +$8, v50 −$6 vs v48) confirm the design choice
+
+---
+
+**Methodology rules NEW (Session 53 overnight):**
+
+1. **High-rank sub-pops (A/K) defy the defensive playbook.** Even at low s2, oracle still wants A-on-top (91-94%) and K-on-top (54-71%). The "dump weakest card" defensive intuition fails here — high cards have too much top-tier equity.
+
+2. **Low-rank sub-pops (max ≤ T) overwhelmingly favor defensive.** For T-high through 8-high, oracle picks max-on-top only 3-15%. HIMID is wrong on 85-97% of these.
+
+3. **Per-(max, s2) characterization is the right diagnostic.** Cell-level oracle distributions revealed the right gates. Without it, the combination (always-defensive max ≤ T + gated K/Q/J + skip A) wasn't obvious.
+
+4. **Layered ships can regress.** v50 added defensive overrides on top of v48 and regressed. Always test the layered combo, not just standalone components.
+
+---
+
+**Files:**
+- NEW: `analysis/scripts/strategy_v52_full_high_only_handler.py` (PRODUCTION)
+- NEW: `analysis/scripts/grade_v52_full_handler.py`
+- NEW: `analysis/scripts/strategy_v48_rules17_21_high_only_HIMID.py` (sister, +$8 alone)
+- NEW: `analysis/scripts/strategy_v50_rules22_23_high_only_defensive.py` (sister, regressed)
+- NEW: `analysis/scripts/strategy_v51_defensive_max_le_J.py` (sister, untested)
+- NEW: `analysis/scripts/strategy_v53_defensive_KQJ_only.py` (sister, untested)
+- NEW: `analysis/scripts/grade_v48_rules17_21.py`
+- NEW: `analysis/scripts/grade_v50_defensive.py`
+- NEW: `analysis/scripts/drill_Q_high_non_Q_top_characterization.py` (Drill O)
+- NEW (report): `SESSION_53_OVERNIGHT_REPORT.md`
+- UPDATED: `CURRENT_PHASE.md` (rewritten for Session 53)
+- UPDATED: `STRATEGY_GUIDE.md` Part 1 (Session 53 entry) + production-of-record references
+
+**Total project rule count: 17** (v52 = "Rule 17 high_only generalized handler" supersedes the v48 attempt of Rules 17-21).
+
+**The S43-S53 arc** has now shipped 9 production rules totaling −$348 full / −$185 prefix.
