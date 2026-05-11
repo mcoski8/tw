@@ -4564,3 +4564,129 @@ This is the LOWEST individual feature importance per ship in the project, yet sh
 The two tracks now diverge by **$1,375/1000h** — the ML champion beats the human-memorizable rule chain by more than half its EV deficit.
 
 **Total project rule count: 17** (UNCHANGED from v52; S57 was ML-only). ML champion: v43_dt (new — replaces v42_dt).
+
+
+---
+
+## Decision 093 — v44_dt new ML champion (+$42 full / $0 prefix) via high_only zone THIRD-PASS collapse (Session 58)
+
+**Date:** 2026-05-10
+
+**Context:** Session 58 was scheduled as an autonomous overnight run with a user-priority directive: characterize what oracle picks for the Omaha (bot) hand vs the Hold'em (mid) hand across every max-rank × structural-achievability cell, then design ho_v4 from the deepest residual axis revealed.
+
+**The 4-phase playbook (drill → hand-level → 4 rank-valued conditional features → train) applied for the 6th consecutive session, 3rd time on the SAME zone (high_only).** Result: +$42/1000h on full grid, $0 on prefix (by design), all 7 non-targeted categories byte-identical.
+
+### What v44_dt ships
+
+| Metric | v43_dt | v44_dt | Δ |
+|---|---:|---:|---:|
+| Full grid mean regret | 0.1123 | 0.1081 | −0.0042 |
+| Full grid $/1000h | $1,123 | **$1,081** | **−$42** |
+| Full grid pct_opt | 63.99% | 64.80% | +0.81% |
+| Prefix grid $/1000h | $686 | $686 | $0 (by design) |
+| Prefix grid pct_opt | 67.13% | 67.13% | $0 (by design) |
+| Leaves | 2,177,798 | 2,248,173 | +3.2% |
+| Features | 103 | 107 | +4 ho_v4 |
+
+**Cumulative ML arc (v32 → v44):** −$634/1000h on full grid across 9 ships.
+
+### High_only zone collapse (the targeted gain)
+
+| Stage | high_only within-cat | pct_opt | Δ within-cat |
+|---|---:|---:|---:|
+| v41_dt (S55) | $2,796 | 29.0% | — |
+| v42_dt (S56) | $2,411 | 33.4% | −$385 (−13.8%) |
+| v43_dt (S57) | $2,075 | 37.9% | −$336 (−13.9%) |
+| **v44_dt (S58)** | **$1,868** | **41.8%** | **−$207 (−10.0%)** |
+
+Three-session cumulative collapse: $2,796 → $1,868 = **−$928 (−33.2%) within-category, −$378/1000h whole-grid**.
+
+### What 5 drills revealed (HO5–HO10)
+
+1. **`DS_NO_JOINT` is the dominant cell (62.9% × every max-rank).** Sums to ~69% of high_only regret. Top mismatch globally: `tA_SS_mu → tA_DS_mu` ($25.06/1000h, n=34,726). v43 under-routes DS bot by 10–20% in this cell.
+2. **Within JOINT picks, oracle is mid-first** (mean mid_pct 0.67–0.81 >> bot_pct 0.24–0.36); gap widens at lower max-ranks. v43's ho_v3 already exposes `max_mid_high`.
+3. **Joint take-rate collapses with lower max-rank** (A:95% → 8:13%). 47.7% of high_only hands have a non-max-top joint achievable — entirely invisible to v43.
+4. **At max=A, 4-flush+ms_mid is the dominant alternative** (54% of A-alt picks when joint is achievable but skipped).
+
+### The 4 ho_v4 features
+
+```python
+ho_v4_topMax_DS_max_bot_pair_high_g   # 0..13 — DS bot pair_high quality with top=max
+ho_v4_topMax_4f_ms_max_mid_high_g     # 0..13 — 4-flush+ms+top=max route
+ho_v4_topNonMax_DS_ms_n_configs_g     # 0..30 — non-max-top joint count
+ho_v4_topNonMax_DS_ms_max_top_rank_g  # 0..13 — best non-max top in those joints
+```
+
+### Feature importance (low, surgical, ships)
+
+| Rank | Feature | Importance |
+|---:|---|---:|
+| #47 | `ho_v4_topNonMax_DS_ms_max_top_rank_g` | 0.13% |
+| #80 | `ho_v4_topMax_DS_max_bot_pair_high_g` | 0.04% |
+| #93 | `ho_v4_topMax_4f_ms_max_mid_high_g` | 0.01% |
+| #95 | `ho_v4_topNonMax_DS_ms_n_configs_g` | 0.01% |
+
+5th consecutive session shipping with low individual feature importance via surgical gating on high-leverage subsets.
+
+### Per-category residuals (v44_dt, full grid)
+
+| Category | n_hands | v44 within-cat | v43 within-cat | Δ |
+|---|---:|---:|---:|---:|
+| **high_only** | 1,226,940 | **$1,868** | $2,075 | **−$207** |
+| pair | 2,800,512 | $1,097 | $1,097 | $0 |
+| trips | 328,185 | $1,194 | $1,194 | $0 |
+| two_pair | 1,338,480 | $363 | $363 | $0 |
+| three_pair | 114,400 | $1,613 | $1,613 | $0 |
+| trips_pair | 171,600 | $281 | $281 | $0 |
+| composite | 14,742 | $960 | $960 | $0 |
+| quads | 14,300 | $545 | $545 | $0 |
+
+**All 7 non-high_only categories byte-identical to v43** — surgical gating confirmed.
+
+### Methodology lessons (Session 58)
+
+1. **The 4-phase playbook is transferable to the SAME zone for a THIRD pass without modification.** Re-drilling against the new champion (v43, post-S57 collapse) revealed the residual had shifted axis (DS+ms joint → DS bot quality + non-max-top joint + 4f route) without changing in zone.
+
+2. **A zone can be collapsed at least three times by stacking conditional feature axes.** Each session adds a NEW conditional axis to the same zone, and gains compound: $2,796 → $1,868 (−$928, −33.2%) over S56→S58.
+
+3. **The decision matrix is a separable deliverable from the ML ship.** `SESSION_58_HIGH_ONLY_DECISION_MATRIX.md` documents oracle's structural strategy across 7 max-ranks × 7 cells, answering the user's S57 review independently of whether v44 shipped.
+
+4. **5 drills can run as 4 scripts sharing one sweep.** HO5+HO6+HO7 consolidated (~8 min, 2.5K hands/s incl. v43 strategy calls); HO8 standalone (~24s, structural-only at 50K/s); HO9 read the parquet (~5s); HO10 standalone (~55s, pure enumeration at 22K/s). Total drill compute ~10 min.
+
+5. **"Omaha first or Hold'em first?" has a nuanced answer.** Within joint, mid-first. Outside joint at lower max-ranks, bot-first (max-rank moves into bot to enable a stronger DS configuration with a lower top).
+
+### Files (Session 58)
+
+**Drills:**
+- `analysis/scripts/drill_high_only_v43_deepdive.py` (HO5+HO6+HO7)
+- `analysis/scripts/drill_high_only_v43_bot_vs_mid.py` (HO8)
+- `analysis/scripts/drill_high_only_v43_threshold.py` (HO9)
+- `analysis/scripts/drill_high_only_v43_nonmax_joint.py` (HO10)
+
+**Features:**
+- `analysis/scripts/high_only_aug_v4_features_gated.py` (PRODUCTION)
+- `analysis/scripts/persist_high_only_aug_v4_gated.py`
+
+**Training + grading:**
+- `analysis/scripts/train_v44_dt.py` + `strategy_v44_dt.py` + `grade_v44_dt.py`
+
+**Models:**
+- `data/v44_dt_model.npz` (1260 MB, PRODUCTION — NEW ML CHAMPION)
+- `data/feature_table_high_only_aug_v4_gated.parquet` (19.04 MB)
+- `data/drill_ho_v43_per_hand_structural.parquet` (15.0 MB; reusable for future high_only drills)
+- `data/drill_ho_v43_nonmax_joint.parquet` (4.7 MB)
+
+**Documentation:**
+- `SESSION_58_V44_DT_REPORT.md` (standalone session report)
+- `SESSION_58_HIGH_ONLY_DECISION_MATRIX.md` (per-max-rank × per-cell decision matrix — answers user S57 review)
+- `STRATEGY_GUIDE.md` Part 1 — Session 58 entry; Part 2 ML champion table updated
+- `CURRENT_PHASE.md` — rewritten
+- `DECISIONS_LOG.md` — Decision 093 (this section)
+
+**Two production tracks at end of S58:**
+- Rule chain: **v52_full_high_only_handler** ($2,498 full / $1,522 prefix) — UNCHANGED
+- ML champion: **v44_dt (NEW)** — $1,081 full / $686 prefix
+
+The two tracks now diverge by **$1,417/1000h** — the ML champion beats the human-memorizable rule chain by more than half its EV deficit.
+
+**Total project rule count: 17** (UNCHANGED from v52; S58 was ML-only). ML champion: v44_dt (new — replaces v43_dt).
