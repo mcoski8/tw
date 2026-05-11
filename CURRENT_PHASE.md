@@ -1,22 +1,24 @@
 # Current: Sprint 8 — Session 56 ships **v42_dt as the new ML champion via the user-priority high_only zone collapse, applying the proven 4-phase playbook (drill → hand-level → 4 rank-valued conditional features → train) for the 4th consecutive session**. v41_dt → v42_dt: **$1,270 → $1,192 full / $686 → $686 prefix**. **High_only within-category $2,796 → $2,411 (−$385, −13.8%)**, pct_opt 29.0% → 33.4% (+4.4%). All 7 non-targeted categories byte-identical to v41 on both grids (surgical gating). Leaf count v42: 2.02M → 2.11M (+4.7%). Depth saturated at 36. Four new features: rank-valued `ho_v2_bot_DS_*_g` series mirroring pair_aug_v5 / trips_pair_v2 / two_pair_v2 — total 99 features (95 base + 4 ho_v2). Three of four ranked in top-32 importance (#26, #31, #32). Cumulative v32 → v42 = **−$524 full / −$218 prefix** (7 ML ships). Rule chain unchanged at v52 ($2,498 full / $1,522 prefix). The ML champion now beats the rule chain by **$1,306/1000h** (more than half the rule-chain EV deficit). Phase 1b validation was the cleanest in the project: 100% of dominant-class (tA_SS_mu → tA_DS_ms) mismatches have max_top=A available in DS configs, AND 100% of oracle picks use it — the new feature shape captures the structural delta exactly. **User-prediction "different feature types needed" was partially correct, partially wrong**: the dominant high_only blind spot turned out to be the SAME DS-routing pattern as prior zones; only the bot suit profile differs in 100% of mismatches, not the top-card choice. Methodology validation: **the playbook is fully transferable to the largest population zone (40.4% of canonical hands) without modification.** Prefix-grid neutrality is by design — the prefix slice contains zero high_only hands, so gated features mathematically guarantee identical metrics; this is correct, not a regression.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 57):**
+> **🎯 IMMEDIATE NEXT ACTION (Session 57): Second pass on high_only — push into the headroom.**
 >
->   **More high_only feature axes — high_only is STILL the dominant residual at $2,411/1000h within-cat × 40.4% share = $975/1000h whole-grid contribution (~82% of v42's total regret).**
+>   **high_only is STILL the dominant residual at $2,411/1000h within-cat × 40.4% share = $975/1000h whole-grid (~82% of v42's total regret).** The S56 ho_v2 features collapsed the DS-routing axis. **Three specific sub-axes remain, each plausibly worth $50-150/1000h whole-grid if cracked the way v42 cracked DS-routing:**
 >
->   The ho_v2 features collapsed only the DS-routing axis ($210/1000h whole-grid). The remaining $271/1000h of high_only mismatch contribution (post-v42 estimate) lives in:
->      - **Top-card placement at non-Ace ranks**: the SS→SS swap ($80/1000h pre-v42) and 31→DS swap ($36) classes
->      - **Broadway connectivity at non-Ace tops**: tK→tK and tQ→tQ mismatches (still ~$67 + $24 = $91/1000h pre-v42)
->      - **Defensive-pair triggers** (when 7 cards form a near-straight)
->      - **Three-of-a-suit clustering quality**
+>   **Axis 1 — Defensive trigger at max ∈ {K, Q}** ($67 + $24 = $91/1000h pre-v42 in tK→tK and tQ→tQ mismatch classes; smaller post-v42 but non-zero). v42 still over-picks "K-on-top" in some hands where oracle wants a defensive 2-on-top. Existing rule chain v52 already handles this at max ∈ {T, 9, 8, 7} unconditionally and at max ∈ {J, Q, K} when 2nd-high ≤ 8 — but the ML doesn't have a feature that mirrors that trigger structure. Feature candidate: rank-valued "supporting-structure strength for K-on-top" or "best defensive-top alternative top rank."
 >
->   4-phase plan (Session 57):
->   Phase 1: Re-drill high_only against v42 (NEW residual matrix; the SS→DS class will be smaller; new dominant classes will emerge)
->   Phase 1b: Hand-level inspection of new top class
->   Phase 2 v3: Design 4 rank-valued conditional features (probably mid-suited vs mid-unsuited quality, top-rank kept tA-vs-tK, etc.)
->   Train v43_dt
+>   **Axis 2 — Defensive top-card choice on T-9-8 hands** (~$60/1000h combined pre-v42). When defensive play is right, *which* low card goes on top still has sub-optimality. Feature candidate: rank-valued "best defensive top-card given the mid/bot structure available."
 >
->   Alternative targets: trips zone ($55/1000h whole-grid) or three_pair ($35/1000h) — much smaller potential lift but cleaner playbook fits.
+>   **Axis 3 — Broadway connectivity at non-Ace tops** (within AKQ/KQJ/QJT-type hands). When 7 cards almost form a straight, the mid Hold'em equity from the connector might outweigh DS-bot value. Feature candidate: rank-valued "mid Hold'em equity given best DS-bot routing" or "longest connector available off-top."
+>
+>   **4-phase plan (Session 57):**
+>   - Phase 1: Re-drill high_only against v42_dt (the residual matrix will have shifted; new dominant classes will emerge — most likely K/Q-top classes since the Ace-top DS axis is collapsed).
+>   - Phase 1b: Hand-level inspection of new top class — identify which structural axis it represents.
+>   - Phase 2 v3: Design 4 rank-valued conditional features targeting the new top axis (mirror the v2/v5 pattern).
+>   - Train v43_dt (depth=36 ml=1, 103 features = 99 + 4 ho_v3).
+>
+>   **Acceptance:** any ship −$30/1000h or better on full grid + surgical (all non-high_only categories byte-identical).
+>
+>   **Alternative targets** (smaller but cleaner playbook fit, if Session 57's high_only drill reveals nothing actionable): trips zone ($55/1000h whole-grid) or three_pair ($35/1000h) — same drill + 4-feature shape applies. Recommend high_only first since the upside is much larger.
 
 > **✅ NEW SHIPS (Session 56):**
 > 1. **v42_dt** replaces v41_dt as ML champion. **+$79 full / $0 prefix.** High_only zone collapse from $2,796 → $2,411 (−13.8%). Prefix neutrality is by design — prefix slice has zero high_only hands and the new features are gated.
@@ -160,29 +162,45 @@ State (end of Session 56):
 
 USER-PRIORITY DIRECTION FOR SESSION 57:
 
-Continue compressing the high_only zone — STILL the dominant residual at
-$2,411/1000h within-cat × 40.4% share = $975/1000h whole-grid (~82% of
-v42's total regret).
+**Second pass on high_only — push into the headroom.**
 
-The ho_v2 features collapsed the DS-routing axis. The remaining residual
-lives in:
-- Top-card placement at non-Ace ranks (tK→tK and tQ→tQ mismatches were
-  $67 and $24 pre-v42 — what's left after v42 collapsed the SS→DS slice
-  of those?)
-- Broadway connectivity at non-Ace tops
-- Defensive-pair triggers and three-of-a-suit clustering
+high_only is STILL the dominant residual at $2,411/1000h within-cat ×
+40.4% share = $975/1000h whole-grid (~82% of v42's total regret).
+S56 ho_v2 features collapsed the DS-routing axis. Three specific
+sub-axes remain, each plausibly worth $50-150/1000h whole-grid:
+
+  Axis 1: Defensive trigger at max ∈ {K, Q} ($91/1000h pre-v42 in
+          tK→tK and tQ→tQ mismatch classes). Rule chain v52 already
+          handles this at max ∈ {T,9,8,7} unconditionally and at
+          max ∈ {J,Q,K} when 2nd-high ≤ 8 — but the ML doesn't have a
+          feature mirroring that trigger structure.
+
+  Axis 2: Defensive top-card choice on T-9-8 hands (~$60/1000h). When
+          defensive play is right, *which* low card goes on top still
+          has sub-optimality.
+
+  Axis 3: Broadway connectivity at non-Ace tops (AKQ/KQJ/QJT-type
+          hands). Mid Hold'em equity from the connector cards might
+          outweigh DS-bot value.
 
 4-phase plan:
 Phase 1: Re-drill high_only against v42_dt (NEW residual matrix; the
-         SS→DS class will be smaller; new dominant classes will emerge)
-Phase 1b: Hand-level inspection of the new top class
+         SS→DS class will be smaller; new dominant classes will
+         emerge — most likely K/Q-top classes since the Ace-top DS
+         axis is collapsed).
+Phase 1b: Hand-level inspection of the new top class — identify which
+          of the 3 axes it represents.
 Phase 2 v3: Design 4 rank-valued conditional features for the
-            highest-leverage NEW axis (likely mid-suited quality OR
-            broadway-when-not-Ace OR something else the drill reveals)
-Train v43_dt
+          highest-leverage NEW axis (mirror v2/v5 pattern).
+Train v43_dt (depth=36 ml=1, 103 features = 99 + 4 ho_v3).
 
-Alternative targets: trips zone ($55/1000h whole-grid) or three_pair
-($35/1000h) — much smaller potential lift but cleaner playbook fit.
+Acceptance: −$30/1000h or better on full grid + surgical (all
+non-high_only categories byte-identical).
+
+Alternative targets if Session 57's drill reveals nothing actionable:
+trips zone ($55/1000h whole-grid) or three_pair ($35/1000h) — same
+drill + 4-feature shape applies. Recommend high_only first since the
+upside is much larger.
 
 REMINDERS:
 - Auto mode is on; minimize interruptions.

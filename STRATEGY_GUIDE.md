@@ -1388,6 +1388,50 @@ Sessions 54 + 55 had shipped v39 → v40 → v41 by applying a 4-phase diagnosti
 
 **End of S56:** Rule chain UNCHANGED at v52 ($2,498 full / $1,522 prefix). ML champion v42_dt at $1,192 full / $686 prefix. The two production tracks now diverge by **$1,306/1000h** — the ML champion beats the human-memorizable rule chain by more than half its EV deficit. **high_only remains the dominant residual** ($2,411 within-cat × 40.4% share = $975/1000h whole-grid = ~82% of v42's total regret) — the next session can continue compressing it via additional axes (top-card placement at non-Ace ranks, broadway connectivity, etc.) or pivot to trips ($55 whole-grid) / three_pair ($35 whole-grid).
 
+### Session 56 extracted playable hierarchy for high-only hands
+
+Combining v52's rule chain with the S56 ho_v2 finding ("when DS-bot is achievable, take it AND keep your max card on top"), the full high-only strategy at end of S56 is:
+
+| Max card | # of hands | Population share | Action |
+|---|---:|---:|---|
+| **A** | 660,660 | 11.0% | **Ace on top.** Try DS bot (Ace kept OUT of bot); if no DS achievable, SS bot fallback. Mid = HIMID (the 2 highest remaining cards). |
+| **K** | 330,330 | 5.5% | **King on top** *unless* 2nd-high ≤ 8 (then defensive). DS bot preferred, SS fallback. HIMID tie-break. |
+| **Q** | 150,150 | 2.5% | **Q on top** *unless* 2nd-high ≤ 8 (then defensive). DS bot preferred, SS fallback. HIMID tie-break. |
+| **J** | 90,090 | 1.5% | HIMID by default; defensive when 2nd-high ≤ 8. |
+| **T** | 40,040 | 0.7% | **Always defensive.** Lowest card on top, DS bot, HIMID. |
+| **9** | 15,015 | 0.25% | Always defensive. |
+| **8** | 4,290 | 0.07% | Always defensive. (Only rank pattern: 8-7-6-5-4-3-2.) |
+
+Floor: max = 8 is the lowest possible high-only since you need 7 distinct ranks and the ranks below 8 are {2,3,4,5,6,7}=6 values. **Total: 1,290,615 hands = ALL high-only canonical hands.**
+
+**Three terms:**
+- **HIMID** ("High in Mid"): after committing top, put the **next two highest** cards in mid; the 4 lowest non-top cards go to bot.
+- **Defensive**: put the **lowest** card on top (not the highest); high cards go to mid + bot where they're worth more points. Right when your max card can't reliably win the top tier.
+- **DS bot**: 4-card bot with suit pattern 2+2 (two of one suit + two of another). Best Omaha pattern — gives two independent flush draws.
+
+**Master 5-step hierarchy:**
+1. Max = A? → Ace on top; DS bot first, SS fallback; HIMID.
+2. Max ∈ {K, Q} and 2nd-high ≥ 9? → Max on top; DS bot first, SS fallback; HIMID.
+3. Max ∈ {K, Q} and 2nd-high ≤ 8? → Defensive.
+4. Max = J? → HIMID with defensive switch at 2nd-high ≤ 8.
+5. Max ∈ {T, 9, 8}? → Always defensive.
+
+**The S56 sharpening:** for max=A/K/Q the rule chain already said "max on top, DS first." But v41 wasn't always *finding* the DS routing — in 100% of 28,014 worst-case `tA_SS_mu → tA_DS_ms` mismatches, a DS bot was achievable with Ace preserved on top and oracle used it 100% of the time. The 4 new `ho_v2_bot_DS_*` features explicitly expose that signal to the ML; v42 now sees it.
+
+### Where Session 57 should push (the headroom)
+
+The hierarchy table above is good but not perfect. Three specific axes remain unaddressed:
+
+1. **Defensive trigger at max ∈ {K, Q}** ($67 + $24 = $91/1000h whole-grid pre-v42 in tK→tK and tQ→tQ mismatches; smaller now but non-zero). v42 still over-picks "King on top" in some hands where oracle wants a defensive 2-on-top. Refinement candidate: a feature that signals "even with K/Q max, the supporting structure is weak — go defensive."
+2. **Defensive top-card choice on T-9-8** (~$60/1000h whole-grid combined). When defensive play is right, the question of *which* low card goes on top (the absolute lowest? a 2 vs a 3?) still has sub-optimality. Feature candidate: rank-valued "best defensive top-card given mid/bot structure."
+3. **Broadway connectivity at non-Ace tops** (within the AKQ/KQJ/QJT-type hands). When 7 cards almost form a straight, the mid Hold'em equity from the connector cards might outweigh DS-bot value. Feature candidate: "mid Hold'em equity given best-DS-bot routing."
+
+**Total headroom in high-only alone is still ~$975/1000h whole-grid** (= v42's high-only contribution). Each of the 3 axes above is plausibly worth $50-150/1000h whole-grid if cracked the way v42 cracked the DS-routing axis.
+
+**Alternative S57 targets** (smaller but cleaner playbook fits): trips zone ($55/1000h whole-grid) or three_pair zone ($35/1000h whole-grid) — same drill + 4-feature shape applies.
+
+Current S57 priority recommendation: **stay in high_only and run a second pass.** The playbook is now mature, the diagnostic infrastructure is in place, and there's $200+/1000h of plausible whole-grid lift across the three high_only sub-axes.
+
 ---
 
 ## Session 55: TWO ML champions in one session — v40_dt + v41_dt via the S54 playbook applied to trips_pair + two_pair zones (+$142 full / +$115 prefix cumulative)
