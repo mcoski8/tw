@@ -1,24 +1,91 @@
 # Current: Sprint 8 — Session 57 ships **v43_dt as the new ML champion via the user-priority high_only zone SECOND-PASS collapse, applying the proven 4-phase playbook (drill → hand-level → 4 rank-valued conditional features → train) for the 5th consecutive session and the 2nd time on the SAME zone**. v42_dt → v43_dt: **$1,192 → $1,123 full / $686 → $686 prefix**. **High_only within-category $2,411 → $2,075 (−$336, −13.9%)**, pct_opt 33.4% → 37.9% (+4.5%). All 7 non-targeted categories byte-identical to v42 on both grids (surgical gating). Leaf count v43: 2.11M → 2.18M (+3.2%). Depth saturated at 36. Four new features: rank-valued `ho_v3_topMax_DS_ms_*_g` series encoding JOINT (DS bot + ms mid) achievability + quality conditional on top=max-rank-of-hand — total 103 features (95 base + 4 ho_v2 + 4 ho_v3). All 4 features at LOW individual importance: #63 min_mid_high (0.07%), #64 max_mid_sum (0.07%), #100 max_mid_high (0.01%), #102 n_configs (0.00%) — **lowest-importance-per-ship in project**. Cumulative v32 → v43 = **−$592 full / −$218 prefix** (8 ML ships). Rule chain unchanged at v52 ($2,498 full / $1,522 prefix). The ML champion now beats the rule chain by **$1,375/1000h** (more than half the rule-chain EV deficit). **Two-session high_only collapse (S55 → S57): $2,796 → $2,411 → $2,075 = −$721 within-cat (−25.8%)** — composing two conditional axes (ho_v2 DS-only + ho_v3 DS+ms-joint) compresses the same zone twice without surgical interference. Phase 1 surfaced the counterintuitive finding: after S56 the SAME SS→DS pattern STILL dominates the residual, just with a NEW dimension (mid suiting); user-prediction axes (defensive K/Q triggers, T-9-8 top choice, broadway connectivity) were NOT confirmed. Phase 1b confirmed 100% of dominant-class mismatches have a (DS bot + ms mid) joint config achievable WITH the Ace on top. Methodology validation: **the playbook is transferable to the SAME zone for a SECOND pass, and joint-achievability features are a distinct structural axis from single-axis achievability features.** Surgical gating mathematically guarantees prefix-grid neutrality when the prefix slice contains zero target-zone hands.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 58): THIRD pass on high_only — push further into the headroom.**
+> **🎯 IMMEDIATE NEXT ACTION (Session 58): EXHAUSTIVE high_only deep-dive — characterize WHAT oracle picks for Omaha (bot) vs Hold'em (mid) across EVERY max-rank × structural-achievability cell, then design ho_v4 from the deepest residual axis revealed.**
 >
->   **high_only is STILL the dominant residual at $2,075/1000h within-cat × 40.4% share = $838/1000h whole-grid (~75% of v43's total regret).** S56 ho_v2 + S57 ho_v3 collapsed two axes (DS-only achievability, then DS+ms joint achievability). The next session should:
+>   **Why this — the user's S57 review.** The S57 ship (ho_v3 joint features) is real lift but only at the *aggregate* level — it tells the DT "there exists a way to do DS-bot AND ms-mid with the Ace on top." It does NOT explain *what oracle is actually optimizing for* in each (top, bot, mid) configuration. Specifically the user wants to know:
+>   1. **When v43 picks `DS+ms` correctly, what is it actually choosing for the bot vs the mid?** Does it pick the highest-rank suited mid pair? The most-connected bot? Both? What about *trade-offs* between bot strength and mid strength when the joint config exists but at uneven quality?
+>   2. **Does oracle optimize Omaha (bot) FIRST and then take whatever mid is left? Or Hold'em (mid) FIRST and then take whatever bot is left? Or jointly?** If it's joint, what's the implicit *exchange rate* between bot rank/connectivity and mid rank/connectivity?
+>   3. **Does oracle prioritize HIGHER cards in the bot, or HIGHER connectivity in the bot?** (Omaha values both, but they're competing in many 7-card hands — when forced to choose, which wins?)
+>   4. **What about edge cases**: Ace-high hands where DS is achievable BUT mid would be "random crap" (low max_mid_high) — does oracle still take DS+ms, or fall back to SS_ms (single-suit bot but a strong suited mid), or DS_mu (DS bot, mid unsuited but high)?
+>   5. **Same exhaustive analysis for K-high, Q-high, J-high, T-high, 9-high, 8-high.** Each max-rank class likely has its own optimization trade-off — defensive triggers, mid-vs-bot priority, connectivity weights — and we have NO unified picture of what those are.
 >
->   **Step 1**: Re-drill HO5 (`drill_high_only_zone_v43_diagnostic.py`) against v43_dt — the residual matrix will have shifted again; new dominant classes will emerge. Likely candidates:
->   - K-top mismatches (the tK_SS_mu → tK_DS_ms class at $17.05/1000h pre-v43 may shift up the ranking).
->   - Mid-suit-only at non-Ace ranks (tK_SS_mu → tK_SS_ms at $7.59/1000h pre-v43).
->   - A-top defensive sub-axes (tA→tK and tA→tQ swaps).
->   - The user-predicted axes (defensive K/Q, T-9-8 top, broadway connectivity) might finally surface as dominant after the SS→DS axis is compressed further.
+>   **The deep-dive plan (5 drills, 1 feature module, 1 ship; should take an overnight session at most):**
 >
->   **Step 2**: If the new dominant class is a JOINT-axis variant (e.g., ho_v3 generalized to non-Ace tops, or 3-way joint of DS+ms+top-rank), build ho_v4. If a genuinely new axis (defensive top, broadway connectivity, mid-ranks-on-bot), pivot the feature design.
+>   ### Drill HO5 — per-max-rank residual stratification
 >
->   **Step 3**: Train v44_dt at depth=36 ml=1, 107 features = 103 + 4 ho_v4. Acceptance: −$30/1000h or better on full grid + surgical (all non-high_only categories byte-identical).
+>   Sweep all 1,226,940 high_only hands. For each max_rank ∈ {A, K, Q, J, T, 9, 8}:
+>   - Total v43 vs oracle mismatch contribution ($/1000h whole-grid).
+>   - Top-10 mismatch classes (v43_pick → oracle_pick).
+>   - Distribution of v43 picks (top×bot×mid) vs oracle picks.
+>   - pct_opt within max-rank class.
 >
->   **Alternative targets** if Session 58's drill reveals nothing actionable in high_only: trips zone ($55/1000h whole-grid) or three_pair ($35/1000h) — same drill + 4-feature shape applies. Recommend high_only first since the upside is much larger AND the playbook is now proven for SECOND passes.
+>   Expected output: a per-max-rank table that shows where the residual concentrates after v43. Likely K-high and Q-high move up the ranking now that A-high SS→DS is compressed.
 >
->   **Methodology candidates worth testing** (from S57's lowest-importance-per-ship ship):
->   - Are joint-achievability features ALWAYS the right design after a single-axis collapse, or did the high_only zone happen to have an unusually rich joint structure?
->   - Can the playbook handle a zone where Phase 1b reveals NO further single-axis structural delta (i.e., the residual is irreducibly multi-axis noise)?
+>   ### Drill HO6 — full structural achievability cross-tabulation
+>
+>   For each high_only hand, compute these 8 boolean/count signals:
+>   1. `n_DS_bot_configs` (count of 4-card subsets of all 7 that are 2+2)
+>   2. `n_DS_bot_with_max_on_top` (DS configs where max-rank is in leftover, not bot)
+>   3. `n_ms_mid_configs` (count of (top, mid_pair) splits where mid 2 cards share suit)
+>   4. `n_ms_mid_with_max_on_top` (subset with max-rank as top)
+>   5. `n_joint_DS_ms_max_top_configs` (the ho_v3 count: all three together)
+>   6. `best_DS_bot_pair_high` (max higher-card-of-suited-pair across DS configs)
+>   7. `best_ms_mid_high` (max higher-card-of-suited-mid across ms-mid configs)
+>   8. `bot_mid_quality_corr` (in joint configs, does best_bot_pair coincide with best_mid_pair? or are they competing?)
+>
+>   Stratify by max_rank. Cross-tabulate. Identify cells where the joint is achievable but at *uneven* quality (high bot, low mid, OR low bot, high mid — the trade-off cases).
+>
+>   ### Drill HO7 — what oracle ACTUALLY picks (per max_rank × structural cell)
+>
+>   For each (max_rank × structural-achievability) cell from Drill HO6, characterize the oracle's pick:
+>   - **TOP**: rank distribution (always max? sometimes 2-on-top defensive? second-highest?)
+>   - **BOT**: ranks present (sum, max, min), suit profile (DS/SS/RB/31/4f), connectivity (longest run within the bot's 4 cards), suit-pair high cards.
+>   - **MID**: ranks present (sum, max, min), suit-match (ms/mu), connectivity.
+>
+>   Then compare against v43's pick per-cell. The DELTA between oracle and v43 in bot vs mid choices reveals what v43 is missing.
+>
+>   ### Drill HO8 — Omaha-first vs Hold'em-first vs joint
+>
+>   The discriminating question: when oracle picks (bot, mid), is it:
+>   - **Omaha-first**: pick the strongest possible bot (DS + highest pair-high + best connectivity); take whatever mid + top are left.
+>   - **Hold'em-first**: pick the strongest possible mid (suited + highest pair); take whatever bot is left.
+>   - **Joint-optimal**: balance bot strength against mid strength via some implicit rate.
+>
+>   Test by:
+>   1. For each oracle-picked hand, enumerate ALL alternative (bot, mid) splits with the same top.
+>   2. Rank by bot strength only, by mid strength only, and by an EV-weighted joint.
+>   3. Where does oracle's pick fall? Top of bot-only ranking? Top of mid-only? Top of joint?
+>
+>   Hypothesis: oracle is closer to "bot-first" than "mid-first" because Omaha pays 3 points/board vs Hold'em mid 2 points/board. But the magnitude matters and may flip in specific cells (e.g., low-rank bot with high-rank suited mid).
+>
+>   ### Drill HO9 — edge-case "trade-off" enumeration
+>
+>   The user's specific question: when DS is achievable BUT mid is crap, what does oracle pick?
+>   - Stratify hands where best_ms_mid_high (in joint configs) ≤ T (i.e., the suited mid would be a low pair).
+>   - Compare: oracle DS+low_ms_mid vs SS_ms+higher_mid vs DS_mu+highest_mid vs other.
+>   - Per max-rank, quantify the break-even point: at what mid_high threshold does oracle switch from DS+ms to SS+ms?
+>
+>   Same for: when SS is achievable but mid would be high suited vs DS achievable but mid is low suited — at what point does the bot upgrade matter more than the mid downgrade?
+>
+>   ### Phase 2 v4 design — based on Drill HO5–HO9 findings
+>
+>   Most likely outcomes (rank by probability):
+>   1. **Trade-off-aware joint feature**: 4 features that encode "DS+ms achievable AND mid_high ≥ threshold" + "SS+ms with mid_high ≥ threshold" + "second-best joint config quality" — explicit alternative-comparison features.
+>   2. **Per-max-rank-class joint features**: 4 features that fire only at K/Q/J max-rank and encode the same joint pattern as ho_v3 but with different trade-off weights.
+>   3. **Bot-vs-mid priority signal**: a feature like "ratio of best_DS_bot_quality to best_ms_mid_quality" that exposes the trade-off directly.
+>   4. **Defensive-2-on-top features**: if Drill HO5 reveals defensive-top mismatches dominate at K/Q max, build features that encode "defensive top achievable + with what bot/mid quality."
+>
+>   Pick the 4 features that target the LARGEST residual cell from the drills.
+>
+>   ### Train v44_dt
+>
+>   depth=36 ml=1, 107 features = 103 + 4 ho_v4. Same surgical-gating discipline. Acceptance: −$30/1000h or better on full grid + all non-high_only categories byte-identical.
+>
+>   **Alternative if Drill HO5–HO9 reveal nothing actionable** (unlikely given 75% of regret is still in high_only): trips zone ($55/1000h whole-grid) or three_pair ($35/1000h). But high_only should still have real lift — the analysis itself will reveal the next axis.
+>
+>   **Time budget**: this is a 5-drill investigation. Each drill is ~6 min on the full grid (per Session 57's drills). Total drill time ≈ 30 min + analysis between phases. Feature design + persist + train + grade ≈ 30 min. Total session ≈ 1.5–2 hours of compute, plus thinking time. Suitable for an overnight session.
+>
+>   **Diagnostic deliverable** (regardless of whether v44_dt ships): produce a **per-max-rank decision matrix** showing what oracle picks for top, bot (Omaha), and mid (Hold'em) under every structural-achievability cell. This is the "exhaustive characterization" the user wants AND it directly informs all future high_only feature work.
 
 > **✅ NEW SHIPS (Session 57):**
 > 1. **v43_dt** replaces v42_dt as ML champion. **+$69 full / $0 prefix.** High_only zone collapse from $2,411 → $2,075 (−13.9%). Prefix neutrality is by design — prefix slice has zero high_only hands and the new features are gated.
@@ -138,7 +205,7 @@
 
 ---
 
-## Resume Prompt (Session 58)
+## Resume Prompt (Session 58 — overnight, autonomous)
 
 ```
 Resume Session 58 of the Taiwanese Poker Solver project at
@@ -149,55 +216,154 @@ Read these files for context:
 - CURRENT_PHASE.md (rewritten end of Session 57)
 - DECISIONS_LOG.md (latest: Decision 092 — v43_dt new ML champion)
 - SESSION_57_V43_DT_REPORT.md
-- STRATEGY_GUIDE.md (Session 57 entry in Part 1; updated ML champion table in Part 2)
+- STRATEGY_GUIDE.md (Session 57 entry in Part 1; updated ML champion
+  table in Part 2)
 - analysis/scripts/strategy_v43_dt.py — current ML champion
-- analysis/scripts/high_only_aug_v3_features_gated.py — template feature suite (ho_v3 JOINT)
-- analysis/scripts/drill_high_only_zone_v42_diagnostic.py — Phase 1 drill template
-- analysis/scripts/drill_high_only_v42_mismatch_handlevel.py — Phase 1b drill template
+- analysis/scripts/high_only_aug_v3_features_gated.py — ho_v3 JOINT
+  feature template (most-relevant prior art)
+- analysis/scripts/drill_high_only_zone_v42_diagnostic.py — Phase 1
+  drill template (per-cell mismatch matrix)
+- analysis/scripts/drill_high_only_v42_mismatch_handlevel.py — Phase 1b
+  drill template (hand-level inspection)
+- analysis/scripts/high_only_aug_v2_features_gated.py — ho_v2 single-axis
+  template (DS-only)
 
 State (end of Session 57):
-- Rule chain production: v52_full_high_only_handler (17 rules; UNCHANGED) at
-  $2,498 full / $1,522 prefix.
-- ML champion: v43_dt (NEW) at $1,123 full / $686 prefix; 2.18M leaves at
-  depth=36 ml=1; 103 features (99 + 4 ho_v3 JOINT).
+- Rule chain production: v52_full_high_only_handler (17 rules; UNCHANGED)
+  at $2,498 full / $1,522 prefix.
+- ML champion: v43_dt (NEW) at $1,123 full / $686 prefix; 2.18M leaves
+  at depth=36 ml=1; 103 features (95 base + 4 ho_v2 + 4 ho_v3 JOINT).
 - Cumulative ML v32 → v43 = −$592 full / −$218 prefix (8 ML ships).
-- High_only zone gap collapsed twice: $2,796 → $2,411 → $2,075 (−$721 / −25.8%).
+- High_only collapsed twice: $2,796 → $2,411 → $2,075 (−$721 / −25.8%).
+- High_only is STILL the dominant residual at $838/1000h whole-grid
+  (~75% of v43's regret).
 
-USER-PRIORITY DIRECTION FOR SESSION 58:
+USER-PRIORITY DIRECTION FOR SESSION 58 (autonomous overnight):
 
-**THIRD pass on high_only — push further into the headroom.**
+**EXHAUSTIVE high_only deep-dive — characterize WHAT oracle picks for
+the Omaha (bot) hand vs the Hold'em (mid) hand across EVERY max-rank ×
+structural-achievability cell, then design ho_v4 from the deepest
+residual axis revealed.**
 
-high_only is STILL the dominant residual at $2,075/1000h within-cat ×
-40.4% share = $838/1000h whole-grid (~75% of v43's total regret).
-S56 ho_v2 collapsed the DS-only axis; S57 ho_v3 collapsed the DS+ms-joint
-axis. The remaining residual likely lives in:
+The user reviewed Session 57's ship and said:
+"your findings are great and at first glance its nice to see that it
+didnt know it had the option of splitting the remaining 6 cards into
+suited chunks - but be specific, what does it choose for its omaha hand
+double suited vs its mid hand - what is it looking for in each? does it
+optimize the omaha FIRST before holdem or vice versa? does it care
+about high(er) cards for one vs the other or does it look solely at
+connectedness for the omaha? and what about situations that are 1) Ace
+high still but dont have 3 possible suited combinations, lets say it
+can do DS but then its mid is random crap, or lets say it can do a
+single suit and the other stuff suffers 2) work this same logic for K
+high, Q high, so on so forth until its exhaustive across all
+combinations."
 
-  Axis A: K-top SS→DS mismatches (tK_SS_mu → tK_DS_ms was $17.05/1000h
-          pre-v43; may shift up after S57).
-  Axis B: Mid-suit-only at non-Ace ranks (tK_SS_mu → tK_SS_ms etc.).
-  Axis C: A-top alternative-rank mismatches (tA→tK $13.77, tA→tQ $4.82
-          pre-v43).
-  Axis D: Defensive triggers, T-9-8 top choice, broadway connectivity
-          (the user's S57 predictions that didn't dominate then but
-          might surface now after SS→DS is further compressed).
+**Deliverable regardless of whether v44_dt ships:** a per-max-rank ×
+per-structural-achievability decision matrix showing what oracle picks
+for top, bot, mid under every cell. This is the documentation the user
+wants, AND it directly informs all future high_only feature work.
 
-4-phase plan:
-Phase 1: Re-drill high_only against v43_dt (NEW residual matrix; the
-         A-top SS→DS class will be smaller; new dominant classes will
-         emerge — most likely K/Q-top SS→DS or non-Ace mid-suit-only).
-Phase 1b: Hand-level inspection of the new top class — identify which
-          structural axis it represents.
-Phase 2 v4: Design 4 rank-valued conditional features for the
-          highest-leverage NEW axis.
-Train v44_dt (depth=36 ml=1, 107 features = 103 + 4 ho_v4).
+**5-DRILL PLAN (overnight):**
 
-Acceptance: −$30/1000h or better on full grid + surgical (all
-non-high_only categories byte-identical).
+### Drill HO5 — per-max-rank residual stratification (~7 min)
+Sweep all 1,226,940 high_only hands. For each max_rank ∈
+{A, K, Q, J, T, 9, 8}:
+  - Total v43 vs oracle mismatch contribution ($/1000h whole-grid).
+  - Top-10 mismatch classes (v43_pick → oracle_pick).
+  - Distribution of v43 picks (top×bot×mid) vs oracle picks.
+  - pct_opt within max-rank class.
+Adapt drill_high_only_zone_v42_diagnostic.py — swap to v43, add
+max_rank dimension to the cell stratification.
 
-Alternative targets if Session 58's drill reveals nothing actionable:
-trips zone ($55/1000h whole-grid) or three_pair ($35/1000h) — same
-drill + 4-feature shape applies. Recommend high_only first since the
-upside is much larger AND the playbook is now proven for SECOND passes.
+### Drill HO6 — full structural achievability cross-tabulation (~7 min)
+For each high_only hand, compute these signals (most are derivable
+from existing scripts; aggregate them):
+  1. n_DS_bot_configs (count of 4-card subsets that are 2+2)
+  2. n_DS_bot_with_max_on_top (DS configs where max-rank is leftover)
+  3. n_ms_mid_configs (count of (top, mid_pair) splits with mid suited)
+  4. n_ms_mid_with_max_on_top (subset with max-rank as top)
+  5. n_joint_DS_ms_max_top_configs (the ho_v3 count)
+  6. best_DS_bot_pair_high (max higher-card-of-suited-pair across DS)
+  7. best_ms_mid_high (max higher-card-of-suited-mid across ms-mid)
+  8. bot_mid_quality_gap (in joint configs: best_bot vs best_mid rank
+     difference — captures trade-off magnitude)
+Stratify by max_rank. Cross-tabulate. Identify cells where joint is
+achievable but at uneven quality (high bot + low mid, OR vice versa —
+the trade-off cases that ho_v3 cannot distinguish).
+
+### Drill HO7 — what oracle ACTUALLY picks per cell (~10 min)
+For each (max_rank × structural-achievability) cell from Drill HO6:
+  - TOP: rank distribution (always max? sometimes 2-on-top defensive?
+    second-highest?).
+  - BOT: ranks present (sum, max, min), suit profile, longest-run
+    connectivity within the bot's 4 cards, suit-pair high cards.
+  - MID: ranks present (sum, max, min), suit-match status,
+    connectivity.
+Then compare against v43's pick per-cell. The DELTA between oracle
+and v43 in bot vs mid choices reveals what v43 is missing.
+
+### Drill HO8 — Omaha-first vs Hold'em-first vs joint (~10 min)
+The user's discriminating question. For each oracle-picked hand:
+  1. Enumerate ALL alternative (bot, mid) splits with the same top.
+  2. Rank by bot strength only, by mid strength only, by joint EV.
+  3. Where does oracle's pick fall in each ranking?
+Hypothesis to test: oracle is closer to "bot-first" than "mid-first"
+because Omaha pays 3 points/board vs Hold'em mid 2 points/board. But
+the ratio matters and may flip in specific cells. Quantify the
+implicit exchange rate per max-rank.
+
+### Drill HO9 — edge-case "trade-off" enumeration (~10 min)
+The user's specific question: when DS is achievable BUT mid is crap,
+what does oracle pick?
+  - Stratify hands where best_ms_mid_high (in joint configs) ≤ T
+    (suited mid would be a low pair).
+  - Compare oracle picks: DS+low_ms_mid vs SS_ms+higher_mid vs
+    DS_mu+highest_mid vs other.
+  - Per max-rank, quantify the break-even threshold: at what mid_high
+    does oracle switch from DS+ms to SS+ms?
+Same for the inverse: when SS is achievable with strong suited mid
+but DS would force a weak mid, at what point does the bot upgrade
+matter more than the mid downgrade?
+
+### Phase 2 v4 — design 4 features from drill findings
+Most likely candidates (rank by likelihood after drill data):
+  1. Trade-off-aware joint feature: encode "DS+ms achievable AND
+     mid_high ≥ threshold" + "SS+ms with mid_high ≥ threshold" +
+     second-best joint quality — explicit alternative-comparison.
+  2. Per-max-rank-class joint features: fire only at K/Q/J max-rank
+     and encode the same joint pattern as ho_v3 but with different
+     trade-off weights.
+  3. Bot-vs-mid priority signal: e.g., "ratio of best_DS_bot_quality
+     to best_ms_mid_quality" that exposes the trade-off directly.
+  4. Defensive-2-on-top features: if Drill HO5 reveals defensive-top
+     mismatches dominate at K/Q max.
+
+Pick the 4 features that target the LARGEST residual cell from the
+drills, mirroring the v2/v3/v5 rank-valued conditional shape.
+
+### Train + ship v44_dt
+depth=36 ml=1, 107 features = 103 + 4 ho_v4. Same surgical-gating
+discipline. Acceptance: −$30/1000h or better on full grid + all
+non-high_only categories byte-identical.
+
+### MUST-PRODUCE deliverable (regardless of whether v44 ships)
+A per-max-rank decision matrix saved to
+`SESSION_58_HIGH_ONLY_DECISION_MATRIX.md` at repo root, covering
+A/K/Q/J/T/9/8 max-rank classes, with per-cell:
+  - Oracle's TOP pick (always-max? sometimes defensive?)
+  - Oracle's BOT pick (suit profile, rank profile, connectivity)
+  - Oracle's MID pick (suit profile, rank profile, connectivity)
+  - Trade-off rule (e.g., "at K-high, oracle switches from DS+ms to
+    SS+ms when best_ms_mid_high ≤ 9").
+  - v43's mistake pattern in this cell.
+
+This deliverable IS the answer to the user's review question even
+if no new ML ship results.
+
+Time budget: ~30 min of drills + ~30 min of feature design + persist
++ train + grade (~6 min train, ~14 min full-grid grade) = ~1.5–2
+hours of compute. Plus thinking time. Fully autonomous-friendly.
 
 REMINDERS:
 - Auto mode is on; minimize interruptions.
@@ -205,31 +371,34 @@ REMINDERS:
 - cargo lives at ~/.cargo/bin/cargo (not on PATH).
 - Session-end protocol: commit + push to origin/main (pre-authorized).
 - For long Python scripts: PYTHONUNBUFFERED=1 or python3 -u.
-- Methodology rule (Session 57 NEW): the 4-phase playbook is transferable
+- Run drills in parallel where independent (HO5/HO6/HO7/HO8/HO9 can
+  often share a single sweep — consolidate into 1-2 scripts if
+  possible to save wall time).
+- Don't re-implement what already exists — reuse setting_features_from_bytes,
+  SETTING_HAND_INDICES, SUIT_PROFILE_* constants from
+  tw_analysis.query.
+- Methodology rule (Session 57): the 4-phase playbook is transferable
   to the SAME zone for a SECOND pass without modification.
-- Methodology rule (Session 57 NEW): a zone can be collapsed multiple
-  times by stacking conditional feature axes; gains compound surgically.
-- Methodology rule (Session 57 NEW): joint achievability is a distinct
-  structural axis from single-axis achievability; joint features are NOT
-  redundant with the components.
-- Methodology rule (Session 57 NEW): importance can be low (#60+) and
+- Methodology rule (Session 57): a zone can be collapsed multiple
+  times by stacking conditional feature axes; gains compound
+  surgically.
+- Methodology rule (Session 57): joint achievability is a distinct
+  structural axis from single-axis achievability; joint features are
+  NOT redundant with the components.
+- Methodology rule (Session 57): importance can be low (#60+) and
   lift can still ship via surgical gating on a high-leverage subset.
-- Methodology rule (Session 57 NEW): user predictions can be wrong about
-  WHICH axis dominates even after one pass collapses one axis; the data
-  dictates the axis, not the human intuition.
-- Methodology rule (Session 56): the 4-phase playbook is fully
-  transferable to the largest population zone without modification.
+- Methodology rule (Session 57): user predictions can be wrong about
+  WHICH axis dominates even after one pass collapses one axis; the
+  data dictates the axis, not the human intuition.
 - Methodology rule (Session 56): when feature design exactly matches
   the structural delta, Phase 1b confirmation collapses to 100/0.
 - Methodology rule (Session 56): surgical-gating means prefix-grid
   neutrality is correct (not suspect) when the prefix slice doesn't
   contain the targeted population.
-- Methodology rule (Session 55): the playbook is TRANSFERABLE.
-  Same shape works across zones.
 - Methodology rule (Session 55): asymmetric existing features signal
   blind spots.
-- Methodology rule (Session 55): low individual feature importance can
-  still ship lift via surgical gating.
+- Methodology rule (Session 55): low individual feature importance
+  can still ship lift via surgical gating.
 - Methodology rule (Session 54): diagnostic-first feature engineering
   works at saturation.
 - Methodology rule (Session 54): boolean features are redundant at
