@@ -4429,3 +4429,138 @@ All zeros for non-high_only hands.
 The two tracks now diverge by **$1,306/1000h** — the ML champion beats the human-memorizable rule chain by more than half its EV deficit.
 
 **Total project rule count: 17** (UNCHANGED from v52, this session was ML-only). ML champion: v42_dt (new — replaces v41_dt).
+
+
+---
+
+## Decision 092 — v43_dt new ML champion (+$69 full / $0 prefix) via high_only zone SECOND-PASS collapse (Session 57)
+
+**Date:** 2026-05-10 (Session 57)
+
+**Context:** Session 56 had collapsed the high_only DS-routing axis via 4 ho_v2 features (DS-bot achievability + max-top quality), shipping +$79 full / $0 prefix and reducing high_only within-category from $2,796 → $2,411 (−13.8%). User-priority direction for S57: "stay in high_only and run a second pass — push into the headroom." User predicted three sub-axes might dominate (defensive K/Q triggers, T-9-8 top choice, broadway connectivity). Reality: the dominant residual was STILL on the SS→DS axis but with a NEW conditional dimension (mid suiting).
+
+**Decision:** Ship v43_dt as new ML champion.
+
+### Phase 1 (Drill HO3) — diagnostic against v42_dt
+
+Full sweep over all 1,226,940 high_only hands. Key findings:
+
+- **SS → DS bot-suit swap is STILL the dominant axis post-S56**: 224,353 hands @ $5,071 mean = $189.33/1000h whole-grid contribution.
+- v42 picks SS bot **46.07%** vs oracle **32.04%** (−14.0% absolute under-routing of DS, marginally better than v41's −15.5% but still huge).
+- Top single mismatch class: **v42=tA_SS_mu, oracle=tA_DS_ms** — 28,027 hands @ $7,534 = $35.14/1000h whole-grid. **Essentially UNCHANGED** from v41 (28,014 hands @ $7,774).
+- 2nd: tA_SS_mu → tA_DS_mu ($25.61, n=35,332) — bot-suit-only swap.
+- 3rd: tA_SS_mu → tA_SS_ms ($23.68, n=33,559) — **mid-suit-only swap** (NEW signal that ho_v2 doesn't capture).
+- 4th: tK_SS_mu → tK_DS_ms ($17.05, n=13,229) — same pattern at K-top.
+
+The mid-suit-only swap class confirms mid-suiting matters as a separate axis. The user's predicted axes (defensive K/Q triggers, T-9-8 top choice, broadway connectivity) were NOT confirmed.
+
+### Phase 1b (Drill HO4) — hand-level inspection
+
+For all 28,027 v42=tA_SS_mu, oracle=tA_DS_ms mismatches, characterized joint (DS bot + suited mid) achievability:
+
+- **100% of mismatches have a (DS bot + suited mid) JOINT config achievable WITH the Ace on top.** Strongest possible Phase 1b validation.
+- 18% have 3 joint configs, 82% have 9 joint configs — abundant alternatives.
+- DS_AND_ms_max_top = A in 100% of cases (existing ho_v2_bot_DS_max_top_rank_g also fires at 14 here, so the existing feature alone is not differentiating).
+- Oracle's actual mid_high distribution spans the full range: K 22%, Q 19%, J 17%, T 14%, …, 3 at 0.9%.
+- Oracle uses the max-available joint mid only 8.2% of the time — the choice depends on more than max-mid-high.
+
+**Diagnosis:** v42 has DS-bot achievability features (`ho_v2_*_g`) but NOT joint (DS bot + ms mid) achievability features. The DT can split on "DS bot achievable + max_top=A" but cannot compose "DS bot AND mid suited at the same time, with what mid quality."
+
+### Phase 2 v3 — high_only_aug_v3 features
+
+4 rank-valued conditional features encoding JOINT (DS bot + ms mid) achievability + quality, conditional on top = max-rank-of-hand. For each high_only hand:
+
+1. Fix top = max-rank-of-hand (unique in high_only).
+2. Enumerate the C(6,4)=15 4-card subsets of the remaining 6 cards as candidate bots.
+3. Filter to (a) bot is 2+2 (DS), (b) the 2 leftover cards (mid) share a suit.
+4. Aggregate:
+   - `ho_v3_topMax_DS_ms_n_configs_g` (0..15): joint achievability count.
+   - `ho_v3_topMax_DS_ms_max_mid_high_g` (0..13): best higher-card-of-suited-mid.
+   - `ho_v3_topMax_DS_ms_min_mid_high_g` (0..13): lowest higher-card-of-suited-mid.
+   - `ho_v3_topMax_DS_ms_max_mid_sum_g` (0..25): best sum of suited mid pair.
+
+All zeros for non-high_only hands. Only **14.7% of high_only hands** have any joint config — but those hands include nearly all of the dominant SS→DS mismatch class.
+
+### v43 training + grade
+
+| Metric | v42_dt | v43_dt | Δ |
+|---|---:|---:|---:|
+| Full grid mean regret | 0.1192 | 0.1123 | **−0.0069** |
+| Full grid $/1000h | $1,192 | $1,123 | **−$69** |
+| Full grid pct_opt | 63.08% | 63.99% | **+0.91%** |
+| Prefix grid $/1000h | $686 | $686 | **$0 (by design)** |
+| Prefix grid pct_opt | 67.13% | 67.13% | **$0 (by design)** |
+| Leaves | 2,109,330 | 2,177,798 | **+3.2%** |
+| Features | 99 | 103 | **+4 ho_v3** |
+| Depth | 36 | 36 | saturated |
+| p90 regret | 0.425 | 0.400 | −0.025 |
+| p99 regret | 1.035 | 0.980 | −0.055 |
+
+**Per-category (full grid):** high_only $2,411 → $2,075 (−$336, −13.9%); pct_opt 33.4% → 37.9% (+4.5%). All 7 other categories byte-identical to v42 — surgical gating CONFIRMED.
+
+**Two-session high_only collapse (S55 → S57):** $2,796 → $2,411 → $2,075 = **−$721 within-category (−25.8%)**, **−$291/1000h whole-grid contribution**. Composing two conditional axes (ho_v2 DS-only + ho_v3 DS+ms-joint) compresses the same zone twice without surgical interference.
+
+**Cumulative ML arc v32 → v43 = −$592/1000h on full grid across 8 ML ships** (v34: −$34, v36: −$33, v39: −$237, v40: −$18, v41: −$124, v42: −$79, v43: −$69).
+
+### Feature importance — LOWEST per-ship in project
+
+| Rank | Feature | Importance |
+|---:|---|---:|
+| #63 | ho_v3_topMax_DS_ms_min_mid_high_g | 0.07% |
+| #64 | ho_v3_topMax_DS_ms_max_mid_sum_g | 0.07% |
+| #100 | ho_v3_topMax_DS_ms_max_mid_high_g | 0.01% |
+| #102 | ho_v3_topMax_DS_ms_n_configs_g | 0.00% |
+
+This is the LOWEST individual feature importance per ship in the project, yet ships +$69. **Methodology rule (S55) re-confirmed: "low individual feature importance can still ship lift via surgical gating."** Features fire on only 14.7% of high_only hands (3.0% of full grid), but those hands are concentrated in the dominant SS→DS mismatch class. Per-firing impact is much higher than global importance suggests.
+
+### Pre-flight (every check passed)
+
+- **Full grid ships strongly positive**: −$69/1000h, +0.91% pct_opt
+- **Prefix grid neutral by design** (zero high_only hands in prefix slice; gating mathematically guarantees identical metrics)
+- **All 7 non-high_only categories byte-identical** (pair $1,097, two_pair $363, trips $1,194, three_pair $1,613, trips_pair $281, composite $960, quads $545 — every $/1000h matches v42 exactly)
+- **Leaf expansion modest** (+3.2%, smaller than v42's +4.7% — consistent with low-importance features that fire on a smaller subset)
+- **Phase 1b 100% match rate** for joint achievability — feature design exactly captures structural delta
+- **Matches Phase 1 diagnosis** — the lift is in the high_only zone, exactly where the diagnostic identified the gap
+
+### Methodology lessons (Session 57)
+
+1. **The 4-phase playbook is transferable to the SAME zone for a SECOND pass.** Re-drilling against the new champion (v42, post-S56 collapse) revealed the residual had shifted in axis (DS-only → joint DS+ms) without changing in dominant top-rank or zone. The same playbook applied without modification.
+
+2. **A zone can be collapsed multiple times by stacking conditional feature axes.** S56's ho_v2 (DS bot only) + S57's ho_v3 (DS bot AND ms mid) compose: 2-session cumulative collapse = −$721 within-category (−25.8%). Each pass adds a NEW conditional axis to the same zone, and the gains compound.
+
+3. **User predictions can be wrong about WHICH axis dominates, even after one pass collapses one axis.** The user predicted defensive triggers, T-9-8 top choice, and broadway connectivity. Reality: the dominant residual was STILL on the SS→DS axis, just with a NEW conditional dimension (mid suiting). The data dictates the axis, not the human intuition.
+
+4. **Importance can be low and lift can still ship.** v43's 4 features at #63/#64/#100/#102 individual importance is the lowest-per-ship on record, yet they ship +$69. Importance ≠ impact when features fire on a narrow but high-leverage subset.
+
+5. **Joint achievability is a distinct structural axis from single-axis achievability.** ho_v2 exposes "is DS bot achievable" but the DT couldn't compose "DS bot AND mid suited" from existing features alone. Joint features are NOT redundant with the components — they expose joint structure that's invisible when only individual axes are exposed.
+
+### Files (Session 57)
+
+**Drills:**
+- `analysis/scripts/drill_high_only_zone_v42_diagnostic.py` (Drill HO3, Phase 1)
+- `analysis/scripts/drill_high_only_v42_mismatch_handlevel.py` (Drill HO4, Phase 1b)
+
+**Features:**
+- `analysis/scripts/high_only_aug_v3_features_gated.py` (PRODUCTION)
+- `analysis/scripts/persist_high_only_aug_v3_gated.py`
+
+**Training + grading:**
+- `analysis/scripts/train_v43_dt.py` + `strategy_v43_dt.py` + `grade_v43_dt.py`
+
+**Models:**
+- `data/v43_dt_model.npz` (1224 MB, PRODUCTION — NEW ML CHAMPION)
+- `data/feature_table_high_only_aug_v3_gated.parquet` (18.72 MB)
+
+**Documentation:**
+- `SESSION_57_V43_DT_REPORT.md` (standalone session report)
+- `STRATEGY_GUIDE.md` Part 1 — Session 57 entry; Part 2 ML champion table updated; Part 6 ML champion paragraph updated
+- `CURRENT_PHASE.md` — rewritten
+- `DECISIONS_LOG.md` — Decision 092 (this section)
+
+**Two production tracks at end of S57:**
+- Rule chain: **v52_full_high_only_handler** ($2,498 full / $1,522 prefix) — UNCHANGED
+- ML champion: **v43_dt (NEW)** — $1,123 full / $686 prefix
+
+The two tracks now diverge by **$1,375/1000h** — the ML champion beats the human-memorizable rule chain by more than half its EV deficit.
+
+**Total project rule count: 17** (UNCHANGED from v52; S57 was ML-only). ML champion: v43_dt (new — replaces v42_dt).
