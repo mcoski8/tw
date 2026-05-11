@@ -1,0 +1,905 @@
+========================================================================================
+Session 59 — Drill HO11+HO12+HO13: high_only deep-dive on v44_dt
+========================================================================================
+Started: 2026-05-11 08:18:29
+
+[1/4] loading + categorizing ...
+  high_only hands: 1,226,940
+
+[2/4] loading oracle grid ...
+  ready.
+
+[3/4] sweeping per-hand v44 vs oracle + structural counts ...
+    progress   50,000/1,226,940  rate= 1619/s  elapsed    31s  ETA   727s
+    progress  100,000/1,226,940  rate= 1729/s  elapsed    58s  ETA   652s
+    progress  150,000/1,226,940  rate= 1768/s  elapsed    85s  ETA   609s
+    progress  200,000/1,226,940  rate= 1788/s  elapsed   112s  ETA   574s
+    progress  250,000/1,226,940  rate= 1781/s  elapsed   140s  ETA   549s
+    progress  300,000/1,226,940  rate= 1787/s  elapsed   168s  ETA   519s
+    progress  350,000/1,226,940  rate= 1789/s  elapsed   196s  ETA   490s
+    progress  400,000/1,226,940  rate= 1792/s  elapsed   223s  ETA   461s
+    progress  450,000/1,226,940  rate= 1798/s  elapsed   250s  ETA   432s
+    progress  500,000/1,226,940  rate= 1802/s  elapsed   277s  ETA   403s
+    progress  550,000/1,226,940  rate= 1804/s  elapsed   305s  ETA   375s
+    progress  600,000/1,226,940  rate= 1805/s  elapsed   332s  ETA   347s
+    progress  650,000/1,226,940  rate= 1807/s  elapsed   360s  ETA   319s
+    progress  700,000/1,226,940  rate= 1808/s  elapsed   387s  ETA   291s
+    progress  750,000/1,226,940  rate= 1808/s  elapsed   415s  ETA   264s
+    progress  800,000/1,226,940  rate= 1808/s  elapsed   442s  ETA   236s
+    progress  850,000/1,226,940  rate= 1809/s  elapsed   470s  ETA   208s
+    progress  900,000/1,226,940  rate= 1809/s  elapsed   497s  ETA   181s
+    progress  950,000/1,226,940  rate= 1809/s  elapsed   525s  ETA   153s
+    progress 1,000,000/1,226,940  rate= 1809/s  elapsed   553s  ETA   125s
+    progress 1,050,000/1,226,940  rate= 1808/s  elapsed   581s  ETA    98s
+    progress 1,100,000/1,226,940  rate= 1807/s  elapsed   609s  ETA    70s
+    progress 1,150,000/1,226,940  rate= 1806/s  elapsed   637s  ETA    43s
+    progress 1,200,000/1,226,940  rate= 1805/s  elapsed   665s  ETA    15s
+  done in 679.7s
+
+====================================================================================================
+HO11: PER-MAX-RANK RESIDUAL STRATIFICATION (v44_dt vs oracle)
+====================================================================================================
+  max   n_hands  pct_opt   mean_reg   wg_contrib
+    A   660,660   44.54% $ +1660.1 $   +182.51
+    K   330,330   38.92% $ +2018.2 $   +110.94
+    Q   150,150   36.70% $ +2210.7 $    +55.24
+    J    60,060   35.10% $ +2343.7 $    +23.43
+    T    20,020   37.95% $ +2180.8 $     +7.27
+    9     5,005   42.66% $ +2086.7 $     +1.74
+    8       715   40.56% $ +2337.6 $     +0.28
+
+  Per-max-rank top-10 mismatch classes:
+
+  ── max_rank = A ──
+    tA_SS_mu               -> tA_DS_mu               n= 26,731 mean=$+4258.5 wg=$ +18.94
+    tA_SS_mu               -> tA_SS_ms               n= 27,441 mean=$+4068.3 wg=$ +18.58
+    tA_DS_mu               -> tA_SS_ms               n= 28,389 mean=$+2416.5 wg=$ +11.42
+    tA_SS_ms               -> tA_DS_mu               n= 23,649 mean=$+2849.9 wg=$ +11.22
+    tA_SS_mu               -> tA_DS_ms               n=  5,061 mean=$+7421.5 wg=$  +6.25
+    tA_DS_mu               -> tA_31_ms               n= 12,125 mean=$+2590.3 wg=$  +5.23
+    tA_31_mu               -> tA_SS_ms               n=  8,021 mean=$+3271.4 wg=$  +4.37
+    tA_SS_ms               -> tA_31_ms               n=  6,642 mean=$+3083.2 wg=$  +3.41
+    tA_SS_mu               -> tA_31_mu               n=  7,433 mean=$+2701.5 wg=$  +3.34
+    tA_DS_mu               -> tA_SS_mu               n=  9,068 mean=$+1916.9 wg=$  +2.89
+
+  ── max_rank = K ──
+    tK_SS_mu               -> tK_SS_ms               n=  8,640 mean=$+4334.7 wg=$  +6.23
+    tK_SS_mu               -> tK_DS_mu               n=  7,412 mean=$+4460.7 wg=$  +5.50
+    tK_SS_ms               -> tK_DS_mu               n=  7,645 mean=$+2936.0 wg=$  +3.74
+    tK_DS_mu               -> tK_SS_ms               n=  8,569 mean=$+2563.4 wg=$  +3.66
+    tK_SS_mu               -> tK_DS_ms               n=  2,010 mean=$+7609.1 wg=$  +2.55
+    tK_DS_mu               -> tK_31_ms               n=  4,368 mean=$+2718.1 wg=$  +1.98
+    tK_SS_ms               -> tQ_DS_ms               n=  2,182 mean=$+4961.4 wg=$  +1.80
+    tK_SS_mu               -> tJ_DS_ms               n=  1,299 mean=$+7032.2 wg=$  +1.52
+    tK_SS_mu               -> tQ_DS_ms               n=  1,202 mean=$+7555.9 wg=$  +1.51
+    tK_31_mu               -> tK_SS_ms               n=  2,401 mean=$+3709.9 wg=$  +1.48
+
+  ── max_rank = Q ──
+    tQ_SS_mu               -> tQ_SS_ms               n=  2,370 mean=$+4404.7 wg=$  +1.74
+    tQ_SS_mu               -> tQ_DS_mu               n=  2,035 mean=$+4432.0 wg=$  +1.50
+    tQ_SS_ms               -> tQ_DS_mu               n=  2,290 mean=$+3047.5 wg=$  +1.16
+    tQ_DS_mu               -> tQ_SS_ms               n=  2,134 mean=$+2566.1 wg=$  +0.91
+    tQ_SS_mu               -> tQ_DS_ms               n=    614 mean=$+7776.1 wg=$  +0.79
+    tQ_SS_ms               -> tJ_DS_ms               n=    869 mean=$+4906.2 wg=$  +0.71
+    tQ_SS_mu               -> tJ_DS_ms               n=    478 mean=$+7190.1 wg=$  +0.57
+    tQ_DS_mu               -> tQ_31_ms               n=  1,217 mean=$+2728.1 wg=$  +0.55
+    tQ_SS_mu               -> tT_DS_ms               n=    506 mean=$+6515.8 wg=$  +0.55
+    tJ_SS_mu               -> tJ_DS_ms               n=    371 mean=$+8404.6 wg=$  +0.52
+
+  ── max_rank = J ──
+    t2_SS_mu               -> t2_DS_ms               n=    369 mean=$+7380.5 wg=$  +0.45
+    t2_SS_mu               -> t2_SS_ms               n=    517 mean=$+4963.2 wg=$  +0.43
+    t2_SS_mu               -> t2_DS_mu               n=    475 mean=$+4684.8 wg=$  +0.37
+    t2_SS_ms               -> t2_DS_mu               n=    532 mean=$+3235.2 wg=$  +0.29
+    t2_SS_mu               -> t3_DS_mu               n=    313 mean=$+5221.6 wg=$  +0.27
+    t2_DS_mu               -> t2_SS_ms               n=    526 mean=$+2667.4 wg=$  +0.23
+    tJ_SS_mu               -> tJ_SS_ms               n=    234 mean=$+4832.7 wg=$  +0.19
+    tJ_DS_mu               -> t2_DS_mu               n=    331 mean=$+3285.0 wg=$  +0.18
+    t2_31_mu               -> t2_SS_ms               n=    225 mean=$+4484.0 wg=$  +0.17
+    t2_SS_mu               -> tJ_SS_ms               n=    209 mean=$+4616.0 wg=$  +0.16
+
+  ── max_rank = T ──
+    t2_SS_mu               -> t2_DS_ms               n=    178 mean=$+7164.3 wg=$  +0.21
+    t2_SS_mu               -> t2_DS_mu               n=    241 mean=$+4846.3 wg=$  +0.19
+    t2_SS_mu               -> t2_SS_ms               n=    249 mean=$+4541.4 wg=$  +0.19
+    t2_SS_mu               -> t3_DS_mu               n=    193 mean=$+4996.1 wg=$  +0.16
+    t2_SS_ms               -> t2_DS_mu               n=    228 mean=$+3149.3 wg=$  +0.12
+    t2_DS_mu               -> t2_SS_ms               n=    208 mean=$+2725.7 wg=$  +0.09
+    t2_SS_mu               -> t3_SS_ms               n=     94 mean=$+4930.9 wg=$  +0.08
+    t2_SS_mu               -> t3_DS_ms               n=     55 mean=$+8241.8 wg=$  +0.08
+    t2_SS_mu               -> t4_DS_mu               n=     82 mean=$+4315.2 wg=$  +0.06
+    t2_31_ms               -> t2_DS_mu               n=    113 mean=$+2900.9 wg=$  +0.05
+
+  ── max_rank = 9 ──
+    t2_SS_mu               -> t2_DS_ms               n=     69 mean=$+7022.5 wg=$  +0.08
+    t2_SS_mu               -> t2_DS_mu               n=     82 mean=$+4733.5 wg=$  +0.06
+    t2_SS_mu               -> t3_DS_mu               n=     68 mean=$+4680.9 wg=$  +0.05
+    t2_SS_mu               -> t2_SS_ms               n=     69 mean=$+4575.4 wg=$  +0.05
+    t2_SS_mu               -> t3_DS_ms               n=     23 mean=$+8060.9 wg=$  +0.03
+    t2_SS_ms               -> t2_DS_mu               n=     62 mean=$+2764.5 wg=$  +0.03
+    t2_SS_mu               -> t7_DS_ms               n=     24 mean=$+6604.2 wg=$  +0.03
+    t2_SS_mu               -> t3_SS_ms               n=     30 mean=$+4786.7 wg=$  +0.02
+    t2_DS_mu               -> t2_SS_ms               n=     53 mean=$+2508.5 wg=$  +0.02
+    t2_SS_mu               -> t4_DS_mu               n=     33 mean=$+3853.0 wg=$  +0.02
+
+  ── max_rank = 8 ──
+    t2_SS_mu               -> t2_DS_mu               n=     22 mean=$+5438.6 wg=$  +0.02
+    t2_SS_mu               -> t2_DS_ms               n=     13 mean=$+7734.6 wg=$  +0.02
+    t2_SS_mu               -> t2_SS_ms               n=     11 mean=$+5586.4 wg=$  +0.01
+    t2_SS_mu               -> t3_DS_mu               n=      8 mean=$+7012.5 wg=$  +0.01
+    t2_SS_mu               -> t6_DS_ms               n=      6 mean=$+6150.0 wg=$  +0.01
+    t2_SS_mu               -> t3_SS_ms               n=      8 mean=$+4537.5 wg=$  +0.01
+    t2_SS_mu               -> t4_DS_ms               n=      3 mean=$+11616.7 wg=$  +0.01
+    t2_SS_mu               -> t5_DS_ms               n=      4 mean=$+8437.5 wg=$  +0.01
+    t2_SS_mu               -> t3_DS_ms               n=      3 mean=$+10116.7 wg=$  +0.01
+    t2_DS_mu               -> t2_SS_ms               n=     10 mean=$+3035.0 wg=$  +0.01
+
+  Per-max-rank class distribution (v44 pick % vs oracle pick %):
+
+  ── max_rank = A  (n=660,660) ──
+    class                    v44_pct  oracle_pct     delta
+    tA_DS_mu                  29.22%      29.37%    -0.15%
+    tA_SS_ms                  18.98%      21.76%    -2.77%
+    tA_SS_mu                  20.42%      11.62%    +8.79%
+    tA_DS_ms                  13.38%      13.92%    -0.54%
+    tA_31_mu                   7.53%       6.56%    +0.96%
+    tA_31_ms                   5.10%       7.07%    -1.97%
+    tA_4f_mu                   1.24%       1.31%    -0.07%
+    tK_DS_ms                   0.44%       1.64%    -1.21%
+    tA_RB_ms                   1.10%       0.79%    +0.30%
+    tK_DS_mu                   0.62%       1.21%    -0.59%
+    tA_4f_ms                   0.59%       0.68%    -0.09%
+    tK_SS_ms                   0.29%       0.94%    -0.65%
+    tQ_DS_ms                   0.08%       0.67%    -0.59%
+    tQ_DS_mu                   0.12%       0.37%    -0.25%
+    tA_RB_mu                   0.38%       0.03%    +0.35%
+
+  ── max_rank = K  (n=330,330) ──
+    class                    v44_pct  oracle_pct     delta
+    tK_DS_mu                  24.03%      20.27%    +3.76%
+    tK_SS_ms                  16.33%      15.41%    +0.92%
+    tK_DS_ms                  12.72%      12.61%    +0.11%
+    tK_SS_mu                  16.33%       6.68%    +9.65%
+    tK_31_ms                   4.62%       5.42%    -0.80%
+    tK_31_mu                   5.41%       3.89%    +1.52%
+    tQ_DS_ms                   2.33%       3.87%    -1.54%
+    tQ_DS_mu                   2.31%       3.45%    -1.13%
+    tQ_SS_ms                   1.95%       2.81%    -0.86%
+    t2_DS_ms                   1.61%       2.38%    -0.77%
+    t2_DS_mu                   0.98%       1.94%    -0.96%
+    tJ_DS_ms                   0.65%       2.03%    -1.37%
+    t3_DS_ms                   0.86%       1.41%    -0.55%
+    t2_SS_ms                   0.60%       1.35%    -0.75%
+    tQ_SS_mu                   1.20%       0.69%    +0.51%
+
+  ── max_rank = Q  (n=150,150) ──
+    class                    v44_pct  oracle_pct     delta
+    tQ_DS_mu                  18.10%      14.59%    +3.51%
+    tQ_SS_ms                  13.09%      11.19%    +1.90%
+    tQ_DS_ms                  11.62%      11.12%    +0.49%
+    tQ_SS_mu                  12.06%       4.24%    +7.82%
+    t2_DS_mu                   3.89%       4.76%    -0.87%
+    t2_DS_ms                   3.74%       4.59%    -0.85%
+    tQ_31_ms                   4.11%       4.20%    -0.09%
+    tQ_31_mu                   3.79%       2.56%    +1.23%
+    t2_SS_ms                   2.99%       3.34%    -0.34%
+    tJ_DS_ms                   2.29%       3.72%    -1.43%
+    t3_DS_ms                   1.97%       2.93%    -0.96%
+    tJ_DS_mu                   1.87%       2.61%    -0.74%
+    tJ_SS_ms                   1.81%       2.32%    -0.51%
+    t2_SS_mu                   2.89%       0.92%    +1.97%
+    t3_DS_mu                   0.76%       2.32%    -1.56%
+
+  ── max_rank = J  (n=60,060) ──
+    class                    v44_pct  oracle_pct     delta
+    t2_DS_mu                   9.03%       8.34%    +0.69%
+    tJ_DS_ms                   8.57%       7.90%    +0.67%
+    tJ_DS_mu                   8.91%       7.37%    +1.54%
+    t2_SS_ms                   7.22%       6.23%    +0.99%
+    t2_DS_ms                   6.01%       6.81%    -0.80%
+    tJ_SS_ms                   6.84%       5.89%    +0.95%
+    t2_SS_mu                   7.24%       1.94%    +5.30%
+    t3_DS_ms                   3.31%       4.63%    -1.32%
+    t3_DS_mu                   2.21%       4.25%    -2.03%
+    tJ_SS_mu                   4.16%       1.57%    +2.59%
+    tT_DS_ms                   2.19%       2.94%    -0.75%
+    t4_DS_ms                   2.02%       3.05%    -1.03%
+    tJ_31_ms                   2.48%       2.50%    -0.02%
+    t2_31_ms                   2.68%       2.27%    +0.41%
+    t3_SS_ms                   2.07%       2.87%    -0.80%
+
+  ── max_rank = T  (n=20,020) ──
+    class                    v44_pct  oracle_pct     delta
+    t2_DS_mu                  11.42%      10.70%    +0.72%
+    t2_SS_ms                   9.40%       7.87%    +1.53%
+    t2_DS_ms                   7.08%       8.06%    -0.98%
+    t2_SS_mu                  10.84%       2.80%    +8.04%
+    tT_DS_ms                   5.57%       5.26%    +0.31%
+    t3_DS_ms                   4.08%       5.93%    -1.86%
+    t3_DS_mu                   3.70%       5.95%    -2.25%
+    t3_SS_ms                   3.32%       3.83%    -0.51%
+    t2_31_ms                   3.75%       2.82%    +0.93%
+    tT_DS_mu                   3.23%       3.26%    -0.03%
+    tT_SS_ms                   3.00%       3.24%    -0.24%
+    t4_DS_ms                   2.43%       3.59%    -1.16%
+    t2_31_mu                   3.23%       1.89%    +1.34%
+    t9_DS_ms                   2.35%       2.65%    -0.30%
+    t8_DS_ms                   1.87%       2.26%    -0.39%
+
+  ── max_rank = 9  (n=5,005) ──
+    class                    v44_pct  oracle_pct     delta
+    t2_DS_mu                  12.63%      13.35%    -0.72%
+    t2_SS_ms                  10.07%       9.63%    +0.44%
+    t2_SS_mu                  13.87%       3.56%   +10.31%
+    t2_DS_ms                   7.53%       9.49%    -1.96%
+    t3_DS_ms                   4.96%       6.77%    -1.82%
+    t3_DS_mu                   4.14%       7.51%    -3.38%
+    t2_31_ms                   4.66%       3.44%    +1.22%
+    t4_DS_ms                   3.34%       4.00%    -0.66%
+    t3_SS_ms                   3.04%       4.16%    -1.12%
+    t9_DS_ms                   3.52%       3.28%    +0.24%
+    t2_31_mu                   4.62%       1.68%    +2.94%
+    t6_DS_ms                   1.94%       2.66%    -0.72%
+    t4_DS_mu                   1.18%       3.20%    -2.02%
+    t8_DS_ms                   2.12%       2.22%    -0.10%
+    t5_DS_ms                   1.78%       2.36%    -0.58%
+
+  ── max_rank = 8  (n=715) ──
+    class                    v44_pct  oracle_pct     delta
+    t2_DS_mu                  16.36%      17.20%    -0.84%
+    t2_DS_ms                   8.53%      10.91%    -2.38%
+    t2_SS_mu                  15.80%       2.66%   +13.15%
+    t2_SS_ms                   9.23%       8.53%    +0.70%
+    t3_DS_ms                   6.43%       9.65%    -3.22%
+    t3_DS_mu                   5.73%       9.51%    -3.78%
+    t3_SS_ms                   4.48%       4.62%    -0.14%
+    t4_DS_ms                   3.50%       5.17%    -1.68%
+    t2_31_ms                   3.50%       3.64%    -0.14%
+    t4_DS_mu                   1.40%       3.92%    -2.52%
+    t6_DS_ms                   1.96%       2.66%    -0.70%
+    t3_SS_mu                   2.94%       1.68%    +1.26%
+    t2_31_mu                   3.50%       1.12%    +2.38%
+    t5_DS_ms                   2.24%       2.10%    +0.14%
+    t3_31_ms                   2.52%       1.68%    +0.84%
+
+====================================================================================================
+HO12: STRUCTURAL CELL CROSS-TABULATION (per max_rank x cell)
+====================================================================================================
+  max cell             n_hands  pct_of_max   wg_contrib   mean_reg
+    A JOINT_HIGH        88,200       13.4% $    +14.95 $ +1018.6
+    A JOINT_MED          8,715        1.3% $     +1.20 $  +829.1
+    A JOINT_LOW            105        0.0% $     +0.01 $  +806.7
+    A DS_NO_JOINT      415,800       62.9% $   +124.81 $ +1803.7
+    A DS_NO_MAXTOP      88,704       13.4% $    +23.47 $ +1589.9
+    A MS_ONLY           59,136        9.0% $    +18.07 $ +1835.8
+    K JOINT_HIGH        39,690       12.0% $     +7.06 $ +1069.2
+    K JOINT_MED          8,715        2.6% $     +1.29 $  +887.8
+    K JOINT_LOW            105        0.0% $     +0.02 $ +1177.6
+    K DS_NO_JOINT      207,900       62.9% $    +76.99 $ +2225.4
+    K DS_NO_MAXTOP      44,352       13.4% $    +15.52 $ +2103.2
+    K MS_ONLY           29,568        9.0% $    +10.06 $ +2043.6
+    Q JOINT_HIGH        13,230        8.8% $     +2.38 $ +1081.3
+    Q JOINT_MED          8,715        5.8% $     +1.39 $  +958.8
+    Q JOINT_LOW            105        0.1% $     +0.02 $  +980.0
+    Q DS_NO_JOINT       94,500       62.9% $    +38.80 $ +2467.1
+    Q DS_NO_MAXTOP      20,160       13.4% $     +7.74 $ +2306.1
+    Q MS_ONLY           13,440        9.0% $     +4.91 $ +2197.3
+    J JOINT_MED          8,715       14.5% $     +1.66 $ +1143.2
+    J JOINT_LOW            105        0.2% $     +0.02 $ +1221.0
+    J DS_NO_JOINT       37,800       62.9% $    +16.29 $ +2589.1
+    J DS_NO_MAXTOP       8,064       13.4% $     +3.28 $ +2444.7
+    J MS_ONLY            5,376        9.0% $     +2.18 $ +2435.3
+    T JOINT_MED          2,835       14.2% $     +0.55 $ +1164.0
+    T JOINT_LOW            105        0.5% $     +0.02 $ +1234.3
+    T DS_NO_JOINT       12,600       62.9% $     +4.99 $ +2379.7
+    T DS_NO_MAXTOP       2,688       13.4% $     +1.10 $ +2454.9
+    T MS_ONLY            1,792        9.0% $     +0.61 $ +2035.0
+    9 JOINT_MED            630       12.6% $     +0.11 $ +1022.2
+    9 JOINT_LOW            105        2.1% $     +0.02 $ +1244.8
+    9 DS_NO_JOINT        3,150       62.9% $     +1.22 $ +2330.9
+    9 DS_NO_MAXTOP         672       13.4% $     +0.27 $ +2404.2
+    9 MS_ONLY              448        9.0% $     +0.12 $ +1587.7
+    8 JOINT_LOW            105       14.7% $     +0.02 $ +1148.1
+    8 DS_NO_JOINT          450       62.9% $     +0.20 $ +2618.3
+    8 DS_NO_MAXTOP          96       13.4% $     +0.04 $ +2614.1
+    8 MS_ONLY               64        9.0% $     +0.02 $ +1900.0
+
+====================================================================================================
+HO13: ORACLE'S PICK PROFILE PER (max_rank x cell)
+====================================================================================================
+
+  ── max_rank=A  cell=JOINT_HIGH  n=88,200  pct_opt=66.6%  mean_reg=$+1018.6 ──
+    oracle TOP:        A:99%, K:1%, Q:0%, J:0%, 2:0%
+    oracle BOT_suit:   DS:95%, 4f:3%, 31:1%, SS:1%
+    oracle BOT_run:    r1:20%, r2:60%, r3:17%, r4:3%  bot_sum_avg=28.6
+    oracle MID_suited: 98.2%  mid_sum_avg=17.3
+    oracle MID_high:   K:28%, Q:22%, J:18%, T:10%, 9:9%
+    v44    TOP:        A:100%, K:0%, Q:0%, 2:0%, J:0%
+    v44    BOT_suit:   DS:91%, SS:6%, 4f:2%, 31:1%
+    v44    BOT_run:    r1:19%, r2:61%, r3:17%, r4:3%  bot_sum_avg=27.7
+    v44    MID_suited: 93.4%  mid_sum_avg=18.3
+    v44    MID_high:   K:32%, Q:23%, J:19%, T:10%, 9:7%
+    top mismatch within cell:
+      tA_SS_mu               -> tA_DS_ms               n= 4,640 mean=$+7482.2 wg=$ +5.78
+      tA_DS_ms               -> tA_4f_ms               n=   787 mean=$+2128.0 wg=$ +0.28
+      tA_31_mu               -> tA_DS_ms               n=   330 mean=$+3912.0 wg=$ +0.21
+
+  ── max_rank=A  cell=JOINT_MED  n=8,715  pct_opt=73.3%  mean_reg=$+829.1 ──
+    oracle TOP:        A:100%, 2:0%, 3:0%, T:0%, 8:0%
+    oracle BOT_suit:   DS:95%, 4f:3%, 31:1%, SS:1%
+    oracle BOT_run:    r1:8%, r2:55%, r3:27%, r4:10%  bot_sum_avg=22.4
+    oracle MID_suited: 98.0%  mid_sum_avg=13.7
+    oracle MID_high:   T:41%, 9:25%, 8:14%, 7:7%, 5:4%
+    v44    TOP:        A:100%, 2:0%, 3:0%
+    v44    BOT_suit:   DS:90%, SS:5%, 4f:3%, 31:1%
+    v44    BOT_run:    r1:7%, r2:55%, r3:27%, r4:10%  bot_sum_avg=21.6
+    v44    MID_suited: 93.3%  mid_sum_avg=14.5
+    v44    MID_high:   T:46%, 9:26%, 8:14%, 7:5%, 5:3%
+    top mismatch within cell:
+      tA_SS_mu               -> tA_DS_ms               n=   417 mean=$+6715.8 wg=$ +0.47
+      tA_31_mu               -> tA_DS_ms               n=    39 mean=$+3601.3 wg=$ +0.02
+      tA_DS_ms               -> tA_4f_ms               n=    37 mean=$+1837.8 wg=$ +0.01
+
+  ── max_rank=A  cell=JOINT_LOW  n=105  pct_opt=73.3%  mean_reg=$+806.7 ──
+    oracle TOP:        A:99%, 3:1%
+    oracle BOT_suit:   DS:99%, 4f:1%
+    oracle BOT_run:    r2:26%, r3:45%, r4:30%  bot_sum_avg=17.9
+    oracle MID_suited: 100.0%  mid_sum_avg=9.2
+    oracle MID_high:   7:44%, 4:18%, 6:15%, 5:12%, 3:10%
+    v44    TOP:        A:99%, 3:1%
+    v44    BOT_suit:   DS:96%, SS:4%
+    v44    BOT_run:    r2:27%, r3:40%, r4:33%  bot_sum_avg=17.0
+    v44    MID_suited: 96.2%  mid_sum_avg=10.1
+    v44    MID_high:   7:54%, 6:20%, 3:10%, 5:8%, 4:8%
+    top mismatch within cell:
+      tA_SS_mu               -> tA_DS_ms               n=     4 mean=$+10650.0 wg=$ +0.01
+      tA_DS_ms               -> tA_4f_ms               n=     1 mean=$+4300.0 wg=$ +0.00
+
+  ── max_rank=A  cell=DS_NO_JOINT  n=415,800  pct_opt=41.7%  mean_reg=$+1803.7 ──
+    oracle TOP:        A:94%, K:4%, Q:1%, J:0%, 2:0%
+    oracle BOT_suit:   DS:52%, SS:38%, 31:10%, RB:0%, 4f:0%
+    oracle BOT_run:    r1:18%, r2:59%, r3:19%, r4:4%  bot_sum_avg=27.9
+    oracle MID_suited: 41.4%  mid_sum_avg=17.3
+    oracle MID_high:   K:24%, Q:19%, J:17%, T:13%, 9:10%
+    v44    TOP:        A:99%, K:1%, 2:0%, Q:0%, 3:0%
+    v44    BOT_suit:   DS:47%, SS:45%, 31:7%, RB:1%, 4f:0%
+    v44    BOT_run:    r1:13%, r2:58%, r3:23%, r4:6%  bot_sum_avg=27.3
+    v44    MID_suited: 29.4%  mid_sum_avg=17.7
+    v44    MID_high:   K:29%, Q:21%, J:18%, T:13%, 9:10%
+    top mismatch within cell:
+      tA_SS_mu               -> tA_DS_mu               n=26,731 mean=$+4258.5 wg=$+18.94
+      tA_SS_mu               -> tA_SS_ms               n=27,441 mean=$+4068.3 wg=$+18.58
+      tA_DS_mu               -> tA_SS_ms               n=28,389 mean=$+2416.5 wg=$+11.42
+
+  ── max_rank=A  cell=DS_NO_MAXTOP  n=88,704  pct_opt=40.0%  mean_reg=$+1589.9 ──
+    oracle TOP:        A:81%, K:12%, Q:4%, J:1%, 2:1%
+    oracle BOT_suit:   SS:52%, 31:30%, DS:10%, RB:4%, 4f:4%
+    oracle BOT_run:    r1:17%, r2:58%, r3:21%, r4:5%  bot_sum_avg=27.9
+    oracle MID_suited: 33.5%  mid_sum_avg=17.5
+    oracle MID_high:   K:22%, Q:20%, J:18%, T:14%, 9:11%
+    v44    TOP:        A:89%, K:9%, Q:1%, J:0%, 2:0%
+    v44    BOT_suit:   SS:54%, 31:30%, DS:7%, RB:6%, 4f:3%
+    v44    BOT_run:    r1:10%, r2:59%, r3:23%, r4:7%  bot_sum_avg=27.3
+    v44    MID_suited: 32.5%  mid_sum_avg=17.9
+    v44    MID_high:   K:27%, Q:21%, J:18%, T:14%, 9:11%
+    top mismatch within cell:
+      tA_SS_mu               -> tA_31_mu               n= 5,046 mean=$+2543.0 wg=$ +2.14
+      tA_31_mu               -> tA_SS_mu               n= 4,187 mean=$+2297.6 wg=$ +1.60
+      tA_RB_ms               -> tA_SS_mu               n= 2,161 mean=$+3073.3 wg=$ +1.11
+
+  ── max_rank=A  cell=MS_ONLY  n=59,136  pct_opt=33.7%  mean_reg=$+1835.8 ──
+    oracle TOP:        A:98%, K:2%, Q:0%, 2:0%, J:0%
+    oracle BOT_suit:   SS:43%, 31:41%, 4f:13%, RB:3%
+    oracle BOT_run:    r1:15%, r2:59%, r3:21%, r4:6%  bot_sum_avg=27.6
+    oracle MID_suited: 45.1%  mid_sum_avg=17.5
+    oracle MID_high:   K:28%, Q:20%, J:17%, T:13%, 9:10%
+    v44    TOP:        A:100%, K:0%, Q:0%, 2:0%
+    v44    BOT_suit:   31:45%, SS:39%, 4f:12%, RB:3%
+    v44    BOT_run:    r1:7%, r2:62%, r3:23%, r4:8%  bot_sum_avg=27.0
+    v44    MID_suited: 41.6%  mid_sum_avg=18.0
+    v44    MID_high:   K:35%, Q:20%, J:15%, T:13%, 9:10%
+    top mismatch within cell:
+      tA_31_mu               -> tA_SS_ms               n= 4,774 mean=$+3110.8 wg=$ +2.47
+      tA_SS_ms               -> tA_31_mu               n= 3,175 mean=$+2742.4 wg=$ +1.45
+      tA_31_mu               -> tA_SS_mu               n= 2,360 mean=$+2583.8 wg=$ +1.01
+
+  ── max_rank=K  cell=JOINT_HIGH  n=39,690  pct_opt=64.4%  mean_reg=$+1069.2 ──
+    oracle TOP:        K:90%, Q:5%, 2:2%, J:1%, 3:1%
+    oracle BOT_suit:   DS:95%, 4f:3%, 31:1%, SS:1%
+    oracle BOT_run:    r1:18%, r2:60%, r3:19%, r4:4%  bot_sum_avg=27.1
+    oracle MID_suited: 96.5%  mid_sum_avg=16.6
+    oracle MID_high:   Q:29%, J:27%, T:13%, 9:10%, 8:7%
+    v44    TOP:        K:95%, Q:3%, 2:1%, J:1%, 3:0%
+    v44    BOT_suit:   DS:91%, SS:6%, 4f:2%, 31:1%
+    v44    BOT_run:    r1:16%, r2:61%, r3:19%, r4:4%  bot_sum_avg=26.2
+    v44    MID_suited: 92.9%  mid_sum_avg=17.4
+    v44    MID_high:   Q:34%, J:29%, T:13%, 9:10%, 8:5%
+    top mismatch within cell:
+      tK_SS_mu               -> tK_DS_ms               n= 1,689 mean=$+7684.9 wg=$ +2.16
+      tK_DS_ms               -> tQ_DS_ms               n=   656 mean=$+1667.5 wg=$ +0.18
+      tK_SS_mu               -> tQ_DS_ms               n=    92 mean=$+8360.9 wg=$ +0.13
+
+  ── max_rank=K  cell=JOINT_MED  n=8,715  pct_opt=71.1%  mean_reg=$+887.8 ──
+    oracle TOP:        K:90%, 2:5%, 3:2%, T:1%, 4:1%
+    oracle BOT_suit:   DS:94%, 4f:3%, 31:2%, SS:1%
+    oracle BOT_run:    r1:8%, r2:54%, r3:28%, r4:10%  bot_sum_avg=22.7
+    oracle MID_suited: 95.3%  mid_sum_avg=14.4
+    oracle MID_high:   T:38%, 9:25%, 8:13%, K:7%, 7:6%
+    v44    TOP:        K:94%, 2:4%, 3:1%, T:0%, 4:0%
+    v44    BOT_suit:   DS:90%, SS:5%, 4f:3%, 31:2%
+    v44    BOT_run:    r1:8%, r2:54%, r3:28%, r4:10%  bot_sum_avg=21.7
+    v44    MID_suited: 92.4%  mid_sum_avg=15.0
+    v44    MID_high:   T:44%, 9:26%, 8:14%, 7:5%, K:5%
+    top mismatch within cell:
+      tK_SS_mu               -> tK_DS_ms               n=   318 mean=$+7184.6 wg=$ +0.38
+      tK_DS_ms               -> t2_DS_ms               n=    99 mean=$+1899.0 wg=$ +0.03
+      tK_SS_mu               -> t2_DS_ms               n=    15 mean=$+7136.7 wg=$ +0.02
+
+  ── max_rank=K  cell=JOINT_LOW  n=105  pct_opt=71.4%  mean_reg=$+1177.6 ──
+    oracle TOP:        K:69%, 2:17%, 3:11%, 4:2%, 7:1%
+    oracle BOT_suit:   DS:95%, 4f:2%, SS:2%, 31:1%
+    oracle BOT_run:    r2:22%, r3:40%, r4:38%  bot_sum_avg=18.2
+    oracle MID_suited: 89.5%  mid_sum_avg=12.1
+    oracle MID_high:   7:42%, K:30%, 5:10%, 3:7%, 6:7%
+    v44    TOP:        K:70%, 3:13%, 2:12%, 4:3%, 7:1%
+    v44    BOT_suit:   DS:90%, SS:8%, 4f:2%
+    v44    BOT_run:    r2:19%, r3:43%, r4:38%  bot_sum_avg=17.4
+    v44    MID_suited: 84.8%  mid_sum_avg=12.6
+    v44    MID_high:   7:46%, K:29%, 6:10%, 3:7%, 5:6%
+    top mismatch within cell:
+      tK_SS_mu               -> tK_DS_ms               n=     3 mean=$+9933.3 wg=$ +0.00
+      tK_DS_ms               -> t2_DS_ms               n=     3 mean=$+3416.7 wg=$ +0.00
+      t3_SS_ms               -> tK_DS_ms               n=     1 mean=$+8200.0 wg=$ +0.00
+
+  ── max_rank=K  cell=DS_NO_JOINT  n=207,900  pct_opt=34.8%  mean_reg=$+2225.4 ──
+    oracle TOP:        K:66%, Q:12%, 2:7%, J:5%, 3:3%
+    oracle BOT_suit:   DS:58%, SS:32%, 31:9%, 4f:0%, RB:0%
+    oracle BOT_run:    r1:16%, r2:58%, r3:21%, r4:5%  bot_sum_avg=26.9
+    oracle MID_suited: 51.1%  mid_sum_avg=16.8
+    oracle MID_high:   J:20%, Q:19%, K:18%, T:17%, 9:13%
+    v44    TOP:        K:85%, Q:7%, 2:4%, 3:1%, J:1%
+    v44    BOT_suit:   DS:48%, SS:44%, 31:7%, RB:1%, 4f:0%
+    v44    BOT_run:    r1:11%, r2:56%, r3:25%, r4:8%  bot_sum_avg=25.5
+    v44    MID_suited: 36.5%  mid_sum_avg=17.2
+    v44    MID_high:   J:24%, Q:24%, T:19%, 9:14%, K:9%
+    top mismatch within cell:
+      tK_SS_mu               -> tK_SS_ms               n= 8,640 mean=$+4334.7 wg=$ +6.23
+      tK_SS_mu               -> tK_DS_mu               n= 7,412 mean=$+4460.7 wg=$ +5.50
+      tK_SS_ms               -> tK_DS_mu               n= 7,645 mean=$+2936.0 wg=$ +3.74
+
+  ── max_rank=K  cell=DS_NO_MAXTOP  n=44,352  pct_opt=34.2%  mean_reg=$+2103.2 ──
+    oracle TOP:        K:34%, Q:24%, 2:13%, J:10%, 3:6%
+    oracle BOT_suit:   SS:42%, DS:34%, 31:19%, 4f:3%, RB:2%
+    oracle BOT_run:    r1:18%, r2:57%, r3:21%, r4:4%  bot_sum_avg=28.3
+    oracle MID_suited: 48.7%  mid_sum_avg=16.9
+    oracle MID_high:   J:20%, T:19%, 9:16%, K:16%, Q:13%
+    v44    TOP:        K:44%, Q:29%, 2:11%, J:8%, 3:3%
+    v44    BOT_suit:   SS:46%, DS:30%, 31:19%, RB:3%, 4f:2%
+    v44    BOT_run:    r1:13%, r2:55%, r3:26%, r4:7%  bot_sum_avg=26.9
+    v44    MID_suited: 41.5%  mid_sum_avg=17.3
+    v44    MID_high:   J:27%, T:22%, 9:18%, Q:13%, K:9%
+    top mismatch within cell:
+      tK_SS_mu               -> tQ_SS_ms               n=   564 mean=$+4087.1 wg=$ +0.38
+      tK_SS_mu               -> t2_DS_mu               n=   468 mean=$+4006.0 wg=$ +0.31
+      tK_SS_mu               -> tK_31_mu               n=   650 mean=$+2739.3 wg=$ +0.30
+
+  ── max_rank=K  cell=MS_ONLY  n=29,568  pct_opt=30.9%  mean_reg=$+2043.6 ──
+    oracle TOP:        K:78%, Q:10%, 2:5%, J:3%, 3:2%
+    oracle BOT_suit:   SS:43%, 31:41%, 4f:13%, RB:2%
+    oracle BOT_run:    r1:13%, r2:57%, r3:23%, r4:7%  bot_sum_avg=26.1
+    oracle MID_suited: 49.7%  mid_sum_avg=17.0
+    oracle MID_high:   Q:22%, J:22%, T:17%, 9:13%, K:13%
+    v44    TOP:        K:97%, Q:2%, 2:1%, J:0%, 3:0%
+    v44    BOT_suit:   31:43%, SS:41%, 4f:12%, RB:3%
+    v44    BOT_run:    r1:5%, r2:57%, r3:26%, r4:12%  bot_sum_avg=24.3
+    v44    MID_suited: 44.5%  mid_sum_avg=17.8
+    v44    MID_high:   Q:31%, J:26%, T:20%, 9:14%, 8:6%
+    top mismatch within cell:
+      tK_31_mu               -> tK_SS_ms               n= 1,671 mean=$+3289.2 wg=$ +0.91
+      tK_SS_ms               -> tK_31_mu               n= 1,378 mean=$+2920.8 wg=$ +0.67
+      tK_SS_mu               -> tK_31_mu               n=   662 mean=$+3043.9 wg=$ +0.34
+
+  ── max_rank=Q  cell=JOINT_HIGH  n=13,230  pct_opt=63.4%  mean_reg=$+1081.3 ──
+    oracle TOP:        Q:80%, J:7%, 2:6%, 3:3%, 4:1%
+    oracle BOT_suit:   DS:94%, 4f:3%, 31:2%, SS:2%
+    oracle BOT_run:    r1:14%, r2:61%, r3:20%, r4:5%  bot_sum_avg=26.3
+    oracle MID_suited: 95.0%  mid_sum_avg=15.9
+    oracle MID_high:   J:45%, T:15%, 9:13%, 8:8%, Q:8%
+    v44    TOP:        Q:87%, 2:5%, J:4%, 3:1%, 4:0%
+    v44    BOT_suit:   DS:91%, SS:5%, 4f:2%, 31:2%
+    v44    BOT_run:    r1:13%, r2:62%, r3:21%, r4:5%  bot_sum_avg=25.1
+    v44    MID_suited: 92.7%  mid_sum_avg=16.7
+    v44    MID_high:   J:53%, T:14%, 9:12%, 8:7%, Q:6%
+    top mismatch within cell:
+      tQ_SS_mu               -> tQ_DS_ms               n=   395 mean=$+7944.2 wg=$ +0.52
+      tQ_DS_ms               -> tJ_DS_ms               n=   296 mean=$+1784.0 wg=$ +0.09
+      tQ_DS_ms               -> t2_DS_ms               n=   189 mean=$+2422.8 wg=$ +0.08
+
+  ── max_rank=Q  cell=JOINT_MED  n=8,715  pct_opt=68.6%  mean_reg=$+958.8 ──
+    oracle TOP:        Q:78%, 2:10%, 3:5%, T:2%, 4:2%
+    oracle BOT_suit:   DS:92%, 4f:3%, 31:3%, SS:2%
+    oracle BOT_run:    r1:10%, r2:54%, r3:27%, r4:9%  bot_sum_avg=23.3
+    oracle MID_suited: 93.6%  mid_sum_avg=14.6
+    oracle MID_high:   T:36%, 9:24%, 8:13%, Q:11%, 7:5%
+    v44    TOP:        Q:83%, 2:9%, 3:3%, T:1%, 4:1%
+    v44    BOT_suit:   DS:89%, SS:6%, 4f:3%, 31:2%
+    v44    BOT_run:    r1:8%, r2:55%, r3:28%, r4:10%  bot_sum_avg=22.2
+    v44    MID_suited: 91.5%  mid_sum_avg=15.3
+    v44    MID_high:   T:42%, 9:25%, 8:13%, Q:10%, 7:4%
+    top mismatch within cell:
+      tQ_SS_mu               -> tQ_DS_ms               n=   218 mean=$+7467.7 wg=$ +0.27
+      tQ_DS_ms               -> t2_DS_ms               n=   159 mean=$+2764.2 wg=$ +0.07
+      t2_SS_ms               -> tQ_DS_ms               n=    62 mean=$+5846.0 wg=$ +0.06
+
+  ── max_rank=Q  cell=JOINT_LOW  n=105  pct_opt=70.5%  mean_reg=$+980.0 ──
+    oracle TOP:        Q:57%, 2:25%, 3:10%, 7:4%, 4:4%
+    oracle BOT_suit:   DS:94%, SS:3%, 4f:2%, 31:1%
+    oracle BOT_run:    r2:31%, r3:39%, r4:30%  bot_sum_avg=18.7
+    oracle MID_suited: 85.7%  mid_sum_avg=12.2
+    oracle MID_high:   7:37%, Q:35%, 6:10%, 5:9%, 3:5%
+    v44    TOP:        Q:55%, 2:31%, 3:9%, 7:4%, 4:1%
+    v44    BOT_suit:   DS:83%, SS:14%, 4f:2%, 31:1%
+    v44    BOT_run:    r2:29%, r3:37%, r4:34%  bot_sum_avg=18.1
+    v44    MID_suited: 85.7%  mid_sum_avg=13.1
+    v44    MID_high:   Q:40%, 7:40%, 6:7%, 5:6%, 3:5%
+    top mismatch within cell:
+      t2_SS_ms               -> tQ_DS_ms               n=     6 mean=$+4141.7 wg=$ +0.00
+      t2_SS_ms               -> t3_DS_ms               n=     2 mean=$+6000.0 wg=$ +0.00
+      tQ_SS_mu               -> tQ_DS_ms               n=     1 mean=$+8650.0 wg=$ +0.00
+
+  ── max_rank=Q  cell=DS_NO_JOINT  n=94,500  pct_opt=32.0%  mean_reg=$+2467.1 ──
+    oracle TOP:        Q:48%, 2:15%, J:10%, 3:8%, T:4%
+    oracle BOT_suit:   DS:62%, SS:29%, 31:9%, 4f:0%, RB:0%
+    oracle BOT_run:    r1:14%, r2:57%, r3:22%, r4:7%  bot_sum_avg=26.1
+    oracle MID_suited: 56.4%  mid_sum_avg=16.1
+    oracle MID_high:   Q:24%, J:21%, T:19%, 9:16%, 8:10%
+    v44    TOP:        Q:66%, 2:15%, J:7%, 3:4%, 4:2%
+    v44    BOT_suit:   DS:50%, SS:42%, 31:8%, RB:0%, 4f:0%
+    v44    BOT_run:    r1:8%, r2:54%, r3:28%, r4:11%  bot_sum_avg=24.4
+    v44    MID_suited: 44.1%  mid_sum_avg=17.0
+    v44    MID_high:   J:29%, T:23%, Q:20%, 9:17%, 8:8%
+    top mismatch within cell:
+      tQ_SS_mu               -> tQ_SS_ms               n= 2,370 mean=$+4404.7 wg=$ +1.74
+      tQ_SS_mu               -> tQ_DS_mu               n= 2,035 mean=$+4432.0 wg=$ +1.50
+      tQ_SS_ms               -> tQ_DS_mu               n= 2,290 mean=$+3047.5 wg=$ +1.16
+
+  ── max_rank=Q  cell=DS_NO_MAXTOP  n=20,160  pct_opt=32.4%  mean_reg=$+2306.1 ──
+    oracle TOP:        2:25%, Q:18%, J:18%, 3:13%, T:7%
+    oracle BOT_suit:   DS:45%, SS:37%, 31:15%, 4f:2%, RB:1%
+    oracle BOT_run:    r1:17%, r2:57%, r3:21%, r4:5%  bot_sum_avg=28.0
+    oracle MID_suited: 53.2%  mid_sum_avg=16.0
+    oracle MID_high:   T:20%, 9:19%, J:19%, Q:17%, 8:13%
+    v44    TOP:        2:34%, Q:22%, J:21%, 3:8%, T:6%
+    v44    BOT_suit:   DS:41%, SS:41%, 31:14%, RB:2%, 4f:2%
+    v44    BOT_run:    r1:13%, r2:54%, r3:26%, r4:8%  bot_sum_avg=27.2
+    v44    MID_suited: 44.7%  mid_sum_avg=16.8
+    v44    MID_high:   T:25%, 9:23%, J:21%, Q:12%, 8:12%
+    top mismatch within cell:
+      t2_SS_mu               -> t2_SS_ms               n=   292 mean=$+4808.9 wg=$ +0.23
+      t2_SS_mu               -> tQ_SS_mu               n=   179 mean=$+4434.1 wg=$ +0.13
+      t2_SS_mu               -> t2_DS_mu               n=   163 mean=$+4770.2 wg=$ +0.13
+
+  ── max_rank=Q  cell=MS_ONLY  n=13,440  pct_opt=29.2%  mean_reg=$+2197.3 ──
+    oracle TOP:        Q:59%, 2:17%, J:9%, 3:6%, 4:2%
+    oracle BOT_suit:   SS:43%, 31:41%, 4f:14%, RB:2%
+    oracle BOT_run:    r1:10%, r2:55%, r3:25%, r4:10%  bot_sum_avg=25.4
+    oracle MID_suited: 51.6%  mid_sum_avg=16.4
+    oracle MID_high:   J:26%, T:21%, Q:19%, 9:17%, 8:10%
+    v44    TOP:        Q:87%, 2:9%, J:2%, 3:2%, 4:0%
+    v44    BOT_suit:   31:42%, SS:42%, 4f:12%, RB:4%
+    v44    BOT_run:    r1:4%, r2:52%, r3:30%, r4:14%  bot_sum_avg=22.2
+    v44    MID_suited: 44.6%  mid_sum_avg=17.9
+    v44    MID_high:   J:44%, T:27%, 9:17%, Q:6%, 8:5%
+    top mismatch within cell:
+      tQ_31_mu               -> tQ_SS_ms               n=   523 mean=$+3017.3 wg=$ +0.26
+      tQ_SS_ms               -> tQ_31_mu               n=   367 mean=$+2880.0 wg=$ +0.18
+      tQ_SS_mu               -> tQ_31_mu               n=   225 mean=$+3082.4 wg=$ +0.12
+
+  ── max_rank=J  cell=JOINT_MED  n=8,715  pct_opt=61.8%  mean_reg=$+1143.2 ──
+    oracle TOP:        J:56%, 2:20%, 3:9%, 4:4%, T:3%
+    oracle BOT_suit:   DS:90%, 31:4%, SS:4%, 4f:3%
+    oracle BOT_run:    r1:8%, r2:57%, r3:26%, r4:9%  bot_sum_avg=24.4
+    oracle MID_suited: 88.6%  mid_sum_avg=14.8
+    oracle MID_high:   T:27%, J:23%, 9:20%, 8:13%, 7:6%
+    v44    TOP:        J:62%, 2:21%, 3:6%, 4:3%, T:2%
+    v44    BOT_suit:   DS:85%, SS:8%, 31:4%, 4f:2%
+    v44    BOT_run:    r1:7%, r2:57%, r3:27%, r4:9%  bot_sum_avg=23.3
+    v44    MID_suited: 88.3%  mid_sum_avg=15.7
+    v44    MID_high:   T:33%, J:22%, 9:21%, 8:12%, 7:4%
+    top mismatch within cell:
+      tJ_SS_mu               -> tJ_DS_ms               n=    85 mean=$+7137.6 wg=$ +0.10
+      t2_SS_ms               -> tJ_DS_ms               n=   107 mean=$+4957.5 wg=$ +0.09
+      tJ_DS_ms               -> t2_DS_ms               n=   177 mean=$+2845.8 wg=$ +0.08
+
+  ── max_rank=J  cell=JOINT_LOW  n=105  pct_opt=64.8%  mean_reg=$+1221.0 ──
+    oracle TOP:        J:37%, 2:30%, 3:18%, 4:8%, 5:4%
+    oracle BOT_suit:   DS:89%, SS:6%, 31:3%, 4f:3%
+    oracle BOT_run:    r1:1%, r2:25%, r3:49%, r4:26%  bot_sum_avg=19.6
+    oracle MID_suited: 75.2%  mid_sum_avg=12.5
+    oracle MID_high:   J:50%, 7:26%, 4:12%, 6:10%, 5:3%
+    v44    TOP:        2:40%, J:30%, 3:17%, 4:9%, 5:3%
+    v44    BOT_suit:   DS:74%, SS:19%, 31:5%, 4f:2%
+    v44    BOT_run:    r1:1%, r2:18%, r3:51%, r4:30%  bot_sum_avg=19.2
+    v44    MID_suited: 64.8%  mid_sum_avg=13.6
+    v44    MID_high:   J:59%, 7:36%, 4:2%, 6:2%, 5:1%
+    top mismatch within cell:
+      t2_SS_mu               -> tJ_DS_ms               n=     3 mean=$+6650.0 wg=$ +0.00
+      tJ_SS_mu               -> t2_SS_ms               n=     1 mean=$+8400.0 wg=$ +0.00
+      t2_SS_ms               -> tJ_DS_ms               n=     2 mean=$+4150.0 wg=$ +0.00
+
+  ── max_rank=J  cell=DS_NO_JOINT  n=37,800  pct_opt=30.7%  mean_reg=$+2589.1 ──
+    oracle TOP:        2:27%, J:24%, 3:14%, 4:8%, T:7%
+    oracle BOT_suit:   DS:65%, SS:26%, 31:8%, 4f:0%, RB:0%
+    oracle BOT_run:    r1:9%, r2:57%, r3:25%, r4:9%  bot_sum_avg=25.5
+    oracle MID_suited: 60.8%  mid_sum_avg=15.4
+    oracle MID_high:   J:37%, T:18%, 9:17%, 8:12%, 7:6%
+    v44    TOP:        2:36%, J:31%, 3:11%, T:5%, 9:4%
+    v44    BOT_suit:   DS:53%, SS:38%, 31:9%, RB:1%, 4f:0%
+    v44    BOT_run:    r1:5%, r2:52%, r3:29%, r4:14%  bot_sum_avg=24.0
+    v44    MID_suited: 53.3%  mid_sum_avg=16.9
+    v44    MID_high:   J:45%, T:21%, 9:18%, 8:9%, 7:3%
+    top mismatch within cell:
+      t2_SS_mu               -> t2_DS_ms               n=   354 mean=$+7518.5 wg=$ +0.44
+      t2_SS_mu               -> t2_SS_ms               n=   317 mean=$+4882.3 wg=$ +0.26
+      t2_SS_mu               -> t2_DS_mu               n=   321 mean=$+4818.5 wg=$ +0.26
+
+  ── max_rank=J  cell=DS_NO_MAXTOP  n=8,064  pct_opt=32.2%  mean_reg=$+2444.7 ──
+    oracle TOP:        2:36%, 3:19%, T:10%, 4:9%, 9:6%
+    oracle BOT_suit:   DS:49%, SS:34%, 31:15%, 4f:2%, RB:0%
+    oracle BOT_run:    r1:12%, r2:58%, r3:22%, r4:7%  bot_sum_avg=27.4
+    oracle MID_suited: 57.0%  mid_sum_avg=14.9
+    oracle MID_high:   J:24%, 9:21%, T:18%, 8:15%, 7:9%
+    v44    TOP:        2:48%, 3:15%, T:10%, J:7%, 9:5%
+    v44    BOT_suit:   DS:46%, SS:36%, 31:15%, 4f:1%, RB:1%
+    v44    BOT_run:    r1:9%, r2:54%, r3:28%, r4:10%  bot_sum_avg=26.8
+    v44    MID_suited: 44.4%  mid_sum_avg=15.7
+    v44    MID_high:   9:28%, T:21%, J:21%, 8:15%, 7:6%
+    top mismatch within cell:
+      t2_SS_mu               -> t2_SS_ms               n=   195 mean=$+5105.4 wg=$ +0.17
+      t2_SS_mu               -> t2_DS_mu               n=   148 mean=$+4387.8 wg=$ +0.11
+      t2_DS_mu               -> t2_SS_ms               n=   224 mean=$+2792.6 wg=$ +0.10
+
+  ── max_rank=J  cell=MS_ONLY  n=5,376  pct_opt=26.5%  mean_reg=$+2435.3 ──
+    oracle TOP:        2:35%, J:31%, 3:13%, 4:6%, T:6%
+    oracle BOT_suit:   SS:43%, 31:41%, 4f:14%, RB:2%
+    oracle BOT_run:    r1:7%, r2:52%, r3:27%, r4:14%  bot_sum_avg=25.1
+    oracle MID_suited: 53.3%  mid_sum_avg=15.9
+    oracle MID_high:   J:37%, T:20%, 9:18%, 8:11%, 7:5%
+    v44    TOP:        J:47%, 2:39%, 3:11%, T:2%, 4:1%
+    v44    BOT_suit:   31:43%, SS:40%, 4f:12%, RB:5%
+    v44    BOT_run:    r1:2%, r2:50%, r3:30%, r4:19%  bot_sum_avg=22.8
+    v44    MID_suited: 50.1%  mid_sum_avg=17.7
+    v44    MID_high:   J:34%, T:32%, 9:21%, 8:11%, 7:1%
+    top mismatch within cell:
+      t2_31_mu               -> t2_SS_ms               n=   119 mean=$+3039.1 wg=$ +0.06
+      tJ_31_mu               -> t2_31_mu               n=    65 mean=$+3370.0 wg=$ +0.04
+      tJ_SS_ms               -> t2_SS_ms               n=    50 mean=$+4087.0 wg=$ +0.03
+
+  ── max_rank=T  cell=JOINT_MED  n=2,835  pct_opt=62.0%  mean_reg=$+1164.0 ──
+    oracle TOP:        T:38%, 2:28%, 3:15%, 4:6%, 9:3%
+    oracle BOT_suit:   DS:89%, SS:5%, 31:4%, 4f:2%
+    oracle BOT_run:    r1:6%, r2:51%, r3:30%, r4:13%  bot_sum_avg=22.7
+    oracle MID_suited: 80.1%  mid_sum_avg=14.6
+    oracle MID_high:   T:41%, 9:25%, 8:15%, 7:7%, 5:5%
+    v44    TOP:        T:41%, 2:31%, 3:13%, 4:5%, 9:2%
+    v44    BOT_suit:   DS:81%, SS:11%, 31:5%, 4f:2%
+    v44    BOT_run:    r1:4%, r2:51%, r3:31%, r4:14%  bot_sum_avg=21.9
+    v44    MID_suited: 79.3%  mid_sum_avg=15.3
+    v44    MID_high:   T:43%, 9:27%, 8:15%, 7:5%, 5:3%
+    top mismatch within cell:
+      t2_SS_ms               -> tT_DS_ms               n=    30 mean=$+5410.0 wg=$ +0.03
+      tT_DS_ms               -> t2_DS_ms               n=    41 mean=$+3146.3 wg=$ +0.02
+      t2_DS_mu               -> tT_DS_ms               n=    37 mean=$+3373.0 wg=$ +0.02
+
+  ── max_rank=T  cell=JOINT_LOW  n=105  pct_opt=65.7%  mean_reg=$+1234.3 ──
+    oracle TOP:        2:38%, 3:27%, T:23%, 4:7%, 5:3%
+    oracle BOT_suit:   DS:90%, 31:5%, SS:4%, 4f:2%
+    oracle BOT_run:    r1:3%, r2:21%, r3:43%, r4:33%  bot_sum_avg=18.9
+    oracle MID_suited: 67.6%  mid_sum_avg=13.7
+    oracle MID_high:   T:72%, 7:16%, 5:4%, 6:3%, 4:3%
+    v44    TOP:        2:38%, 3:28%, T:18%, 4:9%, 5:6%
+    v44    BOT_suit:   DS:78%, SS:13%, 31:8%, 4f:1%
+    v44    BOT_run:    r1:3%, r2:21%, r3:39%, r4:37%  bot_sum_avg=18.3
+    v44    MID_suited: 65.7%  mid_sum_avg=14.6
+    v44    MID_high:   T:79%, 7:17%, 6:2%, 3:2%
+    top mismatch within cell:
+      t2_SS_ms               -> t3_DS_ms               n=     3 mean=$+5633.3 wg=$ +0.00
+      t3_SS_ms               -> t2_DS_ms               n=     2 mean=$+5675.0 wg=$ +0.00
+      t3_SS_mu               -> t4_DS_ms               n=     1 mean=$+10400.0 wg=$ +0.00
+
+  ── max_rank=T  cell=DS_NO_JOINT  n=12,600  pct_opt=34.3%  mean_reg=$+2379.7 ──
+    oracle TOP:        2:34%, 3:19%, T:11%, 4:10%, 9:6%
+    oracle BOT_suit:   DS:68%, SS:25%, 31:7%, 4f:0%, RB:0%
+    oracle BOT_run:    r1:6%, r2:52%, r3:29%, r4:13%  bot_sum_avg=23.4
+    oracle MID_suited: 60.9%  mid_sum_avg=15.0
+    oracle MID_high:   T:57%, 9:15%, 8:11%, 7:6%, 5:4%
+    v44    TOP:        2:47%, 3:17%, T:12%, 9:6%, 4:5%
+    v44    BOT_suit:   DS:52%, SS:39%, 31:8%, RB:1%, 4f:0%
+    v44    BOT_run:    r1:3%, r2:43%, r3:34%, r4:19%  bot_sum_avg=22.1
+    v44    MID_suited: 53.6%  mid_sum_avg=16.7
+    v44    MID_high:   T:75%, 9:13%, 8:6%, 7:2%, 5:2%
+    top mismatch within cell:
+      t2_SS_mu               -> t2_DS_ms               n=   168 mean=$+7286.9 wg=$ +0.20
+      t2_SS_mu               -> t2_DS_mu               n=   177 mean=$+4876.8 wg=$ +0.14
+      t2_SS_mu               -> t3_DS_mu               n=   150 mean=$+5014.0 wg=$ +0.13
+
+  ── max_rank=T  cell=DS_NO_MAXTOP  n=2,688  pct_opt=33.3%  mean_reg=$+2454.9 ──
+    oracle TOP:        2:41%, 3:22%, 4:10%, 9:6%, 8:5%
+    oracle BOT_suit:   DS:43%, SS:35%, 31:19%, 4f:3%, RB:0%
+    oracle BOT_run:    r1:8%, r2:53%, r3:28%, r4:12%  bot_sum_avg=25.0
+    oracle MID_suited: 60.2%  mid_sum_avg=14.1
+    oracle MID_high:   T:38%, 9:21%, 8:17%, 5:8%, 7:8%
+    v44    TOP:        2:56%, 3:18%, 9:6%, 4:6%, T:4%
+    v44    BOT_suit:   DS:39%, SS:37%, 31:18%, RB:3%, 4f:2%
+    v44    BOT_run:    r1:5%, r2:45%, r3:34%, r4:16%  bot_sum_avg=24.5
+    v44    MID_suited: 47.6%  mid_sum_avg=14.9
+    v44    MID_high:   T:38%, 9:29%, 8:15%, 5:9%, 6:4%
+    top mismatch within cell:
+      t2_SS_mu               -> t2_SS_ms               n=    82 mean=$+5010.4 wg=$ +0.07
+      t2_SS_mu               -> t2_DS_mu               n=    58 mean=$+4879.3 wg=$ +0.05
+      t2_DS_mu               -> t2_SS_ms               n=    53 mean=$+3842.5 wg=$ +0.03
+
+  ── max_rank=T  cell=MS_ONLY  n=1,792  pct_opt=31.0%  mean_reg=$+2035.0 ──
+    oracle TOP:        2:45%, 3:18%, T:15%, 4:6%, 9:6%
+    oracle BOT_suit:   31:43%, SS:42%, 4f:13%, RB:2%
+    oracle BOT_run:    r1:4%, r2:45%, r3:32%, r4:20%  bot_sum_avg=23.1
+    oracle MID_suited: 53.5%  mid_sum_avg=15.5
+    oracle MID_high:   T:60%, 9:16%, 8:10%, 5:4%, 7:4%
+    v44    TOP:        2:63%, 3:19%, T:12%, 8:2%, 9:2%
+    v44    BOT_suit:   31:43%, SS:39%, 4f:12%, RB:7%
+    v44    BOT_run:    r1:0%, r2:34%, r3:39%, r4:27%  bot_sum_avg=21.9
+    v44    MID_suited: 49.6%  mid_sum_avg=17.6
+    v44    MID_high:   T:83%, 9:12%, 8:2%, 5:1%, 7:1%
+    top mismatch within cell:
+      t2_31_mu               -> t2_SS_ms               n=    44 mean=$+2427.3 wg=$ +0.02
+      t2_SS_ms               -> t2_31_mu               n=    32 mean=$+2934.4 wg=$ +0.02
+      t2_RB_ms               -> t2_31_mu               n=    16 mean=$+5112.5 wg=$ +0.01
+
+  ── max_rank=9  cell=JOINT_MED  n=630  pct_opt=66.2%  mean_reg=$+1022.2 ──
+    oracle TOP:        2:34%, 9:24%, 3:19%, 4:9%, 8:4%
+    oracle BOT_suit:   DS:90%, SS:5%, 31:4%, 4f:2%
+    oracle BOT_run:    r1:2%, r2:45%, r3:36%, r4:17%  bot_sum_avg=21.1
+    oracle MID_suited: 71.3%  mid_sum_avg=13.7
+    oracle MID_high:   9:54%, 8:22%, 7:9%, 5:5%, 6:5%
+    v44    TOP:        2:33%, 9:26%, 3:19%, 4:9%, 5:4%
+    v44    BOT_suit:   DS:81%, SS:11%, 31:6%, 4f:2%
+    v44    BOT_run:    r1:1%, r2:44%, r3:36%, r4:18%  bot_sum_avg=20.4
+    v44    MID_suited: 71.1%  mid_sum_avg=14.3
+    v44    MID_high:   9:57%, 8:26%, 7:8%, 6:4%, 5:3%
+    top mismatch within cell:
+      t9_DS_ms               -> t2_DS_ms               n=    10 mean=$+3775.0 wg=$ +0.01
+      t2_SS_ms               -> t3_DS_ms               n=     7 mean=$+4507.1 wg=$ +0.01
+      t2_SS_mu               -> t9_DS_ms               n=     5 mean=$+5590.0 wg=$ +0.00
+
+  ── max_rank=9  cell=JOINT_LOW  n=105  pct_opt=64.8%  mean_reg=$+1244.8 ──
+    oracle TOP:        2:43%, 3:20%, 9:17%, 4:13%, 5:3%
+    oracle BOT_suit:   DS:88%, 31:6%, SS:4%, 4f:3%
+    oracle BOT_run:    r1:6%, r2:24%, r3:41%, r4:30%  bot_sum_avg=19.4
+    oracle MID_suited: 65.7%  mid_sum_avg=12.7
+    oracle MID_high:   9:65%, 7:12%, 6:7%, 4:7%, 5:7%
+    v44    TOP:        2:43%, 9:18%, 3:16%, 4:12%, 6:5%
+    v44    BOT_suit:   DS:76%, SS:14%, 31:6%, 4f:4%
+    v44    BOT_run:    r1:3%, r2:22%, r3:40%, r4:35%  bot_sum_avg=18.6
+    v44    MID_suited: 64.8%  mid_sum_avg=13.3
+    v44    MID_high:   9:67%, 7:17%, 6:6%, 5:6%, 3:3%
+    top mismatch within cell:
+      t3_SS_mu               -> t2_DS_mu               n=     2 mean=$+8200.0 wg=$ +0.00
+      t2_SS_ms               -> t3_DS_ms               n=     3 mean=$+5316.7 wg=$ +0.00
+      t2_SS_mu               -> t4_DS_mu               n=     2 mean=$+4475.0 wg=$ +0.00
+
+  ── max_rank=9  cell=DS_NO_JOINT  n=3,150  pct_opt=38.4%  mean_reg=$+2330.9 ──
+    oracle TOP:        2:41%, 3:22%, 4:11%, 7:6%, 6:5%
+    oracle BOT_suit:   DS:69%, SS:24%, 31:6%, 4f:0%, RB:0%
+    oracle BOT_run:    r1:3%, r2:45%, r3:33%, r4:20%  bot_sum_avg=21.5
+    oracle MID_suited: 59.3%  mid_sum_avg=13.8
+    oracle MID_high:   9:65%, 8:13%, 7:8%, 5:5%, 6:4%
+    v44    TOP:        2:57%, 3:18%, 4:6%, 8:5%, 7:4%
+    v44    BOT_suit:   DS:50%, SS:39%, 31:10%, RB:1%, 4f:0%
+    v44    BOT_run:    r1:1%, r2:31%, r3:38%, r4:30%  bot_sum_avg=20.4
+    v44    MID_suited: 48.5%  mid_sum_avg=15.3
+    v44    MID_high:   9:85%, 8:9%, 7:2%, 5:2%, 6:1%
+    top mismatch within cell:
+      t2_SS_mu               -> t2_DS_ms               n=    67 mean=$+7086.6 wg=$ +0.08
+      t2_SS_mu               -> t2_DS_mu               n=    61 mean=$+4868.9 wg=$ +0.05
+      t2_SS_mu               -> t3_DS_mu               n=    58 mean=$+4668.1 wg=$ +0.05
+
+  ── max_rank=9  cell=DS_NO_MAXTOP  n=672  pct_opt=37.1%  mean_reg=$+2404.2 ──
+    oracle TOP:        2:49%, 3:23%, 4:10%, 5:5%, 6:5%
+    oracle BOT_suit:   DS:46%, SS:33%, 31:18%, 4f:3%, RB:0%
+    oracle BOT_run:    r1:4%, r2:51%, r3:28%, r4:17%  bot_sum_avg=23.2
+    oracle MID_suited: 60.0%  mid_sum_avg=12.6
+    oracle MID_high:   9:39%, 8:22%, 7:15%, 5:10%, 6:8%
+    v44    TOP:        2:60%, 3:22%, 6:5%, 4:5%, 5:3%
+    v44    BOT_suit:   DS:39%, SS:35%, 31:20%, RB:3%, 4f:2%
+    v44    BOT_run:    r1:4%, r2:38%, r3:35%, r4:23%  bot_sum_avg=22.5
+    v44    MID_suited: 43.9%  mid_sum_avg=13.6
+    v44    MID_high:   9:44%, 8:31%, 7:7%, 5:7%, 4:6%
+    top mismatch within cell:
+      t2_SS_mu               -> t2_DS_mu               n=    19 mean=$+4442.1 wg=$ +0.01
+      t2_SS_mu               -> t2_SS_ms               n=    13 mean=$+5130.8 wg=$ +0.01
+      t2_DS_mu               -> t2_SS_ms               n=    18 mean=$+2927.8 wg=$ +0.01
+
+  ── max_rank=9  cell=MS_ONLY  n=448  pct_opt=42.6%  mean_reg=$+1587.7 ──
+    oracle TOP:        2:54%, 3:22%, 4:7%, 9:5%, 6:4%
+    oracle BOT_suit:   SS:46%, 31:39%, 4f:13%, RB:2%
+    oracle BOT_run:    r1:3%, r2:35%, r3:37%, r4:25%  bot_sum_avg=21.4
+    oracle MID_suited: 52.7%  mid_sum_avg=14.3
+    oracle MID_high:   9:68%, 8:12%, 7:6%, 6:5%, 5:5%
+    v44    TOP:        2:76%, 3:9%, 9:4%, 7:3%, 4:3%
+    v44    BOT_suit:   31:42%, SS:40%, 4f:11%, RB:8%
+    v44    BOT_run:    r1:0%, r2:21%, r3:36%, r4:43%  bot_sum_avg=20.3
+    v44    MID_suited: 52.7%  mid_sum_avg=15.9
+    v44    MID_high:   9:89%, 8:5%, 4:2%, 7:2%, 5:1%
+    top mismatch within cell:
+      t2_31_mu               -> t2_SS_ms               n=    16 mean=$+2878.1 wg=$ +0.01
+      t2_RB_ms               -> t3_SS_ms               n=     6 mean=$+4666.7 wg=$ +0.00
+      t2_SS_ms               -> t2_31_mu               n=    10 mean=$+2735.0 wg=$ +0.00
+
+  ── max_rank=8  cell=JOINT_LOW  n=105  pct_opt=63.8%  mean_reg=$+1148.1 ──
+    oracle TOP:        2:36%, 3:32%, 8:13%, 4:11%, 5:4%
+    oracle BOT_suit:   DS:88%, 4f:5%, 31:4%, SS:4%
+    oracle BOT_run:    r1:4%, r2:30%, r3:40%, r4:27%  bot_sum_avg=19.4
+    oracle MID_suited: 68.6%  mid_sum_avg=12.0
+    oracle MID_high:   8:57%, 7:21%, 6:9%, 5:7%, 4:5%
+    v44    TOP:        2:38%, 3:25%, 4:15%, 8:10%, 5:7%
+    v44    BOT_suit:   DS:77%, SS:14%, 4f:5%, 31:4%
+    v44    BOT_run:    r1:3%, r2:33%, r3:37%, r4:27%  bot_sum_avg=18.7
+    v44    MID_suited: 66.7%  mid_sum_avg=12.7
+    v44    MID_high:   8:70%, 7:16%, 6:6%, 4:4%, 5:3%
+    top mismatch within cell:
+      t2_SS_ms               -> t3_DS_ms               n=     6 mean=$+3641.7 wg=$ +0.00
+      t2_SS_ms               -> t8_DS_ms               n=     2 mean=$+5650.0 wg=$ +0.00
+      t3_SS_mu               -> t3_DS_mu               n=     1 mean=$+8400.0 wg=$ +0.00
+
+  ── max_rank=8  cell=DS_NO_JOINT  n=450  pct_opt=37.3%  mean_reg=$+2618.3 ──
+    oracle TOP:        2:45%, 3:25%, 4:14%, 6:7%, 5:4%
+    oracle BOT_suit:   DS:75%, SS:21%, 31:4%
+    oracle BOT_run:    r1:1%, r2:32%, r3:39%, r4:29%  bot_sum_avg=19.6
+    oracle MID_suited: 57.3%  mid_sum_avg=12.2
+    oracle MID_high:   8:68%, 7:11%, 6:8%, 5:7%, 3:3%
+    v44    TOP:        2:62%, 3:22%, 4:6%, 5:4%, 6:4%
+    v44    BOT_suit:   DS:53%, SS:38%, 31:8%, RB:1%
+    v44    BOT_run:    r1:0%, r2:16%, r3:40%, r4:44%  bot_sum_avg=18.3
+    v44    MID_suited: 44.2%  mid_sum_avg=13.9
+    v44    MID_high:   8:88%, 7:6%, 5:3%, 6:2%, 3:1%
+    top mismatch within cell:
+      t2_SS_mu               -> t2_DS_ms               n=    13 mean=$+7734.6 wg=$ +0.02
+      t2_SS_mu               -> t2_DS_mu               n=    18 mean=$+5547.2 wg=$ +0.02
+      t2_SS_mu               -> t3_DS_mu               n=     7 mean=$+7200.0 wg=$ +0.01
+
+  ── max_rank=8  cell=DS_NO_MAXTOP  n=96  pct_opt=37.5%  mean_reg=$+2614.1 ──
+    oracle TOP:        2:54%, 3:35%, 4:5%, 7:3%, 5:2%
+    oracle BOT_suit:   DS:52%, SS:31%, 31:16%, RB:1%
+    oracle BOT_run:    r1:2%, r2:40%, r3:35%, r4:23%  bot_sum_avg=21.7
+    oracle MID_suited: 57.3%  mid_sum_avg=10.6
+    oracle MID_high:   8:31%, 7:23%, 5:18%, 6:15%, 4:11%
+    v44    TOP:        2:74%, 3:24%, 7:1%, 4:1%
+    v44    BOT_suit:   DS:48%, SS:33%, 31:18%, RB:1%
+    v44    BOT_run:    r2:9%, r3:67%, r4:24%  bot_sum_avg=21.7
+    v44    MID_suited: 36.5%  mid_sum_avg=11.0
+    v44    MID_high:   5:30%, 7:28%, 8:25%, 4:11%, 6:5%
+    top mismatch within cell:
+      t2_SS_mu               -> t2_DS_mu               n=     4 mean=$+4950.0 wg=$ +0.00
+      t2_SS_mu               -> t3_SS_ms               n=     4 mean=$+4625.0 wg=$ +0.00
+      t2_DS_mu               -> t2_SS_ms               n=     5 mean=$+3480.0 wg=$ +0.00
+
+  ── max_rank=8  cell=MS_ONLY  n=64  pct_opt=29.7%  mean_reg=$+1900.0 ──
+    oracle TOP:        2:45%, 3:36%, 4:12%, 5:5%, 8:2%
+    oracle BOT_suit:   SS:50%, 31:39%, 4f:11%
+    oracle BOT_run:    r1:2%, r2:25%, r3:53%, r4:20%  bot_sum_avg=19.9
+    oracle MID_suited: 56.2%  mid_sum_avg=12.3
+    oracle MID_high:   8:67%, 5:12%, 6:8%, 7:8%, 4:3%
+    v44    TOP:        2:53%, 3:38%, 4:9%
+    v44    BOT_suit:   SS:42%, 31:39%, 4f:9%, RB:9%
+    v44    BOT_run:    r1:2%, r2:12%, r3:44%, r4:42%  bot_sum_avg=18.4
+    v44    MID_suited: 51.6%  mid_sum_avg=14.0
+    v44    MID_high:   8:89%, 5:8%, 6:2%, 7:2%
+    top mismatch within cell:
+      t2_RB_ms               -> t2_SS_mu               n=     3 mean=$+6283.3 wg=$ +0.00
+      t4_SS_mu               -> t2_SS_ms               n=     2 mean=$+6075.0 wg=$ +0.00
+      t2_SS_mu               -> t4_SS_ms               n=     2 mean=$+4125.0 wg=$ +0.00
+
+[4/4] writing per-hand parquet to /Users/michaelchang/Documents/claudecode/taiwanese/data/drill_ho_v44_per_hand_structural.parquet ...
+  wrote 14.48 MB
+
+Finished: 2026-05-11 08:29:52

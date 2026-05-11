@@ -1,0 +1,62 @@
+loading parquets ...
+  loaded 0.5s
+  v23 base X: (6009159, 49)  loading composite gated ...
+  v24 base X: (6009159, 53)  loading pair gated ...
+  v25 base X: (6009159, 59)  loading two_pair gated ...
+  v26 base X: (6009159, 65)  loading high_only gated ...
+  v27 base X: (6009159, 69)  loading pair_r4 gated ...
+  v29 base X: (6009159, 73)  loading trips gated ...
+  v30 base X: (6009159, 79)  loading trips_v2 gated ...
+  v31b base X: (6009159, 83)  loading pair_aug_v5 gated ...
+  v39 base X: (6009159, 87)  loading trips_pair_aug_v2 gated ...
+  v40 base X: (6009159, 91)  loading two_pair_aug_v2 gated ...
+  v41 base X: (6009159, 95)  loading high_only_aug_v2 gated ...
+  v42 base X: (6009159, 99)  loading high_only_aug_v3 gated ...
+  v43 base X: (6009159, 103)  loading high_only_aug_v4 gated ...
+  v44 base X: (6009159, 107)  loading high_only_aug_v5 gated ...
+X=(6009159, 111)  (111 features)
+loading Y from grid ...
+  Y=(6009159, 105)  2523.8 MB
+
+fitting DT depth=36 ml=1 ...
+  fit 508.0s  leaves=2,248,182  depth=36
+
+saved /Users/michaelchang/Documents/claudecode/taiwanese/data/v45_dt_model.npz (1260.57 MB)
+
+Top-30 feature importances:
+    1. n_broadway                                      41.82%
+    2. third_rank                                      10.59%
+    3. pair_high_rank                                   9.06%
+    4. n_low                                            6.87%
+    5. has_premium_pair                                 4.38%
+    6. top_rank                                         3.95%
+    7. has_ace_singleton                                3.17%
+    8. second_rank                                      2.70%
+    9. pair_low_rank                                    2.27%
+   10. trips_rank                                       1.59%
+   11. t2p_low_singleton_rank_g                         0.83%
+   12. connectivity                                     0.71%
+   13. category_id                                      0.60%
+   14. pair_alt_top_rank_g                              0.60%
+   15. pair_r4_bot_max_rank_g                           0.52%
+   16. pair_aug_v5_bot_DS_min_top_rank_g                0.50%
+   17. suit_max                                         0.43%
+   18. pair_r4_bot_suit_profile_g                       0.33%
+   19. pair_aug_v5_bot_DS_max_mid_sum_g                 0.32%
+   20. has_king_singleton                               0.32%
+   21. t2p_top_singleton_rank_g                         0.31%
+   22. suit_3rd                                         0.30%
+   23. t2p_v2_layout_B_max_top_rank_g                   0.29%
+   24. has_high_pair                                    0.28%
+   25. t2p_v2_layout_C_max_top_rank_g                   0.27%
+   26. ho_v2_bot_DS_max_mid_sum_g                       0.27%
+   27. max_suited_pair_high_rank_g                      0.25%
+   28. ho_v2_bot_DS_max_top_rank_g                      0.22%
+   29. pair_r4_n_low_kickers_g                          0.22%
+   30. t2p_v2_layout_C_DS_max_top_rank_g                0.21%
+
+TRIPWIRE — new ho_v5_*_g features placement:
+  #97  ho_v5_topNonMax_DS_ms_max_mid_high_g           0.01%
+  #66  ho_v5_topNonMax_DS_ms_best_combined_q_g        0.07%
+  #106 ho_v5_topNonMax_DS_max_in_bot_pair_n_g         0.01%
+  #110 ho_v5_topMax_4f_ms_n_configs_g                 0.00%

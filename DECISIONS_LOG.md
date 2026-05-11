@@ -4690,3 +4690,108 @@ ho_v4_topNonMax_DS_ms_max_top_rank_g  # 0..13 — best non-max top in those join
 The two tracks now diverge by **$1,417/1000h** — the ML champion beats the human-memorizable rule chain by more than half its EV deficit.
 
 **Total project rule count: 17** (UNCHANGED from v52; S58 was ML-only). ML champion: v44_dt (new — replaces v43_dt).
+
+---
+
+## Decision 094 — v45_dt NULL RESULT: high_only 4th-pass hits depth=36 ml=1 ceiling (Session 59)
+
+**Date:** 2026-05-11
+
+**Context:** Session 59 was scheduled as an autonomous overnight run with the S58 directive: continue the high_only 4th-pass focused on the K/Q × DS_NO_JOINT cell where v44 still over-keeps max-rank on top and under-routes suited mid. Plan was to design 4 ho_v5 features mirroring v2/v3/v4 rank-valued shape and train v45_dt.
+
+**Result: NULL.** v45_dt grades $0/1000h lift vs v44_dt on the full grid. v44_dt remains the ML champion.
+
+### What v45_dt graded
+
+| Metric | v44_dt | v45_dt | Δ |
+|---|---:|---:|---:|
+| Full grid mean regret | 0.1081 | 0.1081 | **+0.0000** |
+| Full grid $/1000h | $1,081 | $1,081 | **$0** |
+| Full grid pct_opt | 64.80% | 64.80% | +0.0001% (+8 hands matched, n=3,893,731 → 3,893,739) |
+| Prefix grid $/1000h | $686 | $686 | $0 (by design) |
+| Leaves | 2,248,173 | 2,248,182 | **+9 (negligible)** |
+| Features | 107 | 111 | +4 ho_v5 |
+| high_only within-cat | $1,868 | $1,868 | $0 |
+| high_only pct_opt | 41.83% | 41.94% | +0.11% (within rounding) |
+
+### What HO11–HO13 verified (the data signal is real)
+
+HO11 confirmed DS_NO_JOINT is STILL the dominant cell at every max-rank (62.9% × all max-ranks = $267/1000h whole-grid summed, ~70% of v44's high_only regret). HO13's non-max joint quality stratification (`drill_high_only_v44_nonmax_quality.py`) isolated the deepest gap:
+
+At max=K × DS_NO_JOINT × best_top=Q × best_mid_high≥J:
+- n = 18,144 hands
+- oracle picks non-max route 66.6%
+- v44 picks non-max route 36.1%
+- gap = +30.5% (the largest unaddressed cell)
+- wg contribution = $9.76/1000h
+
+The data signal is large and well-localized. The features ho_v5 #1 (`topNonMax_DS_ms_max_mid_high_g`) and #2 (`topNonMax_DS_ms_best_combined_q_g`) directly encode this cell's discriminator. But the DT still didn't shift behavior.
+
+### Why v45 didn't ship — the saturation hypothesis
+
+1. **DT capacity saturated.** v44 at depth=36 ml=1 has 2.248M leaves on 6M training rows = ~2.7 examples/leaf average; many leaves are 1-row. Adding new features can't create new splits when leaves already perfectly separate training data.
+2. **ho_v5 features are mathematically derivable from v4 + base.** `best_combined_q = max_top_rank + max_mid_high`. `n_max_in_bot_pair` is implied by `n_configs` × suit profile. The DT can already encode the same decisions via existing features.
+3. **Leaf growth was negligible (+9 over v44's 2,248,173).** v44 had +70K leaves over v43; the +9 is the leading indicator that v5 doesn't carry new split signal.
+
+### Feature importance — the lowest per-ship in project history
+
+| Rank | Feature | Importance |
+|---:|---|---:|
+| #66 | `ho_v5_topNonMax_DS_ms_best_combined_q_g` | 0.07% |
+| #97 | `ho_v5_topNonMax_DS_ms_max_mid_high_g` | 0.01% |
+| #106 | `ho_v5_topNonMax_DS_max_in_bot_pair_n_g` | 0.01% |
+| #110 | `ho_v5_topMax_4f_ms_n_configs_g` | 0.00% |
+
+Sum of v5 importance: 0.09%. Compare to v44's 0.19% (#47–#95). Half the importance + no leaf growth → null ship.
+
+### Methodology lessons (Session 59)
+
+1. **The 4-phase playbook hits a saturation ceiling at depth=36 ml=1 + ~2.25M leaves on 6M rows.** Three passes on high_only (S56/57/58) shipped cumulative −$190 within the zone (−$928 within-cat from $2,796 → $1,868). The 4th pass does NOT, despite the data signal being clear.
+
+2. **Low importance + no leaf growth is a stronger null signal than importance alone.** v44 had low importance (#47–#95) but +70K leaves and shipped −$42. v45 has lower importance AND only +9 leaves — the combination is the leading indicator of a null ship.
+
+3. **Mathematically redundant features don't help at saturation, even when the underlying axis is real.** ho_v5's signals are derivable from ho_v4 + base via small linear combinations.
+
+4. **Drill stratification can identify a residual gap that is not closeable with the current model class.** HO13 found a $9.76/1000h cell with a 30.5% gap; the cell is real, but v45 can't close it.
+
+5. **Number of consecutive same-zone playbook passes ≤ 3 under depth=36 ml=1.** Beyond that, switch zones, switch model class, or switch lever (rules).
+
+### Implications for Session 60
+
+Three options forward:
+
+- **Option C — Surgical rule** on the K × DS_NO_JOINT × best_top=Q × mid_h≥J cell. Estimated lift on rule chain: $5–7/1000h. Implementation cost: ~1 hour. **Recommended.**
+- **Option B — Pivot to trips zone** ($55/1000h whole-grid; the playbook on a fresh zone). Estimated lift: $20–40/1000h if it generalizes. Implementation: 1.5–2 hours.
+- **Option A — Different model class** (gradient boosting / RF) on high_only. Estimated lift: unknown. Implementation: research-heavy.
+
+### Files (Session 59)
+
+**Drills:**
+- `analysis/scripts/drill_high_only_v44_deepdive.py` (HO11+HO12+HO13)
+- `analysis/scripts/drill_high_only_v44_nonmax_quality.py` (HO13 cross-tab)
+
+**Features + train + grade (executed, null-ship):**
+- `analysis/scripts/high_only_aug_v5_features_gated.py`
+- `analysis/scripts/persist_high_only_aug_v5_gated.py`
+- `analysis/scripts/train_v45_dt.py`
+- `analysis/scripts/strategy_v45_dt.py`
+- `analysis/scripts/grade_v45_dt.py`
+
+**Models (persisted but NOT shipping):**
+- `data/v45_dt_model.npz` (1260.57 MB)
+- `data/feature_table_high_only_aug_v5_gated.parquet` (19.21 MB)
+- `data/drill_ho_v44_per_hand_structural.parquet` (15.0 MB; reusable for future v44 drills)
+
+**Documentation:**
+- `SESSION_59_V45_DT_REPORT.md` (null-result session report)
+- `STRATEGY_GUIDE.md` Part 1 — Session 59 NULL entry; Part 2 UNCHANGED (v44 remains champion)
+- `CURRENT_PHASE.md` — rewritten with Session 60 direction
+- `DECISIONS_LOG.md` — Decision 094 (this section)
+
+**Two production tracks at end of S59 (UNCHANGED from S58):**
+- Rule chain: **v52_full_high_only_handler** ($2,498 full / $1,522 prefix)
+- ML champion: **v44_dt** ($1,081 full / $686 prefix)
+
+The two tracks STILL diverge by $1,417/1000h. UNCHANGED.
+
+**Total project rule count: 17** (UNCHANGED from v52). ML champion: v44_dt (UNCHANGED).

@@ -1,66 +1,65 @@
-# Current: Sprint 8 — Session 58 ships **v44_dt as the new ML champion via the user-priority high_only zone THIRD-PASS collapse, applying the 4-phase playbook (drill → hand-level → 4 rank-valued conditional features → train) for the 6th consecutive session and the 3rd time on the SAME zone**. v43_dt → v44_dt: **$1,123 → $1,081 full / $686 → $686 prefix**. **High_only within-category $2,075 → $1,868 (−$207, −10.0%)**, pct_opt 37.9% → 41.8% (+3.9%). All 7 non-targeted categories byte-identical to v43 on both grids (surgical gating). Leaf count v44: 2.18M → 2.25M (+3.2%). Depth saturated at 36. Four new features: `ho_v4_topMax_DS_max_bot_pair_high_g`, `ho_v4_topMax_4f_ms_max_mid_high_g`, `ho_v4_topNonMax_DS_ms_n_configs_g`, `ho_v4_topNonMax_DS_ms_max_top_rank_g` — total 107 features (95 base + 4 ho_v2 + 4 ho_v3 + 4 ho_v4). Feature importance #47/#80/#93/#95. Cumulative v32 → v44 = **−$634 full / −$218 prefix** (9 ML ships). Rule chain unchanged at v52 ($2,498 full / $1,522 prefix). The ML champion now beats the rule chain by **$1,417/1000h** (more than half the rule-chain EV deficit). **Three-session high_only collapse (S55 → S58): $2,796 → $2,411 → $2,075 → $1,868 = −$928 within-cat (−33.2%)** — composing three conditional axes (ho_v2 DS-only + ho_v3 DS+ms-joint + ho_v4 DS-quality+non-max-joint+4f) compresses the same zone three times without surgical interference. **Five drills (HO5–HO10) on all 1.226M high_only hands surfaced THREE structural axes invisible to v43**: (1) `DS_NO_JOINT` cell is dominant at 62.9% × every max-rank, ~69% of high_only regret; v43 under-routes DS bot by 10–20% there. (2) within JOINT picks, oracle is mid-first (mean mid_pct 0.67–0.81 >> bot_pct 0.24–0.36); v43 already covers via ho_v3_max_mid_high. (3) joint take-rate collapses with lower max-rank (A:95% → 8:13%); 47.7% of high_only hands have a non-max-top joint achievable; v43 has no feature for this entire population. (4) at max=A, 4f+ms_mid is dominant alt (54% of A-alt picks). MUST-PRODUCE deliverable shipped: `SESSION_58_HIGH_ONLY_DECISION_MATRIX.md` at repo root — per-max-rank × per-cell oracle TOP/BOT/MID profile + trade-off rules — answering the user's S57 review independently of the ML ship. Methodology validation: **the 4-phase playbook is transferable to the SAME zone for a THIRD pass without modification; the decision matrix is a separable deliverable from the ML ship; "Omaha-first or Hold'em-first?" has a nuanced answer (mid-first within joint, bot-first outside joint at lower max-ranks).**
+# Current: Sprint 8 — Session 59 NULL RESULT. The 4-phase playbook applied for the **4th consecutive time on the same high_only zone** does **NOT** ship: v45_dt grades at exactly $1,081/1000h (the same as v44_dt) on the full grid. The ho_v5 features (non-max joint mid_high quality, combined-quality scalar, max-in-bot-pair count, 4f topMax count) added only **+9 leaves** to v44's 2.248M-leaf tree — essentially no new splits. Drills HO11/HO12/HO13 confirmed the data signal is real and large (K × DS_NO_JOINT × best_top=Q × mid_h≥J: oracle picks non-max-route 67%, v44 only 36%, a $9.76/1000h cell) but the DT at depth=36 ml=1 has saturated: each leaf already covers ~2.7 training examples, and the new v5 signals are mathematically derivable from v4 features (best_combined_q = max_top_rank + max_mid_high; n_max_in_bot_pair is implied by n_configs + suit profile). v44_dt remains the ML champion. **Strategies of record unchanged:** v52_full_high_only_handler ($2,498/$1,522), v44_dt ($1,081/$686). The two tracks diverge by $1,417/1000h.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 59): Decide between (a) high_only 4th-pass focused on the K/Q × `DS_NO_JOINT` cells where the "max-off-top" residual is biggest, OR (b) pivot to trips ($1,194 within-cat × 4.6% share = $55/1000h whole-grid) for diversification.**
+> **🎯 IMMEDIATE NEXT ACTION (Session 60): Pivot away from naive feature-augmentation on high_only.** The S59 null result establishes that depth=36 ml=1 + 2.25M leaves is a hard ceiling for the current DT class on high_only. Three options, in priority order:
 >
->   **Why pause and decide rather than auto-continue.** The high_only zone is still the dominant residual ($1,868 within-cat × 40.4% share = $755/1000h whole-grid = ~70% of v44's regret), so a 4th-pass is the highest-leverage option. The S58 decision matrix surfaced a clear 4th-pass target: at K/Q in `DS_NO_JOINT`, oracle drops max-rank off the top **34%/52% of the time** but v43 keeps it on top 87%/68% — the v44 features only partly capture this (the non-max joint count fires, but oracle's choice depends on a richer per-cell trade-off than v44 currently encodes). Estimated ho_v5 lift: **$50–80/1000h** if the right structural axis is found, similar magnitude to S57's ho_v3 ship. The trips zone alternative is ~$10–15/1000h max even in best case (trips is only 4.6% of population) — much smaller absolute return. **Recommendation: continue high_only 4th-pass.**
+>   **Option C — Surgical rule on K × DS_NO_JOINT × best_top=Q × mid_h≥J cell ($9.76/1000h whole-grid).** HO13 isolated 18,144 hands where oracle routes to (top=Q, DS bot, ms mid) 67% of the time while v44 routes only 36%. A rule chain entry covering this single cell could lift the rule chain by an estimated $5–7/1000h (lift on rule chain depends on whether the rule fires inside the v52 trip/two_pair/pair handlers' jurisdiction). The rule chain hasn't been touched since v52 (S53); this is a clean attack vector. Implementation: write `rule_18_K_high_DS_NO_JOINT_route.py` + grade vs v52.
 >
->   **The 4-phase playbook for Session 59 (if continuing high_only):**
+>   **Option B — Pivot to trips zone** ($1,194 within-cat × 4.6% share = $55/1000h whole-grid). The 4-phase playbook on a fresh zone may have room; trips_pair and three_pair were already touched, but trips itself was last attacked in S39's trips_v2 features. Estimated lift: $20–40/1000h if the playbook generalizes. Implementation: drill trips zone residuals on v44_dt; design 4 trips-gated features; train v45_dt_v2 (a fresh v45 number since v45_dt didn't ship).
 >
->   **Phase 1 — Drill HO11**: per-(max_rank, cell) v44-vs-oracle mismatch matrix specifically inside `DS_NO_JOINT` at K/Q/J. Identify the dominant new mismatch class. Hypothesis (testable): the residual is now in the "max-off-top + DS bot routing choice" axis — oracle picks (top=2nd-highest, DS bot, ms mid) where v44 still picks (top=max, DS_mu) or (top=max, SS_ms). v44's `ho_v4_topNonMax_DS_ms_max_top_rank_g` exposes the BEST non-max top rank but not WHICH non-max top is best per (DS bot, mid suit) trade-off.
+>   **Option A — Try a different model class on high_only** (gradient-boosted trees / RF ensemble). Higher computational cost. The data signal is there ($9.76/1000h cell); the question is whether a non-DT model can capture it. Estimated lift: unknown; could be $30–60/1000h or $0.
 >
->   **Phase 1b — Drill HO12 (hand-level)**: inspect 50–100 hands of the dominant new mismatch class. Confirm structural delta. Most likely finding: when DS_pair_high = max_rank in non-max-top joints (e.g., a K-pair as the suited pair in the bot at max=K), oracle ALWAYS picks the non-max joint route; v44 partially routes to it but not fully because the choice between top=2nd-rank vs top=3rd-rank vs top=lower depends on mid_high quality at each top.
+>   **Recommendation: Option C first (surgical rule).** Fastest to implement (~30 min), bounded downside, addresses a precisely-identified residual. If it ships, we get a rule-chain entry and ML champion unchanged. If it doesn't, we still learn whether rules can attack the residual where ML can't.
 >
->   **Phase 2 v5 — design 4 features targeting the deepest residual axis**:
->     1. `ho_v5_topNonMax_DS_ms_max_mid_high_g` — best mid_high in non-max-top joints (the missing quality counterpart to v44's max_top_rank).
->     2. `ho_v5_topNonMax_DS_ms_best_combined_quality_g` — max(top_rank + mid_high) across non-max joints — the "joint quality" scalar.
->     3. `ho_v5_topNonMax_DS_ms_with_max_in_bot_pair_g` — count of non-max joints where max-rank is paired in the bot (the K-pair-in-bot signature for K-high).
->     4. `ho_v5_topMax_4f_ms_n_configs_g` (or similar) — augment the 4f route to give a count signal alongside ho_v4's max_mid_high.
+>   **4-phase playbook for Option C:**
 >
->   **Phase 3 — train + ship v45_dt** at depth=36 ml=1, 111 features. Acceptance: −$30/1000h or better on full grid + all non-high_only categories byte-identical.
+>   **Phase 1 — Drill RU18**: deep-dive the 18,144 hands in the K × DS_NO_JOINT × best_top=Q × mid_h≥J cell. What does oracle pick beyond just (Q on top)? Bot DS suit profile distribution? Bot pair high? Mid pair high? Is there a clean trigger condition that fires on >90% of the cell?
 >
->   **Time budget:** ~1.5–2 hours of compute (similar to S58). Fully autonomous-friendly.
+>   **Phase 1b — Hand-level**: inspect 50 hands. Confirm the trigger condition uniquely identifies the cell without false positives in other K-high subcategories.
+>
+>   **Phase 2 — Write rule_18_K_high_DS_NO_JOINT_route.py**: gated to `max_rank == K AND has_K_on_top_DS_bot achievable == False AND n_joint_topNonMax > 0 AND best_top_topNonMax == Q AND best_mid_high_topNonMax >= J`. Action: route to (top=Q, DS bot via [the rule's chosen suit pair], ms mid via [the rule's chosen suit]).
+>
+>   **Phase 3 — Train v53_rule_chain (rules 1..18) + grade** vs v52. Acceptance: ≥−$5/1000h full grid + non-K-high categories byte-identical.
+>
+>   **Time budget:** ~1 hour total (drill 15 min, rule 20 min, grade 25 min). Significantly cheaper than the v45 attempt.
 
-> **✅ NEW SHIPS (Session 58):**
-> 1. **v44_dt** replaces v43_dt as ML champion. **+$42 full / $0 prefix.** High_only zone collapse from $2,075 → $1,868 (−10.0%). Prefix neutrality is by design — prefix slice has zero high_only hands and the new features are gated.
-> 2. **`SESSION_58_HIGH_ONLY_DECISION_MATRIX.md`** — per-max-rank × per-cell decision matrix at repo root, answering the user's S57 review question independently of the ML ship.
-> 3. **Cumulative session +$42 full / $0 prefix.** New feature suite fully orthogonal — surgical gating preserves all other categories byte-identical on both grids.
+> **❌ NULL RESULT (Session 59):**
+> 1. **v45_dt did NOT ship.** Full-grid lift = $0/1000h. Prefix lift = $0/1000h (by design, high_only-gated). v44_dt remains the ML champion.
+> 2. The 4 ho_v5 features rank #66/#97/#106/#110 (0.07%/0.01%/0.01%/0.00%) — the LOWEST per-ship in project history. Combined with **+9 leaves** vs v44's 2.248M (essentially zero new splits), this signals saturation.
+> 3. The data signal is real and was empirically verified (HO13 stratification: K × DS_NO_JOINT × best_top=Q × mid_h≥J is a $9.76/1000h cell with a 30.5% gap between oracle's pick rate and v44's). But it's not capturable by adding more DT features at current hyperparameters.
 
-> **🔬 ARTIFACTS (Session 58):**
-> 1. **`analysis/scripts/drill_high_only_v43_deepdive.py`** — Drill HO5+HO6+HO7 (consolidated: per-max-rank residual + structural cell cross-tab + oracle pick profile). Persists `data/drill_ho_v43_per_hand_structural.parquet` (15 MB) for downstream drill reuse.
-> 2. **`analysis/scripts/drill_high_only_v43_bot_vs_mid.py`** — Drill HO8 (Omaha-first vs Hold'em-first vs joint per max-rank).
-> 3. **`analysis/scripts/drill_high_only_v43_threshold.py`** — Drill HO9 (DS-vs-SS threshold; reads parquet from HO5+HO6+HO7).
-> 4. **`analysis/scripts/drill_high_only_v43_nonmax_joint.py`** — Drill HO10 supplementary (non-max-top joint enumeration).
-> 5. **`analysis/scripts/high_only_aug_v4_features_gated.py`** + persist — PRODUCTION rank-valued features for high_only structural axes.
-> 6. **`analysis/scripts/train_v44_dt.py`** + `strategy_v44_dt.py` + `grade_v44_dt.py` — ship.
-> 7. **`data/v44_dt_model.npz`** (1260 MB) — PRODUCTION ML champion.
-> 8. **`data/feature_table_high_only_aug_v4_gated.parquet`** (19 MB) — persisted feature table.
-> 9. **`SESSION_58_V44_DT_REPORT.md`** — repo-root standalone report.
-> 10. **`SESSION_58_HIGH_ONLY_DECISION_MATRIX.md`** — repo-root decision matrix (the user-deliverable doc).
+> **✅ ARTIFACTS (Session 59):**
+> 1. **`analysis/scripts/drill_high_only_v44_deepdive.py`** — HO11+HO12+HO13 consolidated drill on v44_dt's residuals. Reusable for future v44-baseline drills.
+> 2. **`analysis/scripts/drill_high_only_v44_nonmax_quality.py`** — HO13 follow-up: non-max joint quality stratification by (max_rank × best_top × best_mid bucket).
+> 3. **`analysis/scripts/high_only_aug_v5_features_gated.py`** + persist + train + strategy + grade — full v5 chain wired up (kept as documented null attempt; useful when Session 60 considers Option A / Option D).
+> 4. **`data/v45_dt_model.npz`** (1260.57 MB) — trained but NOT shipping; kept for reference.
+> 5. **`data/drill_ho_v44_per_hand_structural.parquet`** (15.0 MB) — per-hand v44 residual structure; reusable.
+> 6. **`SESSION_59_V45_DT_REPORT.md`** — null-result session report at repo root.
 
-> **📓 METHODOLOGY LESSONS (Session 58 NEW):**
-> - **The 4-phase playbook is transferable to the SAME zone for a THIRD pass without modification.** Re-drilling against the new champion (v43, post-S57 collapse) revealed the residual had shifted axis (DS+ms joint → DS bot quality + non-max-top joint + 4f route) without changing in zone. Same playbook applied without modification.
-> - **A zone can be collapsed at least three times by stacking conditional feature axes.** Each session adds a NEW conditional axis to the same zone, and gains compound surgically: $2,796 → $1,868 (−$928, −33.2%) over S56→S58.
-> - **The decision matrix is a separable deliverable from the ML ship.** `SESSION_58_HIGH_ONLY_DECISION_MATRIX.md` documents oracle's structural strategy across 7 max-ranks × 7 cells, answering the user's S57 review independently of whether v44 shipped.
-> - **5 drills can run as 4 scripts sharing one sweep.** HO5+HO6+HO7 consolidated (~8 min, 2.5K hands/s incl. v43 strategy calls); HO8/HO9/HO10 standalone (or read the shared parquet). Total drill compute: ~10 min wall time.
-> - **"Omaha first or Hold'em first?" has a nuanced answer.** Within joint, oracle is mid-first (mid_high preferred over bot pair_high). Outside joint at lower max-ranks, oracle becomes bot-first (max-rank moves into the bot to enable a stronger DS configuration with a lower top). Both behaviors are simultaneously true at different points in the structural cell space.
+> **📓 METHODOLOGY LESSONS (Session 59 NEW):**
+> - **The 4-phase playbook hits a saturation ceiling at depth=36 ml=1 + ~2.25M leaves on 6M rows.** Three passes on high_only worked. The 4th does not, despite the data signal being clear. Bottleneck is no longer feature design but DT capacity.
+> - **Low importance AND no leaf growth is a stronger null signal than importance alone.** v44 had low importance (#47–#95) but +70K leaves; v45 has lower importance AND +9 leaves — the combination is the leading indicator.
+> - **Mathematically redundant features don't help at saturation.** ho_v5 signals are linear combinations or derivations of ho_v4 + base features; the DT already exploits the underlying axis.
+> - **Drill stratification can identify a residual gap that is not closeable with the current model class.** HO13 found a 30.5% gap on an $9.76/1000h cell — a real signal that ML can't capture but a rule could.
+> - **Number of consecutive same-zone playbook passes ≤ 3 under current DT hyperparameters.** Beyond that, switch zones, switch model class, or switch lever (rules).
 
-> Updated: 2026-05-11 (Session 58)
+> Updated: 2026-05-11 (Session 59 — NULL)
 
 ---
 
-## Headline state at end of Session 58
+## Headline state at end of Session 59 (UNCHANGED from S58)
 
 **Strategies of record:**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
-| **v52_full_high_only_handler** | **PRODUCTION rule chain** (17 rules; UNCHANGED from S53). $2,498 full / $1,522 prefix. | `analysis/scripts/strategy_v52_full_high_only_handler.py` |
-| **v44_dt** | **NEW ML champion (Session 58).** 2.25M leaves, 107 features at depth=36 ml=1; +$42 full / $0 prefix vs v43_dt. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
-| v43_dt | Predecessor ML champion (S57). 2.18M leaves, 103 features. | `analysis/scripts/strategy_v43_dt.py` + `data/v43_dt_model.npz` |
-| v42_dt | S56 ML champion. 2.11M leaves, 99 features. | `analysis/scripts/strategy_v42_dt.py` + `data/v42_dt_model.npz` |
-| v41_dt | S55 ML champion. 2.02M leaves, 95 features. | `analysis/scripts/strategy_v41_dt.py` + `data/v41_dt_model.npz` |
-| v40_dt | S55 first ship; replaced within-session. 1.57M leaves, 91 features. | `analysis/scripts/strategy_v40_dt.py` + `data/v40_dt_model.npz` |
-| v39_dt | S54 ML champion. 1.52M leaves, 87 features. | `analysis/scripts/strategy_v39_dt.py` + `data/v39_dt_model.npz` |
+| **v52_full_high_only_handler** | **PRODUCTION rule chain** (17 rules; UNCHANGED). $2,498 full / $1,522 prefix. | `analysis/scripts/strategy_v52_full_high_only_handler.py` |
+| **v44_dt** | **PRODUCTION ML champion (UNCHANGED).** 2.25M leaves, 107 features at depth=36 ml=1; $1,081 full / $686 prefix. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
+| v45_dt (S59 NULL) | Trained but does NOT ship; kept for reference. 2.25M+9 leaves, 111 features. | `analysis/scripts/strategy_v45_dt.py` + `data/v45_dt_model.npz` |
+| v43_dt | Predecessor ML champion (S57). | `analysis/scripts/strategy_v43_dt.py` + `data/v43_dt_model.npz` |
+| v42_dt | S56 ML champion. | `analysis/scripts/strategy_v42_dt.py` + `data/v42_dt_model.npz` |
+| v41_dt | S55 ML champion. | `analysis/scripts/strategy_v41_dt.py` + `data/v41_dt_model.npz` |
+| v40_dt | S55 first ship; replaced within-session. | `analysis/scripts/strategy_v40_dt.py` + `data/v40_dt_model.npz` |
+| v39_dt | S54 ML champion. | `analysis/scripts/strategy_v39_dt.py` + `data/v39_dt_model.npz` |
 | v36_dt | Older ML champion (S53 overnight; 1.06M leaves; $1,649). | `analysis/scripts/strategy_v36_dt.py` + `data/v36_dt_model.npz` |
 | v34_dt | Older ML champion (874K leaves; $1,681). | `analysis/scripts/strategy_v34_dt.py` + `data/v34_dt_model.npz` |
 | v47_rule16_Qhigh_DS / v46_rule15_Khigh_DS / v45_rule14_Ahigh_DS | Predecessor rule chains. | various |
@@ -68,7 +67,7 @@
 | v32_dt | Older ML baseline. | various |
 | v30_dt / v29_dt / v27_dt / v26 / v25 / v24 / v23 / v20 / v18e / v16 | Older baselines. | various |
 
-**Capacity + feature progression — NEW v44 ML champion:**
+**Capacity + feature progression (UNCHANGED — v44 still champion):**
 
 | Strategy | Depth | min_leaf | Features | Leaves | $/1000h full | pct_opt full |
 |---|---:|---:|---:|---:|---:|---:|
@@ -81,150 +80,115 @@
 | v42 | 36 | 1 | 99 (95+4 ho_v2) | 2,109,330 | $1,192 | 63.08% |
 | v43 | 36 | 1 | 103 (99+4 ho_v3) | 2,177,798 | $1,123 | 63.99% |
 | **v44** | **36** | **1** | **107 (103+4 ho_v4)** | **2,248,173** | **$1,081** | **64.80%** |
+| v45 (NULL) | 36 | 1 | 111 (107+4 ho_v5) | 2,248,182 (+9) | $1,081 (+$0) | 64.80% (+0.00%) |
 
-**Cumulative ML arc (v32 → v44):** **−$634/1000h on full grid across 9 ships** (v34: −$34, v36: −$33, v39: −$237, v40: −$18, v41: −$124, v42: −$79, v43: −$69, v44: −$42).
+**Cumulative ML arc (v32 → v44, UNCHANGED):** **−$634/1000h on full grid across 9 ships.** v45 attempt: $0 (does not ship).
 
-**Per-category residuals (within-category, full grid) — END OF SESSION 58:**
+**Per-category residuals (UNCHANGED from S58):**
 
-| Category | n_hands | share | v44 within-cat | $/1000h whole-grid | Δ vs v43 |
-|---|---:|---:|---:|---:|---:|
-| **high_only** (S58 collapsed) | 1,226,940 | 40.4% | **$1,868** | $755 | **−$207** |
-| pair | 2,800,512 | 36.2% | $1,097 | $396 | $0 |
-| trips | 328,185 | 4.6% | $1,194 | $55 | $0 |
-| two_pair | 1,338,480 | 14.5% | $363 | $52 | $0 |
-| three_pair | 114,400 | 2.2% | $1,613 | $35 | $0 |
-| trips_pair | 171,600 | 1.8% | $281 | $5 | $0 |
-| composite | 14,742 | 0.2% | $960 | $2 | $0 |
-| quads | 14,300 | 0.1% | $545 | $1 | $0 |
+| Category | n_hands | share | v44 within-cat | $/1000h whole-grid |
+|---|---:|---:|---:|---:|
+| **high_only** | 1,226,940 | 40.4% | $1,868 | $755 |
+| pair | 2,800,512 | 36.2% | $1,097 | $396 |
+| trips | 328,185 | 4.6% | $1,194 | $55 |
+| two_pair | 1,338,480 | 14.5% | $363 | $52 |
+| three_pair | 114,400 | 2.2% | $1,613 | $35 |
+| trips_pair | 171,600 | 1.8% | $281 | $5 |
+| composite | 14,742 | 0.2% | $960 | $2 |
+| quads | 14,300 | 0.1% | $545 | $1 |
 
-**high_only is STILL by far the dominant residual** ($755/1000h whole-grid = ~70% of total v44 regret). Session 59's highest-leverage target. Three-session high_only progression: $2,796 → $2,411 → $2,075 → $1,868 = **−$928 within-category (−33.2%)** over Sessions 56–58.
+**high_only is STILL the dominant residual** at $755/1000h whole-grid (~70% of total v44 regret). But naive 4th-pass feature engineering can no longer attack it under current DT hyperparameters.
 
 **Human-strategy progression — UNCHANGED from end of S53:**
 
-| Strategy | $/1000h | pct_opt | Δ vs v14 |
-|---|---:|---:|---:|
-| v8_hybrid (pre-Rule chain) | $3,153 | — | — |
-| v14_combined (Rules 1-3) | $3,033 | 39.5% | baseline |
-| v33_rule6_trips (+ Rule 6 v1) | $2,920 | 40.68% | −$113 |
-| v37_rule7_three_pair (+ Rule 7) | $2,877 | 41.02% | −$156 |
-| v38_rule8_qp (+ Rule 8) | $2,868 | 41.07% | −$165 |
-| v39_rule9 (+ Rule 9 a/b/c) | $2,846 | 41.17% | −$187 |
-| v40b_rule10_gated (+ Rule 10) | $2,798 | 41.48% | −$235 |
-| v41_rule10_v3_ds (+ Rule 10 v3) | $2,769 | 41.91% | −$264 |
-| v42_rule11_jpair_pbot_ds (+ Rule 11) | $2,763 | 41.93% | −$270 |
-| v43_rule12_two_pair_DS_intact (+ Rule 12) | $2,727 | 42.20% | −$306 |
-| v44_rule13_three_pair_DS (+ Rule 13) | $2,717 | 42.34% | −$316 |
-| v45_rule14_Ahigh_DS (+ Rule 14) | $2,585 | 43.05% | −$448 |
-| v46_rule15_Khigh_DS (+ Rule 15) | $2,534 | 43.24% | −$499 |
-| v47_rule16_Qhigh_DS (+ Rule 16) | $2,515 | 43.30% | −$518 |
-| **v52_full_high_only_handler (+ Rule 17) — CURRENT PRODUCTION** | **$2,498** | **43.34%** | **−$535** |
+(table omitted — see S58 CURRENT_PHASE.md; no change in S59)
 
-**The two production tracks now diverge by $1,417/1000h** (v52 rule chain at $2,498; v44_dt at $1,081). The ML champion beats the human-memorizable rule chain by more than half its EV deficit.
+**The two production tracks STILL diverge by $1,417/1000h** (v52 rule chain at $2,498; v44_dt at $1,081). UNCHANGED.
 
 ---
 
-## What Session 58 produced
+## What Session 59 produced
 
 **Code:**
-- 4 drills (HO5+HO6+HO7 consolidated, HO8 standalone, HO9 reads parquet, HO10 standalone supplementary)
-- 1 feature module (high_only_v4) + 1 persistence script
-- 1 trainer (v44) + 1 strategy + 1 grader
+- 2 drills (HO11+HO12+HO13 consolidated, HO13 follow-up cross-tab)
+- 1 feature module (high_only_v5) + 1 persistence script
+- 1 trainer (v45) + 1 strategy + 1 grader
 
 **Documentation:**
-- `STRATEGY_GUIDE.md` — Part 1 Session 58 entry; Part 2 ML champion table updated (v44 row); front-matter "Last updated" line refreshed
+- `STRATEGY_GUIDE.md` — Part 1 Session 59 NULL entry (appended); Part 2 unchanged (v44 still champion)
 - `CURRENT_PHASE.md` — rewritten (this file)
-- `DECISIONS_LOG.md` — Decision 093 appended
-- `SESSION_58_V44_DT_REPORT.md` — repo-root standalone report
-- `SESSION_58_HIGH_ONLY_DECISION_MATRIX.md` — repo-root decision matrix (the user-deliverable doc)
+- `DECISIONS_LOG.md` — Decision 094 (NULL) appended
+- `SESSION_59_V45_DT_REPORT.md` — repo-root null-result report
 
-**Models persisted:**
-- `data/v44_dt_model.npz` (PRODUCTION ML champion, 1260 MB)
-- `data/feature_table_high_only_aug_v4_gated.parquet` (19.04 MB)
-- `data/drill_ho_v43_per_hand_structural.parquet` (15.0 MB; reusable for future high_only drills)
-- `data/drill_ho_v43_nonmax_joint.parquet` (4.7 MB; supplementary)
+**Models persisted (NOT shipping):**
+- `data/v45_dt_model.npz` (1260.57 MB; kept for reference)
+- `data/feature_table_high_only_aug_v5_gated.parquet` (19.21 MB)
+- `data/drill_ho_v44_per_hand_structural.parquet` (15.0 MB; reusable for future v44 drills)
 
 ---
 
-## Resume Prompt (Session 59 — overnight, autonomous)
+## Resume Prompt (Session 60)
 
 ```
-Resume Session 59 of the Taiwanese Poker Solver project at
+Resume Session 60 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context:
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of Session 58)
-- DECISIONS_LOG.md (latest: Decision 093 — v44_dt new ML champion)
-- SESSION_58_V44_DT_REPORT.md
-- SESSION_58_HIGH_ONLY_DECISION_MATRIX.md
-- STRATEGY_GUIDE.md (Session 58 entry in Part 1; updated ML champion
-  table in Part 2)
+- CURRENT_PHASE.md (rewritten end of Session 59 — NULL result)
+- DECISIONS_LOG.md (latest: Decision 094 — v45_dt NULL result)
+- SESSION_59_V45_DT_REPORT.md (the null-result session report)
+- STRATEGY_GUIDE.md (Session 59 NULL entry in Part 1; Part 2 unchanged)
 - analysis/scripts/strategy_v44_dt.py — current ML champion
-- analysis/scripts/high_only_aug_v4_features_gated.py — ho_v4 feature
-  template (most-recent prior art)
-- analysis/scripts/drill_high_only_v43_deepdive.py — drill consolidation
-  template
-- analysis/scripts/high_only_aug_v3_features_gated.py — ho_v3 JOINT
-  feature template
+- analysis/scripts/strategy_v52_full_high_only_handler.py — production rule chain
+- analysis/scripts/drill_high_only_v44_deepdive.py — drill template
+- analysis/scripts/drill_high_only_v44_nonmax_quality.py — cross-tab template
 
-State (end of Session 58):
+State (end of Session 59 = end of Session 58, unchanged):
 - Rule chain production: v52_full_high_only_handler (17 rules; UNCHANGED)
   at $2,498 full / $1,522 prefix.
-- ML champion: v44_dt (NEW) at $1,081 full / $686 prefix; 2.25M leaves
-  at depth=36 ml=1; 107 features.
-- Cumulative ML v32 → v44 = −$634 full / −$218 prefix (9 ML ships).
-- High_only collapsed THREE times: $2,796 → $2,411 → $2,075 → $1,868
-  (−$928 / −33.2%).
-- High_only is STILL the dominant residual at $755/1000h whole-grid
-  (~70% of v44's regret).
+- ML champion: v44_dt (UNCHANGED) at $1,081 full / $686 prefix; 2.25M
+  leaves at depth=36 ml=1; 107 features.
+- v45_dt attempt: NULL ($0/1000h lift, +9 leaves, lowest-importance
+  features in project history). Kept on disk for reference.
+- high_only STILL dominant residual at $755/1000h whole-grid (~70%
+  of v44's regret) but no longer ML-attackable under current
+  hyperparameters.
 
-DIRECTION FOR SESSION 59 (autonomous overnight):
+DIRECTION FOR SESSION 60 (recommended: Option C — surgical rule):
 
-**High_only 4th-pass focused on the K/Q × `DS_NO_JOINT` cells where the
-"max-off-top" residual is biggest.**
+The S59 null established that the 4-phase ML-feature playbook is
+saturated on high_only at depth=36 ml=1. HO13 surfaced a specific
+$9.76/1000h cell (K × DS_NO_JOINT × best_top=Q × mid_h>=J)
+that ML can't reach but a rule might.
 
-The S58 decision matrix surfaced the deepest unaddressed cell: at K/Q in
-`DS_NO_JOINT`, oracle drops max-rank off the top 34%/52% of the time
-but v44 keeps it on top 87%/68%. v44's ho_v4 features partly capture
-this (the non-max joint count fires) but oracle's choice depends on a
-richer per-cell trade-off than v44 currently encodes.
+Option C (recommended): Write rule_18_K_high_DS_NO_JOINT_route.py.
 
-5-DRILL PLAN (overnight):
+Phase 1 — Drill RU18: deep-dive the 18,144 hands in the cell. What
+does oracle pick beyond just (Q on top)? Bot DS suit profile?
+Bot pair high? Mid pair high?
 
-### Drill HO11 — per-max-rank residual stratification on v44_dt
-Apply HO5 template to v44 (swap strategy_v43_dt → strategy_v44_dt; add
-v44 fields). Verify the K/Q × DS_NO_JOINT cells are now the dominant
-residual. Identify the new top mismatch class (likely tK_DS_mu →
-t<12_DS_ms or similar non-max-top swap).
+Phase 1b — Hand-level: 50 hands. Confirm a clean trigger.
 
-### Drill HO12 — hand-level inspection of the dominant new mismatch
-Inspect 50–100 hands. Confirm structural delta. Hypothesis: when the
-DS bot would contain the max-rank as a suited pair (K-pair-bot at
-max=K), oracle ALWAYS prefers non-max-top joint route.
+Phase 2 — Write rule_18_K_high_DS_NO_JOINT_route.py gated to:
+  max_rank == K AND
+  no joint with K on top (n_joint_topMax == 0) AND
+  non-max joint exists (n_joint_topNonMax > 0) AND
+  best non-max top == Q AND
+  best non-max mid_high >= J(11)
 
-### Drill HO13 — non-max-top joint quality stratification
-Stratify non-max-top joints by (best_top_rank, best_mid_high) tuples.
-Identify which (top, mid) combinations oracle prefers. v44 has best_top
-but not best_mid in non-max joints — this is the gap.
+Action: route to (top=Q, DS bot, ms mid) per the rule's analysis.
 
-### Phase 2 v5 — design 4 features
-1. ho_v5_topNonMax_DS_ms_max_mid_high_g — best mid_high in non-max
-   joints (the missing quality counterpart to v44's max_top_rank).
-2. ho_v5_topNonMax_DS_ms_best_combined_quality_g — max(top + mid_high)
-   across non-max joints.
-3. ho_v5_topNonMax_DS_ms_with_max_in_bot_pair_g — count of non-max
-   joints where max-rank is paired in the bot suit.
-4. ho_v5_topMax_4f_ms_n_configs_g — augment 4f route with count signal.
+Phase 3 — Train v53_rule_chain (rules 1..18) + grade vs v52.
+Acceptance: >=-$5/1000h full grid + non-K-high categories byte-identical.
 
-Pick the 4 features from drill outcomes; mirror v2/v3/v4 rank-valued
-shape.
+Alternative options if Option C doesn't work:
+- Option B: pivot to trips zone ($55/1000h whole-grid)
+- Option A: try a different model class (gradient boosting / RF) on
+  high_only
+- Option D: increase DT training data via synthetic-hand augmentation
 
-### Train + ship v45_dt
-depth=36 ml=1, 111 features = 107 + 4 ho_v5. Same surgical-gating
-discipline. Acceptance: −$30/1000h or better on full grid + all
-non-high_only categories byte-identical.
-
-Time budget: ~1.5–2 hours of compute. Fully autonomous-friendly.
+Time budget: ~1 hour for Option C.
 
 REMINDERS:
 - Auto mode is on; minimize interruptions.
@@ -232,42 +196,13 @@ REMINDERS:
 - cargo lives at ~/.cargo/bin/cargo (not on PATH).
 - Session-end protocol: commit + push to origin/main (pre-authorized).
 - For long Python scripts: PYTHONUNBUFFERED=1 or python3 -u.
-- Reuse `data/drill_ho_v43_per_hand_structural.parquet` from S58 if
-  the residual structure is similar (saves the ~8 min sweep).
-- Methodology rule (Session 58): the 4-phase playbook is transferable
-  to the SAME zone for a THIRD pass — and presumably a 4th, 5th, etc.
-  Each pass adds a NEW conditional axis; gains compound surgically.
-- Methodology rule (Session 58): the decision matrix is a separable
-  deliverable from the ML ship — even if v45 doesn't ship, document
-  the per-cell trade-off rules.
-- Methodology rule (Session 58): "Omaha-first or Hold'em-first?" has
-  a nuanced answer — mid-first within joint, bot-first outside joint
-  at lower max-ranks. Both true simultaneously in different cells.
-- Methodology rule (Session 57): joint achievability is a distinct
-  structural axis from single-axis achievability; joint features are
-  NOT redundant with the components.
-- Methodology rule (Session 57): importance can be low (#60+) and
-  lift can still ship via surgical gating on a high-leverage subset.
-- Methodology rule (Session 57): user predictions can be wrong about
-  WHICH axis dominates even after one pass collapses one axis; the
-  data dictates the axis.
-- Methodology rule (Session 56): when feature design exactly matches
-  the structural delta, Phase 1b confirmation collapses to 100/0.
-- Methodology rule (Session 56): surgical-gating means prefix-grid
-  neutrality is correct (not suspect) when the prefix slice doesn't
-  contain the targeted population.
-- Methodology rule (Session 55): asymmetric existing features signal
-  blind spots.
-- Methodology rule (Session 55): low individual feature importance
-  can still ship lift via surgical gating.
-- Methodology rule (Session 54): diagnostic-first feature engineering
-  works at saturation.
-- Methodology rule (Session 54): boolean features are redundant at
-  ml=1 saturation.
-- Methodology rule (Session 54): rank-valued conditional features
-  describing ALTERNATIVE configurations unlock saturation.
-- Methodology rule (Session 54): feature design beats hyperparameter
-  tuning at saturation.
+- Methodology rule (Session 59): the 4-phase playbook saturates at 3
+  consecutive same-zone passes under depth=36 ml=1. Beyond that,
+  switch zones / model / lever.
+- Methodology rule (Session 59): low importance + no leaf growth is
+  the leading indicator of a null ship.
+- Methodology rule (Session 59): drill stratification can identify
+  residual gaps that are not closeable with the current model class.
 ```
 
 ---
