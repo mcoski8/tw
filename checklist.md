@@ -192,18 +192,22 @@
 
 ---
 
-> **STALENESS NOTICE (last updated end of Session 55, 2026-05-10):** This
+> **STALENESS NOTICE (last updated end of Session 59, 2026-05-11):** This
 > checklist was authored pre-build. The actual project has advanced through
-> Sprint 8 with **v41_dt as current ML champion** ($1,270/1000h full grid /
-> $686 prefix; 95 features, 2.02M leaves at depth=36 ml=1) and **11
-> gating-template wins** shipped (high_only-via-suited/v20, trips_pair/v23,
-> composite/v24, pair-v1/v25, two_pair/v26, high_only-direct/v27, pair-v2/v29,
-> trips/v30, trips_v2/v32, pair_aug_v5/v39, trips_pair_aug_v2/v40,
-> two_pair_aug_v2/v41). 17 production rules shipped in the human-memorizable
-> chain (v52_full_high_only_handler at $2,498 full / $1,522 prefix).
-> Cumulative ML arc v32 → v41 = −$445 full / −$218 prefix (6 ML ships).
-> Cumulative rule chain v14 → v52 = −$535 full. Rule 5 (Rainbow override)
-> shipped for human play; superseded within the chain.
+> Sprint 8 with **v44_dt as current ML champion** ($1,081/1000h full grid /
+> $686 prefix; 107 features, 2.25M leaves at depth=36 ml=1). Session 59
+> attempted v45_dt (111 features, +4 ho_v5) but graded $0/1000h lift —
+> NULL ship. v44 remains the champion. **15 gating-template wins**
+> shipped through v44 (high_only-via-suited/v20, trips_pair/v23, composite/v24,
+> pair-v1/v25, two_pair/v26, high_only-direct/v27, pair-v2/v29, trips/v30,
+> trips_v2/v32, pair_aug_v5/v39, trips_pair_aug_v2/v40, two_pair_aug_v2/v41,
+> high_only_aug_v2/v42, high_only_aug_v3/v43, high_only_aug_v4/v44).
+> 17 production rules shipped in the human-memorizable chain
+> (v52_full_high_only_handler at $2,498 full / $1,522 prefix; UNCHANGED
+> since S53). Cumulative ML arc v32 → v44 = −$634 full / −$218 prefix
+> (9 ML ships). Cumulative rule chain v14 → v52 = −$535 full. Rule 5
+> (Rainbow override) shipped for human play; superseded within the chain.
+> **The two production tracks diverge by $1,417/1000h.**
 > Most engine + best-response items above are complete via the Full Oracle
 > Grid (Session 24); CFR Tier 2 was deferred. The "AI Consensus" sub-tasks
 > were superseded by direct DT regression (v16+) and pattern-mining via

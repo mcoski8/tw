@@ -2393,3 +2393,46 @@ Session 55 highlights:
 - `SESSION_55_V41_DT_REPORT.md` is the standalone session report.
 
 Session 56 priority: **high_only zone** ($2,796/1000h within-cat × 40.4% share = $1,131/1000h whole-grid = ~63% of v41's total regret). Different feature types likely needed (top-card placement, defensive-pair triggers, broadway connectivity). The methodology pipeline is mature; the next zone awaits.
+
+## Sessions 56–58 — covered in CURRENT_PHASE.md rewrites + DECISIONS_LOG.md (Decisions 091–093) + SESSION_NN_*.md reports
+
+Sessions 56, 57, 58 each shipped a new ML champion via the S54 playbook applied to the high_only zone. Three consecutive same-zone passes:
+
+- **S56 v42_dt** (Decision 091): +$79 full / $0 prefix. ho_v2 features (DS-bot achievability with top=max). high_only $2,796 → $2,411.
+- **S57 v43_dt** (Decision 092): +$69 full / $0 prefix. ho_v3 features (JOINT DS bot + ms mid achievability + quality). high_only $2,411 → $2,075.
+- **S58 v44_dt** (Decision 093): +$42 full / $0 prefix. ho_v4 features (DS bot pair_high quality + 4f route + non-max-top joint count/quality). high_only $2,075 → $1,868. Also shipped `SESSION_58_HIGH_ONLY_DECISION_MATRIX.md` answering the user's S57 review question independently of the ML ship.
+
+Three-session cumulative high_only collapse: $2,796 → $1,868 = **−$928 within-category (−33.2%)**, −$378/1000h whole-grid contribution.
+
+End of S58:
+- Rule chain UNCHANGED at v52 ($2,498 full / $1,522 prefix).
+- ML champion: v44_dt ($1,081 full / $686 prefix; 107 features; 2,248,173 leaves).
+- Two tracks diverge by $1,417/1000h.
+
+## Session 59 — NULL RESULT (Decision 094)
+
+Session 59 attempted a 4th consecutive high_only pass with 4 ho_v5 features designed from drills HO11+HO12+HO13 on v44_dt. The drills empirically confirmed the residual signal IS real and large — HO13 isolated a $9.76/1000h cell at K × DS_NO_JOINT × best_top=Q × best_mid_high≥J (n=18,144 hands, oracle picks non-max route 67% vs v44's 36%).
+
+**v45_dt training:** 111 features, depth=36 ml=1, 508s training time. Leaves grew only **+9** over v44's 2,248,173 (essentially zero new splits). Feature importance #66/#97/#106/#110 (sum 0.09%) — the LOWEST per-ship in project history.
+
+**v45_dt grade — NULL.** Full-grid $0/1000h lift. Prefix-grid $0/1000h lift. Byte-identical to v44_dt across all 8 categories (pct_opt match shift: +8 hands out of 6.0M). v45_dt does NOT ship.
+
+**Why null — saturation hypothesis:** at depth=36 ml=1, v44 has 2.25M leaves on 6M training rows (~2.7 examples/leaf avg). New features can split a leaf only when existing features cannot. ho_v5 signals are mathematically derivable from ho_v4 + base features (best_combined_q = max_top_rank + max_mid_high; n_max_in_bot_pair implied by n_configs × suit profile). The DT already exploits the underlying axis.
+
+**Methodology lessons (S59):**
+- The 4-phase playbook hits a saturation ceiling at depth=36 ml=1 + ~2.25M leaves on 6M rows after 3 consecutive same-zone passes.
+- Low importance + no leaf growth is a stronger null signal than importance alone.
+- Drill stratification can identify a residual gap that is not closeable with the current model class — useful diagnostic even when the ML attempt fails.
+- Track record after S59: 7 SHIPS / 1 NULL across 8 attempts (S54 pair, S55a trips_pair, S55b two_pair, S56/57/58 high_only 1-3, S59 high_only 4 NULL).
+
+**End of S59 state (UNCHANGED from S58):**
+- Rule chain: v52_full_high_only_handler ($2,498 full / $1,522 prefix).
+- ML champion: v44_dt ($1,081 full / $686 prefix). UNCHANGED.
+- Two production tracks diverge by $1,417/1000h.
+
+Session 60 priorities (in order):
+1. **Option C — Surgical rule on the HO13-identified cell.** K × DS_NO_JOINT × best_top=Q × mid_h≥J. Estimated lift on rule chain: $5–7/1000h. Implementation: ~1 hour. Recommended.
+2. **Option B — Pivot to trips zone** ($55/1000h whole-grid). The 4-phase playbook on a fresh zone may have room. Estimated lift: $20–40/1000h.
+3. **Option A — Different model class** (gradient boosting / RF ensemble) on high_only. Estimated lift: unknown. Implementation: research-heavy.
+
+Standalone session report: `SESSION_59_V45_DT_REPORT.md`.
