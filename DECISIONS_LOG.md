@@ -5053,3 +5053,100 @@ J-high has the most aggressive drop-max profile of all high zones (76% in DSnj p
 - Diverge by $1,417/1000h. STILL UNCHANGED.
 
 **Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED).
+
+---
+
+## Decision 098 — Session 63 J-high catalog audit: ALL CELLS LABELED ML-ONLY (no rule ships; harness validated on fourth shipped lift; "$17 Rule 17" attribution corrected)
+
+**Date:** 2026-05-12
+
+**Context:** Sessions 60+61+62 produced three consecutive NULL results (A-high, K-high, Q-high catalog audits). The per-max-rank rule catalog methodology's hypothesis remained open at the fourth max-rank: would J-high — where oracle drops max off top 76% in DSnj (the most aggressive drop-max profile of any zone tested), with a Rule 24 defensive overlap on s2 ≤ 8 hands — yield a Threshold-2 shippable rule? Session 63 reused the S60/S61/S62 harness verbatim (helpers `_enumerate_max_on_top_configs`, `_enumerate_nonMax_top_DSms`, `_enumerate_nonMax_top_anyBot_ms` imported from `candidates_K_high_S61`), audited v52 cell-by-cell on J-high, and tested 7 J-specific candidate refinement rules.
+
+**Result: ALL 7 CANDIDATES FAIL THRESHOLD 1.** J-high cells formally labeled ML-only at this catalog granularity. No production change. v52 and v44_dt both UNCHANGED.
+
+### Harness validation — corrected attribution
+
+The Phase 2 sanity check on J-high failed the original acceptance window ($15.30–$18.70) at +$5.48/1000h WG. **Investigation revealed CURRENT_PHASE's "Rule 17 = +$17 shipped lift" was a misattribution.** The S53 OVERNIGHT REPORT (lines 17-20) shows:
+- v48 (= v47 + Rules 17-21 HIMID for J/T/9/8/7-high) → +$8/1000h WG vs v47
+- v52 (= v47 + Rule 17 offensive + Rules 22-28 defensive) → +$17/1000h WG vs v47
+
+CURRENT_PHASE's "+$17 for Rule 17" was the **v52 TOTAL over v47**, NOT Rule 17 alone. The cross-check `sanity_v52_vs_v47_high_only.py` reproduces v52 vs v47 = +$16.77/1000h WG across all high_only — matching documented +$17 to within 1.4%. **Harness validated on a FOURTH independent shipped lift** (joining Rule 14 0.2% S60, Rule 15 0.7% S61, Rule 16 1.7% S62).
+
+Rule 17's actual J-high alone contribution: +$5.48/1000h WG (v48 vs v47 on max=11). The +$5.48 is consistent with v48's total $8 across J/T/9/8/7-high. J-high contribution makes up the majority since J is the largest sub-pop of v48's covered max-ranks (60K of 85K total in {7..11}).
+
+### Phase 2 — v52 cell-by-cell audit on J-high
+
+Per-cell remaining gap to oracle after v52 (= Rule 17 on s2 > 8 J-high = 91.7%, Rule 24 lowest-on-top on s2 ≤ 8 = 8.3%), in $/1000h whole-grid:
+
+| Cell | n hands | v52 mean_ev | Oracle mean_ev | Gap within-cell | Gap WG | v44 mean_ev | v44 gap WG |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| JOINT_HIGH | 0 | — | — | — | — | — | — |
+| JOINT_MED | 8,715 | -1.420 | -1.152 | $2,686 | $3.90 | -1.266 | $1.66 |
+| JOINT_LOW | 105 | -2.670 | -2.302 | $3,686 | $0.06 | -2.424 | $0.02 |
+| **DS_NO_JOINT** | **37,800** | **-1.702** | **-1.227** | **$4,749** | **$29.88** | **-1.486** | **$16.29** |
+| DS_NO_MAXTOP | 8,064 | -2.053 | -1.355 | $6,978 | $9.36 | -1.600 | $3.28 |
+| MS_ONLY | 5,376 | -2.257 | -1.781 | $4,767 | $4.26 | -2.024 | $2.18 |
+| **J-high total** | **60,060** | — | — | — | **$47.46** | — | **$23.43** |
+
+DS_NO_JOINT is dominant (63% of leak). Within-cell gap is **29% deeper at J than Q** ($4,749 vs $3,690) — a structural consequence of oracle dropping J off top 76% in this cell vs Q's 52%. **JOINT_HIGH is empty at J** (no hands have `best_ms_mid_high ≥ 11` since J = 11 is the max rank). v44_dt captures **$24.03/1000h WG more** than v52 on J-high overall (vs $38.53 at Q, $65.41 at K, $99.41 at A).
+
+**Rule 17 vs Rule 24 fire-region disambiguation:** s2 > 8 (Rule 17) handles 91.7% of J-high and accounts for $44.20 of $47.46 (93%) of the leak. s2 ≤ 8 (Rule 24) is 8.3% of J-high but only $3.26/1000h WG of leak. The structural twist is real but not load-bearing.
+
+### Phase 3 + 4 — 7 candidates tested vs v52 baseline
+
+| ID | Candidate | Cell | Fires | cap_b | $/cell | $/1000h WG | Verdict |
+|---|---|---|---:|---:|---:|---:|---|
+| C_J1 | DSnj_drop_J_low_top_DSms | DSnj | 39.8% | +21.54% | +$1,023 | **+$6.44** | T3 (best WG across S60-S63) |
+| C_J2 | DSnj_take_2top_DSms | DSnj | 9.6% | +8.73% | +$414 | +$2.61 | T3 |
+| C_J3 | DSnj_take_3top_DSms | DSnj | 9.6% | +6.61% | +$314 | +$1.98 | T3 |
+| C_J4 | DSnj_drop_J_when_J_in_DSpair | DSnj | 43.9% | +15.35% | +$729 | **+$4.59** | T3 (2nd best WG) |
+| C_J5 | DSnj_SSms_when_high | DSnj | 35.6% | −0.75% | −$36 | −$0.22 | T3 |
+| C_J6 | MSonly_drop_J | MSonly | 89.1% | −16.47% | −$785 | −$0.70 | T3 (over-fire pattern) |
+| C_J7 | DSnj_HIBOT_tiebreaker (control) | DSnj | 100.0% | −21.96% | −$1,043 | −$6.56 | T3 (HIMID confirmed) |
+
+**Every candidate falls below Threshold 1 (≥40% gap closure + ≥$3/1000h within-cell).** Three (C_J5, C_J6, C_J7) are net-NEGATIVE on whole-grid. C_J1's **+$6.44/1000h WG exceeds T2's $5 bar** in raw terms but fails T1's 40% gap-closure bar at 21.54%.
+
+### Methodology lessons (Session 63)
+
+1. **Drop-max rate IS partially recoverable at extreme rates — but still below T1.** S60–S62 lesson: decision-matrix percentages overstate refinement headroom monotonically across A (6%) → K (34%) → Q (52%). S63 partially shifts at J (76%): best-candidate capture jumps to **21.54%** at J (vs 5.45% A, 3.33% K, 5.99% Q). The lesson holds *qualitatively* — rules can't pick the right subset deterministically — but headroom *does* scale once the underlying surface is large enough. **C_J1's +$6.44/1000h WG is the biggest single-candidate WG lift across the entire S60-S63 catalog.** If T1's gap-closure threshold were 20%, C_J1 would ship.
+
+2. **Rule 17's HIMID design is empirically validated post-hoc — FOURTH retrospective confirmation.** C_J7 (HIBOT replacement) was −$1,043/cell, −$6.56/1000h WG. Together with A C10 (Rule 14), K C_K6 (Rule 15), Q C_Q7 (Rule 16), this is the fourth shipped HIMID design choice (S50/S51/S52/S53) confirmed sound at the cell level.
+
+3. **J-high cells are STRUCTURALLY DEEPER than Q-high but exhibit the same rule-saturation.** v52's residual cells at J are 21–29% deeper per hand than v52's at Q (DSnj $4,749 vs $3,690; DS_NO_MAXTOP $6,978 vs $5,767; MS_ONLY $4,767 vs $3,938). The MORE oracle deviates from "max-on-top + DS HIMID" (J's 76% drop-J vs Q's 52% vs K's 34% vs A's 6%), the bigger the within-cell gap, but the rule space tested STILL can't close it.
+
+4. **MSonly drop-max over-fire is a UNIVERSAL pattern across A/K/Q/J.** C_K5 (82.7% fire), C_Q6 (85.8%), C_J6 (89.1%) all over-fire catastrophically with the same structural mechanic: gating on "drop-max achievable" matches a near-universal subset of MS_ONLY but oracle's actual drop is much narrower.
+
+5. **The catalog methodology successfully falsifies the fourth hypothesis.** S60 falsified A; S61 K; S62 Q; S63 J. **Four-quarters minus J's best-candidate of high_only's WG residual is now in the explicit ML-only zone** (97% of high_only by population). T/9/8 (the remaining 2.1% by population, ~$34/1000h WG residual extrapolated) are the only zones still pending audit. If the pattern holds, the entire $755/1000h is ML-only at this granularity.
+
+6. **CURRENT_PHASE's rolled-up "shipped lift per rule" table is unreliable for harness sanity checks.** Future catalog pages must reference the original session-end report's per-rule attribution, not the rolled-up CURRENT_PHASE table. The S63 cross-check uncovered the misattribution; future sessions should do the same kind of cross-check at the start.
+
+### Implications for Session 64
+
+T/9/8-high are all in v52's **always-defensive** zone (Rules 25/26/27) — oracle prefers lowest-on-top. The structural prediction inverts compared to A/K/Q/J: the rule strategy ALREADY drops max by default, so candidates must explore lowest-on-top tiebreaker refinements or DS/SS bot preference gates instead of max-on-top alternatives. Combined population is only 25,740 hands (2.1% of high_only); audit fits in one session.
+
+**Two predictions for S64:**
+1. T-high's v52→oracle within-cell gap is **deeper per hand** than J-high's $4,749 (structural funnel narrows further); WG total ~$20–30/1000h.
+2. ALL T/9/8 candidates land T3, completing the high_only catalog as ALL ML-only.
+
+If predictions hold, **Session 65 produces the aggregate `HIGH_ONLY_RULE_CATALOG.md`** documenting the boundary of rule-chain effectiveness on the largest residual zone.
+
+### Files (Session 63)
+
+**New artifacts (committed):**
+- `analysis/scripts/audit_rule17_S63.py` — Phase 2 sanity (v48 vs v47) + Phase 2b cell audit + Phase 2c Rule 17/Rule 24 fire-region disambiguation
+- `analysis/scripts/sanity_v52_vs_v47_high_only.py` — cross-check (v52 vs v47 reproduces +$17 to 1.4%) resolving CURRENT_PHASE misattribution
+- `analysis/scripts/candidates_J_high_S63.py` — 7 candidates importing generic helpers from `candidates_K_high_S61`
+- `analysis/scripts/test_J_high_candidates_S63.py` — sweep driver + JSON output
+- `data/session_63_candidate_results.json` — full results
+
+**Documentation:**
+- `SESSION_63_J_HIGH_CATALOG.md` — J-high catalog page (fourth page of `HIGH_ONLY_RULE_CATALOG.md`)
+- `CURRENT_PHASE.md` — rewritten with S64 direction
+- `DECISIONS_LOG.md` — Decision 098 (this section)
+
+**Production state at end of S63:** UNCHANGED from S58/S59/S60/S61/S62.
+- Rule chain: **v52_full_high_only_handler** ($2,498 full / $1,522 prefix)
+- ML champion: **v44_dt** ($1,081 full / $686 prefix)
+- Diverge by $1,417/1000h. STILL UNCHANGED.
+
+**Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED).
