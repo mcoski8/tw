@@ -4969,3 +4969,87 @@ Q-high has the most aggressive drop-max profile (52% in DSnj vs K's 34%, A's 6%)
 - Diverge by $1,417/1000h. STILL UNCHANGED.
 
 **Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED).
+
+---
+
+## Decision 097 — Session 62 Q-high catalog audit: ALL CELLS LABELED ML-ONLY (no rule ships; harness validated on third max-rank)
+
+**Date:** 2026-05-11
+
+**Context:** Sessions 60 + 61 produced two consecutive NULL results (A-high and K-high catalog audits). The per-max-rank rule catalog methodology's hypothesis remained open at the third max-rank: would Q-high — where oracle drops max off top 52% in DSnj (1.5× K's 34%, 8.7× A's 6%), the most aggressive drop-max profile of zones tested so far — yield a Threshold-2 shippable rule? Session 62 reused the S60/S61 harness verbatim (helpers `_enumerate_max_on_top_configs`, `_enumerate_nonMax_top_DSms`, `_enumerate_nonMax_top_anyBot_ms` imported from `candidates_K_high_S61` — no duplication), audited Rule 16 (Q-high HIMID, S52) cell-by-cell, and tested 7 Q-specific candidate refinement rules.
+
+**Result: ALL 7 CANDIDATES FAIL THRESHOLD 1.** Q-high cells formally labeled ML-only at this catalog granularity. No production change. v52 and v44_dt both UNCHANGED.
+
+### Harness validation (sanity check, 3rd max-rank)
+
+Sanity check: Rule 16 (`strategy_v47_rule16_Qhigh_DS`) vs its pre-Rule-16 predecessor (`strategy_v46_rule15_Khigh_DS`) on all 6 Q-high cells. **Total Q-high whole-grid lift: +$18.67/1000h**, matching CURRENT_PHASE's documented S52 ship of +$19 to within 1.7%. Per-cell decomposition: JOINT_HIGH +$1.68, JOINT_MED +$0.56, JOINT_LOW +$0.00, **DS_NO_JOINT +$7.14** (38% of total), DS_NO_MAXTOP +$6.90, MS_ONLY +$2.38. **Harness now validated on THREE independent shipped rules** (Rule 14 0.2%, Rule 15 0.7%, Rule 16 1.7%).
+
+### Phase 2 — Rule 16 cell-by-cell audit
+
+Per-cell remaining gap to oracle after Rule 16 (= v52 on Q-high since defensive triggers don't fire for Q-high with s2 > 8), in $/1000h whole-grid:
+
+| Cell | n hands | R16 mean_ev | Oracle mean_ev | Gap within-cell | Gap WG | v44 mean_ev | v44 gap WG |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| JOINT_HIGH | 13,230 | -0.592 | -0.391 | $2,006 | $4.42 | -0.499 | $2.38 |
+| JOINT_MED | 8,715 | -1.113 | -0.900 | $2,135 | $3.10 | -0.996 | $1.39 |
+| JOINT_LOW | 105 | -2.468 | -2.073 | $3,943 | $0.07 | -2.171 | $0.02 |
+| **DS_NO_JOINT** | **94,500** | **-1.078** | **-0.709** | **$3,690** | **$58.04** | **-0.955** | **$38.80** |
+| DS_NO_MAXTOP | 20,160 | -1.443 | -0.866 | $5,767 | $19.35 | -1.097 | $7.74 |
+| MS_ONLY | 13,440 | -1.646 | -1.252 | $3,938 | $8.81 | -1.472 | $4.91 |
+| **Q-high total** | **150,150** | — | — | — | **$93.77** | — | **$55.24** |
+
+DS_NO_JOINT is the dominant residual cell (62% of Q-high's $94/1000h post-Rule-16 leak). **Within-cell gap is 21% deeper at Q than K** ($3,690 vs $3,062) — a structural consequence of oracle dropping Q off top 52% in this cell vs K's 34%, while Rule 16 keeps Q on top 100%. v44_dt captures **$38.53/1000h WG more** than Rule 16 on Q-high overall (vs $65.41 at K, $99.41 at A).
+
+### Phase 3 + 4 — 7 candidates tested vs v52 baseline
+
+| ID | Candidate | Cell | Fires | cap_b | $/cell | $/1000h WG | Verdict |
+|---|---|---|---:|---:|---:|---:|---|
+| C_Q1 | DSnj_drop_Q_low_top_DSms | DSnj | 37.2% | +5.75% | +$212 | **+$3.33** | T3 (micro+) |
+| C_Q2 | DSnj_take_Jtop_DSms | DSnj | 8.7% | +3.24% | +$120 | +$1.88 | T3 |
+| C_Q3 | DSnj_drop_Q_when_Q_in_DSpair | DSnj | 41.5% | +1.06% | +$39 | +$0.62 | T3 |
+| C_Q4 | DSnj_drop_Q_to_2top_DSms | DSnj | 8.7% | +5.99% | +$221 | **+$3.48** | T3 (best micro+) |
+| C_Q5 | DSnj_SSms_when_high | DSnj | 32.0% | −3.48% | −$128 | −$2.02 | T3 |
+| C_Q6 | MSonly_drop_Q | MSonly | 85.8% | −68.84% | −$2,711 | −$6.06 | T3 (catastrophic) |
+| C_Q7 | DSnj_HIBOT_tiebreaker (control) | DSnj | 100.0% | −22.52% | −$831 | −$13.07 | T3 |
+
+**Every candidate falls below Threshold 1 (≥40% gap closure + ≥$3/1000h within-cell).** Three (C_Q5, C_Q6, C_Q7) are net-NEGATIVE on whole-grid. Two (C_Q1, C_Q4) show micro-positive lift (+$3.33 + +$3.48 = $+6.81/1000h WG gross with overlapping fire regions) but neither reaches T1 nor T2 individually nor combined.
+
+### Methodology lessons (Session 62)
+
+1. **Drop-max rate is NOT a recoverable quantity for simple gates — confirmed across the entire 6%→52% range.** S60 lesson at A (6% drop-A): "decision-matrix percentages overstate refinement headroom because oracle knows WHICH q% to switch on." S61 confirmed at K (34% drop-K). S62 confirms at Q (52% drop-Q). C_Q1 fires at **37.2%** (under-firing relative to 52% oracle rate) and captures only 5.75% — and the broadest gate (C_Q3 at 41.5% fire) captures barely 1.06%. **Lesson generalizes monotonically across an 8.7× growth in drop-max opportunity.** Best-candidate capture barely shifts: 5.45% (A C5) → 3.33% (K C_K3) → 5.99% (Q C_Q4).
+
+2. **Rule 16's HIMID design is empirically validated post-hoc — third retrospective confirmation.** C_Q7 (HIBOT replacement) was −$831/cell, −$13.07/1000h WG — same retrospective validation pattern as A-high C10 (Rule 14) and K-high C_K6 (Rule 15). All three shipped HIMID design choices (S50 + S51 + S52) are empirically sound.
+
+3. **Q-high cells are STRUCTURALLY DEEPER than K-high but exhibit the same rule-saturation.** Rule 16's residual cells are 21–56% deeper per hand than Rule 15's (DSnj $3,690 vs $3,062 +21%; DS_NO_MAXTOP $5,767 vs $4,980 +16%; MS_ONLY $3,938 vs $3,710 +6%). The MORE oracle deviates from "max-on-top + DS HIMID" (Q's 52% drop vs K's 34% vs A's 6%), the bigger the within-cell gap to oracle, but the rule space tested STILL can't close it. **This strengthens the case for the third consecutive max-rank** that high_only's residual is fundamentally non-rule-shaped at the catalog's "one sentence statable" granularity.
+
+4. **Two micro-positive candidates exist (C_Q1, C_Q4) but compose poorly.** C_Q4 (top=2 surgical, +$3.48) is the best Q candidate — mirror of C_K7 at K (which was +$1.05). Q's higher top=2 oracle rate (15% vs K's 7%) does scale the capture, but +$3.48/1000h WG is still under T2's $5/1000h bar even alone, and C_Q1's fire region overlaps (top ≤ 7 ⊃ top = 2).
+
+5. **The catalog methodology successfully falsifies the third hypothesis.** S60 falsified A-high; S61 falsified K-high; S62 falsifies Q-high. **Three-quarters of high_only's WG residual ($531 of $755) is now in the explicit ML-only zone.** Three-of-three across an 8.7× growth in drop-max opportunity is strong empirical evidence that the catalog approach saturates at this granularity. The remaining J/T/9/8 zones (6.9% by population, ~$80/1000h WG) likely follow the same pattern.
+
+### Implications for Session 63
+
+J-high has the most aggressive drop-max profile of all high zones (76% in DSnj per S58). If the rule-saturation pattern generalizes (which three independent falsifications strongly suggest), J-high is also expected to land all-T3. The S63 plan:
+- Reuse harness verbatim (fourth use); copy `candidates_Q_high_S62.py` → `candidates_J_high_S63.py`, swap `QUEEN = 12` → `JACK = 11`.
+- Sanity-check Rule 17 (S53, J-high HIMID, +$17/1000h WG shipped) reproduces ~$17 ±10%, **carefully handling the Rule 24 defensive overlap** (~30% of J-high has s2 ≤ 8 where Rule 24 fires lowest-on-top instead of Rule 17 HIMID).
+- Test 5–7 J-specific candidates targeting J × DSnj (n=37,800 = 62.9% of J-high; expected residual ~$18.75/1000h WG per S58 v43 baseline, less after Rule 17).
+- If all-T3, label J-high ML-only and proceed to T/9/8 combined (S64); if any T2, draft v53 with Rule 18.
+
+### Files (Session 62)
+
+**New artifacts (committed):**
+- `analysis/scripts/audit_rule16_S62.py` — Phase 2 sanity + Phase 2b cell audit driver
+- `analysis/scripts/candidates_Q_high_S62.py` — 7 candidates importing generic helpers from `candidates_K_high_S61`
+- `analysis/scripts/test_Q_high_candidates_S62.py` — sweep driver + JSON output
+- `data/session_62_candidate_results.json` — full results
+
+**Documentation:**
+- `SESSION_62_Q_HIGH_CATALOG.md` — Q-high catalog page (third page of `HIGH_ONLY_RULE_CATALOG.md`)
+- `CURRENT_PHASE.md` — rewritten with S63 direction
+- `DECISIONS_LOG.md` — Decision 097 (this section)
+
+**Production state at end of S62:** UNCHANGED from S58/S59/S60/S61.
+- Rule chain: **v52_full_high_only_handler** ($2,498 full / $1,522 prefix)
+- ML champion: **v44_dt** ($1,081 full / $686 prefix)
+- Diverge by $1,417/1000h. STILL UNCHANGED.
+
+**Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED).
