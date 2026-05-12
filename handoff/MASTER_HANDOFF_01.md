@@ -2436,3 +2436,43 @@ Session 60 priorities (in order):
 3. **Option A — Different model class** (gradient boosting / RF ensemble) on high_only. Estimated lift: unknown. Implementation: research-heavy.
 
 Standalone session report: `SESSION_59_V45_DT_REPORT.md`.
+
+## Sessions 60-65 — High-Only Rule Catalog (Decisions 095-100)
+
+Sessions 60 through 65 produced a complete five-page rule catalog for the high_only category — the project's first publishable end-product per CLAUDE.md's stated goal ("the definitive GTO Taiwanese Poker strategy guide — backed by exhaustive computation, not heuristics").
+
+**S60-S64: Per-max-rank catalog audits, all ALL-T3.**
+
+- **S60 A-high** (Decision 095, n=660,660, 53.8%): Rule 14 (S50, +$131) audited cell-by-cell. 10 candidates tested across 6 cells. All T3. $281.2/1000h WG residual to oracle; v44 catches $98.7; net ML-only $182.5.
+- **S61 K-high** (Decision 096, n=330,330, 26.9%): Rule 15 (S51, +$51). 7 candidates. All T3. $176.4 residual; $65.4 v44 catch; $110.9 ML-only.
+- **S62 Q-high** (Decision 097, n=150,150, 12.2%): Rule 16 (S52, +$19). 7 candidates. All T3. $93.8 residual; $38.5 v44; $55.2 ML-only.
+- **S63 J-high** (Decision 098, n=60,060, 4.9%): v52 (Rule 17 + Rule 24). 7 candidates including C_J1 at +$6.44/1000h WG (biggest single-candidate WG in catalog; clears T2's $5 but fails T1's 40% capture at 21.54%). All T3. $47.5 residual; $24.0 v44; $23.4 ML-only.
+- **S64 T/9/8-high combined** (Decision 099, n=25,740, 2.1%): Rules 25/26/27 (S53, always-defensive). 12 candidates across 3 max-ranks. All T3. C_T5 only positive (+$0.22). $16.5 residual; $9.3 v44; $9.3 ML-only. **Harness reproduced Rules 25/26/27 to 0.08% — cleanest yet.**
+
+**S65: Aggregate `HIGH_ONLY_RULE_CATALOG.md`** (Decision 100). Cover TL;DR + Part 1 (five per-max-rank pages assembled) + Part 2 (six cross-cell structural findings) + Part 3 (ML-only boundary claim formalized) + Part 4 (three concrete next-step paths) + Part 5 (methodology + harness validation summary) + Appendix.
+
+**The ML-only boundary claim** (S65 Part 3): *Across 1,226,940 canonical high_only hands, v52 cannot be refined further at the "one-sentence-statable" granularity. v44_dt captures $233/1000h of the $615 catalog-measured v52→oracle gap; the residual $381/1000h is ML-only territory at current rule-chain depth.*
+
+Evidence backing the claim:
+- **Five independent harness reproductions** of shipped rules to <2% error each, spanning a 23× magnitude range ($0.56 → $131): Rule 14 (0.2%), Rule 15 (0.7%), Rule 16 (1.7%), v52-vs-v47 ensemble (1.4%), Rules 25/26/27 (0.08% — cleanest).
+- **Five independent falsifications** across 43 candidate rules (10+7+7+7+12) spanning a 12.7× range of structural opportunity (drop-max rate 6%→76% plus inverted-defensive at T/9/8).
+
+**Six cross-cell structural findings** (S65 Part 2):
+1. HIMID is the single most-validated rule-chain decision (5 HIBOT controls all negative with monotonic dampening −$40→−$0.1).
+2. MS_ONLY drop-max candidates universally over-fire at >80% (K 82.7%, Q 85.8%, J 89.1%, all catastrophic).
+3. DS_NO_JOINT within-cell gap peaks at J ($4,749) then flattens at T/9/8 (~$3,500) — unexpected; mechanism is v52's baseline inversion at low max-ranks.
+4. JOINT max-on-top boundary is at T-JOINT_MED specifically (C_T5 +$0.22 marginal positive; C_95 at 9-JOINT_MED is negative).
+5. Best-candidate-capture trajectory jumps unexpectedly at J (5.45%/3.33%/5.99% → 21.54%) before falling — intersection of high drop-max rate AND mid_high pool collapse.
+6. Two-track production divergence ($1,417/1000h) decomposes: $381 high_only ML-only (27%) + $546 across other categories + $490 prefix-vs-full grid differences.
+
+**Production state at end of S65 (UNCHANGED from S58):**
+- Rule chain: v52_full_high_only_handler ($2,498 full / $1,522 prefix; 17 rules).
+- ML champion: v44_dt ($1,081 full / $686 prefix; 107 features; 2.25M leaves).
+- Two production tracks STILL diverge by $1,417/1000h.
+
+**Session 66 priorities (in order, per `HIGH_ONLY_RULE_CATALOG.md` Part 4):**
+1. **Path A — Pair category audit.** Build `PAIR_DECISION_MATRIX.md` analogous to S58. At $396/1000h WG and 36.2% of canonical-grid (2.8M hands), pair is **a LARGER absolute target than high_only's $381 ML-only residual**. Phase 1 (decision matrix) = ~3-4 hr.
+2. **Path B — Hybrid chain experiment.** Isolate v44_dt's high_only-specific decision tree. Benchmark v52-non-high_only + v44_dt-high_only on held-out subset. Ship as v53 if zero non-targeted regression. ~1 hr. Commits production to v44_dt on high_only forever.
+3. **Recommended order:** Path A Phase 1 FIRST (information value before committing to hybrid), then Path B if pair shows similar ML-only ceiling.
+
+Standalone session reports: `SESSION_60_A_HIGH_CATALOG.md` through `SESSION_64_T98_HIGH_CATALOG.md` (five per-max-rank pages); `HIGH_ONLY_RULE_CATALOG.md` (S65 aggregate synthesis).

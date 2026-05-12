@@ -5257,3 +5257,76 @@ Beyond S65, **the rule chain has reached its asymptotic ceiling on high_only.** 
 - Diverge by $1,417/1000h. STILL UNCHANGED.
 
 **Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED).
+
+## Decision 100 — Session 65 aggregate `HIGH_ONLY_RULE_CATALOG.md` produced; ML-only boundary claim formalized; pivot to pair category for S66
+
+**Date:** 2026-05-12
+
+**Context:** Sessions 60-64 produced five consecutive per-max-rank catalog audits (A/K/Q/J/T-9-8), all ALL-T3 verdicts. Session 65's mandate per CURRENT_PHASE (rewritten end of S64) was to produce the aggregate `HIGH_ONLY_RULE_CATALOG.md` synthesis — the user-facing publishable end-product per CLAUDE.md's stated goal. **No new code, tests, or production state changes; pure documentation work.**
+
+**Result: `HIGH_ONLY_RULE_CATALOG.md` produced as canonical synthesis.** The document assembles the five per-max-rank pages (S60-S64) into a single structured document with cover TL;DR, Part 1 (five per-max-rank pages), Part 2 (six cross-cell structural findings), Part 3 (the ML-only boundary claim formalized), Part 4 (implications for future work), Part 5 (methodology and harness validation), and an appendix.
+
+### The ML-only boundary claim, formalized
+
+> **Across the 1,226,940 canonical high_only hands of Taiwanese Poker, the production rule chain v52_full_high_only_handler cannot be refined further at the "one-sentence-statable" granularity. v44_dt captures $233/1000h of the $615 catalog-measured v52→oracle gap; the residual $381/1000h is ML-only territory at current rule-chain depth.**
+
+The $615 / $233 / $381 decomposition is the central numerical claim of the document. The $615 figure differs from CURRENT_PHASE's $755 because catalog framing measures v52→oracle (sum across cells), while $755 measures v44→oracle scaled by category share — both correct, different framings.
+
+Evidence backing the claim:
+- **Five independent harness reproductions** of shipped rules to <2% error each, spanning a 23× magnitude range ($0.56 → $131):
+  - Rule 14 (+$131, 0.2% S60), Rule 15 (+$51, 0.7% S61), Rule 16 (+$19, 1.7% S62), v52-vs-v47 (+$17, 1.4% S63), Rules 25/26/27 (+$12, 0.08% S64 — cleanest).
+- **Five independent falsifications** across 43 candidate rules (10 S60 + 7 S61 + 7 S62 + 7 S63 + 12 S64) spanning a 12.7× range of structural opportunity (drop-max rate 6%→76% plus inverted at T/9/8).
+
+### Six cross-cell structural findings (Part 2)
+
+1. **HIMID is the single most-validated rule-chain decision.** All five HIBOT controls (A C10, K C_K6, Q C_Q7, J C_J7, T-9-8 C_T3/C_93/C_83) lost money with monotonic-magnitude dampening (−$40 → −$22 → −$13 → −$7 → −$2.4 sum). HIMID never lost; trajectory reflects v52's monotonically smaller residual as max drops.
+
+2. **MS_ONLY "drop-max" candidates universally over-fire at >80%.** C_K5 82.7% fires (−$21.48 WG); C_Q6 85.8% (−$6.06); C_J6 89.1% (−$0.70). The "drop-max-achievable" gate satisfies on near-universal subsets but oracle's actual drops are much narrower — set MEMBERSHIP problem, not COUNT.
+
+3. **DS_NO_JOINT within-cell-gap peaks at J then flattens.** Trajectory: $2,337 (A) → $3,062 (K) → $3,690 (Q) → $4,749 (J) → $3,827 (T) → $3,565 (9) → $3,463 (8). The peak-at-J was unexpected (predicted monotonic deepening with drop-max-rate growth); mechanism is that v52's baseline INVERTS at T/9/8 (always drops max), so within-cell gap measures v52's deviation from oracle's *picks within the defensive zone* — smaller deviation than at A/K/Q/J.
+
+4. **JOINT max-on-top boundary is at T-JOINT_MED specifically.** C_T5 marginally positive (+$0.22 WG, +12.24% capture) at T; C_95 same rule at 9-JOINT_MED is NEGATIVE (−$0.06 WG, −15.68% capture). Above J, joint cells let max-on-top dominate; at T, marginal; below T, fully defensive even in joint. Consistent with S58 JOINT_PICK rate trajectory 7.9% (J) → 5.3% (T) → 3.3% (9) → 2.0% (8).
+
+5. **Best-candidate-capture trajectory is non-monotonic with unexpected J jump.** 5.45% (A) → 3.33% (K) → 5.99% (Q) → **21.54% (J, C_J1)** ← jump → 12.24% (T, C_T5 JOINT_MED-only) → ~0% (9/8). The J jump reflects intersection of high drop-max rate (76%) AND mid_high pool collapse — not extrapolatable from either feature alone. C_J1's +$6.44/1000h WG CLEARS T2's $5 raw WG bar but fails T1's 40% capture bar — catalog's "catalog-curious" candidate.
+
+6. **Two-track production divergence ($1,417/1000h) decomposed by category.** $381 attributable to high_only ML-only territory (27% of divergence). Remaining $1,036 split across pair ($396), trips ($55), two_pair ($52), three_pair ($35), trips_pair ($5), composite ($2), quads ($1) — plus prefix-vs-full grid differences (~$490). Pair is the LARGEST remaining absolute target.
+
+### Implications for future work (Part 4)
+
+Three concrete next-step paths recommended:
+
+1. **Pair category audit (`PAIR_DECISION_MATRIX.md` analogous to S58)** — at $396/1000h WG and 36.2% of canonical-grid (2.8M hands), pair is **a larger absolute target than high_only's $381 ML-only residual**. Recommended S66 Phase 1.
+
+2. **Smaller-population categories.** Trips ($55, 4.6%, v44 within-cat $1,194 — surgical wins potential), three_pair ($35, 2.2%, v44 within-cat $1,613 — large per-hand gap), two_pair ($52, 14.5%).
+
+3. **Hybrid chain proposal:** v52 for non-high_only categories + v44_dt for high_only handoff. Estimated combined value $2,500-2,700/1000h. Risk: v44_dt trained on full-grid features, not high_only-scoped; needs either retrain with hand-only-feature-importance OR full v44_dt at inference time on `is_high_only` predicate. Implementationally cheaper than pair matrix (~1 hr); ships as v53 if zero non-targeted regression on rest of grid.
+
+### Methodology lessons (Session 65 — synthesis-document specific)
+
+1. **Synthesis documents have epistemic value beyond raw data assembly.** The cross-cell findings (HIMID-vs-HIBOT trajectory, DS_NO_JOINT peak-at-J, JOINT max-on-top boundary at T) are NOT visible from any single S60-S64 page; they emerge only when the five pages are read in cross-section. Part 2 of `HIGH_ONLY_RULE_CATALOG.md` is the highest information-density per word of the catalog.
+
+2. **The "ML-only" label is a publishable result.** Per CLAUDE.md's stated end-product goal — "the definitive GTO Taiwanese Poker strategy guide — backed by exhaustive computation, not heuristics" — `HIGH_ONLY_RULE_CATALOG.md` IS the publishable artifact for the high_only zone. The user-facing strategy doc can honestly state: "for high_only hands at this catalog's granularity, defer to v44_dt — no clean rule exists. The boundary has been formally measured."
+
+3. **Five-falsification methodology is reusable as a category-audit template.** Pair, trips, two_pair, three_pair could each be audited using S60-S64's structure: S58-style decision matrix → cell-by-cell rule audit → candidate sweep → ML-only verdict. The harness (`test_rule_catalog.py`) is structurally category-agnostic.
+
+4. **The two-track production divergence is structural, not a methodology limit.** Decomposing the $1,417 gap by category (high_only $381 + pair $396 + trips $55 + …) makes the next-step prioritization obvious: pair is the largest remaining target, even though high_only's residual is the most ML-saturated.
+
+5. **Speed is not necessary — clarity and perfection is.** S65 took ~3.5 hours of pure synthesis work to produce a publishable end-product. No new code or tests. The "clarity" half of the directive is met (the boundary claim is now formally stated with falsification evidence); the "perfection" half acknowledges that the high_only catalog is structurally complete.
+
+### Files (Session 65)
+
+**New artifacts:**
+- `HIGH_ONLY_RULE_CATALOG.md` — the canonical synthesis. Cover TL;DR, Part 1 (five per-max-rank pages), Part 2 (six cross-cell findings), Part 3 (ML-only boundary claim with falsification evidence and harness reproducibility evidence), Part 4 (three concrete next-step paths), Part 5 (threshold definitions + cell decomposition + harness validation + reusable artifacts), Appendix (source files, data artifacts, decisions log refs, production state).
+
+**Documentation updates:**
+- `CURRENT_PHASE.md` — rewritten with S66 direction (pair category audit OR hybrid chain).
+- `DECISIONS_LOG.md` — Decision 100 (this section).
+
+**No code, test, or production state changes.** Pure documentation work per S65's mandate.
+
+**Production state at end of S65:** UNCHANGED from S58/S59/S60/S61/S62/S63/S64.
+- Rule chain: **v52_full_high_only_handler** ($2,498 full / $1,522 prefix)
+- ML champion: **v44_dt** ($1,081 full / $686 prefix)
+- Diverge by $1,417/1000h. STILL UNCHANGED.
+
+**Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED). **The high_only rule catalog is now CLOSED.**
