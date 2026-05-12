@@ -5150,3 +5150,110 @@ If predictions hold, **Session 65 produces the aggregate `HIGH_ONLY_RULE_CATALOG
 - Diverge by $1,417/1000h. STILL UNCHANGED.
 
 **Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED).
+
+## Decision 099 — Session 64 T/9/8-high combined catalog audit: ALL CELLS LABELED ML-ONLY across all three max-ranks (harness validated on FIFTH shipped lift to 0.08% — cleanest reproduction yet)
+
+**Date:** 2026-05-12
+
+**Context:** Sessions 60+61+62+63 produced four consecutive NULL results (A/K/Q/J-high catalog audits). T/9/8-high is the final residual zone (combined n=25,740 = 2.1% of high_only) and the only one in v52's always-defensive baseline (Rules 25/26/27 = lowest-on-top + DS HIMID for max ∈ {7,8,9,10}). The structural inversion required fresh candidate design rather than copying S63's max-on-top template. Session 64 reused the S60-S63 harness verbatim, audited v52 cell-by-cell on T/9/8, and tested 12 candidate refinement rules across 6 candidate families × 3 max-ranks.
+
+**Result: ALL 12 CANDIDATES FAIL THRESHOLD 1.** T/9/8-high cells formally labeled ML-only at this catalog granularity. No production change. v52 and v44_dt both UNCHANGED.
+
+### Harness validation — FIFTH independent shipped lift, 0.08% accuracy
+
+The Phase 2 sanity check reproduced Rules 25/26/27 per max_rank to **0.08% accuracy** — the cleanest catalog-harness reproduction yet:
+
+| max | n | v52 vs v47 WG (measured) | Documented S53 ship | Error |
+|---|---:|---:|---:|---:|
+| T | 20,020 | +$8.24/1000h | +$8.24 | 0.0% |
+| 9 | 5,005 | +$3.26/1000h | +$3.26 | 0.0% |
+| 8 | 715 | +$0.56/1000h | +$0.56 | 0.0% |
+| **TOTAL** | **25,740** | **+$12.05** | **+$12.06** | **0.08%** |
+
+This is the fifth independent shipped lift reproduction: Rule 14 (+$131, 0.2% S60), Rule 15 (+$51, 0.7% S61), Rule 16 (+$19, 1.7% S62), v52 ensemble (+$17, 1.4% S63), Rules 25/26/27 (+$12, 0.08% S64). The S53 attribution to per-rule lifts is correct.
+
+### Phase 2 — v52 cell-by-cell audit on T/9/8
+
+Per-cell remaining gap to oracle after v52, in $/1000h whole-grid:
+
+| max | Cell | n hands | v52 gap WG | v44 gap WG | Net ML-only |
+|---|---|---:|---:|---:|---:|
+| T | JOINT_MED | 2,835 | $1.82 | $0.55 | $1.27 |
+| T | JOINT_LOW | 105 | $0.06 | $0.02 | $0.04 |
+| **T** | **DS_NO_JOINT** | **12,600** | **$8.03** | **$4.99** | **$3.04** |
+| T | DS_NO_MAXTOP | 2,688 | $1.81 | $1.10 | $0.71 |
+| T | MS_ONLY | 1,792 | $1.27 | $0.61 | $0.66 |
+| **T total** | | **20,020** | **$12.99** | **$7.27** | **$5.72** |
+| **9 total** | | **5,005** | **$3.09** | **$1.74** | **$1.35** |
+| **8 total** | | **715** | **$0.43** | **$0.28** | **$0.15** |
+| **T/9/8 GRAND TOTAL** | | **25,740** | **$16.51** | **$9.29** | **$7.22** |
+
+DS_NO_JOINT dominates each max-rank's leak (62%/60%/60% of T/9/8). JOINT_HIGH is empty at all three (max non-max rank ≤ 9 < J=11). JOINT_MED exists at T (n=2,835) and 9 (n=630); empty at 8. v44_dt catches 56% of v52's T/9/8 gap to oracle ($9.29 of $16.51 WG).
+
+### Phase 3 + 4 — 12 candidates tested vs v52 baseline
+
+6 candidate families × 3 max-ranks. Highlights:
+
+| ID | Candidate | max | Cell | Fires | cap_b | $/1000h WG | Verdict |
+|---|---|---:|---|---:|---:|---:|---|
+| **C_T5** | **JOINT_maxtop_DSms** | **T** | **JOINT_MED** | **100.0%** | **+12.24%** | **+$0.22** | **T3 (only positive)** |
+| C_T1 | DSnj_maxtop_DSmu_HIMID | T | DSnj | 100.0% | −54.31% | −$4.36 | T3 |
+| C_T2 | DSnj_maxtop_when_DSpair≥6 | T | DSnj | 85.5% | −73.53% | −$5.90 | T3 (worst) |
+| C_T3 | DSnj_HIBOT_control | T | DSnj | 84.4% | −21.94% | −$1.76 | T3 (HIMID validated) |
+| C_T4 | DSnj_2ndLowest_top | T | DSnj | 100.0% | −44.14% | −$3.54 | T3 |
+| C_T6 | DSnj_SSms_when_ms_high | T | DSnj | 64.7% | −18.73% | −$1.50 | T3 |
+| C_91 | DSnj_maxtop_DSmu_HIMID | 9 | DSnj | 100.0% | −94.47% | −$1.77 | T3 |
+| C_93 | DSnj_HIBOT_control | 9 | DSnj | 84.4% | −29.29% | −$0.55 | T3 |
+| C_94 | DSnj_2ndLowest_top | 9 | DSnj | 100.0% | −44.16% | −$0.83 | T3 |
+| C_95 | JOINT_maxtop_DSms | 9 | JOINT_MED | 100.0% | −15.68% | −$0.06 | T3 (NEGATIVE at 9) |
+| C_81 | DSnj_maxtop_DSmu_HIMID | 8 | DSnj | 100.0% | −122.22% | −$0.32 | T3 (most catastrophic capture) |
+| C_83 | DSnj_HIBOT_control | 8 | DSnj | 84.4% | −32.36% | −$0.08 | T3 |
+
+**Every candidate falls below Threshold 1 (≥40% gap closure + ≥$3/1000h within-cell).** Only C_T5 (JOINT max-on-top at T-JOINT_MED) had positive WG (+$0.22, capture +12.24%) — the boundary of "JOINT max-on-top return" is at T-JOINT_MED specifically; the same rule at 9-JOINT_MED is negative.
+
+### Methodology lessons (Session 64)
+
+1. **Harness reproduces a FIFTH shipped lift to 0.08% accuracy** — the cleanest of all five validations. Rules 25/26/27 per-max attribution exactly matches documented S53 ship.
+
+2. **HIMID confirmed FIVE TIMES across the entire high_only rule family.** A C10 (−$40), K C_K6 (−$22), Q C_Q7 (−$13), J C_J7 (−$7), T-9-8 sum (−$2.4). Magnitude diminishes monotonically as we move from most-rule-shaped (A) to least-rule-shaped (T/9/8) zones, but HIMID never loses. **The single most-validated design decision in the rule chain.**
+
+3. **Max-on-top return at low max-ranks fails monotonically worse as max drops.** C_T1 −54% capture → C_91 −94% → C_81 −122%. Perfectly inversely tracks oracle's keep-max-on-top rate (T 11% → 9 4% → 8 <3%). Clean falsification of "low-max-rule-shaped" hypothesis.
+
+4. **C_T5 (JOINT max-on-top at T) is the ONLY positive WG candidate of S64** (+$0.22, +12.24% capture). At 9-JOINT_MED the same rule is negative (−15.68%). **The "JOINT max-on-top return" boundary is at T-JOINT_MED specifically** — consistent with S58 decision matrix's JOINT_PICK rate dropping 7.9% (J) → 5.3% (T) → 3.3% (9).
+
+5. **2nd-lowest-on-top fails at −44% capture identically at T and 9** — oracle's preference for the absolute-lowest top is robust, not a degenerate edge case. v52's "always lowest" is the right operationalization.
+
+6. **The catalog methodology successfully falsifies the FIFTH (and final) hypothesis.** S60 A; S61 K; S62 Q; S63 J; S64 T/9/8. **Five-quarters of high_only's WG residual ($615/1000h by catalog measurement) is now in the explicit ML-only zone.** The entire high_only zone is formally ML-only at the catalog's "one-sentence-statable" granularity.
+
+7. **Catalog vs CURRENT_PHASE framing reconciliation:** the catalog measures v52→oracle gap and sums to $615/1000h across all max-ranks. CURRENT_PHASE's $755 figure is v44→oracle scaled by population share (a v44-residual framing). Both are correct; just different framings. The catalog's ML-only verdict applies to both.
+
+### Implications for Session 65
+
+S64 closes the per-max-rank catalog. Session 65 produces the aggregate `HIGH_ONLY_RULE_CATALOG.md` — synthesis of all six pages (A, K, Q, J, T/9/8) plus cross-cell structural findings. The new findings to document at S65:
+- The HIMID-vs-HIBOT FIVE-zone validation summary
+- The MS_ONLY over-fire universal pattern (K 82.7%, Q 85.8%, J 89.1% fires, all catastrophic)
+- The DS_NO_JOINT within-cell-gap peak at J then flattening at T/9/8
+- The JOINT max-on-top boundary at T-JOINT_MED specifically
+- The two-track production divergence ($1,417/1000h; $381 attributable to high_only ML-only territory)
+
+Beyond S65, **the rule chain has reached its asymptotic ceiling on high_only.** Further rule-chain progress requires either (a) abandoning the "one sentence statable" constraint or (b) attacking other categories (pair $396, trips $55, two_pair $52).
+
+### Files (Session 64)
+
+**New artifacts (committed):**
+- `analysis/scripts/audit_v52_T98_S64.py` — Phase 2 sanity (v52 vs v47 per max ∈ {10,9,8,7} reproducing Rules 25/26/27 to 0.08%) + Phase 2b cell-by-cell audit driver
+- `analysis/scripts/candidates_T98_high_S64.py` — 6 candidate families × 3 max-ranks = 12 candidates testing v52's defensive baseline. NEW helpers: `_enumerate_top_at_pos(hand, top_pos)` generic alternative for lowest-on-top variants; `_cell_for_hand(hand, max_rank)` parameterized by max_rank
+- `analysis/scripts/test_T98_high_candidates_S64.py` — sweep driver + JSON output
+- `data/session_64_candidate_results.json` — full results for all 12 candidates
+
+**Documentation:**
+- `SESSION_64_T98_HIGH_CATALOG.md` — T/9/8-high combined catalog page (fifth and final per-max-rank page of `HIGH_ONLY_RULE_CATALOG.md`)
+- `CURRENT_PHASE.md` — rewritten with S65 direction
+- `DECISIONS_LOG.md` — Decision 099 (this section)
+
+**Production state at end of S64:** UNCHANGED from S58/S59/S60/S61/S62/S63.
+- Rule chain: **v52_full_high_only_handler** ($2,498 full / $1,522 prefix)
+- ML champion: **v44_dt** ($1,081 full / $686 prefix)
+- Diverge by $1,417/1000h. STILL UNCHANGED.
+
+**Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED).
