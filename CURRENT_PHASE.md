@@ -1,197 +1,222 @@
-# Current: Sprint 8 — Session 65 produced the canonical **`HIGH_ONLY_RULE_CATALOG.md`** aggregate synthesis. The catalog is now CLOSED on high_only. Five consecutive max-rank zone audits (S60–S64) produced ALL-T3 verdicts across 43 candidate rules; the entire $615/1000h WG high_only residual is formally labeled ML-only at the catalog's "one-sentence-statable" granularity. v44_dt holds $381/1000h WG of exclusive territory beyond what catalog refinement reached. The aggregate document assembles the five per-max-rank pages and adds six cross-cell structural findings: HIMID is the single most-validated rule-chain decision (5 zones); MS_ONLY drop-max gates universally over-fire at >80%; DS_NO_JOINT within-cell gap peaks at J then flattens; JOINT max-on-top boundary is at T-JOINT_MED specifically; best-candidate-capture trajectory jumps unexpectedly at J (21.54%) before falling; the two-track production divergence ($1,417/1000h) decomposes to $381 in high_only ML-only zone (27%). The ML-only boundary claim is formalized with the $615/$233/$381 decomposition. **Strategies of record UNCHANGED:** v52_full_high_only_handler ($2,498 full / $1,522 prefix); v44_dt ($1,081 full / $686 prefix). The two production tracks STILL diverge by $1,417/1000h.
+# Current: Sprint 8 — Session 66 produced `PAIR_DECISION_MATRIX.md`, the canonical pair-category Phase 1+2 audit. Pair category v44_dt→oracle residual decomposes into a 6-cell pair-specific taxonomy across 2.8M canonical hands; v52 (rule chain) leaves **$341/1000h WG more residual than v44 on pair**, concentrated entirely in **PBOT cells ($391 WG of catalog-shippable headroom)** where six pair_ranks (A, K, 6, 7, 8, 9) have ZERO PBOT-routing rule in v52. The dominant Phase 3 target is a generalized pair-to-bot DS rule extending v9_2/Rule 11 to cover the six uncovered ranks; ceiling estimates per candidate range $28-89/1000h WG. **Strategies of record UNCHANGED:** v52_full_high_only_handler ($2,498 full / $1,522 prefix); v44_dt ($1,081 full / $686 prefix). Two-track divergence $1,417/1000h. Pair Phase 3 candidates are SIZED with catalog-shippable WG ceilings.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 66): Pivot to the pair category — the largest remaining target ($396/1000h WG, 36.2% of canonical-grid).**
+> **🎯 IMMEDIATE NEXT ACTION (Session 67): Phase 3 candidate sweep — start with the highest-EV PBOT-take rule (C_PAIR_3: 6/7/8/9-pair PBOT-take, $89/1000h WG ceiling).**
 >
->   With high_only catalog closed as ML-only, the next-largest absolute WG residual zone is **pair** (n=2,800,512, 36.2% share, v44 within-cat $1,097, whole-grid $396/1000h). This is **a larger absolute target than high_only's $381 ML-only residual** — meaning a successful catalog effort on pair would unlock more rule-chain value than completely closing high_only's ML-only gap. Per `HIGH_ONLY_RULE_CATALOG.md` Part 4.1.
+>   Per `PAIR_DECISION_MATRIX.md` Phase 2 + Phase 3 sections, five concrete catalog candidates are sized:
 >
->   **3-PHASE PLAN (Session 66 — pair decision matrix first, audit later):**
+>   | ID | Candidate | Fire region | Catalog ceiling (WG) |
+>   |---|---|---|---:|
+>   | **C_PAIR_3** | **6/7/8/9-pair PBOT-take rule** | 4 ranks × PBOT cells (~475K hands) | **$88.71/1000h WG** |
+>   | C_PAIR_5 | Q-pair PBOT_DS_PARTIAL refinement | Q-pair × PBOT_DS_PARTIAL (~90K) | $41.20/1000h WG |
+>   | C_PAIR_1 | K-pair PBOT-take rule | K-pair × PBOT cells (~119K) | $35.60/1000h WG |
+>   | C_PAIR_4 | Drop "single Ace" predicate from v9_2 | 3× wider v9_2 fire region | ~$30-50/1000h WG estimate |
+>   | C_PAIR_2 | A-pair PBOT-take rule | A-pair × PBOT cells (~119K) | $28.39/1000h WG |
 >
->   **Phase 1 — Build `PAIR_DECISION_MATRIX.md` analogous to S58.** No rule shipping. Goal: stratify pair hands by (pair_rank × pair-placement × ms_mid achievability × DS bot achievability) with sub-stratification by max non-pair rank. Output the oracle's TOP/BOT/MID profile and v44's mismatch class per (pair_rank, cell). Same shape as `SESSION_58_HIGH_ONLY_DECISION_MATRIX.md`. Reuse `oracle_grid_full_realistic_n200.bin` + `v44_dt`. Time: ~3–4 hours including cell-tagging design.
+>   Even at 40-60% capture rates (lower than Rule 14's A-high record 70%+), each clears T2's $5 WG bar by 5-15×.
 >
->   **Phase 2 — Identify whether existing pair rules (Rules 7–11 in v52) are catalog-auditable.** v52 currently includes pair-handling rules from S46 (Rule 11 J-pair pair-to-bot DS, Decision 079) and earlier sessions. Build a per-(pair_rank, cell) audit similar to S60's Phase 2 to check whether the existing pair rule chain leaves substantial within-cell residual that human-statable refinements could close. If yes → proceed to Phase 3 candidate sweep. If no (existing rules already near-oracle within cells) → recommend pivot to trips or three_pair.
+>   **3-PHASE PLAN (Session 67 — start the candidate sweep):**
 >
->   **Phase 3 — Decide on continuation.** Three outcomes:
->     - **Pair has shippable refinement headroom:** spawn S67–S70 catalog pass mirroring S60–S64 (one pair_rank zone per session, falsifications accumulate to `PAIR_RULE_CATALOG.md`).
->     - **Pair is ML-only at the matrix level:** the high_only catalog's boundary claim generalizes to a multi-category claim. Document as `PAIR_DECISION_MATRIX.md` + appendix to `HIGH_ONLY_RULE_CATALOG.md` Part 4. Pivot to trips (n=328,185, $55 WG, v44 within-cat $1,194 — smaller population, larger per-hand gap).
->     - **Hybrid chain (`HIGH_ONLY_RULE_CATALOG.md` Part 4.3) is more tractable:** isolate v44_dt's high_only-specific decision tree, benchmark v52-non-high_only + v44_dt-high_only on held-out subset, ship as v53 if zero non-targeted regression on the rest of the grid.
+>   **Phase 1 (S67 first ~1 hr)** — Build pair-specific catalog harness `test_rule_catalog_pair.py` by adapting `test_rule_catalog.py` for the pair parquet schema (cell_idx, pair_rank instead of max_rank). Reuse the per-hand parquet at `data/drill_pair_v44_per_hand_structural.parquet`. Sanity-check by reproducing the shipped lift of Rule 11 (J-pair-J pair-to-bot DS): v52 vs v52-minus-Rule-11 on J-pair hands should match Decision 080's +$11/1000h WG estimate (with the caveat that the original measurement was on full N=200 grid, same as our oracle grid, so should match to <5%).
 >
->   **TIME BUDGET (S66):** Phase 1 (build decision matrix) = 3–4 hr; Phase 2 (audit existing pair rules) = 1 hr; Phase 3 (decide continuation) = 30 min; total ~5 hr. **Slower than per-zone S60-S64 sessions** — Phase 1 is fresh design work, not a copy of S58 (pair's cell-tagging is structurally different from high_only's 6-cell scheme).
+>   **Phase 2 (S67 second ~2 hr)** — Test C_PAIR_3 candidates. Three sub-variants:
+>     - C_PAIR_3a: simple "if pair_rank ∈ {6,7,8,9} AND PBOT_DS achievable → take PBOT-HIMID setting"
+>     - C_PAIR_3b: gated variant with PBOT bot_pair_high ≥ T threshold
+>     - C_PAIR_3c: PBOT_DS_JOINT only (most surgical, smallest fire-region)
 >
->   **ALTERNATIVE (if user prefers): the hybrid chain experiment (4.3).** This is implementationally cheaper than building the pair matrix (~1 hr) and could ship as v53 if the held-out non-targeted regression check passes. The trade-off: a hybrid chain commits production to v44_dt for high_only forever (or until a replacement ML champion ships), while the pair catalog opens new rule-chain headroom that may unlock multiple shippable rules. **Recommended order if pursuing both: Phase 1 of pair matrix FIRST** (information value before committing to hybrid), then hybrid experiment as Phase 2 if pair shows similar ML-only ceiling.
+>   For each: measure within-cell + WG lift vs v52 baseline. T1 = ≥40% capture within fire-region cell; T2 = ≥+$5/1000h WG + zero non-targeted regression.
 >
->   **SUCCESS CRITERIA (S66 — Phase 1 minimum):**
->   - `PAIR_DECISION_MATRIX.md` produced as a single canonical document analogous to `SESSION_58_HIGH_ONLY_DECISION_MATRIX.md`.
->   - Per-(pair_rank × cell) v44 residual + oracle pick profile documented across all 13 pair ranks.
->   - Top-3 mismatch class per cell identified with $/1000h within-cell magnitude.
->   - Recommendation issued for S67+ direction (catalog sweep / pivot / hybrid).
+>   **Phase 3 (S67 closing ~30 min)** — Decision on continuation: if C_PAIR_3 ships clean → ship as v53, queue C_PAIR_1/C_PAIR_2/C_PAIR_5 for S68. If C_PAIR_3 falsifies (T3 verdict) → falls back to C_PAIR_5 (smaller fire region, larger per-hand lift) as the next falsification attempt.
+>
+>   **TIME BUDGET (S67):** ~3-4 hours total. Phase 1 harness adaptation is structural; reuses pair Phase 1 parquet. Phase 2 measurement is 3 candidates × ~15-30 min each = ~1 hr; bulk of time is harness setup and reasoning.
+>
+>   **ALTERNATIVE (if user prefers): the hybrid chain experiment.** Per `PAIR_DECISION_MATRIX.md` Recommendation Path B, a cell-routed hybrid (v44 on PBOT cells, v52 on PMID cells) captures $390 WG improvement on pair vs v52 alone, $49 WG vs v44 alone. Implementationally simpler than rule extension. The trade-off: hybrid commits production to v44_dt on PBOT pair cells forever (or until an alternate ML champion).
+>
+>   **RECOMMENDED ORDER: C_PAIR_3 candidate sweep FIRST.** A successful rule ship is more durable than the hybrid chain (the rule is portable, interpretable, and validatable); the hybrid is a fallback if rules fail catalog ship thresholds.
+>
+>   **SUCCESS CRITERIA (S67 — Path A minimum):**
+>   - `test_rule_catalog_pair.py` harness produced and Rule 11 shipped-lift reproduced to <5% error.
+>   - 3+ C_PAIR_3 sub-variants tested; verdicts assigned per T1/T2/T3.
+>   - If any sub-variant clears T2: candidate proceeds to non-targeted-regression check on full grid.
+>   - S68 direction recommendation (Phase 3 sweep continuation OR pivot to C_PAIR_5 / hybrid).
 
-> **✅ ARTIFACTS produced in S65:**
-> 1. **`HIGH_ONLY_RULE_CATALOG.md`** — the canonical aggregate synthesis. Assembles S60-S64's five per-max-rank pages + adds six cross-cell findings + formalizes the ML-only boundary claim + recommends three concrete next-step paths.
-> 2. **`DECISIONS_LOG.md`** — Decision 100 (S65 aggregate catalog + ML-only boundary claim).
-> 3. **`CURRENT_PHASE.md`** — rewritten for S66 (this file).
-> No new code/tests/data artifacts. Pure synthesis document work.
+> **✅ ARTIFACTS produced in S66:**
+> 1. **`PAIR_DECISION_MATRIX.md`** — the canonical pair Phase 1+2 audit document. Headlines + per-(pair_rank, cell) v44 residual + oracle pick profile + v52 vs v44 comparison + existing-rule coverage check + Phase 3 candidate sizing with quantified WG ceilings.
+> 2. **`analysis/scripts/drill_pair_v44_S66.py`** — pair-specific deep-dive sweep (Phase 1).
+> 3. **`analysis/scripts/sweep_v52_on_pair_S66.py`** — v52 sweep on pair hands (Phase 2).
+> 4. **`data/drill_pair_v44_per_hand_structural.parquet`** (22.8 MB) — per-hand v44/oracle picks + 6-cell structural tag. Foundation for S67+ catalog harness.
+> 5. **`data/drill_pair_v44_summary.json`** (390 KB) — aggregate stats keyed by (pair_rank, cell). Source for matrix doc tables.
+> 6. **`data/drill_pair_v52_per_hand.parquet`** (12.0 MB) — v52 picks joined on canonical_id.
+> 7. **`data/drill_pair_v52_summary.json`** (45 KB) — v52 per-(pair_rank, cell) aggregates.
+> 8. **`DECISIONS_LOG.md`** — Decision 101 (this session's analysis + recommendation).
+> 9. **`CURRENT_PHASE.md`** — rewritten for S67 (this file).
+>
+> No new code, tests, or production state changes. Pure analysis + documentation work, mirroring S58/S65's pattern.
 
-> **✅ ARTIFACTS preserved from S58+S59+S60+S61+S62+S63+S64 (reusable for S66+):**
-> 1. **`analysis/scripts/test_rule_catalog.py`** (S60, validated S60+S61+S62+S63+S64 to <2% on FIVE independent shipped rules) — per-cell rule audit harness. **Structurally category-agnostic** — reusable for pair / trips / etc. once a new cell-tagging parquet is built.
-> 2. **`analysis/scripts/sanity_v52_vs_v47_high_only.py`** (S63) — cross-check pattern for shipped-lift attribution.
-> 3. **`analysis/scripts/audit_v52_T98_S64.py`** (S64) — Phase 2 sanity + per-(max, cell) audit driver template.
-> 4. **`analysis/scripts/candidates_K_high_S61.py`** (S61) — generic helpers `_enumerate_max_on_top_configs(hand, max_rank)`, `_enumerate_nonMax_top_DSms`, `_enumerate_nonMax_top_anyBot_ms`.
-> 5. **`analysis/scripts/candidates_T98_high_S64.py`** (S64) — generic `_enumerate_top_at_pos(hand, top_pos)` for lowest-on-top variants.
-> 6. **`data/session_60/61/62/63/64_candidate_results.json`** — full per-candidate results across S60-S64.
-> 7. **`SESSION_60_A_HIGH_CATALOG.md` – `SESSION_64_T98_HIGH_CATALOG.md`** — the five per-max-rank pages. Source-of-truth for per-zone numerical detail.
-> 8. **`data/drill_ho_v44_per_hand_structural.parquet`** (S59) — per-hand v44 residual structure with cell tags. **High_only-specific** — a new parquet is needed for pair (S66 Phase 1 output).
-> 9. **`SESSION_58_HIGH_ONLY_DECISION_MATRIX.md`** — per-max-rank × per-cell oracle profile. **Template for S66's `PAIR_DECISION_MATRIX.md`.**
+> **📓 METHODOLOGY (Session 67+):**
+> - **Threshold definitions carry over from S60-S65:**
+>   - **T1 (Catalog-worthy):** ≥ 40% gap closure within cell AND ≥ +$3/1000h within-cell AND one-sentence statable.
+>   - **T2 (Production ship):** T1 + ≥ +$5/1000h whole-grid lift + zero non-targeted regression.
+>   - **T3 (ML-only):** No candidate clears T1 → cell formally labeled ML-only.
+> - **Pair cell taxonomy (6 cells):** PBOT_DS_JOINT / PBOT_DS_PARTIAL / PMID_DS_MAXTOP / PMID_DS_NOMAXTOP / PMID_SS_MAXTOP / PMID_OTHER. Defined in `analysis/scripts/drill_pair_v44_S66.py:cell_for_pair_hand`. **Cell distribution is canonical-symmetric** (same n_hands per cell across all 13 pair_ranks).
+> - **Catalog harness must be adapted for pair schema.** `test_rule_catalog.py` uses (max_rank, cell) keys; pair version needs (pair_rank, cell). Cell tagging is pre-computed in the parquet (`cell_idx` column). Reuse otherwise verbatim.
+> - **Cross-check shipped-lift attribution.** Reproduce Rule 11 (+$11/1000h WG per Decision 080) within <5% before testing new candidates. This is the pair analog of S60-S64's harness validation pattern.
+> - **Speed is not necessary — clarity and perfection is.** (User directive S59, re-confirmed S60-S66.)
 
-> **📓 METHODOLOGY (Session 66+):**
-> - **Threshold definitions (carry over from S60–S64):**
->   - **Threshold 1 (Catalog-worthy):** ≥ 40% gap closure within cell AND ≥ +$3/1000h within-cell AND one-sentence statable.
->   - **Threshold 2 (Production ship):** Threshold 1 + ≥ +$5/1000h whole-grid lift + zero non-targeted regression.
->   - **Threshold 3 (ML-only):** No candidate clears Threshold 1 → cell formally labeled ML-only.
-> - **Cell decomposition (NEW for pair):** S58's 6-cell scheme (JOINT_HIGH/MED/LOW + DS_NO_JOINT + DS_NO_MAXTOP + MS_ONLY + NEITHER) is high_only-specific (assumes all 7 ranks distinct). Pair requires a fresh cell axis indexed on (pair_rank × pair-placement × ms_mid achievability × DS bot achievability), with sub-stratification by max non-pair rank. **Phase 1 of S66 is to design this taxonomy.**
-> - **Always cross-check shipped-lift attribution.** S63 lesson; S64 confirmed: Rules 25/26/27 reproduced exactly to S53 documented values. Pair rule audits should run the same cross-check pattern before any candidate testing.
-> - **Five-falsification methodology generalizes.** Each pair sub-zone gets one falsification attempt; ship verdicts accumulate to a canonical `PAIR_RULE_CATALOG.md` if rule space is rich enough.
-> - **Speed is not necessary — clarity and perfection is.** (User directive S59, re-confirmed S60+S61+S62+S63+S64+S65.)
-
-> Updated: 2026-05-12 (Session 65 end — HIGH_ONLY_RULE_CATALOG.md complete; ML-only boundary claim formalized; pivot to S66 pair category audit)
+> Updated: 2026-05-12 (Session 66 end — `PAIR_DECISION_MATRIX.md` complete; Phase 3 candidate sweep mandated for S67)
 
 ---
 
-## Headline state at end of Session 65 (UNCHANGED from S58/S59/S60/S61/S62/S63/S64)
+## Headline state at end of Session 66 (UNCHANGED from S65)
 
 **Strategies of record:**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
 | **v52_full_high_only_handler** | **PRODUCTION rule chain** (17 rules; UNCHANGED since S53). $2,498 full / $1,522 prefix. | `analysis/scripts/strategy_v52_full_high_only_handler.py` |
-| **v44_dt** | **PRODUCTION ML champion (UNCHANGED).** $1,081 full / $686 prefix; 2.25M leaves; 107 features. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
-| v45_dt (S59 NULL) | Trained but does NOT ship. 2.25M+9 leaves, 111 features. | `analysis/scripts/strategy_v45_dt.py` + `data/v45_dt_model.npz` |
-| v43_dt | Predecessor ML champion (S57). | `analysis/scripts/strategy_v43_dt.py` + `data/v43_dt_model.npz` |
-| v45_rule14_Ahigh_DS / v46_rule15_Khigh_DS / v47_rule16_Qhigh_DS | Predecessor rule chains for A/K/Q. Rules 14/15/16 audited S60/S61/S62. | `analysis/scripts/strategy_v45_rule14_Ahigh_DS.py` / `v46_rule15_Khigh_DS.py` / `v47_rule16_Qhigh_DS.py` |
-| v48_rules17_21_high_only_HIMID | v47 + Rules 17-21 HIMID. Rule 17 was audited S63 (J-high). | `analysis/scripts/strategy_v48_rules17_21_high_only_HIMID.py` |
+| **v44_dt** | **PRODUCTION ML champion** (UNCHANGED). $1,081 full / $686 prefix; 2.25M leaves; 107 features. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
 
-**Per-category residuals (UNCHANGED from S58–S64 since no production change in S65):**
+**Per-category residuals (UNCHANGED from S58–S65; pair now characterized in detail):**
 
 | Category | n_hands | share | v44 within-cat | $/1000h whole-grid | Status |
 |---|---:|---:|---:|---:|---|
-| **high_only** | 1,226,940 | 40.4% | $1,868 | $755 | **CATALOG CLOSED S65 — ML-only at human granularity** |
-| **pair** | 2,800,512 | 36.2% | $1,097 | $396 | **S66 IMMEDIATE TARGET (largest remaining)** |
-| trips | 328,185 | 4.6% | $1,194 | $55 | Next-best target after pair |
+| high_only | 1,226,940 | 40.4% | $1,868 | $755 | CATALOG CLOSED S65 — ML-only at human granularity |
+| **pair** | 2,800,512 | 36.2% | $1,097 | $396 | **PHASE 1+2 COMPLETE S66 — $341 WG catalog-shippable in PBOT cells** |
+| trips | 328,185 | 4.6% | $1,194 | $55 | S68+ target (after pair Phase 3 ships) |
 | two_pair | 1,338,480 | 14.5% | $363 | $52 | Mid-priority |
 | three_pair | 114,400 | 2.2% | $1,613 | $35 | Larger per-hand gap, smaller population |
 | trips_pair | 171,600 | 1.8% | $281 | $5 | Already collapsed S55a |
 | composite | 14,742 | 0.2% | $960 | $2 | Rounding-error scale |
 | quads | 14,300 | 0.1% | $545 | $1 | Rounding-error scale |
 
-**`HIGH_ONLY_RULE_CATALOG.md` produced in S65:** the canonical synthesis of S60-S64's five per-max-rank pages plus six cross-cell findings plus the formal ML-only boundary claim ($615 catalog v52→oracle gap / $233 v44 catch / $381 ML-only residual) plus implications for future work. The catalog methodology successfully **falsified five hypotheses across 43 tested candidates and a 12.7× range of structural opportunity** — decisive empirical evidence that the high_only residual is genuinely ML-only at the catalog's "one-sentence-statable" granularity.
+**`PAIR_DECISION_MATRIX.md` produced in S66:** canonical synthesis of the pair Phase 1 (v44_dt vs oracle descriptive matrix per (pair_rank × cell)) + Phase 2 (v52 audit revealing the $391 WG PBOT-cell gap) + Phase 3 candidate sizing. The matrix is the source-of-truth for pair-category numerical detail and the basis for S67+ Phase 3 candidate work.
 
-**Existing high_only rules and their TRUE whole-population shipped lifts (corrected S63, confirmed S64, summarized S65):**
+**Pair category catalog headroom decomposition:**
 
-| Max-rank | Rule | Session | Whole-grid lift when shipped | Status entering S66 |
+| Cell | v52 WG | v44 WG | v52→v44 gap (catalog ceiling) |
+|---|---:|---:|---:|
+| PBOT_DS_JOINT | $150.51 | $42.40 | **$108.11** |
+| PBOT_DS_PARTIAL | $455.82 | $173.09 | **$282.73** ← largest |
+| PMID_DS_MAXTOP | $15.16 | $42.14 | −$26.98 (v52 wins) |
+| PMID_DS_NOMAXTOP | $142.28 | $152.82 | −$10.55 (v52 wins) |
+| PMID_SS_MAXTOP | $38.11 | $44.42 | −$6.31 (v52 wins) |
+| PMID_OTHER | $50.60 | $56.28 | −$5.68 (v52 wins) |
+| **PBOT subtotal** | **$606.33** | **$215.49** | **+$390.84** catalog-shippable |
+| **PMID subtotal** | **$246.15** | **$295.66** | **−$49.51** (v52 already correct) |
+| **TOTAL** | **$852.48** | **$511.16** | **+$341.33** v52→v44 |
+
+**Existing pair rules and their coverage:**
+
+| Rule | Source | Fire region | Coverage of PBOT cells |
+|---|---|---|---|
+| Rule 5 (KK/AA + rainbow bot) | v28 (S26) | pair_rank ∈ {K, A} AND bot rainbow | Narrow sub-cell |
+| Rule 10 (J-low pair defensive) | v41 (S43) | pair_rank ≤ J AND max_rank ≤ J | PMID cell, lowest-singleton-on-top |
+| Rule 11 (J-pair pair-to-bot DS) | v42 (S46) | pair_rank = J AND max_rank = J | Narrow (J-pair-J only, ~2% pair) |
+| v9_2 (pair-to-bot DS) | v14_combined → v8_hybrid (S26) | pair_rank ∈ {2-5, T-J-Q} AND single Ace AND DS feasible | Covers 7/13 ranks AT FIRE-REGION rate ~42-58% |
+| (none) | | **pair_rank ∈ {6, 7, 8, 9, A, K}** | **ZERO PBOT routing** ← S67 target |
+
+---
+
+## Session 60+ catalog sequence (S66 added)
+
+| Session | Focus | Existing rule | Population | Outcome |
 |---|---|---|---|---|
-| A | Rule 14 | S50 | +$131 (v44_rule13→v45_rule14) | AUDITED S60: ALL CELLS ML-ONLY. Harness 0.2%. |
-| K | Rule 15 | S51 | +$51 (v45→v46) | AUDITED S61: ALL CELLS ML-ONLY. Harness 0.7%. |
-| Q | Rule 16 | S52 | +$19 (v46→v47) | AUDITED S62: ALL CELLS ML-ONLY. Harness 1.7%. |
-| J | Rule 17 (alone) | S53 (inside v48) | +$5.48 (v47→v48 on J-high) | AUDITED S63: ALL CELLS ML-ONLY. Harness 1.4% on v52 ensemble. |
-| ensemble: J + defensive (K,Q,J,T,9,8,7) | Rule 17 + Rules 22-28 | S53 | +$17 (v47→v52 across all high_only) | AUDITED S63 cross-check. |
-| T (defensive, always) | Rule 25 | S53 | +$8.24 (v52 vs v47 on max=10) | AUDITED S64: ALL CELLS ML-ONLY. Harness 0.0% (exact match). |
-| 9 (defensive, always) | Rule 26 | S53 | +$3.26 (v52 vs v47 on max=9) | AUDITED S64: ALL CELLS ML-ONLY. Harness 0.0% (exact match). |
-| 8 (defensive, always) | Rule 27 | S53 | +$0.56 (v52 vs v47 on max=8) | AUDITED S64: ALL CELLS ML-ONLY. Harness 0.0% (exact match). |
+| 60 | A-high catalog | Rule 14 | 660,660 | NULL — all cells ML-only |
+| 61 | K-high catalog | Rule 15 | 330,330 | NULL — all cells ML-only |
+| 62 | Q-high catalog | Rule 16 | 150,150 | NULL — all cells ML-only |
+| 63 | J-high catalog | Rule 17 + 24 | 60,060 | NULL — all cells ML-only |
+| 64 | T/9/8-high catalog | Rules 25/26/27 | 25,740 | NULL — all cells ML-only |
+| 65 | high_only aggregate synthesis | All high_only | 1,226,940 | `HIGH_ONLY_RULE_CATALOG.md` produced; ML-only boundary formalized |
+| **66** | **Pair Phase 1+2 audit** | **All pair (Rules 5/10/11, v9_2)** | **2,800,512** | **`PAIR_DECISION_MATRIX.md` produced; PBOT cells = $391 WG catalog-shippable headroom** |
 
-**Two production tracks at end of S65 (UNCHANGED):** Rule chain $2,498; ML champion $1,081; diverge by $1,417/1000h. Of the $1,417 gap: $381/1000h (27%) is now formally in high_only ML-only territory per S65's catalog.
-
----
-
-## Session 60+ catalog sequence (final, post-S65)
-
-| Session | Max-rank focus | Existing rule | Population | $/1000h WG residual after v52 | Outcome |
-|---|---|---|---|---:|---|
-| **60** | A-high | Rule 14 | 660,660 (53.8%) | $281.2 (vs oracle); $182.5 (vs v44) | **NULL — all cells ML-only** |
-| **61** | K-high | Rule 15 | 330,330 (26.9%) | $176.4 (vs oracle); $110.9 (vs v44) | **NULL — all cells ML-only** |
-| **62** | Q-high | Rule 16 | 150,150 (12.2%) | $93.77 (vs oracle); $55.24 (vs v44) | **NULL — all cells ML-only** |
-| **63** | J-high | Rule 17 + Rule 24 | 60,060 (4.9%) | $47.46 (vs oracle); $23.43 (vs v44) | **NULL — all cells ML-only** |
-| **64** | T/9/8 combined | Rules 25/26/27 (always defensive) | 25,740 (2.1%) | $16.51 (vs oracle); $9.29 (vs v44) | **NULL — all cells ML-only across 3 max-ranks** |
-| **65** | **Aggregate synthesis** | **All high_only rules** | **All high_only** | **Synthesis only** | **`HIGH_ONLY_RULE_CATALOG.md` produced; ML-only boundary claim formalized** |
-| **TOTAL S60-S65** | **A/K/Q/J/T/9/8 + synthesis** | **All high_only rules** | **1,226,940 (100%)** | **$615.29 (vs oracle); $381.41 (vs v44)** | **5-of-5 NULL — all high_only ML-only at catalog granularity** |
-
-Five consecutive max-rank zones produced ALL-T3 verdicts across 43 tested candidates and a 12.7× range of structural opportunity (drop-max rate 6%→76% plus inverted-defensive at T/9/8). The aggregate document `HIGH_ONLY_RULE_CATALOG.md` is the publishable end-product of S60–S65 per CLAUDE.md's stated end-product goal.
+S66 is the first per-category audit to produce **non-T3 verdicts** since S64 — pair PBOT cells are CATALOG-SHIPPABLE at the matrix's quantified ceilings.
 
 ---
 
-## Resume Prompt (Session 66 — pair category audit OR hybrid chain)
+## Resume Prompt (Session 67 — pair PBOT-rule candidate sweep)
 
 ```
-Resume Session 66 of the Taiwanese Poker Solver project at
+Resume Session 67 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context (in this order):
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of S65 — pair category audit OR hybrid chain)
-- HIGH_ONLY_RULE_CATALOG.md (the S60-S65 canonical synthesis — the
-  publishable end-product. Especially Part 4 (implications) for the
-  pair / hybrid-chain trade-off.)
-- DECISIONS_LOG.md (latest: Decision 100 — S65 aggregate catalog + ML-only
-  boundary claim formalized)
-- SESSION_58_HIGH_ONLY_DECISION_MATRIX.md (template for S66 Phase 1 —
-  the per-(pair_rank × cell) decision matrix to build)
+- CURRENT_PHASE.md (rewritten end of S66 — pair PBOT-rule candidate sweep)
+- PAIR_DECISION_MATRIX.md (the S66 Phase 1+2 audit — Phase 3 candidate
+  sizing is in the "Recommendation" section near the end)
+- DECISIONS_LOG.md (latest: Decision 101 — S66 pair matrix produced;
+  pair category opens with $341/1000h WG catalog-shippable headroom)
+- HIGH_ONLY_RULE_CATALOG.md (the S65 high_only synthesis for methodology
+  reference — the test_rule_catalog.py harness pattern + threshold defs
+  carry over verbatim)
+- analysis/scripts/test_rule_catalog.py (the high_only catalog harness;
+  needs adaptation for pair schema in S67 Phase 1)
 
-State (end of Session 65):
-- HIGH_ONLY_RULE_CATALOG.md complete. Catalog closed on high_only as
-  ML-only at human granularity.
+State (end of Session 66):
+- PAIR_DECISION_MATRIX.md complete. Pair category audit Phase 1 (v44_dt vs
+  oracle descriptive matrix) AND Phase 2 (v52 rule-chain audit) finished.
 - Rule chain UNCHANGED at v52 ($2,498 full / $1,522 prefix).
 - ML champion UNCHANGED at v44_dt ($1,081 full / $686 prefix).
-- Two production tracks diverge by $1,417/1000h; $381 in high_only ML-only.
-- Per-category residuals (descending by WG):
-  - pair: $396/1000h (36.2% share) ← LARGEST REMAINING TARGET
-  - trips: $55, two_pair: $52, three_pair: $35, trips_pair: $5
-  - composite: $2, quads: $1
+- Per-category WG residual (UNCHANGED):
+  - high_only: $755 (catalog CLOSED S65)
+  - pair: $396 (catalog OPEN, $341/1000h WG catalog-shippable headroom in PBOT cells)
+  - trips: $55, two_pair: $52, three_pair: $35
 
-USER DIRECTIVE (S59-S65 re-confirmed):
+USER DIRECTIVE (S59-S66 re-confirmed):
 - "Speed is not necessary — clarity and perfection is."
 
-DIRECTION FOR SESSION 66 — TWO PATHS, USER PICKS:
+DIRECTION FOR SESSION 67 — Phase 3 candidate sweep on pair:
 
-PATH A — Pair category audit (RECOMMENDED for catalog completeness):
+  PHASE 1 (S67 ~1 hr) — Build catalog harness for pair.
+  Adapt analysis/scripts/test_rule_catalog.py for the pair schema:
+  - Load data/drill_pair_v44_per_hand_structural.parquet
+  - Filter by (pair_rank, cell) instead of (max_rank, cell)
+  - Cell index is in parquet column `cell_idx`; cells_order in script
+  - Sanity-check: reproduce Rule 11 shipped lift to <5% error
+    (Decision 080: +$11/1000h WG on J-pair-J)
+  - Output: analysis/scripts/test_rule_catalog_pair.py
 
-  Phase 1 — Build PAIR_DECISION_MATRIX.md analogous to S58. No rule
-  shipping. Stratify pair hands by (pair_rank × pair-placement × ms_mid
-  achievability × DS bot achievability). Output oracle TOP/BOT/MID profile
-  and v44 mismatch class per (pair_rank, cell). Same shape as
-  SESSION_58_HIGH_ONLY_DECISION_MATRIX.md. Time: ~3-4 hours.
+  PHASE 2 (S67 ~2 hr) — Test C_PAIR_3 (highest-EV candidate):
+  Three sub-variants of "6/7/8/9-pair PBOT-take rule":
+  - C_PAIR_3a: simple "pair_rank ∈ {6,7,8,9} AND PBOT_DS achievable
+               → take PBOT-HIMID setting"
+  - C_PAIR_3b: gated variant with PBOT bot_pair_high ≥ T threshold
+  - C_PAIR_3c: PBOT_DS_JOINT only (most surgical)
 
-  Phase 2 — Audit existing pair rules (Rules 7-11 in v52) cell-by-cell.
-  Identify whether they leave substantial within-cell residual that
-  human-statable refinements could close. Time: ~1 hour.
+  For each: measure within-cell + WG lift vs v52 baseline.
+    T1 ≥ 40% capture within fire-region cell
+    T2 ≥ +$5/1000h WG + zero non-targeted regression
+    Catalog ceiling: $88.71/1000h WG total for C_PAIR_3 family
 
-  Phase 3 — Decide on continuation: catalog sweep / pivot / hybrid.
+  PHASE 3 (S67 ~30 min) — Decision on continuation.
+  - If C_PAIR_3 ships clean → ship as v53; queue C_PAIR_1/C_PAIR_2/C_PAIR_5
+    for S68 sweep.
+  - If C_PAIR_3 falsifies (all T3) → fall back to C_PAIR_5 (Q-pair
+    PBOT_DS_PARTIAL refinement, smaller fire region, $41.20 WG ceiling).
 
-PATH B — Hybrid chain experiment (FASTER, COMMITS production to v44_dt
-on high_only):
+ACCEPTANCE for Session 67 (Path A minimum):
+- test_rule_catalog_pair.py harness produced and Rule 11 reproduction
+  <5% error confirmed.
+- C_PAIR_3a/b/c verdicts assigned per T1/T2/T3.
+- If any sub-variant clears T2: non-targeted regression check on full grid
+  before shipping as v53.
+- S68 direction recommendation issued.
 
-  Isolate v44_dt's high_only-specific decision tree. Benchmark
-  v52-non-high_only + v44_dt-high_only on held-out subset. Ship as v53 if
-  zero non-targeted regression. Estimated lift on rule chain: ~$200-300/1000h
-  whole-grid. Time: ~1 hour.
-
-RECOMMENDED ORDER: Phase 1 of Path A FIRST (information value before
-committing to hybrid), then hybrid experiment as Path B if pair shows
-similar ML-only ceiling. If user prefers Path B alone, that's tractable
-in ~1 hour.
-
-ACCEPTANCE for Session 66 (Path A minimum):
-- PAIR_DECISION_MATRIX.md produced.
-- Per-(pair_rank × cell) v44 residual + oracle pick profile documented.
-- Top-3 mismatch class per cell identified with $/1000h within-cell.
-- Recommendation issued for S67+ direction.
+ALTERNATIVE (if user prefers): hybrid chain experiment.
+Per PAIR_DECISION_MATRIX.md Recommendation Path B, a cell-routed hybrid
+(v44 on PBOT cells, v52 on PMID cells) captures $390 WG improvement on
+pair vs v52 alone. Implementationally simpler than rule extension.
+The trade-off: hybrid commits production to v44_dt on PBOT pair cells.
 
 REMINDERS:
 - Use python3, not python.
 - cargo at ~/.cargo/bin/cargo.
 - Session-end protocol: commit + push to origin/main (pre-authorized).
-- The catalog harness (analysis/scripts/test_rule_catalog.py) is
-  STRUCTURALLY CATEGORY-AGNOSTIC. Reusable for pair after building a
-  new cell-tagging parquet.
-- "Speed is not necessary — clarity and perfection is." — S66 Phase 1
-  is fresh design work, not a copy of S58.
+- The pair Phase 1 parquet (data/drill_pair_v44_per_hand_structural.parquet,
+  22.8 MB) is the foundation for the pair catalog harness.
+- 6-cell pair taxonomy: PBOT_DS_JOINT / PBOT_DS_PARTIAL / PMID_DS_MAXTOP /
+  PMID_DS_NOMAXTOP / PMID_SS_MAXTOP / PMID_OTHER.
+- "Speed is not necessary — clarity and perfection is." — S67 candidates
+  are concrete with quantified ceilings; no fresh design work needed.
 ```
 
 ---

@@ -5330,3 +5330,98 @@ Three concrete next-step paths recommended:
 - Diverge by $1,417/1000h. STILL UNCHANGED.
 
 **Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED). **The high_only rule catalog is now CLOSED.**
+
+## Decision 101 — Session 66 `PAIR_DECISION_MATRIX.md` produced; pair category opens with $341/1000h WG of catalog-shippable PBOT-cell headroom
+
+**Date:** 2026-05-12
+
+**Context:** Session 65 closed the high_only catalog with the ML-only boundary claim (Decision 100). CURRENT_PHASE.md mandated S66 Phase 1: build a pair-specific decision matrix analogous to `SESSION_58_HIGH_ONLY_DECISION_MATRIX.md`. S66 executed Phase 1 (oracle vs v44_dt descriptive matrix) AND Phase 2 (v52 rule-chain audit), producing the canonical `PAIR_DECISION_MATRIX.md`.
+
+**Result: `PAIR_DECISION_MATRIX.md` produced.** Phase 1 deliverable (per-(pair_rank × cell) v44_dt vs oracle pick profile) + Phase 2 audit (v52 rule-chain residual + cell-by-cell coverage analysis) + Phase 3 candidate sizing. Across 2,800,512 pair canonical hands, the matrix decomposes the residual into a pair-specific 6-cell taxonomy and identifies which pair_ranks lack PBOT routing in v52.
+
+### Pair-specific cell taxonomy (S66 fresh design)
+
+Six mutually-exclusive cells per pair_rank, distinct from S58's high_only-only scheme:
+- `PBOT_DS_JOINT` — pair-to-bot DS + ms_mid + max-on-top all achievable (13.2% of pair)
+- `PBOT_DS_PARTIAL` — pair-to-bot DS achievable but no ms_mid+maxtop (41.9%, largest cell)
+- `PMID_DS_MAXTOP` — pair stays in mid + DS bot + max sing on top (9.9%)
+- `PMID_DS_NOMAXTOP` — pair in mid, DS bot only with max in bot (17.6%)
+- `PMID_SS_MAXTOP` — pair in mid, only SS bot + max on top (6.6%)
+- `PMID_OTHER` — pair in mid, only 31/RB/4f bot (10.7%)
+
+Cell distribution is identical across all 13 pair_ranks (canonical-symmetric).
+
+### Phase 1 — v44_dt vs oracle descriptive matrix
+
+Total pair v44→oracle residual: **$511/1000h whole-grid (canonical-equal framing)** = $1,097 within-cat. Distributed:
+- Peak per-pair-rank: pair=3 ($70 WG), pair=4 ($68 WG), pair=7 ($52 WG).
+- Trough: pair=A ($24 WG).
+- Per-cell peak: PBOT_DS_PARTIAL ($173 WG across all pair_ranks), PMID_DS_NOMAXTOP ($153 WG).
+
+### Five Phase 1 cross-cutting findings (Observations 1-5)
+
+1. **Q-pair PBOT peak**: oracle picks PBOT (pair-to-bot) on 53% of Q-pair hands — the only pair_rank where PBOT > PMID. v44 under-routes PBOT at every mid pair_rank (K, Q, J, T) by 7-11%.
+2. **pair=3,4 SPLIT bug**: v44 picks SPLIT (one pair card on top + one in mid/bot) 4.2-4.4% at pair=3,4. Oracle picks SPLIT <1%. Catastrophic per-hand cost ($16K-$24K/hand mean regret). This single class accounts for the bulk of the pair=3,4 WG residual spike.
+3. **PMID_DS_NOMAXTOP is deepest cell at every pair_rank** (43-58% pct_opt). The cell is a within-cell suit-trade decision ("sacrifice max-singleton to bot for DS"). v44 misses the WHICH 30%.
+4. **PBOT_DS_PARTIAL is largest by population AND WG contribution but shallow per-hand**. Oracle splits PMID/PBOT ~55/45; v44 over-PMIDs by 10-15%.
+5. **Existing pair rules cover narrow zones**: Rule 11 (J-pair-J only), v9_2 (pair_rank in {2-5, T-J-Q} + Ace), Rule 10 (J-low defensive), Rule 5 (KK/AA rainbow).
+
+### Phase 2 — v52 rule-chain audit (the key finding)
+
+Total pair v52→oracle residual: **$852/1000h WG**. v52 underperforms v44 by **$341/1000h WG on pair** — comparable in magnitude to high_only's $381/1000h ML-only residual.
+
+**Per-cell decomposition (where the v52→v44 gap lives):**
+- **PBOT cells (combined): v52 $606, v44 $215 → $391 WG catalog-shippable headroom**
+- PMID cells (combined): v52 $246, v44 $296 → v52 BEATS v44 by $50 WG (the rule chain is catalog-correct at PMID)
+
+**Empirical PBOT routing coverage (per v52 placement sweep):**
+- pair_ranks A, K, 6, 7, 8, 9 produce **v52 PMID-pick 100%** in PBOT cells — NO PBOT routing rule fires.
+- v9_2 covers pair_ranks 2-5, T-J-Q only AND requires "single Ace" predicate — fires <50% of PBOT_DS_JOINT even within covered ranks.
+- Rule 11 fires uniquely on J-pair-J (~2% of pair).
+
+### Phase 3 candidates (with v52 baseline residuals as catalog-shippable ceilings)
+
+Five candidates identified, sized against the v52→v44 gap:
+
+| ID | Candidate | Fire region | Catalog ceiling (WG) |
+|---|---|---|---:|
+| C_PAIR_1 | K-pair PBOT-take rule | K-pair × PBOT cells (~119K hands) | **$35.60/1000h WG** |
+| C_PAIR_2 | A-pair PBOT-take rule | A-pair × PBOT cells (~119K) | **$28.39/1000h WG** |
+| C_PAIR_3 | 6/7/8/9-pair PBOT-take | 4 pair_ranks × PBOT cells (~475K) | **$88.71/1000h WG** |
+| C_PAIR_4 | Drop "single Ace" predicate from v9_2 | v9_2 fire region 3× wider | ~$30-50/1000h WG estimate |
+| C_PAIR_5 | Q-pair PBOT_DS_PARTIAL refinement | Q-pair × PBOT_DS_PARTIAL (~90K) | **$41.20/1000h WG** |
+
+Cumulative ship value estimate: **$200-300/1000h WG** if 3-4 candidates ship at 40-60% capture rates. **Bigger than high_only's entire S50-S53 shipped lift ($218 WG).**
+
+### Methodology lessons (Session 66)
+
+1. **Pair-specific cell taxonomy was necessary.** S58's high_only 6-cell scheme assumes 7 distinct ranks and does not apply to pair hands. The new pair scheme axis (PBOT achievability + PMID variants) is structurally rooted in the strategic options of the pair category.
+2. **The Phase 2 v52 sweep is decisive for direction-setting.** Phase 1 alone (v44 vs oracle) suggested the dominant issue was v44's low-pair SPLIT bug — which v52 doesn't have. Without v52 numbers the recommendation would have inverted: "fix v44" instead of "extend rule chain to cover uncovered PBOT zones".
+3. **The catalog approach extends naturally to pair.** Unlike high_only (where the S60-S64 audit found all cells ML-only), pair has structural cell-level gaps that are human-statable AND large in $-magnitude.
+4. **The two-track production divergence ($1,417/1000h on full grid) decomposes further than Decision 100's framing.** The pair category contributes $341 WG to that divergence — larger than high_only's $381 ML-only residual was originally thought to be the largest. **Pair PBOT-cell rule extension is the highest-EV catalog target in the project.**
+5. **"Speed is not necessary — clarity and perfection is."** S66 took ~3 hours including both Phase 1 + Phase 2 sweeps (~14 min each on 2.8M hands) and a comprehensive matrix doc. The Phase 2 enrichment changed the entire recommendation; running both sweeps was essential for correctness.
+
+### Files (Session 66)
+
+**New artifacts:**
+- `PAIR_DECISION_MATRIX.md` — canonical pair Phase 1+2 matrix. Headline tables: per-pair-rank residual; oracle/v44 placement distribution; cell residual cross-tab; v52 vs v44 per-cell comparison; existing-rule coverage check; Phase 3 candidate sizing with quantified WG ceilings.
+- `analysis/scripts/drill_pair_v44_S66.py` — pair-specific deep-dive (Phase 1 sweep).
+- `analysis/scripts/sweep_v52_on_pair_S66.py` — v52 sweep on pair hands (Phase 2).
+- `data/drill_pair_v44_per_hand_structural.parquet` (22.8 MB) — per-hand v44/oracle picks + structural cell tag. Reusable for Phase 3 catalog harness.
+- `data/drill_pair_v44_summary.json` (390 KB) — aggregate stats keyed by (pair_rank, cell).
+- `data/drill_pair_v52_per_hand.parquet` (12.0 MB) — v52 per-hand picks joined on canonical_id.
+- `data/drill_pair_v52_summary.json` (45 KB) — v52 per-(pair_rank, cell) aggregates.
+
+**Documentation updates:**
+- `CURRENT_PHASE.md` — rewritten with S67 direction (pair PBOT-rule extension sweep).
+- `DECISIONS_LOG.md` — Decision 101 (this section).
+
+**No code, test, or production state changes.** S66 was pure analysis + documentation, mirroring S58's pattern.
+
+**Production state at end of S66:** UNCHANGED from S65.
+- Rule chain: **v52_full_high_only_handler** ($2,498 full / $1,522 prefix)
+- ML champion: **v44_dt** ($1,081 full / $686 prefix)
+- Diverge by $1,417/1000h. STILL UNCHANGED.
+- **Pair category now characterized: $341/1000h WG catalog-shippable headroom identified in PBOT cells.**
+
+**Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED). **The pair category audit is OPEN with concrete S67+ Phase 3 candidates.**
