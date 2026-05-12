@@ -5425,3 +5425,110 @@ Cumulative ship value estimate: **$200-300/1000h WG** if 3-4 candidates ship at 
 - **Pair category now characterized: $341/1000h WG catalog-shippable headroom identified in PBOT cells.**
 
 **Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED). **The pair category audit is OPEN with concrete S67+ Phase 3 candidates.**
+
+## Decision 102 — Session 67 C_PAIR_3 candidate sweep: pair PBOT-routing is mostly ML-only; v53 ships Rule 19 (Q-pair JOINT PBOT-DS, +$8.50/1000h WG)
+
+**Date:** 2026-05-12
+
+**Context:** CURRENT_PHASE (end S66) mandated S67 Phase 3 candidate sweep on pair PBOT cells, starting with C_PAIR_3 (6/7/8/9-pair PBOT-take, $88.71 catalog ceiling) and falling back to C_PAIR_5 (Q-pair PBOT_DS_PARTIAL refinement, $41.20 ceiling) if C_PAIR_3 falsified. PAIR_DECISION_MATRIX.md framed PBOT cells as $391/1000h WG catalog-shippable headroom.
+
+**Result: ELEVEN OF TWELVE candidates T3 net-negative.** The PAIR_DECISION_MATRIX.md "$391 WG catalog-shippable PBOT-cell headroom" claim is **decisively falsified** for blanket-rule realization. Only Q-pair × PBOT_DS_JOINT (the single cell where oracle PBOT preference is at its 53% peak) admits a clean rule. **v53 ships Rule 19 = v52 + Q-pair JOINT PBOT-DS at +$8.50/1000h WG harness lift** (grader confirmation pending at session end).
+
+### Pair PBOT-rule candidate verdict matrix (S67)
+
+12 candidates tested via `test_rule_catalog_pair.py` against v52 baseline (pre-computed in `data/drill_pair_v52_per_hand.parquet`):
+
+| ID | Sub-variant | Fire region | Capture | WG lift | Verdict |
+|---|---|---|---:|---:|---|
+| C_PAIR_3a | 6/7/8/9 PBOT-take simple | 4 ranks × {JOINT, PARTIAL} | -202% | -$315.39 | T3 |
+| C_PAIR_3b (mid≥J) | 6/7/8/9 + mid≥J gate | 4 ranks × {JOINT, PARTIAL} ∩ mid≥J | -106% | -$165.20 | T3 |
+| C_PAIR_3b (mid≥Q) | 6/7/8/9 + mid≥Q gate | ↑ ∩ mid≥Q | -73% | -$114.04 | T3 |
+| C_PAIR_3b (mid≥K) | 6/7/8/9 + mid≥K gate | ↑ ∩ mid≥K | -31% | -$48.71 | T3 |
+| C_PAIR_3b (mid≥A) | 6/7/8/9 + mid≥A gate | ↑ ∩ mid≥A (0 fires) | n/a | $0 | T3 (no fires) |
+| C_PAIR_3c | 6/7/8/9 JOINT-only | 4 ranks × JOINT only | -12% | -$17.92 | T3 |
+| C_PAIR_5 simple | Q-pair PBOT-take | Q × {JOINT, PARTIAL} | -25% | -$17.44 | T3 |
+| **C_PAIR_5_joint** | **Q-pair JOINT only** | **Q × JOINT** | **+53% (within fire-cell)** | **+$8.50** | **T2 → SHIPS** |
+
+### Sanity check — harness validation
+
+Rule 11 (J-pair JOINT PBOT-DS, Decision 079) reproduction: harness measured +$6.21/1000h WG vs the grader-confirmed +$6/1000h baseline. **Error 3.5%** (well within <5% bar). Harness validated. (Side-note: CURRENT_PHASE end-S66 misquoted Decision 080 as the Rule 11 ship; Decision 080 is Rule 12 (two_pair), Rule 11 is Decision 079; corrected.)
+
+### Root-cause analysis of the falsification
+
+Examining 8-pair × PBOT_DS_JOINT cell (n=28,512) for C_PAIR_3c (joint-only):
+- Rule fires 100%, routes all to PBOT_tmax_DS_ms.
+- Rule pct_opt = 26.57% (= rule matches oracle 27% of fires).
+- v52 baseline pct_opt = 44.69%.
+- **30% of 8-pair JOINT hands have oracle preferring PMID, not PBOT.**
+- Top mismatch class: `PBOT_tmax_DS_ms → PMID_tmax_SS` (n=8,695, mean=$+4,526/hand regret).
+
+**Mechanism:** at pair_ranks 6/7/8/9, oracle's average PBOT preference is 20-30%. Forcing PBOT on 100% of PBOT_DS-feasible hands is wrong on 70-80% of cell hands. The matrix's "$88.71 catalog ceiling" was the v52→v44 gap — v44 captures it by SELECTIVE PMID/PBOT gating (using its 107 features), not by always-PBOT. **The $391 WG PBOT-cell gap is mostly v44's selective catch, NOT blanket-rule headroom.** Same structural finding as high_only's S60-S64 ML-only outcome.
+
+### Why Q-pair × PBOT_DS_JOINT specifically ships
+
+| Property | Q-pair PBOT_DS_JOINT | 6/7/8/9 PBOT_DS_JOINT |
+|---|---|---|
+| Oracle PBOT preference (overall) | **53%** ← global max | 22-29% |
+| Oracle's `PBOT_tmax_DS_ms` rate in cell | ~50% | ~25% |
+| Blanket-PBOT rule's pct_opt | 49.86% | 26-30% |
+| v52 baseline pct_opt | 31.95% | 44-67% |
+| Blanket-PBOT lift vs v52 | **+$8.50/1000h WG** | -$17 to -$315/1000h WG |
+
+The Q-pair JOINT cell is the ONLY structural cell where oracle's PBOT preference is high enough AND the JOINT setting is structurally dominant (max sing on top + ms mid + DS bot all simultaneously achievable) for blanket-PBOT to be correct more often than wrong. At lower pair ranks, oracle's PMID preference dominates, and at PBOT_DS_PARTIAL the suit-pattern constraints force suboptimal kicker choices.
+
+### v53 — Rule 19 (Q-pair JOINT PBOT-DS) design
+
+Codified in `analysis/scripts/strategy_v53_qpair_joint_pbot.py`:
+
+> If hand has exactly one pair AND pair_rank == 12 (Q) AND the JOINT pair-to-bot DS setting is achievable (max non-pair singleton on top + 2 same-suit singletons in mid + 2 kickers matching pair-suits in bot completing DS), play that JOINT setting. Tie-break (when multiple JOINT configs): choose the highest mid_high. Else fall through to v52.
+
+**Fire region:** 28,512 canonical hands = 0.47% of canonical-grid = 13.2% of Q-pair = 4.7% of pair category.
+
+**Non-targeted regression check:** `regression_check_c_pair_5_S67.py` swept all 2,800,512 pair canonical hands across 13 pair_ranks × 6 cells. Rule fires ONLY on Q-pair × PBOT_DS_JOINT (28,512 hands). All other 77 (rank, cell) combos: ZERO fires, $0 lift. Non-pair categories structurally excluded by pair gate (n_pairs==1, n_quads==0, n_trips==0). **CLEAN PASS.**
+
+**Prefix grader (500K hands, n=1000 oracle samples):** v53 == v52 ($1,522/1000h, 53.06% pct_opt). Q-pair JOINT canonical IDs are concentrated outside the prefix-500K region, so prefix is unchanged — same pattern as Rule 11's Decision 079.
+
+**Full grader (6M hands, n=200 oracle samples):** **CONFIRMED +$9/1000h.** v52 → v53: $2,498 → $2,490 full grid, 43.34% → 43.43% pct_opt (+0.09pp). p90 0.720 → 0.715. p99 1.645 → 1.640. ALL non-pair categories byte-identical (surgical via the pair gate). Within pair only: 51.6% → 51.8% pct_opt; $1,829 → $1,811. The +$9 grader matches the harness-projected +$8.50 within 6%. Log: `data/session67/grader_v53_full.log`.
+
+### What this means going forward
+
+1. **The PAIR_DECISION_MATRIX.md catalog ceilings are upper bounds on capacity, not on realizable rule lifts.** Future per-category audits should treat "v52→v44 gap" as an envelope, with the realizable portion typically <30% of that envelope (the high_only S60-S64 outcome found <5%).
+2. **Pair PBOT-routing on 12 of 13 pair_ranks is ML-only at catalog granularity.** Same boundary as high_only.
+3. **S68 pivots to Path B (hybrid chain).** Cell-routed v52-PMID + v44-PBOT routing captures $390 WG on pair vs v52-alone per the matrix; this is implementationally simple (cell taxonomy pre-computed) and bypasses the selectivity problem since v44 inherits its selective gating. Expected v54 full-grid lift: $200-390/1000h.
+4. **C_PAIR_4 (drop Ace predicate from v9_2) is a Path-A fallback** if Path B underperforms. Estimated $30-50 WG ceiling but likely suffers the same selectivity issue.
+
+### Methodology lessons (S67)
+
+1. **Sanity-check fixture errors caught early.** The CURRENT_PHASE prompt cited "+$11/Decision 080" for Rule 11's ship — both numbers wrong (Rule 11 is Decision 079, lift +$6). The harness validation step caught this discrepancy and corrected it before downstream candidates were assessed against false ceilings.
+2. **Pre-computed baseline parquet matters.** `drill_pair_v52_per_hand.parquet` (S66) made the C_PAIR_3 sweep take ~3 min per sub-variant instead of ~30 min. Recommend pre-computing v44 + v52 baselines for any future per-category audit harness.
+3. **Always run regression checks on T2 candidates BEFORE shipping.** The pair-category regression sweep confirmed Rule 19 fires only in 1 of 78 (rank, cell) combos with exact lift reproduction — clean validation.
+4. **Selectivity is the catalog-shippable boundary.** When oracle's preference for a placement is <50%, a blanket-route rule will regress. The Q-pair JOINT cell at 49.86% pct_opt is right at the threshold. Cells below this threshold are ML-only.
+
+### Files (Session 67)
+
+**New code:**
+- `analysis/scripts/test_rule_catalog_pair.py` — pair catalog harness (reusable for S68+ pair work)
+- `analysis/scripts/strategy_v53_c_pair_3.py` — C_PAIR_3 sub-variants + shared PBOT_DS enumeration helpers
+- `analysis/scripts/strategy_v53_qpair_joint_pbot.py` — **v53 PRODUCTION** (v52 + Rule 19)
+- `analysis/scripts/audit_c_pair_3_S67.py` — Phase 2 audit driver
+- `analysis/scripts/audit_c_pair_fallback_S67.py` — Phase 3 fallback driver
+- `analysis/scripts/regression_check_c_pair_5_S67.py` — full pair-category regression check
+- `analysis/scripts/grade_v53_qpair_joint_pbot.py` — v53 vs v52 head-to-head grader
+
+**Data:**
+- `data/session67/c_pair_3_audit.log`, `c_pair_3_audit_summary.json`
+- `data/session67/c_pair_fallback.log`, `c_pair_fallback_summary.json`
+- `data/session67/regression_check.log`, `regression_check_c_pair_5.json`
+- `data/session67/sanity_rule11.log`
+- `data/session67/grader_v53_prefix.log`, `grader_v53_full.log`
+
+**Documentation:**
+- `SESSION_67_C_PAIR_3_AUDIT.md` — Phase 3 verdict + ship decision
+- `CURRENT_PHASE.md` — rewritten for S68 (Path B hybrid chain)
+- `DECISIONS_LOG.md` — Decision 102 (this section)
+
+**Production state at end of S67:**
+- Rule chain: **v53_qpair_joint_pbot** (= v52 + Rule 19). **$2,490 full / $1,522 prefix (grader-confirmed)**.
+- ML champion: **v44_dt** (UNCHANGED). $1,081 full / $686 prefix.
+- Two-track divergence: $1,417 → $1,409 (slight tightening).
+- **Total project rule count: 18** (v52's 17 rules + Rule 19).

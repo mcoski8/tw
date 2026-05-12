@@ -1,0 +1,111 @@
+
+========================================================================================
+SANITY CHECK — Rule 11 vs pre-Rule-11 predecessor (v41_rule10_v3_ds)
+Expected: ~+$11/1000h whole-grid on J-pair-J (S46 shipped lift).
+========================================================================================
+[harness] loading pair parquet (cells + v44 + oracle) ...
+  rows: 2,800,512
+[harness] loading v52 parquet (pre-computed v52 picks) ...
+[harness] loading canonical hands ...
+[harness] loading oracle grid ...
+[harness] cache ready.
+
+══ sanity_rule11/PBOT_DS_JOINT ══
+  pair_rank=J  cell=PBOT_DS_JOINT  n=4,536
+  n_rule_fires=4,536 (100.0%)
+  pct_optimal: rule=15.50%  baseline=14.90%  v44=67.99%
+  mean_ev:     rule=-0.1772  baseline=-0.3208  v44=+0.0907  oracle=+0.1800
+  gap_to_oracle: baseline=+0.5008 EV ($+5007.6/1000h within-cell)  v44=+0.0893 EV ($+892.6/1000h within-cell)
+  capture:     vs_baseline=+28.66%  vs_v44=-300.22%
+  lift vs BASELINE: within_cell $+1435.10/1000h  whole_grid $+1.08/1000h
+  lift vs V44:      within_cell $-2679.87/1000h  whole_grid $-2.02/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PBOT_tnomax_DS_mu -> PBOT_tmax_DS_ms n= 1,219  mean=$+4173.7/1000h
+    PBOT_tnomax_DS_mu -> PMID_tnomax_DS  n=   604  mean=$+6251.8/1000h
+    PBOT_tnomax_DS_mu -> PMID_tmax_SS    n=   196  mean=$+6008.2/1000h
+    PBOT_tnomax_DS_mu -> PBOT_tnomax_DS_ms n=   178  mean=$+4944.4/1000h
+    PBOT_tnomax_DS_mu -> PMID_tnomax_SS  n=   182  mean=$+4705.5/1000h
+
+══ sanity_rule11/PBOT_DS_PARTIAL ══
+  pair_rank=J  cell=PBOT_DS_PARTIAL  n=14,364
+  n_rule_fires=14,364 (100.0%)
+  pct_optimal: rule=24.20%  baseline=15.16%  v44=50.01%
+  mean_ev:     rule=-0.1038  baseline=-0.3183  v44=+0.0333  oracle=+0.1744
+  gap_to_oracle: baseline=+0.4927 EV ($+4927.3/1000h within-cell)  v44=+0.1411 EV ($+1411.4/1000h within-cell)
+  capture:     vs_baseline=+43.53%  vs_v44=-97.15%
+  lift vs BASELINE: within_cell $+2144.84/1000h  whole_grid $+5.13/1000h
+  lift vs V44:      within_cell $-1371.07/1000h  whole_grid $-3.28/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PBOT_tnomax_DS_mu -> PBOT_tnomax_DS_ms n= 1,733  mean=$+3348.2/1000h
+    PBOT_tnomax_DS_mu -> PMID_tnomax_SS  n=   953  mean=$+4654.4/1000h
+    PBOT_tnomax_DS_mu -> PMID_tnomax_DS  n=   773  mean=$+5436.6/1000h
+    PBOT_tnomax_DS_mu -> PMID_tmax_DS    n=   622  mean=$+6733.4/1000h
+    PBOT_tnomax_DS_mu -> PMID_tmax_SS    n=   799  mean=$+5118.9/1000h
+
+══ sanity_rule11/PMID_DS_MAXTOP ══
+  pair_rank=J  cell=PMID_DS_MAXTOP  n=3,402
+  n_rule_fires=3,402 (100.0%)
+  pct_optimal: rule=40.09%  baseline=40.09%  v44=58.44%
+  mean_ev:     rule=+0.0279  baseline=+0.0279  v44=+0.1485  oracle=+0.2502
+  gap_to_oracle: baseline=+0.2223 EV ($+2222.6/1000h within-cell)  v44=+0.1017 EV ($+1016.6/1000h within-cell)
+  capture:     vs_baseline=+0.00%  vs_v44=-118.63%
+  lift vs BASELINE: within_cell $+0.00/1000h  whole_grid $+0.00/1000h
+  lift vs V44:      within_cell $-1206.03/1000h  whole_grid $-0.68/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tnomax_DS -> PMID_tmax_DS       n= 1,029  mean=$+4083.1/1000h
+    PMID_tnomax_DS -> PBOT_tnomax_SS_ms  n=   237  mean=$+3862.4/1000h
+    PMID_tnomax_DS -> PMID_tnomax_DS     n=   163  mean=$+2880.1/1000h
+    PMID_tnomax_DS -> PBOT_tmax_31_ms    n=    59  mean=$+5248.3/1000h
+    PMID_tnomax_DS -> PBOT_tmax_SS_ms    n=    58  mean=$+4889.7/1000h
+
+══ sanity_rule11/PMID_DS_NOMAXTOP ══
+  pair_rank=J  cell=PMID_DS_NOMAXTOP  n=6,048
+  n_rule_fires=6,048 (100.0%)
+  pct_optimal: rule=44.59%  baseline=44.59%  v44=33.85%
+  mean_ev:     rule=+0.0485  baseline=+0.0485  v44=-0.0355  oracle=+0.2097
+  gap_to_oracle: baseline=+0.1612 EV ($+1612.3/1000h within-cell)  v44=+0.2452 EV ($+2451.7/1000h within-cell)
+  capture:     vs_baseline=+0.00%  vs_v44=+34.24%
+  lift vs BASELINE: within_cell $+0.00/1000h  whole_grid $+0.00/1000h
+  lift vs V44:      within_cell $+839.47/1000h  whole_grid $+0.84/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tnomax_DS -> PBOT_tnomax_SS_ms  n=   786  mean=$+3378.4/1000h
+    PMID_tnomax_DS -> PMID_tnomax_SS     n=   595  mean=$+2263.8/1000h
+    PMID_tnomax_DS -> PMID_tmax_SS       n=   501  mean=$+2580.6/1000h
+    PMID_tnomax_DS -> PBOT_tmax_SS_ms    n=   362  mean=$+3515.3/1000h
+    PMID_tnomax_DS -> PMID_tnomax_DS     n=   407  mean=$+2450.7/1000h
+
+══ sanity_rule11/PMID_SS_MAXTOP ══
+  pair_rank=J  cell=PMID_SS_MAXTOP  n=2,268
+  n_rule_fires=2,268 (100.0%)
+  pct_optimal: rule=20.63%  baseline=20.63%  v44=32.01%
+  mean_ev:     rule=-0.3225  baseline=-0.3225  v44=-0.2169  oracle=+0.0096
+  gap_to_oracle: baseline=+0.3322 EV ($+3321.7/1000h within-cell)  v44=+0.2265 EV ($+2265.5/1000h within-cell)
+  capture:     vs_baseline=+0.00%  vs_v44=-46.62%
+  lift vs BASELINE: within_cell $+0.00/1000h  whole_grid $+0.00/1000h
+  lift vs V44:      within_cell $-1056.17/1000h  whole_grid $-0.40/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tnomax_31 -> PBOT_tnomax_SS_ms  n=   433  mean=$+4588.0/1000h
+    PMID_tnomax_SS -> PBOT_tnomax_SS_ms  n=   361  mean=$+4803.6/1000h
+    PMID_tnomax_31 -> PMID_tmax_SS       n=   189  mean=$+3578.3/1000h
+    PMID_tnomax_SS -> PMID_tmax_SS       n=   181  mean=$+3712.7/1000h
+    PMID_tnomax_31 -> PBOT_tmax_SS_ms    n=    79  mean=$+5955.7/1000h
+
+══ sanity_rule11/PMID_OTHER ══
+  pair_rank=J  cell=PMID_OTHER  n=3,654
+  n_rule_fires=3,654 (100.0%)
+  pct_optimal: rule=20.58%  baseline=20.58%  v44=42.56%
+  mean_ev:     rule=-0.4665  baseline=-0.4665  v44=-0.3101  oracle=-0.1417
+  gap_to_oracle: baseline=+0.3248 EV ($+3248.4/1000h within-cell)  v44=+0.1685 EV ($+1684.8/1000h within-cell)
+  capture:     vs_baseline=+0.00%  vs_v44=-92.81%
+  lift vs BASELINE: within_cell $+0.00/1000h  whole_grid $+0.00/1000h
+  lift vs V44:      within_cell $-1563.66/1000h  whole_grid $-0.95/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tnomax_31 -> PBOT_tnomax_SS_ms  n=   399  mean=$+4427.2/1000h
+    PMID_tnomax_31 -> PMID_tmax_31       n=   347  mean=$+3609.1/1000h
+    PMID_tnomax_31 -> PBOT_tmax_SS_ms    n=   209  mean=$+5556.9/1000h
+    PMID_tnomax_SS -> PMID_tmax_31       n=   280  mean=$+3576.1/1000h
+    PMID_tnomax_SS -> PBOT_tmax_SS_ms    n=   148  mean=$+5732.4/1000h
+
+  ==> Sanity total J-pair-J whole-grid lift: $+6.21/1000h (n=34,272, fires=34,272)
+      Expected ~+$11/1000h (Decision 080). Within reason if between $9 and $13 (<20% error tolerance).
+      Observed error vs $11 target: 43.5%

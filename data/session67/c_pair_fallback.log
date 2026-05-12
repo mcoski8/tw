@@ -1,0 +1,545 @@
+==========================================================================================
+Session 67 Phase 3 — fallback experiments
+Started: 2026-05-12 13:27:28
+==========================================================================================
+
+## Block 1: C_PAIR_3b at higher mid thresholds (sub-variant tightening)
+
+==========================================================================================
+AUDITING: C_PAIR_3b (mid≥Q)
+==========================================================================================
+[harness] loading pair parquet (cells + v44 + oracle) ...
+  rows: 2,800,512
+[harness] loading v52 parquet (pre-computed v52 picks) ...
+[harness] loading canonical hands ...
+[harness] loading oracle grid ...
+[harness] cache ready.
+
+══ C_PAIR_3b (mid≥Q)/p6/PBOT_DS_JOINT ══
+  pair_rank=6  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=6,444 (22.6%)
+  pct_optimal: rule=36.65%  baseline=36.65%  v44=76.15%
+  mean_ev:     rule=+0.0587  baseline=+0.0565  v44=+0.2421  oracle=+0.3010
+  gap_to_oracle: baseline=+0.2446 EV ($+2445.8/1000h within-cell)  v44=+0.0589 EV ($+589.3/1000h within-cell)
+  capture:     vs_baseline=+0.92%  vs_v44=-311.18%
+  lift vs BASELINE: within_cell $+22.48/1000h  whole_grid $+0.11/1000h
+  lift vs V44:      within_cell $-1833.96/1000h  whole_grid $-8.70/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_SS -> PBOT_tmax_DS_ms      n= 4,368  mean=$+4112.1/1000h
+    PMID_tmax_31 -> PBOT_tmax_DS_ms      n= 2,514  mean=$+4034.9/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_SS      n= 1,639  mean=$+3737.5/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 1,319  mean=$+3345.8/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_31      n= 1,045  mean=$+4146.9/1000h
+    [C_PAIR_3b (mid≥Q)/p6/PBOT_DS_PARTIAL]  50,000/90,288  rate=73460/s  ETA    1s
+
+══ C_PAIR_3b (mid≥Q)/p6/PBOT_DS_PARTIAL ══
+  pair_rank=6  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=25,632 (28.4%)
+  pct_optimal: rule=33.52%  baseline=44.64%  v44=66.36%
+  mean_ev:     rule=-0.1254  baseline=+0.0276  v44=+0.1668  oracle=+0.2488
+  gap_to_oracle: baseline=+0.2211 EV ($+2211.2/1000h within-cell)  v44=+0.0820 EV ($+819.8/1000h within-cell)
+  capture:     vs_baseline=-69.19%  vs_v44=-356.33%
+  lift vs BASELINE: within_cell $-1529.99/1000h  whole_grid $-22.99/1000h
+  lift vs V44:      within_cell $-2921.37/1000h  whole_grid $-43.89/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PBOT_tnomax_DS_mu -> PMID_tmax_SS    n= 2,641  mean=$+14716.8/1000h
+    PBOT_tnomax_DS_mu -> PMID_tmax_DS    n= 1,384  mean=$+19027.8/1000h
+    PBOT_tmax_DS_mu -> PMID_tmax_SS      n= 5,060  mean=$+5062.6/1000h
+    PMID_tmax_RB -> PBOT_tmax_DS_mu      n= 3,054  mean=$+5802.0/1000h
+    PMID_tmax_SS -> PBOT_tmax_DS_mu      n= 4,617  mean=$+3640.4/1000h
+
+══ C_PAIR_3b (mid≥Q)/p7/PBOT_DS_JOINT ══
+  pair_rank=7  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=6,444 (22.6%)
+  pct_optimal: rule=37.37%  baseline=40.81%  v44=73.26%
+  mean_ev:     rule=+0.3175  baseline=+0.3407  v44=+0.4718  oracle=+0.5510
+  gap_to_oracle: baseline=+0.2103 EV ($+2103.4/1000h within-cell)  v44=+0.0792 EV ($+791.7/1000h within-cell)
+  capture:     vs_baseline=-11.01%  vs_v44=-194.93%
+  lift vs BASELINE: within_cell $-231.66/1000h  whole_grid $-1.10/1000h
+  lift vs V44:      within_cell $-1543.31/1000h  whole_grid $-7.32/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_SS -> PBOT_tmax_DS_ms      n= 4,474  mean=$+3837.0/1000h
+    PMID_tmax_31 -> PBOT_tmax_DS_ms      n= 2,284  mean=$+3721.5/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 2,270  mean=$+3654.2/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_SS      n= 1,976  mean=$+3979.0/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_31      n= 1,265  mean=$+4558.0/1000h
+    [C_PAIR_3b (mid≥Q)/p7/PBOT_DS_PARTIAL]  50,000/90,288  rate=73320/s  ETA    1s
+
+══ C_PAIR_3b (mid≥Q)/p7/PBOT_DS_PARTIAL ══
+  pair_rank=7  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=25,632 (28.4%)
+  pct_optimal: rule=36.11%  baseline=50.46%  v44=64.99%
+  mean_ev:     rule=+0.1272  baseline=+0.3139  v44=+0.4006  oracle=+0.5093
+  gap_to_oracle: baseline=+0.1955 EV ($+1954.5/1000h within-cell)  v44=+0.1087 EV ($+1087.4/1000h within-cell)
+  capture:     vs_baseline=-95.52%  vs_v44=-251.42%
+  lift vs BASELINE: within_cell $-1866.96/1000h  whole_grid $-28.05/1000h
+  lift vs V44:      within_cell $-2734.04/1000h  whole_grid $-41.08/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PBOT_tnomax_DS_mu -> PMID_tmax_SS    n= 2,983  mean=$+15386.7/1000h
+    PBOT_tmax_DS_mu -> PMID_tmax_SS      n= 6,107  mean=$+5358.9/1000h
+    PBOT_tnomax_DS_mu -> PMID_tmax_DS    n= 1,425  mean=$+19875.4/1000h
+    PMID_tmax_RB -> PMID_tnomax_SS       n= 5,399  mean=$+5213.5/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 4,644  mean=$+4167.4/1000h
+
+══ C_PAIR_3b (mid≥Q)/p8/PBOT_DS_JOINT ══
+  pair_rank=8  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=6,444 (22.6%)
+  pct_optimal: rule=39.94%  baseline=44.69%  v44=72.74%
+  mean_ev:     rule=+0.5874  baseline=+0.6172  v44=+0.7269  oracle=+0.8036
+  gap_to_oracle: baseline=+0.1864 EV ($+1863.5/1000h within-cell)  v44=+0.0766 EV ($+766.4/1000h within-cell)
+  capture:     vs_baseline=-15.98%  vs_v44=-182.01%
+  lift vs BASELINE: within_cell $-297.73/1000h  whole_grid $-1.41/1000h
+  lift vs V44:      within_cell $-1394.91/1000h  whole_grid $-6.62/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_SS -> PBOT_tmax_DS_ms      n= 4,296  mean=$+3596.7/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_SS      n= 2,080  mean=$+4179.2/1000h
+    PMID_tmax_31 -> PBOT_tmax_DS_ms      n= 2,113  mean=$+3479.0/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 2,052  mean=$+3474.3/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_31      n= 1,263  mean=$+4328.5/1000h
+    [C_PAIR_3b (mid≥Q)/p8/PBOT_DS_PARTIAL]  50,000/90,288  rate=73442/s  ETA    1s
+
+══ C_PAIR_3b (mid≥Q)/p8/PBOT_DS_PARTIAL ══
+  pair_rank=8  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=25,632 (28.4%)
+  pct_optimal: rule=38.07%  baseline=53.25%  v44=67.63%
+  mean_ev:     rule=+0.3821  baseline=+0.5883  v44=+0.6728  oracle=+0.7655
+  gap_to_oracle: baseline=+0.1772 EV ($+1772.3/1000h within-cell)  v44=+0.0927 EV ($+927.4/1000h within-cell)
+  capture:     vs_baseline=-116.35%  vs_v44=-313.44%
+  lift vs BASELINE: within_cell $-2062.02/1000h  whole_grid $-30.98/1000h
+  lift vs V44:      within_cell $-2906.89/1000h  whole_grid $-43.68/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PBOT_tnomax_DS_mu -> PMID_tmax_SS    n= 2,961  mean=$+16774.2/1000h
+    PBOT_tmax_DS_mu -> PMID_tmax_SS      n= 6,407  mean=$+5396.3/1000h
+    PBOT_tnomax_DS_mu -> PMID_tmax_DS    n= 1,418  mean=$+21301.4/1000h
+    PMID_tmax_RB -> PMID_tnomax_SS       n= 5,582  mean=$+4851.8/1000h
+    PBOT_tmax_DS_mu -> PMID_tmax_DS      n= 2,361  mean=$+8151.8/1000h
+
+══ C_PAIR_3b (mid≥Q)/p9/PBOT_DS_JOINT ══
+  pair_rank=9  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=6,444 (22.6%)
+  pct_optimal: rule=41.17%  baseline=43.30%  v44=73.61%
+  mean_ev:     rule=+0.8277  baseline=+0.8396  v44=+0.9690  oracle=+1.0355
+  gap_to_oracle: baseline=+0.1959 EV ($+1959.3/1000h within-cell)  v44=+0.0664 EV ($+664.4/1000h within-cell)
+  capture:     vs_baseline=-6.05%  vs_v44=-212.75%
+  lift vs BASELINE: within_cell $-118.58/1000h  whole_grid $-0.56/1000h
+  lift vs V44:      within_cell $-1413.51/1000h  whole_grid $-6.71/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_SS -> PBOT_tmax_DS_ms      n= 4,965  mean=$+3746.9/1000h
+    PMID_tmax_31 -> PBOT_tmax_DS_ms      n= 2,362  mean=$+3645.0/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_SS      n= 1,838  mean=$+3866.3/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 1,624  mean=$+3280.1/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_31      n= 1,121  mean=$+4142.0/1000h
+    [C_PAIR_3b (mid≥Q)/p9/PBOT_DS_PARTIAL]  50,000/90,288  rate=73360/s  ETA    1s
+
+══ C_PAIR_3b (mid≥Q)/p9/PBOT_DS_PARTIAL ══
+  pair_rank=9  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=25,632 (28.4%)
+  pct_optimal: rule=39.20%  baseline=52.62%  v44=69.37%
+  mean_ev:     rule=+0.6142  baseline=+0.8075  v44=+0.9121  oracle=+0.9871
+  gap_to_oracle: baseline=+0.1796 EV ($+1795.6/1000h within-cell)  v44=+0.0750 EV ($+750.3/1000h within-cell)
+  capture:     vs_baseline=-107.69%  vs_v44=-397.01%
+  lift vs BASELINE: within_cell $-1933.73/1000h  whole_grid $-29.05/1000h
+  lift vs V44:      within_cell $-2978.95/1000h  whole_grid $-44.76/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PBOT_tnomax_DS_mu -> PMID_tmax_SS    n= 2,893  mean=$+17044.2/1000h
+    PBOT_tnomax_DS_mu -> PMID_tmax_DS    n= 1,407  mean=$+21735.5/1000h
+    PBOT_tmax_DS_mu -> PMID_tmax_SS      n= 5,753  mean=$+5080.6/1000h
+    PMID_tmax_RB -> PMID_tnomax_SS       n= 4,821  mean=$+4420.9/1000h
+    PBOT_tmax_DS_mu -> PMID_tmax_DS      n= 2,297  mean=$+7578.6/1000h
+
+  C_PAIR_3b (mid≥Q) AGGREGATE
+    n_hands              : 475,200
+    n_rule_fires         : 128,304 (27.0%)
+    weighted-avg capture : -73.14%
+    SUM whole-grid lift  : $-114.04/1000h WG
+    VERDICT              : T3 — net-negative
+
+==========================================================================================
+AUDITING: C_PAIR_3b (mid≥K)
+==========================================================================================
+
+══ C_PAIR_3b (mid≥K)/p6/PBOT_DS_JOINT ══
+  pair_rank=6  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=2,520 (8.8%)
+  pct_optimal: rule=36.70%  baseline=36.65%  v44=76.15%
+  mean_ev:     rule=+0.0587  baseline=+0.0565  v44=+0.2421  oracle=+0.3010
+  gap_to_oracle: baseline=+0.2446 EV ($+2445.8/1000h within-cell)  v44=+0.0589 EV ($+589.3/1000h within-cell)
+  capture:     vs_baseline=+0.90%  vs_v44=-311.27%
+  lift vs BASELINE: within_cell $+22.00/1000h  whole_grid $+0.10/1000h
+  lift vs V44:      within_cell $-1834.44/1000h  whole_grid $-8.70/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_SS -> PBOT_tmax_DS_ms      n= 5,433  mean=$+4114.4/1000h
+    PMID_tmax_31 -> PBOT_tmax_DS_ms      n= 3,281  mean=$+3975.2/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 1,426  mean=$+3291.1/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_SS      n=   648  mean=$+3510.6/1000h
+    PMID_tmax_SS -> PBOT_tmax_SS_mu      n=   795  mean=$+2653.1/1000h
+    [C_PAIR_3b (mid≥K)/p6/PBOT_DS_PARTIAL]  50,000/90,288  rate=75090/s  ETA    1s
+
+══ C_PAIR_3b (mid≥K)/p6/PBOT_DS_PARTIAL ══
+  pair_rank=6  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=10,320 (11.4%)
+  pct_optimal: rule=40.16%  baseline=44.64%  v44=66.36%
+  mean_ev:     rule=-0.0392  baseline=+0.0276  v44=+0.1668  oracle=+0.2488
+  gap_to_oracle: baseline=+0.2211 EV ($+2211.2/1000h within-cell)  v44=+0.0820 EV ($+819.8/1000h within-cell)
+  capture:     vs_baseline=-30.22%  vs_v44=-251.21%
+  lift vs BASELINE: within_cell $-668.14/1000h  whole_grid $-10.04/1000h
+  lift vs V44:      within_cell $-2059.52/1000h  whole_grid $-30.94/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_RB -> PBOT_tmax_DS_mu      n= 4,004  mean=$+5783.3/1000h
+    PMID_tmax_SS -> PBOT_tmax_DS_mu      n= 6,214  mean=$+3586.8/1000h
+    PMID_tmax_RB -> PMID_tnomax_SS       n= 3,855  mean=$+4701.7/1000h
+    PBOT_tnomax_DS_mu -> PMID_tmax_SS    n= 1,096  mean=$+16084.9/1000h
+    PMID_tmax_RB -> PBOT_tmax_SS_mu      n= 2,916  mean=$+4505.0/1000h
+
+══ C_PAIR_3b (mid≥K)/p7/PBOT_DS_JOINT ══
+  pair_rank=7  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=2,520 (8.8%)
+  pct_optimal: rule=39.84%  baseline=40.81%  v44=73.26%
+  mean_ev:     rule=+0.3340  baseline=+0.3407  v44=+0.4718  oracle=+0.5510
+  gap_to_oracle: baseline=+0.2103 EV ($+2103.4/1000h within-cell)  v44=+0.0792 EV ($+791.7/1000h within-cell)
+  capture:     vs_baseline=-3.19%  vs_v44=-174.15%
+  lift vs BASELINE: within_cell $-67.15/1000h  whole_grid $-0.32/1000h
+  lift vs V44:      within_cell $-1378.80/1000h  whole_grid $-6.54/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_SS -> PBOT_tmax_DS_ms      n= 5,341  mean=$+3767.9/1000h
+    PMID_tmax_31 -> PBOT_tmax_DS_ms      n= 2,923  mean=$+3579.4/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 2,367  mean=$+3600.5/1000h
+    PMID_tmax_31 -> PMID_tnomax_DS       n= 1,072  mean=$+3948.6/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_SS      n=   736  mean=$+4009.2/1000h
+    [C_PAIR_3b (mid≥K)/p7/PBOT_DS_PARTIAL]  50,000/90,288  rate=74658/s  ETA    1s
+
+══ C_PAIR_3b (mid≥K)/p7/PBOT_DS_PARTIAL ══
+  pair_rank=7  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=10,320 (11.4%)
+  pct_optimal: rule=44.76%  baseline=50.46%  v44=64.99%
+  mean_ev:     rule=+0.2347  baseline=+0.3139  v44=+0.4006  oracle=+0.5093
+  gap_to_oracle: baseline=+0.1955 EV ($+1954.5/1000h within-cell)  v44=+0.1087 EV ($+1087.4/1000h within-cell)
+  capture:     vs_baseline=-40.49%  vs_v44=-152.51%
+  lift vs BASELINE: within_cell $-791.35/1000h  whole_grid $-11.89/1000h
+  lift vs V44:      within_cell $-1658.42/1000h  whole_grid $-24.92/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_RB -> PMID_tnomax_SS       n= 5,957  mean=$+5100.2/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 5,194  mean=$+4040.2/1000h
+    PBOT_tnomax_DS_mu -> PMID_tmax_SS    n= 1,222  mean=$+16587.2/1000h
+    PMID_tmax_RB -> PBOT_tmax_DS_mu      n= 3,738  mean=$+5134.8/1000h
+    PMID_tmax_SS -> PBOT_tmax_DS_mu      n= 4,934  mean=$+3005.5/1000h
+
+══ C_PAIR_3b (mid≥K)/p8/PBOT_DS_JOINT ══
+  pair_rank=8  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=2,520 (8.8%)
+  pct_optimal: rule=42.91%  baseline=44.69%  v44=72.74%
+  mean_ev:     rule=+0.6071  baseline=+0.6172  v44=+0.7269  oracle=+0.8036
+  gap_to_oracle: baseline=+0.1864 EV ($+1863.5/1000h within-cell)  v44=+0.0766 EV ($+766.4/1000h within-cell)
+  capture:     vs_baseline=-5.44%  vs_v44=-156.40%
+  lift vs BASELINE: within_cell $-101.45/1000h  whole_grid $-0.48/1000h
+  lift vs V44:      within_cell $-1198.62/1000h  whole_grid $-5.69/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_SS -> PBOT_tmax_DS_ms      n= 5,100  mean=$+3526.1/1000h
+    PMID_tmax_31 -> PBOT_tmax_DS_ms      n= 2,682  mean=$+3456.9/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 2,161  mean=$+3434.5/1000h
+    PMID_tmax_31 -> PMID_tnomax_DS       n= 1,110  mean=$+3507.3/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_SS      n=   818  mean=$+3966.6/1000h
+    [C_PAIR_3b (mid≥K)/p8/PBOT_DS_PARTIAL]  50,000/90,288  rate=74826/s  ETA    1s
+
+══ C_PAIR_3b (mid≥K)/p8/PBOT_DS_PARTIAL ══
+  pair_rank=8  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=10,320 (11.4%)
+  pct_optimal: rule=46.86%  baseline=53.25%  v44=67.63%
+  mean_ev:     rule=+0.4998  baseline=+0.5883  v44=+0.6728  oracle=+0.7655
+  gap_to_oracle: baseline=+0.1772 EV ($+1772.3/1000h within-cell)  v44=+0.0927 EV ($+927.4/1000h within-cell)
+  capture:     vs_baseline=-49.93%  vs_v44=-186.52%
+  lift vs BASELINE: within_cell $-884.98/1000h  whole_grid $-13.30/1000h
+  lift vs V44:      within_cell $-1729.85/1000h  whole_grid $-25.99/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_RB -> PMID_tnomax_SS       n= 6,264  mean=$+4783.0/1000h
+    PBOT_tnomax_DS_mu -> PMID_tmax_SS    n= 1,259  mean=$+17778.4/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 5,151  mean=$+3882.9/1000h
+    PMID_tmax_RB -> PBOT_tmax_DS_mu      n= 3,561  mean=$+5018.6/1000h
+    PBOT_tmax_DS_mu -> PMID_tmax_SS      n= 2,750  mean=$+5228.9/1000h
+
+══ C_PAIR_3b (mid≥K)/p9/PBOT_DS_JOINT ══
+  pair_rank=9  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=2,520 (8.8%)
+  pct_optimal: rule=42.42%  baseline=43.30%  v44=73.61%
+  mean_ev:     rule=+0.8362  baseline=+0.8396  v44=+0.9690  oracle=+1.0355
+  gap_to_oracle: baseline=+0.1959 EV ($+1959.3/1000h within-cell)  v44=+0.0664 EV ($+664.4/1000h within-cell)
+  capture:     vs_baseline=-1.72%  vs_v44=-199.98%
+  lift vs BASELINE: within_cell $-33.77/1000h  whole_grid $-0.16/1000h
+  lift vs V44:      within_cell $-1328.70/1000h  whole_grid $-6.30/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_SS -> PBOT_tmax_DS_ms      n= 5,945  mean=$+3722.9/1000h
+    PMID_tmax_31 -> PBOT_tmax_DS_ms      n= 3,021  mean=$+3589.3/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 1,725  mean=$+3233.1/1000h
+    PMID_tmax_31 -> PMID_tnomax_DS       n=   908  mean=$+3240.4/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_SS      n=   736  mean=$+3664.1/1000h
+    [C_PAIR_3b (mid≥K)/p9/PBOT_DS_PARTIAL]  50,000/90,288  rate=74681/s  ETA    1s
+
+══ C_PAIR_3b (mid≥K)/p9/PBOT_DS_PARTIAL ══
+  pair_rank=9  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=10,320 (11.4%)
+  pct_optimal: rule=47.13%  baseline=52.62%  v44=69.37%
+  mean_ev:     rule=+0.7235  baseline=+0.8075  v44=+0.9121  oracle=+0.9871
+  gap_to_oracle: baseline=+0.1796 EV ($+1795.6/1000h within-cell)  v44=+0.0750 EV ($+750.3/1000h within-cell)
+  capture:     vs_baseline=-46.80%  vs_v44=-251.29%
+  lift vs BASELINE: within_cell $-840.31/1000h  whole_grid $-12.63/1000h
+  lift vs V44:      within_cell $-1885.53/1000h  whole_grid $-28.33/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_RB -> PMID_tnomax_SS       n= 5,432  mean=$+4389.8/1000h
+    PMID_tmax_RB -> PBOT_tmax_DS_mu      n= 4,243  mean=$+5279.4/1000h
+    PBOT_tnomax_DS_mu -> PMID_tmax_SS    n= 1,216  mean=$+18329.2/1000h
+    PMID_tmax_SS -> PBOT_tmax_DS_mu      n= 5,214  mean=$+3147.6/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 4,185  mean=$+3697.0/1000h
+
+  C_PAIR_3b (mid≥K) AGGREGATE
+    n_hands              : 475,200
+    n_rule_fires         : 51,360 (10.8%)
+    weighted-avg capture : -31.24%
+    SUM whole-grid lift  : $-48.71/1000h WG
+    VERDICT              : T3 — net-negative
+
+==========================================================================================
+AUDITING: C_PAIR_3b (mid≥A)
+==========================================================================================
+
+══ C_PAIR_3b (mid≥A)/p6/PBOT_DS_JOINT ══
+  pair_rank=6  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=0 (0.0%)
+  pct_optimal: rule=36.65%  baseline=36.65%  v44=76.15%
+  mean_ev:     rule=+0.0565  baseline=+0.0565  v44=+0.2421  oracle=+0.3010
+  gap_to_oracle: baseline=+0.2446 EV ($+2445.8/1000h within-cell)  v44=+0.0589 EV ($+589.3/1000h within-cell)
+  capture:     vs_baseline=+0.00%  vs_v44=-315.00%
+  lift vs BASELINE: within_cell $+0.00/1000h  whole_grid $+0.00/1000h
+  lift vs V44:      within_cell $-1856.44/1000h  whole_grid $-8.81/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_SS -> PBOT_tmax_DS_ms      n= 6,178  mean=$+4116.8/1000h
+    PMID_tmax_31 -> PBOT_tmax_DS_ms      n= 3,827  mean=$+3947.8/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 1,429  mean=$+3286.7/1000h
+    PMID_tmax_31 -> PMID_tnomax_DS       n=   674  mean=$+3415.4/1000h
+    PMID_tmax_SS -> PBOT_tmax_SS_mu      n=   804  mean=$+2654.5/1000h
+    [C_PAIR_3b (mid≥A)/p6/PBOT_DS_PARTIAL]  50,000/90,288  rate=75256/s  ETA    1s
+
+══ C_PAIR_3b (mid≥A)/p6/PBOT_DS_PARTIAL ══
+  pair_rank=6  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=0 (0.0%)
+  pct_optimal: rule=44.64%  baseline=44.64%  v44=66.36%
+  mean_ev:     rule=+0.0276  baseline=+0.0276  v44=+0.1668  oracle=+0.2488
+  gap_to_oracle: baseline=+0.2211 EV ($+2211.2/1000h within-cell)  v44=+0.0820 EV ($+819.8/1000h within-cell)
+  capture:     vs_baseline=+0.00%  vs_v44=-169.71%
+  lift vs BASELINE: within_cell $+0.00/1000h  whole_grid $+0.00/1000h
+  lift vs V44:      within_cell $-1391.38/1000h  whole_grid $-20.91/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_RB -> PBOT_tmax_DS_mu      n= 4,771  mean=$+5828.5/1000h
+    PMID_tmax_SS -> PBOT_tmax_DS_mu      n= 7,546  mean=$+3558.9/1000h
+    PMID_tmax_RB -> PMID_tnomax_SS       n= 4,083  mean=$+4644.2/1000h
+    PMID_tmax_RB -> PBOT_tmax_SS_mu      n= 3,059  mean=$+4492.7/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 3,618  mean=$+3701.0/1000h
+
+══ C_PAIR_3b (mid≥A)/p7/PBOT_DS_JOINT ══
+  pair_rank=7  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=0 (0.0%)
+  pct_optimal: rule=40.81%  baseline=40.81%  v44=73.26%
+  mean_ev:     rule=+0.3407  baseline=+0.3407  v44=+0.4718  oracle=+0.5510
+  gap_to_oracle: baseline=+0.2103 EV ($+2103.4/1000h within-cell)  v44=+0.0792 EV ($+791.7/1000h within-cell)
+  capture:     vs_baseline=+0.00%  vs_v44=-165.67%
+  lift vs BASELINE: within_cell $+0.00/1000h  whole_grid $+0.00/1000h
+  lift vs V44:      within_cell $-1311.65/1000h  whole_grid $-6.22/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_SS -> PBOT_tmax_DS_ms      n= 5,994  mean=$+3751.4/1000h
+    PMID_tmax_31 -> PBOT_tmax_DS_ms      n= 3,412  mean=$+3530.3/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 2,377  mean=$+3589.6/1000h
+    PMID_tmax_31 -> PMID_tnomax_DS       n= 1,157  mean=$+3834.4/1000h
+    PMID_tmax_SS -> PBOT_tnomax_DS_ms    n=   487  mean=$+4911.3/1000h
+    [C_PAIR_3b (mid≥A)/p7/PBOT_DS_PARTIAL]  50,000/90,288  rate=75356/s  ETA    1s
+
+══ C_PAIR_3b (mid≥A)/p7/PBOT_DS_PARTIAL ══
+  pair_rank=7  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=0 (0.0%)
+  pct_optimal: rule=50.46%  baseline=50.46%  v44=64.99%
+  mean_ev:     rule=+0.3139  baseline=+0.3139  v44=+0.4006  oracle=+0.5093
+  gap_to_oracle: baseline=+0.1955 EV ($+1954.5/1000h within-cell)  v44=+0.1087 EV ($+1087.4/1000h within-cell)
+  capture:     vs_baseline=+0.00%  vs_v44=-79.74%
+  lift vs BASELINE: within_cell $+0.00/1000h  whole_grid $+0.00/1000h
+  lift vs V44:      within_cell $-867.08/1000h  whole_grid $-13.03/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_RB -> PMID_tnomax_SS       n= 6,207  mean=$+5031.1/1000h
+    PMID_tmax_RB -> PBOT_tmax_DS_mu      n= 4,431  mean=$+5182.2/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 5,379  mean=$+3993.2/1000h
+    PMID_tmax_SS -> PBOT_tmax_DS_mu      n= 5,980  mean=$+3034.9/1000h
+    PMID_tmax_RB -> PBOT_tnomax_DS_ms    n= 1,706  mean=$+8166.2/1000h
+
+══ C_PAIR_3b (mid≥A)/p8/PBOT_DS_JOINT ══
+  pair_rank=8  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=0 (0.0%)
+  pct_optimal: rule=44.69%  baseline=44.69%  v44=72.74%
+  mean_ev:     rule=+0.6172  baseline=+0.6172  v44=+0.7269  oracle=+0.8036
+  gap_to_oracle: baseline=+0.1864 EV ($+1863.5/1000h within-cell)  v44=+0.0766 EV ($+766.4/1000h within-cell)
+  capture:     vs_baseline=+0.00%  vs_v44=-143.17%
+  lift vs BASELINE: within_cell $+0.00/1000h  whole_grid $+0.00/1000h
+  lift vs V44:      within_cell $-1097.17/1000h  whole_grid $-5.21/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_SS -> PBOT_tmax_DS_ms      n= 5,687  mean=$+3516.7/1000h
+    PMID_tmax_31 -> PBOT_tmax_DS_ms      n= 3,120  mean=$+3402.8/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 2,170  mean=$+3426.4/1000h
+    PMID_tmax_31 -> PMID_tnomax_DS       n= 1,201  mean=$+3391.4/1000h
+    PMID_tmax_SS -> PBOT_tnomax_DS_ms    n=   433  mean=$+5249.8/1000h
+    [C_PAIR_3b (mid≥A)/p8/PBOT_DS_PARTIAL]  50,000/90,288  rate=75056/s  ETA    1s
+
+══ C_PAIR_3b (mid≥A)/p8/PBOT_DS_PARTIAL ══
+  pair_rank=8  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=0 (0.0%)
+  pct_optimal: rule=53.25%  baseline=53.25%  v44=67.63%
+  mean_ev:     rule=+0.5883  baseline=+0.5883  v44=+0.6728  oracle=+0.7655
+  gap_to_oracle: baseline=+0.1772 EV ($+1772.3/1000h within-cell)  v44=+0.0927 EV ($+927.4/1000h within-cell)
+  capture:     vs_baseline=+0.00%  vs_v44=-91.10%
+  lift vs BASELINE: within_cell $+0.00/1000h  whole_grid $+0.00/1000h
+  lift vs V44:      within_cell $-844.87/1000h  whole_grid $-12.69/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_RB -> PMID_tnomax_SS       n= 6,517  mean=$+4724.2/1000h
+    PMID_tmax_RB -> PBOT_tmax_DS_mu      n= 4,248  mean=$+5025.1/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 5,326  mean=$+3833.4/1000h
+    PMID_tmax_SS -> PBOT_tmax_DS_mu      n= 5,284  mean=$+2950.7/1000h
+    PMID_tmax_RB -> PBOT_tnomax_DS_ms    n= 1,619  mean=$+7947.9/1000h
+
+══ C_PAIR_3b (mid≥A)/p9/PBOT_DS_JOINT ══
+  pair_rank=9  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=0 (0.0%)
+  pct_optimal: rule=43.30%  baseline=43.30%  v44=73.61%
+  mean_ev:     rule=+0.8396  baseline=+0.8396  v44=+0.9690  oracle=+1.0355
+  gap_to_oracle: baseline=+0.1959 EV ($+1959.3/1000h within-cell)  v44=+0.0664 EV ($+664.4/1000h within-cell)
+  capture:     vs_baseline=+0.00%  vs_v44=-194.90%
+  lift vs BASELINE: within_cell $+0.00/1000h  whole_grid $+0.00/1000h
+  lift vs V44:      within_cell $-1294.93/1000h  whole_grid $-6.14/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_SS -> PBOT_tmax_DS_ms      n= 6,602  mean=$+3719.3/1000h
+    PMID_tmax_31 -> PBOT_tmax_DS_ms      n= 3,516  mean=$+3609.4/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 1,734  mean=$+3221.7/1000h
+    PMID_tmax_31 -> PMID_tnomax_DS       n= 1,017  mean=$+3164.4/1000h
+    PMID_tmax_SS -> PBOT_tnomax_DS_ms    n=   451  mean=$+4710.4/1000h
+    [C_PAIR_3b (mid≥A)/p9/PBOT_DS_PARTIAL]  50,000/90,288  rate=75084/s  ETA    1s
+
+══ C_PAIR_3b (mid≥A)/p9/PBOT_DS_PARTIAL ══
+  pair_rank=9  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=0 (0.0%)
+  pct_optimal: rule=52.62%  baseline=52.62%  v44=69.37%
+  mean_ev:     rule=+0.8075  baseline=+0.8075  v44=+0.9121  oracle=+0.9871
+  gap_to_oracle: baseline=+0.1796 EV ($+1795.6/1000h within-cell)  v44=+0.0750 EV ($+750.3/1000h within-cell)
+  capture:     vs_baseline=+0.00%  vs_v44=-139.30%
+  lift vs BASELINE: within_cell $+0.00/1000h  whole_grid $+0.00/1000h
+  lift vs V44:      within_cell $-1045.22/1000h  whole_grid $-15.70/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_RB -> PBOT_tmax_DS_mu      n= 4,974  mean=$+5323.4/1000h
+    PMID_tmax_RB -> PMID_tnomax_SS       n= 5,735  mean=$+4361.7/1000h
+    PMID_tmax_SS -> PBOT_tmax_DS_mu      n= 6,245  mean=$+3146.9/1000h
+    PMID_tmax_SS -> PMID_tnomax_DS       n= 4,408  mean=$+3642.2/1000h
+    PMID_tmax_RB -> PBOT_tnomax_DS_ms    n= 1,714  mean=$+7658.8/1000h
+
+  C_PAIR_3b (mid≥A) AGGREGATE
+    n_hands              : 475,200
+    n_rule_fires         : 0 (0.0%)
+    weighted-avg capture : +0.00%
+    SUM whole-grid lift  : $+0.00/1000h WG
+    VERDICT              : T3 — net-negative
+
+## Block 2: C_PAIR_5 (Q-pair PBOT-take)
+
+==========================================================================================
+AUDITING: C_PAIR_5 (Q-pair simple)
+==========================================================================================
+
+══ C_PAIR_5 (Q-pair simple)/pQ/PBOT_DS_JOINT ══
+  pair_rank=Q  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=28,512 (100.0%)
+  pct_optimal: rule=49.86%  baseline=31.95%  v44=73.25%
+  mean_ev:     rule=+1.7750  baseline=+1.5958  v44=+1.8632  oracle=+1.9349
+  gap_to_oracle: baseline=+0.3390 EV ($+3390.5/1000h within-cell)  v44=+0.0717 EV ($+716.7/1000h within-cell)
+  capture:     vs_baseline=+52.85%  vs_v44=-123.06%
+  lift vs BASELINE: within_cell $+1791.86/1000h  whole_grid $+8.50/1000h
+  lift vs V44:      within_cell $-881.96/1000h  whole_grid $-4.18/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PBOT_tmax_DS_ms -> PMID_tmax_SS      n= 4,047  mean=$+3491.7/1000h
+    PBOT_tmax_DS_ms -> PBOT_tmax_SS_mu   n= 2,206  mean=$+2879.1/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_31      n= 1,708  mean=$+3433.1/1000h
+    PBOT_tmax_DS_ms -> PMID_tnomax_DS    n= 1,324  mean=$+4188.0/1000h
+    PBOT_tmax_DS_ms -> PBOT_tnomax_DS_ms n= 1,235  mean=$+2751.5/1000h
+    [C_PAIR_5 (Q-pair simple)/pQ/PBOT_DS_PARTIAL]  50,000/90,288  rate=69672/s  ETA    1s
+
+══ C_PAIR_5 (Q-pair simple)/pQ/PBOT_DS_PARTIAL ══
+  pair_rank=Q  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=90,288 (100.0%)
+  pct_optimal: rule=21.27%  baseline=30.67%  v44=62.93%
+  mean_ev:     rule=+1.3272  baseline=+1.4999  v44=+1.7741  oracle=+1.8646
+  gap_to_oracle: baseline=+0.3648 EV ($+3647.6/1000h within-cell)  v44=+0.0906 EV ($+905.6/1000h within-cell)
+  capture:     vs_baseline=-47.33%  vs_v44=-493.44%
+  lift vs BASELINE: within_cell $-1726.51/1000h  whole_grid $-25.94/1000h
+  lift vs V44:      within_cell $-4468.55/1000h  whole_grid $-67.14/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PBOT_tnomax_DS_mu -> PMID_tmax_SS    n= 5,154  mean=$+13779.8/1000h
+    PBOT_tnomax_DS_mu -> PMID_tmax_DS    n= 3,188  mean=$+15995.5/1000h
+    PBOT_tmax_DS_mu -> PMID_tmax_SS      n= 8,543  mean=$+4544.4/1000h
+    PBOT_tnomax_DS_ms -> PBOT_tmax_SS_ms n= 3,416  mean=$+9240.0/1000h
+    PBOT_tmax_DS_mu -> PBOT_tmax_SS_mu   n= 7,510  mean=$+4019.4/1000h
+
+  C_PAIR_5 (Q-pair simple) AGGREGATE
+    n_hands              : 118,800
+    n_rule_fires         : 118,800 (100.0%)
+    weighted-avg capture : -24.60%
+    SUM whole-grid lift  : $-17.44/1000h WG
+    VERDICT              : T3 — net-negative
+
+==========================================================================================
+AUDITING: C_PAIR_5 (Q-pair joint-only)
+==========================================================================================
+
+══ C_PAIR_5 (Q-pair joint-only)/pQ/PBOT_DS_JOINT ══
+  pair_rank=Q  cell=PBOT_DS_JOINT  n=28,512
+  n_rule_fires=28,512 (100.0%)
+  pct_optimal: rule=49.86%  baseline=31.95%  v44=73.25%
+  mean_ev:     rule=+1.7750  baseline=+1.5958  v44=+1.8632  oracle=+1.9349
+  gap_to_oracle: baseline=+0.3390 EV ($+3390.5/1000h within-cell)  v44=+0.0717 EV ($+716.7/1000h within-cell)
+  capture:     vs_baseline=+52.85%  vs_v44=-123.06%
+  lift vs BASELINE: within_cell $+1791.86/1000h  whole_grid $+8.50/1000h
+  lift vs V44:      within_cell $-881.96/1000h  whole_grid $-4.18/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PBOT_tmax_DS_ms -> PMID_tmax_SS      n= 4,047  mean=$+3491.7/1000h
+    PBOT_tmax_DS_ms -> PBOT_tmax_SS_mu   n= 2,206  mean=$+2879.1/1000h
+    PBOT_tmax_DS_ms -> PMID_tmax_31      n= 1,708  mean=$+3433.1/1000h
+    PBOT_tmax_DS_ms -> PMID_tnomax_DS    n= 1,324  mean=$+4188.0/1000h
+    PBOT_tmax_DS_ms -> PBOT_tnomax_DS_ms n= 1,235  mean=$+2751.5/1000h
+    [C_PAIR_5 (Q-pair joint-only)/pQ/PBOT_DS_PARTIAL]  50,000/90,288  rate=76912/s  ETA    1s
+
+══ C_PAIR_5 (Q-pair joint-only)/pQ/PBOT_DS_PARTIAL ══
+  pair_rank=Q  cell=PBOT_DS_PARTIAL  n=90,288
+  n_rule_fires=0 (0.0%)
+  pct_optimal: rule=30.67%  baseline=30.67%  v44=62.93%
+  mean_ev:     rule=+1.4999  baseline=+1.4999  v44=+1.7741  oracle=+1.8646
+  gap_to_oracle: baseline=+0.3648 EV ($+3647.6/1000h within-cell)  v44=+0.0906 EV ($+905.6/1000h within-cell)
+  capture:     vs_baseline=+0.00%  vs_v44=-302.79%
+  lift vs BASELINE: within_cell $+0.00/1000h  whole_grid $+0.00/1000h
+  lift vs V44:      within_cell $-2742.04/1000h  whole_grid $-41.20/1000h
+  top rule-vs-oracle mismatch classes (by $ regret within cell):
+    PMID_tmax_SS -> PBOT_tmax_DS_mu      n=12,038  mean=$+5071.6/1000h
+    PMID_tmax_SS -> PBOT_tmax_SS_ms      n= 6,743  mean=$+4493.3/1000h
+    PMID_tmax_SS -> PBOT_tnomax_DS_ms    n= 3,976  mean=$+6784.1/1000h
+    PMID_tmax_RB -> PBOT_tnomax_DS_ms    n= 2,142  mean=$+10769.0/1000h
+    PMID_tmax_RB -> PBOT_tmax_DS_mu      n= 2,644  mean=$+8296.3/1000h
+
+  C_PAIR_5 (Q-pair joint-only) AGGREGATE
+    n_hands              : 118,800
+    n_rule_fires         : 28,512 (24.0%)
+    weighted-avg capture : +11.99%
+    SUM whole-grid lift  : $+8.50/1000h WG
+    VERDICT              : Below T1 — positive but small or low-capture
+
+  Wrote summary JSON: /Users/michaelchang/Documents/claudecode/taiwanese/data/session67/c_pair_fallback_summary.json
+
+==========================================================================================
+FINAL TABLE — fallback variants
+==========================================================================================
+  variant                                      fires   capture      WG lift verdict             
+  C_PAIR_3b (mid≥Q)                          128,304   -73.14% $   -114.04 T3 — net-negative   
+  C_PAIR_3b (mid≥K)                           51,360   -31.24% $    -48.71 T3 — net-negative   
+  C_PAIR_3b (mid≥A)                                0    +0.00% $     +0.00 T3 — net-negative   
+  C_PAIR_5_qpair_simple                      118,800   -24.60% $    -17.44 T3 — net-negative   
+  C_PAIR_5_qpair_joint                        28,512   +11.99% $     +8.50 Below T1 — positive 
+
+Finished: 2026-05-12 13:29:59

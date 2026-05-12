@@ -1,0 +1,176 @@
+========================================================================================
+Session 66 Phase 2 — v52 sweep on pair category
+========================================================================================
+Started: 2026-05-12 11:11:47
+
+[1/4] loading pair parquet (cell tags + oracle picks) ...
+  rows: 2,800,512
+
+[2/4] loading canonical hands + oracle grid ...
+  ready.
+
+[3/4] computing v52 picks for each pair hand ...
+    progress   50,000/2,800,512  rate= 3848/s  elapsed    13s  ETA   715s
+    progress  100,000/2,800,512  rate= 3837/s  elapsed    26s  ETA   704s
+    progress  150,000/2,800,512  rate= 3801/s  elapsed    39s  ETA   697s
+    progress  200,000/2,800,512  rate= 3762/s  elapsed    53s  ETA   691s
+    progress  250,000/2,800,512  rate= 3759/s  elapsed    66s  ETA   678s
+    progress  300,000/2,800,512  rate= 3720/s  elapsed    81s  ETA   672s
+    progress  350,000/2,800,512  rate= 3649/s  elapsed    96s  ETA   672s
+    progress  400,000/2,800,512  rate= 3648/s  elapsed   110s  ETA   658s
+    progress  450,000/2,800,512  rate= 3636/s  elapsed   124s  ETA   646s
+    progress  500,000/2,800,512  rate= 3595/s  elapsed   139s  ETA   640s
+    progress  550,000/2,800,512  rate= 3557/s  elapsed   155s  ETA   633s
+    progress  600,000/2,800,512  rate= 3525/s  elapsed   170s  ETA   624s
+    progress  650,000/2,800,512  rate= 3488/s  elapsed   186s  ETA   617s
+    progress  700,000/2,800,512  rate= 3464/s  elapsed   202s  ETA   606s
+    progress  750,000/2,800,512  rate= 3432/s  elapsed   219s  ETA   597s
+    progress  800,000/2,800,512  rate= 3425/s  elapsed   234s  ETA   584s
+    progress  850,000/2,800,512  rate= 3403/s  elapsed   250s  ETA   573s
+    progress  900,000/2,800,512  rate= 3380/s  elapsed   266s  ETA   562s
+    progress  950,000/2,800,512  rate= 3354/s  elapsed   283s  ETA   552s
+    progress 1,000,000/2,800,512  rate= 3332/s  elapsed   300s  ETA   540s
+    progress 1,050,000/2,800,512  rate= 3326/s  elapsed   316s  ETA   526s
+    progress 1,100,000/2,800,512  rate= 3313/s  elapsed   332s  ETA   513s
+    progress 1,150,000/2,800,512  rate= 3299/s  elapsed   349s  ETA   500s
+    progress 1,200,000/2,800,512  rate= 3290/s  elapsed   365s  ETA   486s
+    progress 1,250,000/2,800,512  rate= 3276/s  elapsed   382s  ETA   473s
+    progress 1,300,000/2,800,512  rate= 3264/s  elapsed   398s  ETA   460s
+    progress 1,350,000/2,800,512  rate= 3273/s  elapsed   412s  ETA   443s
+    progress 1,400,000/2,800,512  rate= 3276/s  elapsed   427s  ETA   427s
+    progress 1,450,000/2,800,512  rate= 3282/s  elapsed   442s  ETA   412s
+    progress 1,500,000/2,800,512  rate= 3274/s  elapsed   458s  ETA   397s
+    progress 1,550,000/2,800,512  rate= 3279/s  elapsed   473s  ETA   381s
+    progress 1,600,000/2,800,512  rate= 3279/s  elapsed   488s  ETA   366s
+    progress 1,650,000/2,800,512  rate= 3274/s  elapsed   504s  ETA   351s
+    progress 1,700,000/2,800,512  rate= 3266/s  elapsed   520s  ETA   337s
+    progress 1,750,000/2,800,512  rate= 3266/s  elapsed   536s  ETA   322s
+    progress 1,800,000/2,800,512  rate= 3266/s  elapsed   551s  ETA   306s
+    progress 1,850,000/2,800,512  rate= 3261/s  elapsed   567s  ETA   291s
+    progress 1,900,000/2,800,512  rate= 3256/s  elapsed   583s  ETA   277s
+    progress 1,950,000/2,800,512  rate= 3252/s  elapsed   600s  ETA   262s
+    progress 2,000,000/2,800,512  rate= 3247/s  elapsed   616s  ETA   247s
+    progress 2,050,000/2,800,512  rate= 3243/s  elapsed   632s  ETA   231s
+    progress 2,100,000/2,800,512  rate= 3249/s  elapsed   646s  ETA   216s
+    progress 2,150,000/2,800,512  rate= 3252/s  elapsed   661s  ETA   200s
+    progress 2,200,000/2,800,512  rate= 3253/s  elapsed   676s  ETA   185s
+    progress 2,250,000/2,800,512  rate= 3251/s  elapsed   692s  ETA   169s
+    progress 2,300,000/2,800,512  rate= 3249/s  elapsed   708s  ETA   154s
+    progress 2,350,000/2,800,512  rate= 3247/s  elapsed   724s  ETA   139s
+    progress 2,400,000/2,800,512  rate= 3243/s  elapsed   740s  ETA   124s
+    progress 2,450,000/2,800,512  rate= 3239/s  elapsed   756s  ETA   108s
+    progress 2,500,000/2,800,512  rate= 3242/s  elapsed   771s  ETA    93s
+    progress 2,550,000/2,800,512  rate= 3241/s  elapsed   787s  ETA    77s
+    progress 2,600,000/2,800,512  rate= 3237/s  elapsed   803s  ETA    62s
+    progress 2,650,000/2,800,512  rate= 3234/s  elapsed   819s  ETA    47s
+    progress 2,700,000/2,800,512  rate= 3234/s  elapsed   835s  ETA    31s
+    progress 2,750,000/2,800,512  rate= 3230/s  elapsed   851s  ETA    16s
+    progress 2,800,000/2,800,512  rate= 3227/s  elapsed   868s  ETA     0s
+  done in 867.8s
+
+====================================================================================================
+v52 PER-PAIR-RANK RESIDUAL (canonical-equal weighting)
+====================================================================================================
+  pair   n_hands v52_pct_opt   v52_mean_reg     v52_wg
+     A   215,424      57.81% $     +1611.8 $  +57.78
+     K   215,424      47.86% $     +2104.9 $  +75.46
+     Q   215,424      38.95% $     +2847.6 $ +102.09
+     J   215,424      43.70% $     +2204.9 $  +79.04
+     T   215,424      53.10% $     +1685.3 $  +60.42
+     9   215,424      57.60% $     +1432.7 $  +51.36
+     8   215,424      57.61% $     +1453.2 $  +52.10
+     7   215,424      55.13% $     +1606.6 $  +57.59
+     6   215,424      51.51% $     +1722.7 $  +61.76
+     5   215,424      48.14% $     +1967.5 $  +70.53
+     4   215,424      51.11% $     +1766.8 $  +63.34
+     3   215,424      52.95% $     +1652.3 $  +59.23
+     2   215,424      50.89% $     +1723.4 $  +61.78
+
+====================================================================================================
+v52 PER-(pair_rank, cell) RESIDUAL
+====================================================================================================
+  pair cell                       n  pct_opt    v52_mean     v52_wg
+     A PBOT_DS_JOINT         28,512   49.32% $  +1798.9 $   +8.54
+     A PBOT_DS_PARTIAL       90,288   52.83% $  +2147.7 $  +32.27
+     A PMID_DS_MAXTOP        21,384   89.17% $   +206.0 $   +0.73
+     A PMID_DS_NOMAXTOP      38,016   47.46% $  +1808.0 $  +11.44
+     A PMID_SS_MAXTOP        14,256   64.83% $   +905.2 $   +2.15
+     A PMID_OTHER            22,968   71.45% $   +695.0 $   +2.66
+     K PBOT_DS_JOINT         28,512   33.00% $  +3080.6 $  +14.62
+     K PBOT_DS_PARTIAL       90,288   42.63% $  +2472.3 $  +37.15
+     K PMID_DS_MAXTOP        21,384   83.95% $   +355.1 $   +1.26
+     K PMID_DS_NOMAXTOP      38,016   43.97% $  +2123.8 $  +13.44
+     K PMID_SS_MAXTOP        14,256   51.43% $  +1662.8 $   +3.94
+     K PMID_OTHER            22,968   57.49% $  +1321.4 $   +5.05
+     Q PBOT_DS_JOINT         28,512   31.95% $  +3390.5 $  +16.09
+     Q PBOT_DS_PARTIAL       90,288   30.67% $  +3647.6 $  +54.81
+     Q PMID_DS_MAXTOP        21,384   78.57% $   +529.8 $   +1.89
+     Q PMID_DS_NOMAXTOP      38,016   37.53% $  +2502.1 $  +15.83
+     Q PMID_SS_MAXTOP        14,256   39.67% $  +2430.3 $   +5.77
+     Q PMID_OTHER            22,968   45.24% $  +2017.7 $   +7.71
+     J PBOT_DS_JOINT         28,512   34.43% $  +2784.1 $  +13.21
+     J PBOT_DS_PARTIAL       90,288   35.70% $  +2775.4 $  +41.70
+     J PMID_DS_MAXTOP        21,384   79.43% $   +570.2 $   +2.03
+     J PMID_DS_NOMAXTOP      38,016   45.63% $  +1735.5 $  +10.98
+     J PMID_SS_MAXTOP        14,256   44.68% $  +1927.5 $   +4.57
+     J PMID_OTHER            22,968   49.65% $  +1714.4 $   +6.55
+     T PBOT_DS_JOINT         28,512   36.76% $  +2430.4 $  +11.53
+     T PBOT_DS_PARTIAL       90,288   45.84% $  +2208.0 $  +33.18
+     T PMID_DS_MAXTOP        21,384   88.88% $   +224.9 $   +0.80
+     T PMID_DS_NOMAXTOP      38,016   51.55% $  +1462.4 $   +9.25
+     T PMID_SS_MAXTOP        14,256   60.40% $  +1028.9 $   +2.44
+     T PMID_OTHER            22,968   66.67% $   +841.2 $   +3.22
+     9 PBOT_DS_JOINT         28,512   43.30% $  +1959.3 $   +9.30
+     9 PBOT_DS_PARTIAL       90,288   52.62% $  +1795.6 $  +26.98
+     9 PMID_DS_MAXTOP        21,384   90.65% $   +159.6 $   +0.57
+     9 PMID_DS_NOMAXTOP      38,016   49.69% $  +1630.5 $  +10.32
+     9 PMID_SS_MAXTOP        14,256   65.33% $   +799.0 $   +1.90
+     9 PMID_OTHER            22,968   72.43% $   +603.2 $   +2.31
+     8 PBOT_DS_JOINT         28,512   44.69% $  +1863.5 $   +8.84
+     8 PBOT_DS_PARTIAL       90,288   53.25% $  +1772.3 $  +26.63
+     8 PMID_DS_MAXTOP        21,384   89.60% $   +181.5 $   +0.65
+     8 PMID_DS_NOMAXTOP      38,016   48.03% $  +1834.3 $  +11.60
+     8 PMID_SS_MAXTOP        14,256   65.08% $   +845.1 $   +2.00
+     8 PMID_OTHER            22,968   72.24% $   +620.6 $   +2.37
+     7 PBOT_DS_JOINT         28,512   40.81% $  +2103.4 $   +9.98
+     7 PBOT_DS_PARTIAL       90,288   50.46% $  +1954.5 $  +29.37
+     7 PMID_DS_MAXTOP        21,384   88.42% $   +226.1 $   +0.80
+     7 PMID_DS_NOMAXTOP      38,016   46.66% $  +1967.7 $  +12.45
+     7 PMID_SS_MAXTOP        14,256   62.69% $   +966.5 $   +2.29
+     7 PMID_OTHER            22,968   69.61% $   +706.9 $   +2.70
+     6 PBOT_DS_JOINT         28,512   36.65% $  +2445.8 $  +11.60
+     6 PBOT_DS_PARTIAL       90,288   44.64% $  +2211.2 $  +33.22
+     6 PMID_DS_MAXTOP        21,384   83.59% $   +344.9 $   +1.23
+     6 PMID_DS_NOMAXTOP      38,016   51.81% $  +1496.0 $   +9.46
+     6 PMID_SS_MAXTOP        14,256   57.86% $  +1105.1 $   +2.62
+     6 PMID_OTHER            22,968   62.70% $   +945.5 $   +3.61
+     5 PBOT_DS_JOINT         28,512   33.75% $  +2712.5 $  +12.87
+     5 PBOT_DS_PARTIAL       90,288   40.52% $  +2533.9 $  +38.07
+     5 PMID_DS_MAXTOP        21,384   81.92% $   +392.2 $   +1.40
+     5 PMID_DS_NOMAXTOP      38,016   49.39% $  +1692.1 $  +10.70
+     5 PMID_SS_MAXTOP        14,256   54.29% $  +1313.3 $   +3.12
+     5 PMID_OTHER            22,968   58.63% $  +1144.8 $   +4.38
+     4 PBOT_DS_JOINT         28,512   35.60% $  +2479.5 $  +11.76
+     4 PBOT_DS_PARTIAL       90,288   43.12% $  +2297.5 $  +34.52
+     4 PMID_DS_MAXTOP        21,384   84.03% $   +359.9 $   +1.28
+     4 PMID_DS_NOMAXTOP      38,016   52.65% $  +1522.6 $   +9.63
+     4 PMID_SS_MAXTOP        14,256   59.04% $  +1090.8 $   +2.59
+     4 PMID_OTHER            22,968   63.64% $   +930.0 $   +3.55
+     3 PBOT_DS_JOINT         28,512   37.29% $  +2330.4 $  +11.06
+     3 PBOT_DS_PARTIAL       90,288   44.56% $  +2182.8 $  +32.80
+     3 PMID_DS_MAXTOP        21,384   85.00% $   +350.8 $   +1.25
+     3 PMID_DS_NOMAXTOP      38,016   54.87% $  +1391.7 $   +8.80
+     3 PMID_SS_MAXTOP        14,256   61.89% $   +938.1 $   +2.23
+     3 PMID_OTHER            22,968   66.75% $   +811.4 $   +3.10
+     2 PBOT_DS_JOINT         28,512   37.76% $  +2343.2 $  +11.12
+     2 PBOT_DS_PARTIAL       90,288   40.93% $  +2338.6 $  +35.14
+     2 PMID_DS_MAXTOP        21,384   84.97% $   +359.7 $   +1.28
+     2 PMID_DS_NOMAXTOP      38,016   54.37% $  +1322.7 $   +8.37
+     2 PMID_SS_MAXTOP        14,256   58.89% $  +1049.9 $   +2.49
+     2 PMID_OTHER            22,968   63.90% $   +886.2 $   +3.39
+
+[4/4] writing v52 parquet to /Users/michaelchang/Documents/claudecode/taiwanese/data/drill_pair_v52_per_hand.parquet ...
+  wrote 11.97 MB
+  wrote summary JSON (44.9 KB)
+
+Finished: 2026-05-12 11:26:15

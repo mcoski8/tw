@@ -1,0 +1,21 @@
+==========================================================================================
+Session 67 — non-targeted regression check for C_PAIR_5_joint
+Started: 2026-05-12 13:30:58
+==========================================================================================
+[harness] loading pair parquet (cells + v44 + oracle) ...
+  rows: 2,800,512
+[harness] loading v52 parquet (pre-computed v52 picks) ...
+[harness] loading canonical hands ...
+[harness] loading oracle grid ...
+[harness] cache ready.
+  pQ/PBOT_DS_JOINT      n= 28,512  fires= 28,512 (100.0%)  WG lift=$  +8.50/1000h  capture=+52.85%
+
+==========================================================================================
+  Pair-category total audit:  n=2,800,512  fires=28,512
+  Pair-category total WG lift: $+8.50/1000h
+  Expected (audit_c_pair_fallback) at Q-pair-JOINT:  $+8.50/1000h
+  Delta: $+0.00 (should be near zero)
+==========================================================================================
+
+  Wrote: /Users/michaelchang/Documents/claudecode/taiwanese/data/session67/regression_check_c_pair_5.json
+Finished: 2026-05-12 13:34:24
