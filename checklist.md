@@ -192,12 +192,18 @@
 
 ---
 
-> **STALENESS NOTICE (last updated end of Session 59, 2026-05-11):** This
+> **STALENESS NOTICE (last updated end of Session 61, 2026-05-11):** This
 > checklist was authored pre-build. The actual project has advanced through
 > Sprint 8 with **v44_dt as current ML champion** ($1,081/1000h full grid /
 > $686 prefix; 107 features, 2.25M leaves at depth=36 ml=1). Session 59
 > attempted v45_dt (111 features, +4 ho_v5) but graded $0/1000h lift —
-> NULL ship. v44 remains the champion. **15 gating-template wins**
+> NULL ship. v44 remains the champion. **Sessions 60–61 pivoted to a
+> per-max-rank rule catalog audit methodology: A-high (S60) and K-high
+> (S61) cells both formally labeled ML-only after testing 17 combined
+> candidate refinement rules — the harness is validated to 0.7% accuracy
+> against TWO independent shipped lifts (Rule 14 +$131, Rule 15 +$51).
+> Two-thirds of high_only's WG residual ($457 of $755) is now in the
+> explicit ML-only zone. Q-high audit pending S62.** **15 gating-template wins**
 > shipped through v44 (high_only-via-suited/v20, trips_pair/v23, composite/v24,
 > pair-v1/v25, two_pair/v26, high_only-direct/v27, pair-v2/v29, trips/v30,
 > trips_v2/v32, pair_aug_v5/v39, trips_pair_aug_v2/v40, two_pair_aug_v2/v41,

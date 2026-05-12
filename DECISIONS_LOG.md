@@ -4885,3 +4885,87 @@ Rule 15 (S51, K-high HIMID) shipped +$51/1000h whole-grid — 38% as much lift a
 - Diverge by $1,417/1000h. STILL UNCHANGED.
 
 **Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED).
+
+---
+
+## Decision 096 — Session 61 K-high catalog audit: ALL CELLS LABELED ML-ONLY (no rule ships; harness validated on second max-rank)
+
+**Date:** 2026-05-11
+
+**Context:** Session 60's NULL result on A-high left the per-max-rank rule catalog methodology's hypothesis open: would K-high — where oracle drops max off top 5.6× more often (34% in DSnj vs A's 6%) — yield a Threshold-2 shippable rule? Session 61 reused the S60 harness verbatim, audited Rule 15 (K-high HIMID, S51) cell-by-cell, and tested 7 K-specific candidate refinement rules.
+
+**Result: ALL 7 CANDIDATES FAIL THRESHOLD 1.** K-high cells formally labeled ML-only at this catalog granularity. No production change. v52 and v44_dt both UNCHANGED.
+
+### Harness validation (sanity check, 2nd max-rank)
+
+Sanity check: Rule 15 (`strategy_v46_rule15_Khigh_DS`) vs its pre-Rule-15 predecessor (`strategy_v45_rule14_Ahigh_DS`) on all 6 K-high cells. **Total K-high whole-grid lift: +$51.38/1000h**, matching CURRENT_PHASE's documented S51 ship of +$51 to within 0.7%. Per-cell decomposition: JOINT_HIGH +$6.73, JOINT_MED +$0.56, JOINT_LOW +$0.00, **DS_NO_JOINT +$22.98** (45% of total), DS_NO_MAXTOP +$15.47, MS_ONLY +$5.64. **Harness now validated on TWO independent shipped rules.**
+
+### Phase 2 — Rule 15 cell-by-cell audit
+
+Per-cell remaining gap to oracle after Rule 15 (= v52 on K-high since defensive triggers don't fire for K-high with s2 > 8), in $/1000h whole-grid:
+
+| Cell | n hands | R15 mean_ev | Oracle mean_ev | Gap within-cell | Gap WG | v44 mean_ev | v44 gap WG |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| JOINT_HIGH | 39,690 | -0.043 | +0.146 | $1,885 | $12.45 | +0.039 | $7.06 |
+| JOINT_MED | 8,715 | -0.819 | -0.622 | $1,973 | $2.86 | -0.710 | $1.29 |
+| JOINT_LOW | 105 | -2.324 | -1.847 | $4,773 | $0.08 | -1.965 | $0.02 |
+| **DS_NO_JOINT** | **207,900** | **-0.445** | **-0.139** | **$3,062** | **$105.94** | **-0.362** | **$76.99** |
+| DS_NO_MAXTOP | 44,352 | -0.843 | -0.345 | $4,980 | $36.76 | -0.555 | $15.52 |
+| MS_ONLY | 29,568 | -1.037 | -0.666 | $3,710 | $18.26 | -0.870 | $10.06 |
+| **K-high total** | **330,330** | — | — | — | **$176.35** | — | **$110.94** |
+
+DS_NO_JOINT is the dominant residual cell (60% of K-high's $176/1000h post-Rule-15 leak). **Within-cell gap is 31% deeper at K than A** ($3,062 vs $2,337) — a structural consequence of oracle dropping K off top 34% in this cell vs A's 6%, while Rule 15 keeps K on top 100%. v44_dt captures **$65.41/1000h WG more** than Rule 15 on K-high overall (vs $99 at A-high).
+
+### Phase 3 + 4 — 7 candidates tested vs v52 baseline
+
+| ID | Candidate | Cell | Fires | cap_b | $/cell | $/1000h WG | Verdict |
+|---|---|---|---:|---:|---:|---:|---|
+| C_K1 | DSnj_drop_K_low_top_DSms | DSnj | 34.9% | −18.96% | −$580 | −$20.08 | T3 |
+| C_K2 | DSnj_drop_K_when_K_in_DSpair | DSnj | 44.6% | −32.52% | −$996 | −$34.46 | T3 (worst) |
+| C_K3 | DSnj_take_Qtop_DSms | DSnj | 7.9% | +3.33% | +$102 | **+$3.53** | T3 (micro+) |
+| C_K4 | DSnj_SSms_when_high | DSnj | 50.9% | −12.36% | −$379 | −$13.10 | T3 |
+| C_K7 | DSnj_drop_K_to_2top_DSms | DSnj | 7.9% | +0.99% | +$30 | **+$1.05** | T3 (micro+) |
+| C_K5 | MSonly_drop_K | MSonly | 82.7% | −117.68% | −$4,366 | −$21.48 | T3 (catastrophic) |
+| C_K6 | DSnj_HIBOT_tiebreaker (control) | DSnj | 100.0% | −20.51% | −$628 | −$21.73 | T3 |
+
+**Every candidate falls below Threshold 1 (≥40% gap closure + ≥$3/1000h within-cell).** Five (C_K1, C_K2, C_K4, C_K5, C_K6) are net-NEGATIVE on whole-grid. Two (C_K3, C_K7) show micro-positive lift (+$3.53 + $+1.05 = $+4.58/1000h WG combined) but neither reaches T1 nor T2 individually nor combined.
+
+### Methodology lessons (Session 61)
+
+1. **Drop-max rate is NOT a recoverable quantity for simple gates — even at 34%.** S60 lesson: "decision-matrix percentages overstate refinement headroom because oracle knows WHICH q% to switch on." S61 tested whether the lesson generalizes when q% is much larger (34% K vs 6% A). C_K1 fires at **34.9%** — almost EXACTLY oracle's drop-K rate — and is net **−$20/1000h WG**. The set MEMBERSHIP is what matters, not the COUNT. The lesson generalizes from 6% to 34%; expect it to generalize further at Q (52%), J/T/9/8 (similar).
+
+2. **Rule 15's HIMID design is empirically validated post-hoc.** C_K6 (HIBOT replacement) was −$628/cell, $-21.73/1000h WG — same retrospective validation pattern as A-high C10 produced for Rule 14. Both shipped HIMID design choices (S50 + S51) are sound.
+
+3. **K-high cells are STRUCTURALLY DEEPER than A-high but exhibit the same rule-saturation.** The MORE oracle deviates from "max-on-top + DS HIMID" (K's 34% drop-K vs A's 6%), the bigger the within-cell gap to oracle, but the rule space tested STILL can't close it. This strengthens the case that high_only's residual is fundamentally non-rule-shaped at the catalog's "one sentence statable" granularity.
+
+4. **Two micro-positive candidates exist but compose poorly.** C_K3 (Q-on-top + DS + ms ≥ J) and C_K7 (top=2 + DS + ms ≥ T) target very narrow subsets. Their combined lift is +$4.58/1000h WG — under T2's $5/1000h bar even when summed. A "compound rule" approach could chain them, but that's exactly what v44_dt does at scale — back to the catalog-vs-ML boundary.
+
+5. **The catalog methodology successfully falsifies the second hypothesis.** S60 falsified A-high; S61 falsifies K-high. Two-thirds of high_only's WG residual ($457 of $755) is now in the explicit ML-only zone.
+
+### Implications for Session 62
+
+Q-high has the most aggressive drop-max profile (52% in DSnj vs K's 34%, A's 6%). If the rule-saturation pattern generalizes (which the data so far suggests), Q-high is also expected to land all-T3. The S62 plan:
+- Reuse harness verbatim (third use); reuse `_enumerate_max_on_top_configs` and `_cell_for_hand_K` helpers (rename `K` → generic `max_rank` parameter).
+- Sanity-check Rule 16 (S52, Q-high HIMID, +$19/1000h WG shipped) reproduces ~$19 ±10%.
+- Test 5–7 Q-specific candidates targeting Q × DSnj (n=94,500 = 62.9% of Q-high; expected residual ~$70/1000h WG).
+- If all-T3, label Q-high ML-only and proceed to J-high (S63); if any T2, draft v53 with Rule 18.
+
+### Files (Session 61)
+
+**New artifacts (committed):**
+- `analysis/scripts/audit_rule15_S61.py` — Phase 2 sanity + Phase 2b cell audit driver
+- `analysis/scripts/candidates_K_high_S61.py` — 7 candidates with generic `_enumerate_max_on_top_configs` helper (reusable for Q/J/T/9/8)
+- `analysis/scripts/test_K_high_candidates_S61.py` — sweep driver + JSON output
+- `data/session_61_candidate_results.json` — full results
+
+**Documentation:**
+- `SESSION_61_K_HIGH_CATALOG.md` — K-high catalog page (second page of `HIGH_ONLY_RULE_CATALOG.md`)
+- `CURRENT_PHASE.md` — rewritten with S62 direction
+- `DECISIONS_LOG.md` — Decision 096 (this section)
+
+**Production state at end of S61:** UNCHANGED from S58/S59/S60.
+- Rule chain: **v52_full_high_only_handler** ($2,498 full / $1,522 prefix)
+- ML champion: **v44_dt** ($1,081 full / $686 prefix)
+- Diverge by $1,417/1000h. STILL UNCHANGED.
+
+**Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED).
