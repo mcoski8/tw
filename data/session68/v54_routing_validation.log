@@ -1,0 +1,50 @@
+==========================================================================================
+Session 68 — v54 cell-routing validation via S67 harness
+Started: 2026-05-12 14:43:52
+==========================================================================================
+
+## PBOT cells (expect v54 fires, lift positive)
+[harness] loading pair parquet (cells + v44 + oracle) ...
+  rows: 2,800,512
+[harness] loading v52 parquet (pre-computed v52 picks) ...
+[harness] loading canonical hands ...
+[harness] loading oracle grid ...
+[harness] cache ready.
+  p2/PBOT_DS_JOINT      n= 28,512  fires= 17,492 ( 61.3%)  WG=$  +8.08  cap= +72.7%
+  p2/PBOT_DS_PARTIAL    n= 90,288  fires= 44,269 ( 49.0%)  WG=$ +21.67  cap= +61.7%
+  p3/PBOT_DS_JOINT      n= 28,512  fires= 18,315 ( 64.2%)  WG=$  +7.63  cap= +69.0%
+  p3/PBOT_DS_PARTIAL    n= 90,288  fires= 43,229 ( 47.9%)  WG=$ +18.86  cap= +57.5%
+  p4/PBOT_DS_JOINT      n= 28,512  fires= 18,785 ( 65.9%)  WG=$  +8.25  cap= +70.2%
+  p4/PBOT_DS_PARTIAL    n= 90,288  fires= 45,948 ( 50.9%)  WG=$ +19.90  cap= +57.6%
+  p5/PBOT_DS_JOINT      n= 28,512  fires= 18,958 ( 66.5%)  WG=$ +10.08  cap= +78.3%
+  p5/PBOT_DS_PARTIAL    n= 90,288  fires= 45,590 ( 50.5%)  WG=$ +25.18  cap= +66.1%
+  p6/PBOT_DS_JOINT      n= 28,512  fires= 17,057 ( 59.8%)  WG=$  +8.81  cap= +75.9%
+  p6/PBOT_DS_PARTIAL    n= 90,288  fires= 40,951 ( 45.4%)  WG=$ +20.91  cap= +62.9%
+  p7/PBOT_DS_JOINT      n= 28,512  fires= 16,632 ( 58.3%)  WG=$  +6.22  cap= +62.4%
+  p7/PBOT_DS_PARTIAL    n= 90,288  fires= 39,739 ( 44.0%)  WG=$ +13.03  cap= +44.4%
+  p8/PBOT_DS_JOINT      n= 28,512  fires= 15,031 ( 52.7%)  WG=$  +5.21  cap= +58.9%
+  p8/PBOT_DS_PARTIAL    n= 90,288  fires= 34,539 ( 38.3%)  WG=$ +12.69  cap= +47.7%
+  p9/PBOT_DS_JOINT      n= 28,512  fires= 14,464 ( 50.7%)  WG=$  +6.14  cap= +66.1%
+  p9/PBOT_DS_PARTIAL    n= 90,288  fires= 31,416 ( 34.8%)  WG=$ +15.70  cap= +58.2%
+  pT/PBOT_DS_JOINT      n= 28,512  fires= 17,770 ( 62.3%)  WG=$  +7.95  cap= +69.0%
+  pT/PBOT_DS_PARTIAL    n= 90,288  fires= 38,772 ( 42.9%)  WG=$ +19.68  cap= +59.3%
+  pJ/PBOT_DS_JOINT      n= 28,512  fires= 18,716 ( 65.6%)  WG=$  +9.68  cap= +73.3%
+  pJ/PBOT_DS_PARTIAL    n= 90,288  fires= 53,149 ( 58.9%)  WG=$ +27.29  cap= +65.4%
+  pQ/PBOT_DS_JOINT      n= 28,512  fires= 14,917 ( 52.3%)  WG=$  +4.18  cap= +55.2%
+  pQ/PBOT_DS_PARTIAL    n= 90,288  fires= 59,626 ( 66.0%)  WG=$ +41.20  cap= +75.2%
+  pK/PBOT_DS_JOINT      n= 28,512  fires= 18,521 ( 65.0%)  WG=$ +11.36  cap= +77.7%
+  pK/PBOT_DS_PARTIAL    n= 90,288  fires= 45,704 ( 50.6%)  WG=$ +24.24  cap= +65.3%
+  pA/PBOT_DS_JOINT      n= 28,512  fires= 12,777 ( 44.8%)  WG=$  +6.01  cap= +70.4%
+  pA/PBOT_DS_PARTIAL    n= 90,288  fires= 33,548 ( 37.2%)  WG=$ +22.38  cap= +69.4%
+
+## PMID cells (expect v54 == v53, $0 lift, 0 fires)
+
+==========================================================================================
+  PBOT-cell aggregate WG lift (pair only): $+382.34/1000h
+  PMID-cell aggregate WG lift (pair only): $+0.00/1000h (should be ~0)
+  TOTAL pair-category WG lift vs v53: $+382.34/1000h
+  n_hands audited: 2,800,512  fires: 775,915 (27.7%)
+==========================================================================================
+
+  Wrote: /Users/michaelchang/Documents/claudecode/taiwanese/data/session68/v54_routing_validation.json
+Finished: 2026-05-12 15:10:57

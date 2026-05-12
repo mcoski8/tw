@@ -5532,3 +5532,105 @@ Codified in `analysis/scripts/strategy_v53_qpair_joint_pbot.py`:
 - ML champion: **v44_dt** (UNCHANGED). $1,081 full / $686 prefix.
 - Two-track divergence: $1,417 → $1,409 (slight tightening).
 - **Total project rule count: 18** (v52's 17 rules + Rule 19).
+
+## Decision 103 — Session 68 v54 hybrid chain SHIPS +$382/1000h full grid: LARGEST SINGLE PRODUCTION SHIP IN PROJECT HISTORY
+
+**Date:** 2026-05-12
+
+**Context:** S66 PAIR_DECISION_MATRIX.md found v52 underperforms v44 by $341 WG on pair, concentrated in PBOT cells ($391 WG gap). S67 catalog-blanket-rule sweep falsified 11 of 12 candidates (per-cell pct_opt <50% in PBOT cells means blanket-route rules will regress). CURRENT_PHASE end-S67 mandated Path B (cell-routed hybrid) as the next test. S68 executed Phase 1+2 of the plan and graded v54.
+
+**Result: v54 SHIPS. Grader-confirmed +$382/1000h full grid (v53 $2,490 → v54 $2,108). Largest single production ship in project history; 3× Rule 14's prior +$131 record.** Harness pre-validated +$382.34/1000h matched grader to 0.1%.
+
+### v54 design
+
+Single-line routing gate (no cell-taxonomy machinery needed at inference):
+
+> If hand is **single-pair** (no trips/quads) AND **pair-suits-distinct** AND **≥1 non-pair singleton of each pair-suit** → route to `strategy_v44_dt`. Else → route to `strategy_v53_qpair_joint_pbot`.
+
+This gate is equivalent to "in S66's 6-cell pair taxonomy, cell ∈ {PBOT_DS_JOINT, PBOT_DS_PARTIAL}". PMID_* cells share the same fall-through target (v53) so the routing collapses to a binary check.
+
+**Architectural note:** v54 subsumes Rule 19 (S67 ship) entirely. Rule 19 in v53 only fires on Q-pair × PBOT_DS_JOINT hands, which are exactly the hands v54 routes to v44 before Rule 19 gets a chance. v44 catches more on those hands than Rule 19 did (~+$13 vs Rule 19's +$8.50 within fires). Rule 19 remains in v53 as a fallback layer; the production rule chain is v54.
+
+### Grader confirmation
+
+| Metric | v53 | v54 | Δ |
+|---|---:|---:|---:|
+| Full $/1000h | 2,490 | **2,108** | **−$382** |
+| Full pct_opt | 43.43% | **49.74%** | **+6.31pp** |
+| Prefix $/1000h | 1,522 | 1,343 | −$179 |
+| Prefix pct_opt | 53.06% | 56.64% | +3.58pp |
+| Within-pair full pct_opt | 51.8% | 65.3% | +13.5pp |
+| Within-pair $/1000h | 1,811 | 991 | −$820 |
+| Full p90 | 0.715 | 0.640 | improved |
+| Full p99 | 1.640 | 1.625 | improved |
+
+**Records set in S68:**
+- Largest single production ship in project history (+$382 vs prior Rule 14 record of +$131).
+- Largest pct_opt jump in production (+6.31pp).
+- First Path-B-style hybrid ship.
+- Two-track divergence reduction in one session: $1,409 → $1,027 (closed 27%).
+
+### Per-cell verification (harness, matches matrix Path B prediction)
+
+`validate_v54_routing_S68.py` swept full pair category (2.8M hands × 78 (rank, cell) combos):
+
+| Cell group | Aggregate WG lift | Pattern |
+|---|---:|---|
+| PBOT cells (PBOT_DS_JOINT + PBOT_DS_PARTIAL across 13 ranks) | **+$382.34/1000h** | Matches matrix Path B prediction within 2% |
+| PMID cells (4 cells × 13 ranks) | $0.00 | Zero spillover — routing gate is clean |
+| **TOTAL pair-cat** | **+$382.34** | Harness ≈ grader to 0.1% |
+
+Per-rank highlights: Q-pair × PBOT_DS_PARTIAL = +$41.20 (matches matrix-predicted ceiling exactly); K-pair total +$35.60 (matches C_PAIR_1 catalog ceiling). Fire rate 27.7% of pair = 12.9% of canonical grid (775,915 hands).
+
+### What v54 closes
+
+**Pair catalog is CLOSED.** v54's pair residual = $462 WG; v44-alone on pair = $511 WG. v54 BEATS v44 by $49 WG on pair (preserved by routing PMID hands to v53, which beats v44 in PMID cells by $50 WG). The matrix's "best-of-both-worlds" prediction realized in one ship.
+
+**Combined with high_only's S65 closure**, the two largest residual categories (1.226M + 2.800M = 67% of canonical grid) are now both addressed at the limits achievable by current rule chain + v44_dt ML champion.
+
+### What S69 targets
+
+Remaining residual map (v54 framing):
+
+| Category | v54 within-cat | v54 WG | v44 WG | Target priority |
+|---|---:|---:|---:|---|
+| two_pair | $3,211 | $920 | $363 | **S69 PRIMARY** ($557 WG residual gap) |
+| high_only | $3,014 | $755 | $755 | CLOSED S65 |
+| pair | $991 | $462 | $511 | CLOSED S68 (within $50 of v44) |
+| trips | $2,010 | $110 | $54 | S70+ small target |
+| trips_pair | $5,417 | $155 | $5 | Already collapsed S55a |
+| three_pair | $1,696 | $32 | $35 | Small target |
+
+**Two_pair is the largest remaining absolute target ($920 WG within-cat, $263 WG grid-share contribution).** The v54→v44 gap on two_pair is $557 WG within-cat. S69 should mirror S66's matrix doc + S67's candidate sweep + S68's hybrid ship pattern. Expected outcome: either a v55 hybrid extension (route two_pair PBOT cells to v44, if cells are selective) or a catalog ship of one or more rules.
+
+### Methodology lessons (S68)
+
+1. **Cell-routed hybrid is now a validated production mechanism.** The S66-S67-S68 arc (matrix → falsification → hybrid) is the canonical methodology for per-category audits going forward. 3 sessions end-to-end.
+2. **Matrix predictions can be highly accurate when the routing mechanism matches.** Path B's $390 WG prediction was off by 2% from the grader's $382. The earlier "$391 catalog-shippable" claim was wrong because the mechanism (catalog blanket rules) couldn't realize it — but the same gap IS realizable via hybrid.
+3. **Harness-to-grader fidelity at the routing layer is best-of-project.** S67 Rule 19: 6% error. S68 v54: 0.1% error. Routing-based predictions are simpler than rule-prediction (which has setting-builder noise).
+4. **Per-cell decomposition surfaces design surprises.** The C_PAIR_5 "$41.20 Q-PARTIAL ceiling" from S66 matrix was unrealizable by a blanket rule (S67: −$26 regression) but realizable to the dollar via cell routing (S68: +$41.20 exact match). The catalog ceiling was a *capacity* estimate, not a realizable-by-rule estimate.
+5. **Records are made by clever architecture, not clever individual rules.** The +$382 v54 ship is a routing wrapper, not a new rule. It reuses v53 + v44 unchanged. The intelligence is in the gate, not the picks.
+
+### Files (Session 68)
+
+**New code:**
+- `analysis/scripts/strategy_v54_pair_hybrid.py` — **v54 PRODUCTION** (cell-routed hybrid)
+- `analysis/scripts/validate_v54_routing_S68.py` — pre-grader routing validation
+- `analysis/scripts/grade_v54_pair_hybrid.py` — head-to-head grader
+
+**Data:**
+- `data/session68/v54_routing_validation.log`, `v54_routing_validation.json`
+- `data/session68/grader_v54_prefix.log`, `grader_v54_full.log`
+
+**Documentation:**
+- `SESSION_68_V54_HYBRID_CHAIN.md` — Phase 1-3 report + ship narrative
+- `CURRENT_PHASE.md` — rewritten for S69 (two_pair audit)
+- `DECISIONS_LOG.md` — Decision 103 (this section)
+- `STRATEGY_GUIDE.md` — Part 1 Session 68 append + front-matter update
+
+**Production state at end of S68:**
+- Rule chain: **v54_pair_hybrid** ($2,108 full / $1,343 prefix). Grader-confirmed.
+- ML champion: **v44_dt** (UNCHANGED, now also invoked inside v54 for pair PBOT cells). $1,081 full / $686 prefix.
+- Two-track divergence: $1,409 → $1,027 (closed 27% in one ship).
+- **Total project rule count: 18** (UNCHANGED — v54 is a routing wrapper, not a new rule).
+- **Pair catalog CLOSED. High_only catalog CLOSED. S69 pivots to two_pair audit.**
