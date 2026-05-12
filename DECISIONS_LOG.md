@@ -4795,3 +4795,93 @@ Three options forward:
 The two tracks STILL diverge by $1,417/1000h. UNCHANGED.
 
 **Total project rule count: 17** (UNCHANGED from v52). ML champion: v44_dt (UNCHANGED).
+
+## Decision 095 — Session 60 A-high catalog audit: ALL CELLS LABELED ML-ONLY (no rule ships; harness validated)
+
+**Date:** 2026-05-11
+
+**Context:** Session 59's NULL result on v45_dt motivated the per-max-rank rule catalog methodology (CURRENT_PHASE pivot). Session 60 built the rule audit harness, audited Rule 14 (A-high HIMID, S50) cell-by-cell, and tested 10 candidate refinement rules across A-high's 3 leakiest cells. The S58 decision matrix was the design reference for candidates.
+
+**Result: ALL 10 CANDIDATES FAIL THRESHOLD 1.** A-high cells formally labeled ML-only at this catalog granularity. No production change. v52 and v44_dt both UNCHANGED.
+
+### Harness validation (sanity check)
+
+Built `analysis/scripts/test_rule_catalog.py` — per-cell rule audit harness. Reuses S59's `drill_ho_v44_per_hand_structural.parquet` for cell tags and `oracle_grid_full_realistic_n200.bin` for EV evaluation.
+
+Sanity check: Rule 14 vs its pre-Rule-14 predecessor (`strategy_v44_rule13_three_pair_DS`) on all 6 A-high cells. **Total A-high whole-grid lift: +$131.25/1000h**, matching CURRENT_PHASE's documented S50 ship of +$131 to within 0.2%. Per-cell decomposition: JOINT_HIGH +$17.72, JOINT_MED +$0.54, JOINT_LOW +$0.00, **DS_NO_JOINT +$68.58** (52% of total), DS_NO_MAXTOP +$31.83, MS_ONLY +$12.59. **Harness validated.**
+
+### Phase 2 — Rule 14 cell-by-cell audit
+
+Per-cell remaining gap to oracle after Rule 14, in $/1000h whole-grid:
+
+| Cell | n hands | Rule 14 mean_ev | Oracle mean_ev | Gap within-cell | Gap WG | v44 mean_ev | v44 gap WG |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| JOINT_HIGH | 88,200 | +0.841 | +1.023 | $1,822 | $26.7 | +0.922 | $14.9 |
+| JOINT_MED | 8,715 | -0.150 | +0.005 | $1,549 | $2.3 | -0.078 | $1.2 |
+| JOINT_LOW | 105 | -1.348 | -1.193 | $1,552 | $0.0 | -1.274 | $0.0 |
+| **DS_NO_JOINT** | **415,800** | **+0.508** | **+0.742** | **$2,337** | **$161.7** | **+0.562** | **$124.8** |
+| DS_NO_MAXTOP | 88,704 | +0.077 | +0.450 | $3,734 | $55.1 | +0.291 | $23.5 |
+| MS_ONLY | 59,136 | -0.107 | +0.252 | $3,598 | $35.4 | +0.069 | $18.1 |
+| **A-high total** | **660,660** | — | — | — | **$281.2** | — | **$182.5** |
+
+DS_NO_JOINT is the dominant residual cell (58% of A-high's $281/1000h post-Rule-14 leak). v44_dt captures ~$99 more than Rule 14 on A-high overall, distributed across cells (biggest v44 advantages in DS_NO_MAXTOP and MS_ONLY at $17–32/1000h WG each).
+
+### Phase 3 + 4 — 10 candidates tested vs v52 baseline
+
+| ID | Candidate | Cell | Fires | cap_b | $/cell | $/1000h WG | Verdict |
+|---|---|---|---:|---:|---:|---:|---|
+| C1 | DSnj_SSms_any | DSnj | 93.3% | −60.0% | −$1,401 | −$96.94 | T3 |
+| C2 | DSnj_SSms_J | DSnj | 62.8% | −29.1% | −$680 | −$47.04 | T3 |
+| C3 | DSnj_SSms_T | DSnj | 74.1% | −37.7% | −$881 | −$61.00 | T3 |
+| C4 | DSnj_SSms_beats_DSpair | DSnj | 0.0% | 0.0% | $0 | $0.00 | T3 (no fires) |
+| C5 | DSnm_SSms_any | DSnm | 31.2% | 0.0% | $0 | $0.00 | T3 (= R14) |
+| C6 | DSnm_31ms_when_no_SSms | DSnm | 6.2% | +2.1% | +$78 | +$1.15 | T3 |
+| C7 | MSonly_31ms_when_no_SSms | MSonly | 18.8% | +6.1% | +$219 | +$2.15 | T3 |
+| C8 | MSonly_31ms_any | MSonly | 18.8% | +6.1% | +$219 | +$2.15 | T3 |
+| C9 | DSnj_drop_A_for_AK_DSms | DSnj | 51.1% | −175.5% | −$4,101 | −$283.76 | T3 (catastrophic) |
+| C10 | DSnj_HIBOT_tiebreaker | DSnj | 100.0% | −24.5% | −$573 | −$39.66 | T3 |
+
+**Every candidate falls below Threshold 1 (≥40% gap closure + ≥$3/1000h within-cell).** Five (C1, C2, C3, C9, C10) are net-NEGATIVE on whole-grid. C4 is structurally unfireable.
+
+### Methodology lessons (Session 60)
+
+1. **Decision-matrix percentages overstate refinement headroom.** S58's matrix said oracle picks `tA_SS_ms` 27.9% of DS_NO_JOINT (n=116K, $3,613/hand mean regret if v43 stays with DS_mu). The naive read: switch DS_mu → SS_ms whenever achievable, recover ~$1,008/1000h within-cell. C1's harness measurement: switching unconditionally **loses** $1,401/cell within-cell, $96.9/1000h whole-grid. Oracle KNOWS WHICH 28% to switch on; a deterministic gate firing on 93% of cell (every hand where SS_ms is achievable) hurts the 72% where DS_mu was correct. **The catalog test CORRECTLY DETECTS this asymmetry where the matrix alone could not.**
+
+2. **Rule 14's HIMID tiebreaker is empirically validated post-hoc.** C10 (HIBOT replacement, "tiebreak by highest DS bot pair_high instead of highest mid_rank_sum") shipped −$40/1000h WG. The S50 Rule 14 design choice was correct. This kind of audit is itself a catalog deliverable.
+
+3. **Drop-max-off-top is a NARROW play at A-high.** Oracle drops A 6% of DSnj. C9 fired on 51% (loose pair_high ≥ J gate). The wrong 45% are exactly the hands where A should stay on top, and the cost is catastrophic ($10K–$14K/hand mean regret for picking t2_DS_ms/t3_DS_ms/etc. when oracle wants tA_DS_mu). Drop-max requires either MUCH tighter gating or, more likely, can only be approximated via ML.
+
+4. **The catalog methodology successfully falsifies hypothesis.** A-high's residual was the most-attacked zone (S56/57/58/59) and the most-tested rule (Rule 14, S50). The catalog audit proves: at this rule-chain granularity, A-high is RULE-SATURATED. v44_dt's $182.5/1000h A-high residual is the closer-to-oracle baseline; the rule chain cannot meaningfully close further without sophisticated multi-feature gating (which would reproduce ML).
+
+5. **Harness is reusable for S61–S65.** No infrastructure work needed for K-high audit beyond candidate design.
+
+### Implications for Session 61
+
+K-high has structurally different oracle behavior:
+- Oracle drops max off top **34% in K × DSnj** (vs 6% at A) — drop-max is 5.6× more common.
+- Oracle drops max off top **22% in K × MSonly** (vs 2% at A) — 11× more common.
+
+Rule 15 (S51, K-high HIMID) shipped +$51/1000h whole-grid — 38% as much lift as Rule 14, suggesting the rule already over-applies for K (keeping K on top 100% when oracle only does so 66% in DSnj). A K-high candidate analogous to C9 ("drop K off top when DS bot pair_high ≥ J") may clear thresholds where the A-high version catastrophically failed, because the fire rate at K is closer to oracle's actual behavior.
+
+**Session 61 recommended approach:** mirror S60's 5-phase structure. Reuse harness verbatim. Sanity-check Rule 15 reproduces +$51/1000h. Focus candidates on the drop-K-off-top play.
+
+### Files (Session 60)
+
+**New artifacts (committed):**
+- `analysis/scripts/test_rule_catalog.py` — per-cell rule audit harness (7.2 KB)
+- `analysis/scripts/candidates_A_high_S60.py` — 10 candidates (10.7 KB)
+- `analysis/scripts/test_A_high_candidates_S60.py` — sweep driver (3.6 KB)
+- `data/session_60_candidate_results.json` — full results
+
+**Documentation:**
+- `SESSION_60_A_HIGH_CATALOG.md` — A-high catalog page (first page of HIGH_ONLY_RULE_CATALOG.md)
+- `CURRENT_PHASE.md` — rewritten with S61 direction
+- `STRATEGY_GUIDE.md` Part 1 — Session 60 entry appended
+- `DECISIONS_LOG.md` — Decision 095 (this section)
+
+**Production state at end of S60:** UNCHANGED from S58/S59.
+- Rule chain: **v52_full_high_only_handler** ($2,498 full / $1,522 prefix)
+- ML champion: **v44_dt** ($1,081 full / $686 prefix)
+- Diverge by $1,417/1000h. STILL UNCHANGED.
+
+**Total project rule count: 17** (UNCHANGED). ML champion: v44_dt (UNCHANGED).

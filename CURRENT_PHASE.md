@@ -1,85 +1,68 @@
-# Current: Sprint 8 — Session 59 NULL RESULT on v45_dt set up a methodology pivot. **Naive 4th-pass ML feature engineering on high_only has saturated** (depth=36 ml=1 + 2.25M leaves + S58's v44 already captures everything ho_v5 features encode), but the diagnostic drills (HO11/HO12/HO13) surfaced **measurable, localized EV gaps** that ML can't reach. Examples: at K × DS_NO_JOINT × best_top=Q × mid_h≥J (n=18,144), oracle picks the non-K-on-top route 67% while v44 picks it only 36% — a $9.76/1000h cell. Existing rules 14/15/16/17 cover high_only at the WHOLE-max-rank level but were never audited cell-by-cell. **Session 60+ pivots to a per-max-rank rule catalog with explicit rule testing** — for each max-rank's structural cells, write candidate deterministic rules, apply them to every hand in the cell, measure capture % against oracle ceiling, ship to v53 only when both catalog-worthy (≥40% gap closure within cell, +$3/1000h within-cell, statable in one sentence) AND production-worthy (≥$5/1000h whole-grid lift, zero non-target regression). Cells where no rule meets Threshold 1 are formally labeled **ML-only territory** in the catalog. The deliverable is `HIGH_ONLY_RULE_CATALOG.md` — a teachable per-cell strategy doc that the project has been pointing at since CLAUDE.md ("a condensed decision tree / hierarchy of rules that a human can memorize and apply in <30 seconds, matching the solver 95–99% of the time"). **Strategies of record UNCHANGED:** v52_full_high_only_handler ($2,498/$1,522), v44_dt ($1,081/$686). The two tracks diverge by $1,417/1000h.
+# Current: Sprint 8 — Session 60 produced the first page of the high_only rule catalog: **A-high cells are formally labeled ML-only.** All 10 candidate refinement rules tested against Rule 14's residual failed Threshold 1. Most striking: C1 ("switch DS_mu → SS_ms whenever achievable") was net **−$96.9/1000h whole-grid** in A × DS_NO_JOINT, even though oracle picks `tA_SS_ms` 27.9% of that cell. Lesson: decision-matrix percentages tell you "oracle knows which 28%", not "switching to that pick recovers EV." A deterministic gate firing on 93% of cell hurts the 72% where DS was correct. C10 (HIBOT tiebreaker replacing Rule 14's HIMID) shipped **−$40/1000h** — empirical post-hoc validation that S50's HIMID design was correct. **The harness (`test_rule_catalog.py`) is validated** (reproduced Rule 14's documented +$131.25/1000h shipped lift to 0.2%) and **reusable as-is for S61–S65**. **Strategies of record UNCHANGED:** v52_full_high_only_handler ($2,498 full / $1,522 prefix); v44_dt ($1,081 / $686). The two production tracks STILL diverge by $1,417/1000h.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 60): A-high cell-by-cell audit + build the test harness.**
+> **🎯 IMMEDIATE NEXT ACTION (Session 61): K-high cell-by-cell audit + candidates.**
 >
->   A-high is the right starting zone because (a) it's the biggest high_only sub-population (660,660 hands; $182/1000h whole-grid residual), (b) Rule 14 is the oldest and most stress-tested rule at the whole-max-rank level (+$131/1000h whole-grid when shipped in S50 — the LARGEST single-rule lift in project history), (c) the cell-level gaps at A-high are the SMALLEST of any max-rank (oracle drops A off top only 6% in DS_NO_JOINT and 19% in DS_NO_MAXTOP), so if we can't even refine A-high the whole approach is suspect, and (d) the test harness built for A-high is reused for K/Q/J/T/9/8 — A-high pays for the scaffolding.
+>   K-high is the right next zone: (a) 330,330 hands = 26.9% of high_only, second-largest after A; (b) Rule 15 (S51, K-high HIMID) is +$51/1000h whole-grid when shipped (smaller than Rule 14's +$131 → ergo more headroom proportionally remaining); (c) structural decision conditions differ markedly from A-high — oracle drops max off top **34% in K × DS_NO_JOINT** vs 6% at A, and **22% in K × MS_ONLY** vs 2% at A. The "drop max off top" play is 5–11× more common at K. A candidate analogous to C9 (drop max for non-max-top DS_ms when bot pair_high ≥ J) catastrophically failed on A-high but may clear thresholds on K because the fire rate matches oracle behavior more naturally.
 >
->   **5-PHASE PLAN (Session 60):**
+>   **5-PHASE PLAN (Session 61 — mirror of S60 structure):**
 >
->   **Phase 1 — Build the test harness.** Write `analysis/scripts/test_rule_catalog.py`. Interface:
->   ```python
->   test_rule_on_cell(
->       rule_fn,                  # hand → setting_index (or None to skip)
->       cell_predicate_fn,        # hand_id → bool (e.g., "max=A AND cell=DS_NO_JOINT")
->       oracle_grid,              # data/oracle_grid_full_realistic_n200.bin
->       canonical_hands,
->       baselines=[v52_fn, v44_fn],
->   ) → CatalogResult(
->       n_hands_in_cell,
->       rule_pct_optimal,         # % of cell hands where rule picks oracle's argmax
->       rule_mean_ev,
->       oracle_ceiling_ev,
->       capture_pct,              # (rule_ev - null_ev) / (oracle_ev - null_ev)
->       gap_closure_pct,          # vs v52: (rule_ev - v52_ev) / (oracle_ev - v52_ev)
->       lift_vs_v52_within_cell,  # $/1000h within cell population
->       lift_vs_v52_whole_grid,   # $/1000h scaled to whole 6M grid
->       lift_vs_v44_within_cell,
->       top_mismatch_classes,     # where rule disagrees with oracle, by EV loss
->   )
->   ```
->   The harness reuses `data/drill_ho_v44_per_hand_structural.parquet` for cell tags and the oracle grid for EV evaluation. Cell predicates are parameterized (max_rank × cell name).
+>   **Phase 1 — Reuse harness.** No new infrastructure required. `analysis/scripts/test_rule_catalog.py` is reusable verbatim; just import it. Optionally also import the cell-classifier helpers from `candidates_A_high_S60.py` (rename `_enumerate_A_on_top_configs` → generic `_enumerate_max_on_top_configs(hand, max_rank)` if the K version needs adaptation).
 >
->   **Phase 2 — Audit Rule 14 itself.** For each of A-high's 5 structural cells (JOINT_HIGH, JOINT_MED, JOINT_LOW, DS_NO_JOINT, DS_NO_MAXTOP, MS_ONLY), measure: how much oracle ceiling does Rule 14 actually capture? Where does Rule 14 leak EV vs oracle? This is the baseline we're trying to improve.
+>   **Phase 2 — Audit Rule 15 cell-by-cell.** For each of K-high's 6 structural cells (JOINT_HIGH, JOINT_MED, JOINT_LOW, DS_NO_JOINT, DS_NO_MAXTOP, MS_ONLY; NEITHER is empty), measure Rule 15's mean_ev vs oracle ceiling. Expected dominant cell: K × DS_NO_JOINT (n=207,900 = 62.9% of K-high; S58 reported $87.02/1000h WG within-cell residual on v43; the post-Rule-15 residual is likely larger because Rule 15 is "K on top + DS bot + HIMID" identical to Rule 14's structure but with K instead of A — and oracle drops K off top 34% of the time in this cell).
 >
->   **Phase 3 — Propose 2–4 candidate refinement rules per leaky cell.** For cells where Rule 14 leaks > $3/1000h within-cell, design candidate rules that handle the residual. Examples (TBD by data):
->   ```python
->   def rule_A_DS_NO_MAXTOP_drop_if_max_bot_pair_K(hand):
->       """If A-high AND DS_NO_MAXTOP AND best DS bot has A-pair, drop A to bot, take K top."""
->       ...
->   ```
->   Each candidate is one Python function with a one-sentence docstring summarizing the principle.
+>   **Phase 3 — Propose K-high candidate refinements.** Same template as S60 but with K-specific gating:
+>     - C_K1: `rule_K_DSnj_drop_K_to_lowtop_DSms` — In K × DS_NO_JOINT, if a (top=2 or 3 or 4, DS bot with K-pair-or-high-pair, ms_mid with mid_high ≥ J) config is achievable, take it. Mirrors S58's oracle picks of `t2_DS_ms` etc. (more common at K than A).
+>     - C_K2: `rule_K_DSnj_drop_K_when_KQ_DSms` — Same but specifically when K pairs with Q in the bot (KQ-suited bot pair, suggests strong overall structure).
+>     - C_K3: `rule_K_DSnj_take_QtopDSms` — When (top=Q, DS bot, ms_mid ≥ J) achievable, take it (Q-on-top is a known oracle move at K-high).
+>     - C_K4: `rule_K_MSonly_drop_K` — Drop K off top in MS_ONLY (22% oracle drop rate vs 2% at A).
+>     - C_K5: `rule_K_DSnj_HIBOT_tiebreaker` — Negative control (expect to fail like C10).
+>   2–4 candidates per leaky cell, **cell-locally gated**.
 >
->   **Phase 4 — Test every candidate against every leaky cell.** For each cell, rank candidates by capture_pct + lift. Apply thresholds:
->   - **Catalog-worthy (Threshold 1):** ≥ 40% gap closure between v52 and oracle ceiling on the cell AND ≥ +$3/1000h within-cell vs v52 AND one-sentence statable.
->   - **Production ship (Threshold 2):** Threshold 1 met AND ≥ +$5/1000h whole-grid lift on full N=200 grid AND zero non-targeted regression.
->   - **ML-only acknowledgment (Threshold 3):** No candidate clears Threshold 1 → cell labeled "ML-only" in catalog. Document why (e.g., "oracle's pick depends on subtle suit-pair dynamics no simple rule captures").
+>   **Phase 4 — Test against T1/T2/T3 thresholds.** Same definitions: T1 ≥40% gap closure within cell AND ≥+$3/1000h within-cell; T2 + ≥+$5/1000h whole-grid; T3 = no candidate clears T1.
 >
->   **Phase 5 — Write `SESSION_60_A_HIGH_CATALOG.md`.** One-page-per-cell catalog of Rule 14's current capture + candidate rule test results + cell verdict. Ship Threshold-2-passing rules as Rules 18+ in v53. Repository pattern reused for S61 (K-high) through S65 (final aggregate).
+>   **Phase 5 — Write `SESSION_61_K_HIGH_CATALOG.md`.** Same template as `SESSION_60_A_HIGH_CATALOG.md`. If a T2-clearing rule emerges, draft `strategy_v53_K_high_handler.py` as `v52 + Rule 18` and grade vs v52 on full 6M grid. Even one T2 ship would validate the catalog methodology produces shippable rules where ML saturated.
 >
->   **TIME BUDGET:** Session 60 is harness-heavy. Probably 2 hours: harness 45 min, Rule 14 audit 30 min, candidate testing 45 min, catalog doc 30 min. Subsequent sessions (K/Q/J/T/...) reuse the harness and run ~1 hour each.
+>   **TIME BUDGET (S61):** Phase 1 (harness reuse) = 5 min; Phase 2 (audit) = 30 min (smaller population than A-high); Phase 3 (candidates) = 45 min; Phase 4 (test 5–10 candidates) = 30 min; Phase 5 (catalog doc) = 30 min; total ~2.5 hr.
 >
->   **SUCCESS CRITERIA:**
->   - Test harness works on Rule 14 alone (sanity-check it reproduces v45_rule14's shipped +$131/1000h).
->   - At least one A-high cell has its Rule 14 capture % measured.
->   - Either ship at least one refinement rule (Threshold 2) OR honestly label at least one cell ML-only (Threshold 3).
->   - `SESSION_60_A_HIGH_CATALOG.md` produced as the first page of the catalog.
+>   **SUCCESS CRITERIA (S61):**
+>   - Rule 15 audit completed; remaining K-high gap to oracle quantified per cell.
+>   - At least 5 K-specific candidate rules tested (drop-max focused).
+>   - Either ship at least one refinement (T2) OR honestly label K-high cells ML-only (T3).
+>   - `SESSION_61_K_HIGH_CATALOG.md` produced.
 
-> **❌ NULL RESULT (Session 59 — for context):**
-> 1. **v45_dt did NOT ship.** Full-grid lift = $0/1000h. v44_dt remains the ML champion.
-> 2. The 4 ho_v5 features rank #66/#97/#106/#110 (sum 0.09% — LOWEST per-ship). Combined with **+9 leaves** vs v44's 2.248M, signals depth=36 ml=1 saturation.
-> 3. The data signal is real (HO13 stratification: K × DS_NO_JOINT × best_top=Q × mid_h≥J is a $9.76/1000h cell with a 30.5% gap between oracle's pick rate and v44's). But it's not capturable by adding more DT features at current hyperparameters → motivates the catalog approach.
+> **❌ NULL RESULT (Session 60 — for context):**
+> - All 10 A-high candidates failed T1. A-high formally labeled ML-only at this catalog granularity.
+> - C1 (DSnj_SSms_any): −$96.9/1000h WG (worst). Switching unconditionally hurts.
+> - C4 (DSnj_SSms_beats_DSpair): 0% fires — structural gate too tight.
+> - C9 (DSnj_drop_A_for_AK_DSms): −$284/1000h WG (catastrophic) — fired 51%, oracle wants A-on-top in 94% of cell.
+> - C10 (DSnj_HIBOT_tiebreaker): −$40/1000h. **Confirmed Rule 14's HIMID design choice is empirically correct.**
+> - C5/C6/C7/C8 (31_ms branches, DSnm and MSonly): tiny positive lift ($1–$2/1000h WG) — well under T1's $3 within-cell bar.
 
-> **✅ ARTIFACTS to reuse from S58/S59:**
-> 1. **`data/drill_ho_v44_per_hand_structural.parquet`** (15.0 MB) — per-hand v44 residual structure with cell tags. Foundation for Session 60+ catalog work.
-> 2. **`data/drill_ho_v43_nonmax_joint.parquet`** (4.7 MB) — non-max joint achievability + best alt top/mid quality. Reusable.
-> 3. **`data/oracle_grid_full_realistic_n200.bin`** (~2.5 GB) — ground-truth EV for all 6M hands × 105 settings. The arbiter.
-> 4. **`SESSION_58_HIGH_ONLY_DECISION_MATRIX.md`** — per-max-rank × per-cell oracle TOP/BOT/MID profile. Use as the "what should the rule do?" reference when designing candidate rules.
-> 5. **`SESSION_59_V45_DT_REPORT.md`** + `data/v45_dt_model.npz` — null-result artifacts kept for reference (Session 60+ does NOT use them).
+> **✅ ARTIFACTS to reuse from S60:**
+> 1. **`analysis/scripts/test_rule_catalog.py`** (NEW, 7.2 KB) — per-cell rule audit harness. Reusable verbatim for S61–S65. Reports CatalogResult with within-cell + whole-grid lift, capture % vs baseline AND v44, % optimal, top mismatch classes.
+> 2. **`analysis/scripts/candidates_A_high_S60.py`** (NEW, 10.7 KB) — 10 A-high candidates. Useful as a template for S61's `candidates_K_high_S61.py`.
+> 3. **`analysis/scripts/test_A_high_candidates_S60.py`** (NEW) — driver: runs candidate sweep, scores T1/T2/T3, writes JSON.
+> 4. **`data/session_60_candidate_results.json`** (NEW) — full results for C1–C8 (C9/C10 results in `/tmp/s60_candidates_pass2.log`).
+> 5. **`SESSION_60_A_HIGH_CATALOG.md`** (NEW) — A-high catalog page. Template for the K/Q/J/T/9/8 catalog pages.
+> 6. **From S59:** `data/drill_ho_v44_per_hand_structural.parquet` (15 MB) — per-hand v44 residual structure with cell tags. **Still the foundation for catalog work in S61+.**
+> 7. **From S58:** `SESSION_58_HIGH_ONLY_DECISION_MATRIX.md` — per-max-rank × per-cell oracle TOP/BOT/MID profile. Use as the "what should the rule do?" reference when designing candidate rules, BUT treat the percentages as upper bounds on rule-recoverable EV (per S60's methodology lesson — oracle knows which 28%, gates don't).
 
-> **📓 METHODOLOGY (Session 60+):**
-> - **Capture % thresholds:**
->   - **Threshold 1 (Catalog-worthy):** ≥ 40% gap closure between v52 and oracle ceiling on the cell AND ≥ +$3/1000h within-cell AND one-sentence statable.
+> **📓 METHODOLOGY (Session 61+):**
+> - **Threshold definitions (unchanged from S60):**
+>   - **Threshold 1 (Catalog-worthy):** ≥ 40% gap closure between v52 and oracle ceiling within cell AND ≥ +$3/1000h within-cell AND one-sentence statable.
 >   - **Threshold 2 (Production ship):** Threshold 1 + ≥ +$5/1000h whole-grid lift + zero non-targeted regression.
 >   - **Threshold 3 (ML-only):** No candidate clears Threshold 1 → cell formally labeled ML-only.
-> - **Cell decomposition (use the existing 6-cell scheme):** JOINT_HIGH, JOINT_MED, JOINT_LOW, DS_NO_JOINT, DS_NO_MAXTOP, MS_ONLY, NEITHER. Defined in `drill_high_only_v44_deepdive.py`.
-> - **Audit existing rules FIRST.** Before proposing new candidates, measure how the current rule (14 for A, 15 for K, 16 for Q, 17/v52 defensive for J/T/9/8) performs cell-by-cell. The candidate rules REFINE within leaky cells; they don't replace the broader rule.
-> - **Speed is not necessary — clarity and perfection is.** (User directive S59.) Each session covers one max-rank fully; the catalog accumulates over 5–6 sessions. End with a complete `HIGH_ONLY_RULE_CATALOG.md`.
+> - **Cell decomposition (use existing 6-cell scheme):** JOINT_HIGH/MED/LOW, DS_NO_JOINT, DS_NO_MAXTOP, MS_ONLY, NEITHER. Defined in `drill_high_only_v44_deepdive.cell_for_hand`.
+> - **Always sanity-check the harness on the existing rule first.** Reproduce the rule's known shipped lift vs its pre-rule predecessor (e.g., for K-high audit Rule 15 vs `strategy_v45_rule14_Ahigh_DS` — Rule 14 IS Rule 15's pre-Rule-15 baseline since Rule 15 fires for max=K only). Expect ~+$51/1000h whole-grid on K-high. If the sanity check is off by more than ±10%, fix the harness before proceeding.
+> - **Decision-matrix percentages are NOT directly recoverable.** S58's matrix says "oracle picks X q% in cell C" — this is what oracle achieves with FULL knowledge, not what a rule firing on "X is achievable" can recover. A simple gate fires on a SUPERSET of oracle's q% and hurts the complement. Expect candidates to need TIGHT gating to clear thresholds.
+> - **Speed is not necessary — clarity and perfection is.** (User directive S59, re-confirmed S60.)
+> - **Test candidates BOTH ways**: gate on cell predicate (cheap, exact), and gate on rule-pick-direction (e.g., "switch DS→SS only when SS_ms mid_high > DS bot pair_high AND DS bot pair is low"). The S60 candidate set was probably under-gated.
 
-> Updated: 2026-05-11 (Session 59 end — methodology pivot to catalog approach)
+> Updated: 2026-05-11 (Session 60 end — A-high catalog page complete; pivot to K-high)
 
 ---
 
-## Headline state at end of Session 59 (UNCHANGED from S58)
+## Headline state at end of Session 60 (UNCHANGED from S58/S59)
 
 **Strategies of record:**
 
@@ -89,16 +72,10 @@
 | **v44_dt** | **PRODUCTION ML champion (UNCHANGED).** $1,081 full / $686 prefix; 2.25M leaves; 107 features. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
 | v45_dt (S59 NULL) | Trained but does NOT ship. 2.25M+9 leaves, 111 features. | `analysis/scripts/strategy_v45_dt.py` + `data/v45_dt_model.npz` |
 | v43_dt | Predecessor ML champion (S57). | `analysis/scripts/strategy_v43_dt.py` + `data/v43_dt_model.npz` |
-| v42_dt | S56 ML champion. | `analysis/scripts/strategy_v42_dt.py` + `data/v42_dt_model.npz` |
-| v41_dt | S55 ML champion. | `analysis/scripts/strategy_v41_dt.py` + `data/v41_dt_model.npz` |
-| v40_dt | S55 first ship; replaced within-session. | `analysis/scripts/strategy_v40_dt.py` + `data/v40_dt_model.npz` |
-| v39_dt | S54 ML champion. | `analysis/scripts/strategy_v39_dt.py` + `data/v39_dt_model.npz` |
-| v36_dt / v34_dt / v32_dt | Older ML baselines. | various |
 | v45_rule14_Ahigh_DS (Rule 14 standalone) | Rule 14 fired against v44_rule13 baseline. Predecessor in chain. | `analysis/scripts/strategy_v45_rule14_Ahigh_DS.py` |
-| v46_rule15_Khigh_DS / v47_rule16_Qhigh_DS | Predecessor rule chains. | various |
-| v44_rule13_three_pair_DS / earlier | Predecessor rule chains. | various |
+| v46_rule15_Khigh_DS / v47_rule16_Qhigh_DS | Predecessor rule chains for K/Q. **The Rule 15 audit target for S61.** | `analysis/scripts/strategy_v46_rule15_Khigh_DS.py` / `strategy_v47_rule16_Qhigh_DS.py` |
 
-**Per-category residuals at end of S59 (UNCHANGED from S58):**
+**Per-category residuals (UNCHANGED from S58/S59 since no production change in S60):**
 
 | Category | n_hands | share | v44 within-cat | $/1000h whole-grid |
 |---|---:|---:|---:|---:|
@@ -111,180 +88,114 @@
 | composite | 14,742 | 0.2% | $960 | $2 |
 | quads | 14,300 | 0.1% | $545 | $1 |
 
-**high_only is STILL the dominant residual** ($755/1000h whole-grid = ~70% of v44's total regret). Session 60+ attacks it via the catalog methodology.
+**A-high catalog page produced in S60:** `SESSION_60_A_HIGH_CATALOG.md`. Verdict: all 6 A-high cells labeled ML-only. v44_dt is the best available approach on A-high's residual ($182.5/1000h WG remaining). The catalog methodology successfully **falsified** the S58 decision-matrix-derived expectation that simple deterministic switching rules would recover oracle's 27.9% `tA_SS_ms` picks.
 
 **Existing high_only rules and their whole-population shipped lifts:**
 
-| Max-rank | Rule | Session | Whole-grid lift when shipped | Status entering S60 |
+| Max-rank | Rule | Session | Whole-grid lift when shipped | Status entering S61 |
 |---|---|---|---|---|
-| A | Rule 14 | S50 | +$131 | Cell-level audit NOT done; refinement candidates TBD |
-| K | Rule 15 | S51 | +$51 | Cell-level audit NOT done |
-| Q | Rule 16 | S52 | +$19 | Cell-level audit NOT done |
-| J/T/9/8 (defensive) | Rule 17 / v52 | S53 | +$17 | Cell-level audit NOT done |
+| A | Rule 14 | S50 | +$131 | **AUDITED S60: ALL CELLS ML-ONLY.** Harness reproduces lift to 0.2%. |
+| K | Rule 15 | S51 | +$51 | **S61 TARGET.** Cell-level audit not yet done. |
+| Q | Rule 16 | S52 | +$19 | Cell-level audit pending (S62). |
+| J/T/9/8 (defensive) | Rule 17 / v52 | S53 | +$17 | Cell-level audit pending (S63/64). |
 
-**Two production tracks at end of S59 (UNCHANGED):** Rule chain $2,498; ML champion $1,081; diverge by $1,417/1000h.
+**Two production tracks at end of S60 (UNCHANGED):** Rule chain $2,498; ML champion $1,081; diverge by $1,417/1000h.
 
 ---
 
-## Session 60+ catalog sequence
+## Session 60+ catalog sequence (updated)
 
-| Session | Max-rank focus | Existing rule | Population | $/1000h wg residual |
-|---|---|---|---|---|
-| **60** | **A-high** | Rule 14 | **660,660 (53.8% of high_only)** | **$182.51** |
-| 61 | K-high | Rule 15 | 330,330 (26.9%) | $110.94 |
-| 62 | Q-high | Rule 16 | 150,150 (12.2%) | $55.24 |
-| 63 | J-high | Rule 17 (HIMID branch) | 60,060 (4.9%) | $23.43 |
-| 64 | T/9/8 combined | Rule 17 (defensive branch) | 25,740 (2.1%) | $9.29 |
-| 65 | Aggregate + cross-cell rules | All | All high_only | All |
+| Session | Max-rank focus | Existing rule | Population | $/1000h WG residual after current rule | Outcome |
+|---|---|---|---|---:|---|
+| **60** | **A-high** | Rule 14 | **660,660 (53.8%)** | **$281.2 (vs oracle); $182.5 (vs v44)** | **NULL — all cells ML-only** |
+| 61 | K-high | Rule 15 | 330,330 (26.9%) | TBD per Phase 2 audit | TBD |
+| 62 | Q-high | Rule 16 | 150,150 (12.2%) | TBD | TBD |
+| 63 | J-high | Rule 17 (HIMID branch) | 60,060 (4.9%) | TBD | TBD |
+| 64 | T/9/8 combined | Rule 17 (defensive branch) | 25,740 (2.1%) | TBD | TBD |
+| 65 | Aggregate + cross-cell rules | All | All high_only | Synthesis | Final catalog |
 
-Total addressable via catalog audit: $381.41/1000h whole-grid (= v44's full high_only residual). Even capturing 30% of that via rules = ~$115/1000h on the rule chain, $0 on ML.
+The S60 null is BIG SIGNAL for the project: if K-high's drop-max play (34% in DSnj) is similarly unrecoverable by simple rules, the entire $755/1000h WG high_only residual may be genuinely ML-only territory, validating v44_dt as the ceiling rule-chain strategies can approach but not pass. Conversely, if K-high yields T2 shippable rules, the catalog methodology proves it can crack high_only structurally where ML alone saturated.
 
 ---
 
-## Resume Prompt (Session 60 — A-high catalog audit + harness)
+## Resume Prompt (Session 61 — K-high catalog audit)
 
 ```
-Resume Session 60 of the Taiwanese Poker Solver project at
+Resume Session 61 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context (in this order):
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of S59 — methodology pivot to
-  per-max-rank rule catalog with explicit testing)
-- DECISIONS_LOG.md (latest: Decision 094 — v45_dt NULL result)
-- SESSION_59_V45_DT_REPORT.md (the null-result context)
-- SESSION_58_HIGH_ONLY_DECISION_MATRIX.md (per-max-rank × per-cell
-  oracle TOP/BOT/MID profile — the reference for designing candidate rules)
-- STRATEGY_GUIDE.md Part 1 — Session 59 NULL entry
-- analysis/scripts/strategy_v52_full_high_only_handler.py — current
-  rule chain (the v52 production rule chain to extend)
-- analysis/scripts/strategy_v44_dt.py — ML champion (the cell-level
-  benchmark; rule must close gap toward this, not necessarily beat it)
-- analysis/scripts/strategy_v45_rule14_Ahigh_DS.py — Rule 14 standalone
-  (the rule being audited cell-by-cell this session)
-- analysis/scripts/drill_high_only_v44_deepdive.py — cell decomposition
-  reference (JOINT_HIGH/MED/LOW, DS_NO_JOINT, DS_NO_MAXTOP, MS_ONLY,
-  NEITHER classification)
+- CURRENT_PHASE.md (rewritten end of S60 — A-high NULL; K-high next)
+- DECISIONS_LOG.md (latest: Decision 095 — S60 A-high catalog NULL)
+- SESSION_60_A_HIGH_CATALOG.md (the first page of HIGH_ONLY_RULE_CATALOG.md
+  and the template for K/Q/J/T/9/8 pages)
+- SESSION_58_HIGH_ONLY_DECISION_MATRIX.md (oracle decisions per max × cell)
+- analysis/scripts/test_rule_catalog.py (the validated harness — reuse verbatim)
+- analysis/scripts/candidates_A_high_S60.py (template for candidates_K_high_S61.py)
+- analysis/scripts/strategy_v52_full_high_only_handler.py (current v52 chain)
+- analysis/scripts/strategy_v46_rule15_Khigh_DS.py (Rule 15 standalone — audit target)
+- analysis/scripts/strategy_v44_dt.py (ML champion benchmark)
 
-State (end of Session 59):
-- Rule chain production: v52_full_high_only_handler (17 rules; UNCHANGED
-  since S53) at $2,498 full / $1,522 prefix.
-- ML champion: v44_dt (UNCHANGED) at $1,081 full / $686 prefix;
-  2.25M leaves at depth=36 ml=1; 107 features.
-- S59 attempted a 4th ho_v5 pass; NULL ($0/1000h). v44 retained.
-- high_only STILL dominant residual at $755/1000h whole-grid (~70%
-  of v44's regret) but naive feature-augmentation has saturated at
-  depth=36 ml=1.
+State (end of Session 60):
+- Rule chain UNCHANGED at v52 ($2,498 full / $1,522 prefix).
+- ML champion UNCHANGED at v44_dt ($1,081 full / $686 prefix).
+- A-high catalog page produced: all 6 A-high cells labeled ML-only.
+- Harness `test_rule_catalog.py` validated to 0.2% accuracy.
+- All 10 A-high candidates tested fell below Threshold 1.
+- Methodology lesson: decision-matrix percentages overstate
+  rule-recoverable EV (oracle knows WHICH q% to switch on).
+- K-high structural opportunity: oracle drops max off top 34% in
+  K × DSnj (vs 6% at A) and 22% in K × MS_ONLY (vs 2% at A).
 
-USER DIRECTIVE (S59 close):
-- The S58 decision matrix described oracle behavior per cell but never
-  tested whether deterministic rules can actually capture it.
-- Existing rules 14/15/16/17 cover high_only at the whole-max-rank
-  level but were never audited cell-by-cell.
-- Cell-level gaps are known and quantified (e.g., Rule 15 keeps K on
-  top 100% but oracle drops K 34% in DS_NO_JOINT; Rule 14 keeps A on
-  top 100% but oracle drops A 19% in DS_NO_MAXTOP).
+USER DIRECTIVE (S59/S60 re-confirmed):
 - "Speed is not necessary — clarity and perfection is."
+- Build the catalog over 5–6 sessions; A-high page produced in S60.
 
-DIRECTION FOR SESSION 60 (A-high catalog audit + harness):
+DIRECTION FOR SESSION 61 (K-high catalog audit + harness reuse):
 
-A-high is the right starting zone: biggest population (660K hands,
-$182/1000h wg residual), oldest and most-tested rule (Rule 14 at +$131
-shipped), smallest cell-level gaps (oracle drops A off top only 6% in
-DS_NO_JOINT and 19% in DS_NO_MAXTOP — the cleanest test of whether
-cell-level refinement is even worth the effort).
+5-PHASE PLAN — same shape as S60:
 
-5-PHASE PLAN (Session 60):
+Phase 1 — Reuse harness. No new infrastructure.
 
-Phase 1 — Build the test harness.
-  Write `analysis/scripts/test_rule_catalog.py`. The harness takes a
-  candidate rule function (hand → setting_index), a cell predicate
-  (e.g., "max=A AND cell=DS_NO_JOINT"), the oracle grid, and a list
-  of baselines (v52, v44, Rule 14 standalone). It returns:
-    - n_hands_in_cell
-    - rule_pct_optimal (% of cell where rule matches oracle argmax)
-    - rule_mean_ev vs oracle_ceiling_ev
-    - capture_pct = (rule_ev - null_pick_ev) / (oracle_ev - null_pick_ev)
-    - gap_closure_pct = (rule_ev - v52_ev) / (oracle_ev - v52_ev)
-    - lift_vs_v52_within_cell ($/1000h within cell)
-    - lift_vs_v52_whole_grid ($/1000h scaled to 6M)
-    - lift_vs_v44_within_cell
-    - top_mismatch_classes (where rule disagrees with oracle, by $)
-  Reuse data/drill_ho_v44_per_hand_structural.parquet for cell tags.
+Phase 2 — Audit Rule 15 cell-by-cell on K-high. Sanity-check:
+expect harness to reproduce Rule 15's documented +$51/1000h
+whole-grid shipped lift vs its pre-Rule-15 predecessor
+(strategy_v45_rule14_Ahigh_DS). Measure per-cell mean_ev gap to
+oracle. Identify leaky cells (likely K × DS_NO_JOINT dominant).
 
-Phase 2 — Audit Rule 14 itself.
-  For each of A-high's 5 cells (JOINT_HIGH, JOINT_MED, JOINT_LOW,
-  DS_NO_JOINT, DS_NO_MAXTOP, MS_ONLY), run the harness against
-  strategy_v45_rule14_Ahigh_DS. Measure capture_pct and gap_closure_pct
-  per cell. Identify "leaky" cells (those where Rule 14 leaks > $3/1000h
-  within-cell vs oracle).
+Phase 3 — Propose K-specific candidates concentrating on the
+drop-K-off-top play (S58 matrix: oracle drops K 34% in DSnj vs
+6% at A). Candidates listed in CURRENT_PHASE.md "Direction for
+Session 61" section. ~5 candidates.
 
-Phase 3 — Propose 2-4 candidate refinement rules per leaky cell.
-  For each leaky cell, design candidate rules guided by the S58 decision
-  matrix (oracle's modal TOP/BOT/MID per cell). Each candidate is one
-  Python function with a one-sentence principle. Examples (TBD by data):
-    - rule_A_DS_NO_MAXTOP_drop_if_max_bot_pair_high(hand) — "drop A to
-      bot when DS bot would contain A as suited pair"
-    - rule_A_DS_NO_JOINT_mid_suited_priority(hand) — "if A on top + DS
-      bot, prefer the (top=A, DS bot, ms mid) candidate where mid_high
-      is highest"
-  Keep candidates LOCAL to the cell — gating discipline.
+Phase 4 — Test each candidate via test_rule_on_cell with
+baseline=v52. Apply T1/T2/T3 thresholds.
 
-Phase 4 — Test every candidate against every leaky cell.
-  Apply 3 thresholds:
-    Threshold 1 (Catalog-worthy):
-      gap_closure_pct >= 40% AND lift_vs_v52_within_cell >= $3/1000h
-      AND one-sentence statable.
-    Threshold 2 (Production ship into v53):
-      Threshold 1 + lift_vs_v52_whole_grid >= $5/1000h
-      + zero non-A-high regression on full N=200 grid.
-    Threshold 3 (ML-only):
-      No candidate clears Threshold 1 → cell labeled ML-only.
+Phase 5 — Write SESSION_61_K_HIGH_CATALOG.md (mirror of
+SESSION_60_A_HIGH_CATALOG.md). If at least one candidate clears
+T2: draft strategy_v53_K_high_handler.py and grade vs v52 on full
+6M grid (validating ZERO non-targeted regression).
 
-Phase 5 — Write SESSION_60_A_HIGH_CATALOG.md.
-  One section per A-high cell: oracle's modal pick, Rule 14's capture,
-  candidate rule test results, verdict (ships / catalog-only / ML-only).
-  If any rule meets Threshold 2: ship as Rule 18 (or Rule 14 v2) in
-  v53_high_only_handler. Grade vs v52.
-
-Time budget: ~2 hours. Harness 45 min, audit 30 min, candidates 45 min,
-catalog doc 30 min.
-
-ACCEPTANCE for Session 60:
-- Harness validated (reproduces v45_rule14's known +$131/1000h whole-grid
-  ship as sanity check).
-- All 5 A-high cells audited; capture_pct + gap_closure_pct reported.
-- At least one candidate rule tested in each leaky cell.
-- Either ship at least one refinement rule (Threshold 2) OR honestly
-  label at least one cell ML-only (Threshold 3).
-- SESSION_60_A_HIGH_CATALOG.md produced as the first page of the
-  HIGH_ONLY_RULE_CATALOG.md aggregate (built over S60-S65).
+ACCEPTANCE for Session 61:
+- Sanity check on Rule 15 + harness reproduces +$51/1000h ±10%.
+- All 6 K-high cells audited.
+- At least 5 K-specific candidates tested.
+- Either at least one T2-shipping rule OR honest ML-only labeling
+  for all leaky K-high cells.
+- SESSION_61_K_HIGH_CATALOG.md produced.
 
 REMINDERS:
-- Speed is NOT necessary — clarity and perfection IS.
 - Use python3, not python.
-- cargo lives at ~/.cargo/bin/cargo (not on PATH).
+- cargo at ~/.cargo/bin/cargo.
 - Session-end protocol: commit + push to origin/main (pre-authorized).
-- For long Python scripts: PYTHONUNBUFFERED=1 or python3 -u.
+- PYTHONUNBUFFERED=1 or python3 -u for long scripts.
 - Reuse data/drill_ho_v44_per_hand_structural.parquet for cell tags.
 - Reuse data/oracle_grid_full_realistic_n200.bin for EV evaluation.
-- Don't propose candidate rules without first auditing the existing
-  rule (Rule 14) for that cell — refinements REFINE within leaky cells,
-  they don't replace.
-- Threshold 1 gates whether something enters the catalog; Threshold 2
-  gates whether it ships to v53; Threshold 3 honestly labels ML-only.
-
-OUTPUT for Session 65 (the endgame, 5-6 sessions away):
-- HIGH_ONLY_RULE_CATALOG.md — complete A/K/Q/J/T/9/8 catalog with
-  per-cell verdicts.
-- v53_high_only_handler (rule chain successor to v52) — every cell
-  refinement that ships.
-- Honest documentation of which cells are ML-only (v44_dt's exclusive
-  territory).
-- This becomes the project's first user-facing strategy guide that
-  matches the CLAUDE.md goal: "a condensed decision tree / hierarchy
-  of rules that a human can memorize and apply in <30 seconds,
-  matching the solver 95-99% of the time."
+- Don't propose candidates without first auditing the existing
+  rule (Rule 15) for that cell.
+- Treat S58 decision-matrix percentages as upper bounds on
+  rule-recoverable EV, not direct targets (S60 lesson).
 ```
 
 ---
