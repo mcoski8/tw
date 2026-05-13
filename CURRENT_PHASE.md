@@ -1,172 +1,276 @@
-# Current: Sprint 8 — Session 70 SHIPS v56 trips hybrid (+$45/1000h full grid). Third consecutive Path-B hybrid ship; **closes trips category at v44 limits**. Cumulative S68+S69+S70 = $1,061/1000h (75% of pre-S68 two-track divergence). The largest 4 residual categories (high_only, pair, two_pair, trips = 94.7% of canonical grid) are now ALL closed at the limits achievable by current rule chain + v44_dt ML champion. **Architectural-routing headroom is largely exhausted; S71+ pivots to ML retrain (v45_dt+) — any v44 improvement now compounds 4× via v54+v55+v56.** Grader-confirmed v55 → v56: $1,473 → $1,429 full, $827 → $794 prefix; pct_opt 58.44% → 59.51% (+1.07pp). Within-trips $2,010 → $1,194 (-$816), 39.0% → 58.6% pct_opt (+19.6pp). All non-trips categories byte-identical (surgical via trips-blanket gate). Three-gate hybrid chain (pair-PBOT in v54 + two_pair in v55 + trips in v56) is now the project's cleanest architecture; structurally disjoint, zero conflict. Harness predicted +$44.61 WG; grader $+45; fidelity 0.87%.
+# Current: Sprint 8 — Session 71 Phase 1a/1b/2 COMPLETE. Diagnostic-driven ML retrain pivot to v46_dt is set up. The setting-rank diagnostic on v44_dt's high_only residual ($381.39 WG total, matches S59 HO11 to 4 decimals) partitions the leak into MATCH 41.8% / NOISE 20.9% / MID 40.4% / STRUCTURE 38.7%. **STRUCTURE-bucket leak ($147.59 WG, 11.2% of hands, rank ≥10 in oracle's sorted-EV list) is NOT noise** — gap_2nd ≈ 0.11-0.14 ($1,100-1,400 regret per hand) — i.e. testable feature-engineering headroom. The dominant STRUCTURE mismatch family across K/Q/J/A × DS_NO_JOINT is **`SS_mu → SS_ms`** ($10+ WG aggregate; v44 picks SS bot with unsuited mid, oracle picks SS bot with suited mid at same top). v44's 107 features have ZERO SS+ms enumeration features — clean non-derivability story. Phase 2 implements H1 as `high_only_aug_v6_features_gated.py` (2 features: `topMax_SS_ms_n_configs_g` + `topMax_SS_ms_max_mid_high_g`, direct SS-axis counterpart to ho_v3's DS-axis pair that shipped +$79 in S57). Smoke tests pass on 5 hand-crafted cases. Persist script ready; full retrain (v46_dt at depth=32 ml=3) queued for S72.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 71): ML retrain (v45_dt+) — high_only diagnostic-driven feature engineering.**
+> **🎯 IMMEDIATE NEXT ACTION (Session 72): persist + train v46_dt.**
 >
->   With high_only, pair, two_pair, and trips all CLOSED at v44 limits, the remaining structural-rule headroom is exhausted. The two-track divergence remaining ($348/1000h) is concentrated in:
->     - **trips_pair** ($155 WG, 2.9% of grid) — already collapsed S55a; minimal headroom.
->     - **three_pair** ($32 WG, 1.9% of grid) — smallest meaningful target.
->     - **v44's own residuals** — the ML champion still leaks $1,081/1000h full-grid; reducing this via retrain SHIFTS THE WHOLE HYBRID CHAIN downward.
+>   Phase 1: run `persist_high_only_aug_v6_gated.py` to write
+>   `data/feature_table_high_only_aug_v6_gated.parquet` (~6 MB; 2
+>   features × 6,009,159 canonical hands × int8). ~30 sec.
 >
->   The largest single-category v44 residual is **high_only at $3,014/1000h = $755 WG** (12.6% of grid). A v45_dt that reduces high_only by even 20% would ship ~$151 WG full-grid via the v54+v55+v56 chain — comparable to the early rule-era's biggest ships (Rule 6 +$113, Rule 14 +$131).
+>   Phase 2: run `train_v46_dt.py` at **depth=32 ml=3** (project
+>   default; v44 was depth=36 ml=1, v45 was depth=36 ml=1 NULL —
+>   v46 deliberately switches regime to test whether the saturation
+>   hypothesis is the binding constraint vs the feature-set
+>   constraint). 107 + 2 = 109 features. Expected fit time ~10 min.
 >
->   **PATH A (recommended) — high_only ML retrain (v45_dt)**: Diagnostic-driven feature engineering per S54 playbook. Mine v44's high_only mismatches; identify systematic miss patterns; build 4-8 new gated features; retrain DT at depth=32 ml=3 (project default); validate via grader. Expected ship: $50-200 WG full-grid (depending on how much high_only residual can be closed). Higher-effort path than Path-B hybrids (~2-3 sessions of compute + iteration), but the only meaningful remaining lift lever.
+>   Phase 3: tripwire prediction BEFORE grading —
+>     * v6 features rank inside top-50 importance (vs v5's #66/#97/...).
+>     * Leaf count grows ≥10K above v44's 2.25M (vs v5's +9 NULL signal).
+>     * Both → predict ship. Either alone → ambiguous.
 >
->   **PATH B (alternative) — three_pair / trips_pair audit**: Apply S69+S70 methodology to the remaining small categories. Expected ship: <$10 WG full-grid each. Quick (~1 session) but tiny lift.
+>   Phase 4: grade v46_dt on prefix (500K, n=1000) then full (6M,
+>   n=200). Compute within-cat WG delta on high_only specifically.
 >
->   **Recommended:** PATH A (v45_dt high_only retrain) for S71+. Higher-effort but the only direction with meaningful headroom.
+>   Phase 5: if v46_dt ships, harness-predict the v56 hybrid lift
+>   (v44 invoked inside v54/v55/v56 across ~40% of canonical grid;
+>   any v44 improvement compounds ~4×). If predicted lift >$20 WG,
+>   build and ship v57_hybrid_chain = v56 with v46_dt replacing
+>   v44_dt internally. Otherwise queue more features (H2/H3/H4/H5
+>   from SESSION_71_V45_FEATURE_HYPOTHESES.md Section 6).
 >
->   **3-PHASE PLAN (Session 71 — ML retrain prep):**
+>   **PREDICTED SHIP RANGE** (per S71 Phase 1b analysis):
+>   - If H1 closes 25% of `SS_mu→SS_ms` STRUCTURE+MID mismatches:
+>     ~$2.5 WG within-cat → ~$10 WG full-grid via v56 chain.
+>   - If H1 closes 50%: ~$5 WG within-cat → ~$20 WG full-grid.
+>   - **Best plausible (75% close): ~$30 WG full-grid.**
+>   - **NULL scenario:** features rank #50+ in importance + leaf
+>     growth <1K. Confirms saturation hypothesis. Pivot to depth=36
+>     ml=1 retry (v46b_dt) or gradient boosting.
 >
->   **Phase 1a (S71 first ~1.5 hr)** — Diagnostic sweep: build `drill_v44_high_only_S71.py` mirroring S54-era diagnostic harnesses; mine v44's high_only mismatches at hand-level granularity; identify systematic structural patterns (per S54 playbook). Output: per-hand parquet + diagnostic report.
->   **Phase 1b (S71 ~1 hr)** — Hypothesis-list: from Phase 1a output, propose 4-8 candidate features targeting the largest mismatch classes. Document in `SESSION_71_V45_FEATURE_HYPOTHESES.md`.
->   **Phase 2 (S71 last ~1 hr)** — Implement 1-2 features as `*_aug_v3_features_gated.py`; smoke-test in isolation; queue full retrain for S72.
->
->   **SUCCESS CRITERIA (S71):**
->   - `drill_v44_high_only_S71.py` produced + diagnostic sweep complete.
->   - `SESSION_71_V45_FEATURE_HYPOTHESES.md` with 4-8 feature proposals.
->   - 1-2 features implemented + smoke-tested.
->   - S72 direction (full retrain) recommendation.
+>   **ACCEPTANCE for Session 72:**
+>   - v46_dt trained + graded (prefix + full).
+>   - Decision in DECISIONS_LOG.md: ship / NULL / partial.
+>   - If ship: STRATEGY_GUIDE.md Part 1 entry; production state
+>     update.
+>   - If NULL: write SESSION_72 NULL report mirroring SESSION_59;
+>     queue H2/H3 for S73 or pivot to model class.
 
-> **✅ ARTIFACTS produced in S70:**
-> 1. **`SESSION_70_V56_TRIPS_HYBRID.md`** — full Phase 1-5 report, ship narrative, per-cell breakdown.
-> 2. **`TRIPS_DECISION_MATRIX.md`** — Phase 1+2 matrix doc (analog of TWO_PAIR_DECISION_MATRIX.md).
-> 3. **`analysis/scripts/strategy_v56_trips_hybrid.py`** — **v56 PRODUCTION** (blanket trips → v44 hybrid).
-> 4. **`analysis/scripts/drill_trips_v44_S70.py`** — Phase 1 sweep (mirror of drill_two_pair_v44_S69.py).
-> 5. **`analysis/scripts/sweep_v55_on_trips_S70.py`** — Phase 2 sweep (mirror of sweep_v54_on_two_pair_S69.py).
-> 6. **`analysis/scripts/test_trips_catalog_candidates_S70.py`** — bundled candidate harness + 3-candidate verdict sweep.
-> 7. **`analysis/scripts/validate_v56_routing_S70.py`** — pre-grader validation reusing existing parquet (predicted +$44.61 to 0.87% match).
-> 8. **`analysis/scripts/grade_v56_trips_hybrid.py`** — head-to-head grader.
-> 9. **`data/session70/`** — all phase logs + JSON summaries.
-> 10. **`DECISIONS_LOG.md`** — Decision 105.
-> 11. **`CURRENT_PHASE.md`** — rewritten for S71 (this file).
-> 12. **`STRATEGY_GUIDE.md`** — Part 1 Session 70 append + front-matter update.
+> **✅ ARTIFACTS produced in S71:**
+> 1. **`analysis/scripts/drill_v44_high_only_S71.py`** — Phase 1a
+>    diagnostic sweep script (introduces setting-rank lens beyond S58/
+>    S59's class-label lens).
+> 2. **`data/drill_v44_high_only_S71_per_hand.parquet`** (16.2 MB) —
+>    per-hand setting-rank, EV-gap structure, structural cell. 1.226M
+>    rows.
+> 3. **`data/drill_v44_high_only_S71_summary.json`** (248 KB) —
+>    aggregated stats keyed by (max_rank, cell, bucket).
+> 4. **`data/session71/drill_v44_high_only_S71.log`** — full console
+>    output of HO_S71_1..4 tables.
+> 5. **`SESSION_71_V45_FEATURE_HYPOTHESES.md`** — Phase 1b deliverable
+>    with 5 hypotheses (H1-H5), implementation plan, S72 retrain queue,
+>    NULL/ship/partial decision tree.
+> 6. **`analysis/scripts/high_only_aug_v6_features_gated.py`** —
+>    Phase 2 implementation. 2 features: `topMax_SS_ms_n_configs_g`
+>    (0..15) + `topMax_SS_ms_max_mid_high_g` (0..14). Smoke tests
+>    pass on 5 hand-crafted cases including gating (pair AA→0), rest
+>    2+2+2 (SS+ms structurally impossible→0), rest 3+1+1+1 (→0),
+>    rest 2+2+1+1 (→2 configs, max_mid_high=13).
+> 7. **`analysis/scripts/persist_high_only_aug_v6_gated.py`** —
+>    persistence harness (parallel to persist_high_only_aug_v3-v5).
+>    Queued for S72.
+> 8. **`DECISIONS_LOG.md`** — Decision 106 appended.
+> 9. **`CURRENT_PHASE.md`** — rewritten for S72 (this file).
+> 10. **`STRATEGY_GUIDE.md`** — Parts 2-6 updated front-matter date;
+>    Part 1 SKIPPED per protocol (no strategy of record changed this
+>    session).
 
-> **📓 METHODOLOGY (Session 71+):**
-> - **The Path-B hybrid arc generalizes to small categories.** S68 (pair +$382) → S69 (two_pair +$634) → S70 (trips +$45). Cumulative $1,061/1000h. Trips's smaller absolute ship reflects smaller category share (5.5% of grid) AND smaller within-cat v55→v44 gap ($44 WG vs $634 for two_pair), not diminishing methodology returns.
-> - **Methodology arcs compress to ~1 session per category once templates are in place.** S68 took 1 session (after pair-matrix S66+S67); S69 took 1 session (reusing S66+S68 templates); S70 took 1 session (reusing S66+S68+S69 templates). The structural-cell taxonomy and pre-grader validation harness now apply universally.
-> - **Catalog candidates can be even MORE dominated than S69's pattern.** S69 found 3/5 cleared T2 vs baseline but all lose vs v44. S70 found 0/4 cleared even T1 vs baseline. The catalog-vs-hybrid dominance gap WIDENS as v44 gets more selective in smaller categories.
-> - **Three-gate hybrid chain is the project's cleanest architecture.** pair-PBOT (v54) + two_pair (v55) + trips (v56) are structurally disjoint at the rank-count signature level. Zero conflict; surgical category routing. ~40% of canonical grid now routes through v44_dt.
-> - **The architectural-routing headroom is largely exhausted.** Remaining catalog targets (trips_pair, three_pair) are small absolute ships (<$10 WG each predicted). **S71+ MUST pivot to ML retrain (v45_dt+) for meaningful lift.** Any v44 improvement now compounds 4× via the hybrid chain.
-> - **"Speed is not necessary — clarity and perfection is."** S70 took ~3 hours including all phases (matrix, candidates, hybrid, two graders, full documentation). Trips's smaller scope let the methodology compress to a fast, clean ship.
+> **📓 METHODOLOGY (Session 72+):**
+> - **The setting-rank lens generalizes.** S71's NOISE/MID/STRUCTURE
+>   partition can be applied to ANY category. After v46_dt grades on
+>   high_only, applying the same lens to pair / two_pair / trips
+>   residuals will identify their STRUCTURE concentrations and
+>   non-derivable feature gaps. The lens is a permanent addition to
+>   the diagnostic toolkit.
+> - **The "non-derivable feature" rule** from S71 design:
+>     1. Cannot be a linear combination of v44 features.
+>     2. Cannot be a bounded extension of v44 features.
+>     3. Must enumerate a structural axis with no representative in
+>        v44's 20 ho_v* / pair_aug_v* / trips_aug_v* / etc. feature
+>        family.
+>   ho_v6 H1 satisfies all 3 (SS-axis is genuinely absent from v44).
+>   This rule is the S59 NULL postmortem operationalized.
+> - **Hyperparameter regime change is itself a hypothesis.** v44 +
+>   v45 both used depth=36 ml=1 (saturation). v46_dt switches to
+>   depth=32 ml=3 (project default). If v46 ships at depth=32 ml=3
+>   but a hypothetical v46b at depth=36 ml=1 NULLs, the saturation
+>   hypothesis is CONFIRMED and depth=32 ml=3 should become the new
+>   default. If both ship, the regime change is harmless. If neither
+>   ships, H1 itself was wrong.
+> - **The v6 → v46_dt name pairing** is the project's standard
+>   feature-batch → model-version naming. ho_v1/ho_v2/.../ho_v5 each
+>   paired with a v* model; ho_v6 → v46_dt continues the chain.
+>   v45_dt is preserved as historical NULL record.
+> - **"Speed is not necessary — clarity and perfection is."**
+>   S71's diagnostic took the time to introduce a new lens (setting-
+>   rank) rather than re-running S58/S59's class-label lens. The new
+>   lens revealed information the old one couldn't — STRUCTURE
+>   isolation by rank. The lens was the deliverable; v46_dt is the
+>   test of whether new features within that lens can ship.
 
-> Updated: 2026-05-12 (Session 70 end — v56 ships +$45/1000h; trips catalog CLOSED; S71+ pivots to ML retrain v45_dt+)
+> Updated: 2026-05-12 (Session 71 end — drill + hypothesis doc + ho_v6 features + smoke tests; v46_dt retrain queued for S72)
 
 ---
 
-## Headline state at end of Session 70
+## Headline state at end of Session 71
 
-**Strategies of record:**
+**Strategies of record (UNCHANGED from S70):**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
-| **v56_trips_hybrid** | **PRODUCTION rule chain** (blanket trips → v44_dt; else → v55). **$1,429 full / $794 prefix** (grader-confirmed). | `analysis/scripts/strategy_v56_trips_hybrid.py` |
-| **v44_dt** | **PRODUCTION ML champion** (UNCHANGED; now invoked inside v56 for trips, inside v55 for two_pair, inside v54 for pair PBOT cells). $1,081 full / $686 prefix. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
+| **v56_trips_hybrid** | PRODUCTION rule chain (blanket trips → v44_dt; else → v55). **$1,429 full / $794 prefix**. | `analysis/scripts/strategy_v56_trips_hybrid.py` |
+| **v44_dt** | PRODUCTION ML champion (UNCHANGED; invoked inside v54+v55+v56 across ~40% of canonical grid). $1,081 full / $686 prefix. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
 
-Two-track divergence: $393 → **$348** (closed 11% in S70). Cumulative S68+S69+S70: $1,061/1000h (75% of original $1,409).
+Two-track divergence: $348/1000h (no change in S71 — pure diagnostic
++ feature engineering session, no production strategy shipped).
 
-**Per-category residuals (v56 framing):**
+**S71 diagnostic findings on v44_dt's high_only residual:**
 
-| Category | n_hands | v56 within-cat | v56 WG | v44 WG | Status |
-|---|---:|---:|---:|---:|---|
-| high_only | 1,226,940 | $3,014 | $755 | $755 | ML-only, CLOSED S65 |
-| pair | 2,800,512 | $991 | $462 | $511 | Hybrid v54-PBOT-v44 + v54-PMID-v53. CLOSED S68. |
-| two_pair | 1,338,480 | $363 | $80.82 | $80.82 | Hybrid v55-blanket-v44. CLOSED S69 (= v44). |
-| **trips** | 328,185 | **$1,194** | **$65.18** | **$65.18** | **Hybrid v56-blanket-v44. CLOSED S70 (= v44).** |
-| trips_pair | 171,600 | $5,417 | $155 | $5 | Already collapsed S55a (small remaining target) |
-| three_pair | 114,400 | $1,696 | $32 | $35 | Small target |
-| quads + composite | 29,042 | (rounding) | <$5 | <$5 | Negligible |
+| Bucket | Definition | hands | % of hands | $ WG | % of WG |
+|---|---|---:|---:|---:|---:|
+| MATCH | rank 1 (==oracle) | 513,469 | 41.8% | $0.00 | 0.0% |
+| NOISE | rank 2-3 | 308,313 | 25.1% | $79.54 | 20.9% |
+| MID | rank 4-9 | 267,161 | 21.8% | $154.26 | 40.4% |
+| STRUCTURE | rank ≥10 | 137,997 | 11.2% | **$147.59** | **38.7%** |
+| **TOTAL** | | **1,226,940** | | **$381.39** | |
 
-**Project ship records (after S70):**
+**Top STRUCTURE concentration cells (83.6% of STR leak):**
 
-| Ship | Lift WG | Session | Type |
-|---|---:|---|---|
-| v55 two_pair hybrid | +$634 | S69 | Hybrid chain (largest single ship) |
-| v54 pair hybrid | +$382 | S68 | Hybrid chain |
-| v39_dt ML retrain | +$237 | S54 | ML champion |
-| Rule 14 (A-high HIMID) | +$131 | S50 | Rule chain |
-| Rule 6 (Q4) | +$113 | S37 | Rule chain |
-| Rule 15 (K-high HIMID) | +$51 | S51 | Rule chain |
-| **v56 trips hybrid** | **+$45** | **S70** | **Hybrid chain (closes trips category)** |
-| Rule 12 (J-low two_pair DS) | +$35 | S47 | Rule chain |
-| v55 hybrid (prefix) | +$516 | S69 | Hybrid chain (prefix) |
-| v54 hybrid (prefix) | +$179 | S68 | Hybrid chain (prefix) |
+1. K × DS_NO_JOINT: $36.63 WG (16.2% STR rate)
+2. A × DS_NO_JOINT: $29.41 WG (6.0% STR rate)
+3. Q × DS_NO_JOINT: $22.42 WG (22.2% STR rate)
+4. J × DS_NO_JOINT: $10.23 WG (25.5% STR rate)
+5. K × DS_NO_MAXTOP: $8.43 WG (20.1% STR rate)
+6. A × DS_NO_MAXTOP: $6.87 WG (8.2% STR rate)
+7. K × MS_ONLY: $4.76 WG (18.1% STR rate)
+8. Q × DS_NO_MAXTOP: $4.68 WG (23.6% STR rate)
+
+**Per-max-rank rollup** (highlighting K/Q/J/T's STRUCTURE-dominance):
+
+| max | hands | MATCH | NOISE $ | MID $ | STR $ | TOTAL $ | STR fraction |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| A | 660,660 | 44.9% | $50.30 | $88.70 | $43.51 | $182.51 | 23.8% |
+| K | 330,330 | 39.3% | $18.58 | $39.75 | **$52.61** | $110.94 | **47.4%** |
+| Q | 150,150 | 37.1% | $7.01 | $16.74 | **$31.49** | $55.24 | **57.0%** |
+| J | 60,060 | 35.4% | $2.55 | $6.41 | **$14.47** | $23.43 | **61.8%** |
+| T | 20,020 | 38.1% | $0.88 | $2.08 | $4.31 | $7.27 | 59.3% |
+| 9 | 5,005 | 42.9% | $0.20 | $0.51 | $1.02 | $1.74 | 58.6% |
+| 8 | 715 | 40.7% | $0.03 | $0.07 | $0.18 | $0.28 | 64.3% |
+
+**Dominant STRUCTURE-bucket mismatch family (`SS_mu → SS_ms`):**
+
+| Cell × bucket | Top mismatch class | n hands | $ WG |
+|---|---|---:|---:|
+| A × DS_NO_JOINT × STR | `tA_SS_mu → tA_SS_ms` | 4,418 | $5.47 |
+| K × DS_NO_JOINT × STR | `tK_SS_mu → tK_SS_ms` | 3,034 | $3.40 |
+| Q × DS_NO_JOINT × STR | `tQ_SS_mu → tQ_SS_ms` | 1,026 | $1.12 |
+| J × DS_NO_JOINT × STR | `tJ_SS_mu → tJ_SS_ms` | 144 | $0.15 |
+
+Same top rank, same SS bot suit profile — only difference is whether
+the mid pair shares a suit. **v44 has no SS+ms enumeration features
+of any kind** (zero ho_v* features mention SS). H1's 2 features
+(`topMax_SS_ms_n_configs_g`, `topMax_SS_ms_max_mid_high_g`) fill this
+gap.
 
 ---
 
-## Resume Prompt (Session 71 — ML retrain pivot)
+## Resume Prompt (Session 72 — train v46_dt)
 
 ```
-Resume Session 71 of the Taiwanese Poker Solver project at
+Resume Session 72 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context (in this order):
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of S70 — ML retrain pivot mandated)
-- SESSION_70_V56_TRIPS_HYBRID.md (v56 trips hybrid ship report)
-- TRIPS_DECISION_MATRIX.md (S70 — methodology template, now applied 3 times)
-- DECISIONS_LOG.md (latest: Decision 105 — v56 ships +$45 hybrid chain;
-  trips closed)
-- analysis/scripts/strategy_v56_trips_hybrid.py (current production)
-- SESSION_54_V39_DT_REPORT.md (last ML retrain playbook — read carefully)
+- CURRENT_PHASE.md (rewritten end of S71 — v46_dt retrain queued)
+- SESSION_71_V45_FEATURE_HYPOTHESES.md (5 hypotheses, H1 selected)
+- DECISIONS_LOG.md (latest: Decision 106 — S71 diagnostic + ho_v6
+  feature plan)
+- analysis/scripts/high_only_aug_v6_features_gated.py (ho_v6 H1
+  features, smoke-tested)
+- analysis/scripts/persist_high_only_aug_v6_gated.py (ready to run)
+- analysis/scripts/train_v45_dt.py (template for train_v46_dt.py;
+  same shape, swap ho_v5 → ho_v6, switch hyperparams to depth=32 ml=3)
+- SESSION_54_V39_DT_REPORT.md (rank-valued feature shipping playbook)
+- SESSION_59_V45_DT_REPORT.md (NULL retrospective — what to avoid)
 
-State (end of Session 70):
-- v56 ships hybrid chain at +$45/1000h full grid grader-confirmed.
-  Third consecutive Path-B hybrid ship; closes trips category.
-- Cumulative S68+S69+S70 = $1,061/1000h closed (75% of pre-S68
-  divergence).
-- FOUR largest residual categories now ALL closed at v44 limits:
-  high_only (S65), pair (S68), two_pair (S69), trips (S70).
-- Remaining residuals: trips_pair $155, three_pair $32 (small),
-  composite + quads negligible.
-- Two-track divergence v56 vs v44_dt: $348/1000h.
-- **Architectural-routing headroom is largely exhausted.**
+State (end of Session 71):
+- Diagnostic complete (Phase 1a): setting-rank lens partitions
+  high_only $381 WG into MATCH 41.8% / NOISE 20.9% / MID 40.4% /
+  STRUCTURE 38.7%. Top STRUCTURE cells: K/A/Q/J × DS_NO_JOINT
+  account for $98.69 WG = 66.9% of all STRUCTURE leak.
+- Hypothesis doc complete (Phase 1b): 5 hypotheses; H1 (SS+ms route
+  quality) selected for S71 implementation.
+- Features implemented + smoke-tested (Phase 2):
+  high_only_aug_v6_features_gated.py with 2 features
+  (`topMax_SS_ms_n_configs_g`, `topMax_SS_ms_max_mid_high_g`). Direct
+  SS-axis counterpart to ho_v3's DS-axis pair (which shipped +$79
+  in S57). 5 smoke tests pass.
+- Persist script ready: persist_high_only_aug_v6_gated.py.
 
-USER DIRECTIVE (S59-S70 re-confirmed):
+USER DIRECTIVE (S59-S71 re-confirmed):
 - "Speed is not necessary — clarity and perfection is."
 
-DIRECTION FOR SESSION 71 — ML retrain (v45_dt+) PIVOT:
+DIRECTION FOR SESSION 72 — train + grade v46_dt:
 
-  PATH A (recommended) — v45_dt high_only retrain (diagnostic-driven):
+  PHASE 1 (S72 ~5 min) — Persist features:
+  - Run `python3 analysis/scripts/persist_high_only_aug_v6_gated.py`.
+  - Verify `data/feature_table_high_only_aug_v6_gated.parquet`
+    written (~6 MB).
+  - Distribution sanity: most hands should have 0 SS+ms configs;
+    moderate fraction (~20-40%) should have ≥1 config; max
+    n_configs ~3-5 in practice.
 
-    PHASE 1a (S71 ~1.5 hr) — Diagnostic sweep:
-    - Build `analysis/scripts/drill_v44_high_only_S71.py` mirroring
-      S54-era diagnostic harnesses. Mine v44's high_only mismatches at
-      hand-level granularity; identify systematic structural patterns
-      (per S54 playbook).
-    - High_only is currently v44's largest single-category residual:
-      $3,014/1000h within-cat = $755 WG (12.6% of grid).
-    - Output: per-hand parquet + diagnostic report.
+  PHASE 2 (S72 ~15 min) — Train v46_dt at depth=32 ml=3:
+  - Build `analysis/scripts/train_v46_dt.py` mirroring train_v45_dt.py
+    structure. FEATURE_COLUMNS = V44_COLUMNS + HO_V6_COLUMNS (107+2
+    = 109). Default args: --max-depth 32 --min-samples-leaf 3
+    (project default per CURRENT_PHASE.md S70 memo; v44/v45 used
+    depth=36 ml=1, so this is a deliberate regime change to test
+    whether saturation was the binding constraint).
+  - Run training. Save to `data/v46_dt_model.npz`.
+  - Inspect feature importance: ho_v6 features inside top-50 → ship
+    signal; rank #50+ → ambiguous; rank #100+ → NULL signal.
+  - Inspect leaf count: ≥10K growth above v44's 2.25M → ship signal;
+    <1K growth → NULL signal (like v45's +9).
 
-    PHASE 1b (S71 ~1 hr) — Hypothesis-list:
-    - From Phase 1a output, propose 4-8 candidate features targeting
-      the largest mismatch classes.
-    - Document in `SESSION_71_V45_FEATURE_HYPOTHESES.md`.
+  PHASE 3 (S72 ~10 min) — Build inference + grader:
+  - `analysis/scripts/strategy_v46_dt.py` mirroring strategy_v45_dt.py
+    structure; load v46_dt_model.npz; expose strategy_v46_dt(hand).
+  - `analysis/scripts/grade_v46_dt.py` mirroring grade_v45_dt.py.
 
-    PHASE 2 (S71 last ~1 hr) — Implement + smoke-test:
-    - Implement 1-2 features as `ho_aug_v3_features_gated.py` (next
-      version in the gated-feature family).
-    - Smoke-test against handful of hands; queue full retrain for S72.
+  PHASE 4 (S72 ~20 min) — Grade prefix + full:
+  - Prefix grader (500K hands, n=1000) — fast sanity.
+  - Full grader (6M hands, n=200) — definitive within-cat
+    high_only WG delta vs v44.
+  - Compute per-category byte-identity check (other 7 categories
+    should be byte-identical to v44 if gating is surgical, mirroring
+    the ho_v3-v5 pattern).
 
-  PATH B (alternative) — three_pair / trips_pair audit:
-    - Apply S69+S70 methodology to remaining small categories.
-    - Expected ship: <$10 WG full-grid each.
-    - Quick (~1 session) but tiny lift; NOT recommended given Path A
-      headroom is much larger.
+  PHASE 5 (S72 last ~30 min) — Decision + hybrid extension:
+  - If v46_dt ships ≥$10 WG full-grid: build
+    `analysis/scripts/strategy_v57_v46_hybrid.py` mirroring v56 with
+    v46_dt as the ML champion inside trips/two_pair/pair-PBOT
+    routing. Pre-grader harness predicts v57 lift from v46's
+    high_only improvement × 4 (hybrid chain compounding).
+  - If v46_dt NULL-grades: write SESSION_72 NULL report mirroring
+    SESSION_59. Queue depth=36 ml=1 retry (v46b_dt) or pivot to H2
+    (route-tradeoff comparator) or H4 (MS_ONLY discriminator).
 
-ACCEPTANCE for Session 71:
-- drill_v44_high_only_S71.py + diagnostic sweep complete.
-- SESSION_71_V45_FEATURE_HYPOTHESES.md with 4-8 feature proposals.
-- 1-2 features implemented + smoke-tested.
-- S72 direction (full retrain) recommendation.
+  ACCEPTANCE for Session 72:
+  - v46_dt trained + graded.
+  - Decision 107 in DECISIONS_LOG.md: ship / NULL / partial.
+  - If ship: STRATEGY_GUIDE.md Part 1 entry + v57 hybrid build.
+  - If NULL: SESSION_72_V46_DT_NULL_REPORT.md mirroring S59.
 
 REMINDERS:
 - Use python3, not python.
 - cargo at ~/.cargo/bin/cargo.
 - Session-end protocol: commit + push to origin/main (pre-authorized).
-- The S54 diagnostic playbook is the template for Phase 1a — re-read
-  SESSION_54_V39_DT_REPORT.md before building drill scripts.
-- ML retrain hyperparams default: depth=32 ml=3 (verified S36+S58).
-- Re-test depth=34 ml=2 when feature count grows ≥10 above last sweep.
+- Hyperparam choice: depth=32 ml=3 (NOT v44/v45's depth=36 ml=1).
+  This is deliberate — testing whether the saturation hypothesis was
+  the binding constraint.
+- Tripwire prediction (S59 lesson): low feature importance + zero
+  leaf growth = strong NULL signal. Check both BEFORE running grader
+  to avoid wasted compute.
 - "Speed is not necessary — clarity and perfection is."
 ```
 

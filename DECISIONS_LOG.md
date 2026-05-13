@@ -5901,3 +5901,72 @@ The largest single-category v44 residual is **high_only at $3,014/1000h within-c
 - Two-track divergence: $393 → **$348** (closed 11% in S70). Cumulative S68+S69+S70: $1,061 (75% of original $1,409).
 - **Total project rule count: 18** (UNCHANGED — v56 is a routing wrapper, not a new rule).
 - **Trips catalog CLOSED. Two_pair catalog CLOSED. Pair catalog CLOSED. High_only catalog CLOSED.** S71+ pivots to ML retrain (v45_dt+) — architectural-routing headroom is largely exhausted.
+
+## Decision 106 — Session 71 high_only setting-rank diagnostic + ho_v6 H1 feature plan; v46_dt retrain queued for S72
+**Date:** 2026-05-12
+**Question:** After S59 v45_dt NULL ($0/1000h lift at depth=36 ml=1 with 4 ho_v5 features), how should the ML retrain be retried? Specifically: (a) is the S59 "DT saturation" hypothesis the WHOLE story, or is some portion of v44 high_only residual structurally addressable; (b) what diagnostic lens best identifies new non-derivable feature targets; (c) which feature batch and hyperparameter regime should v46_dt use?
+**Options:**
+  - (a) Re-run S58/S59 class-label diagnostic; design next ho_v6 features around the same K/Q × DS_NO_JOINT cell — risks repeating S59 NULL.
+  - (b) Introduce a NEW diagnostic lens (setting-rank partition: NOISE/MID/STRUCTURE) to isolate features-addressable leak from irreducible oracle-noise leak. Then design ho_v6 features targeting the structural axis with cleanest non-derivability story.
+  - (c) Skip diagnostic, retrain v45_dt at depth=32 ml=3 with the same ho_v5 features but different hyperparams — tests saturation hypothesis but does not address feature design.
+**Choice:** (b) — new setting-rank diagnostic, then v46_dt with new SS-axis features at depth=32 ml=3 (project default; deliberate regime change from v44/v45 depth=36 ml=1).
+**Why:**
+  1. **S59 NULL postmortem was incomplete.** The saturation hypothesis explained WHY v5 features did not ship, but did not prove that NO new features can ship. S71 setting-rank diagnostic separates two failure modes: NOISE-bucket misses (rank 2-3, irreducible vs N=200 oracle noise) and STRUCTURE-bucket misses (rank >=10, structurally wrong picks). Only the second is feature-engineering-addressable.
+  2. **The diagnostic found $147.59 WG of STRUCTURE-bucket leak** (38.7% of high_only $381.39 WG residual; 11.2% of hands). This is large enough to ship. EV-gap structure (gap_2nd ~ 0.11-0.14 in STRUCTURE bucket) confirms the optima are sharp, not flat-plateau noise. STRUCTURE leak is concentrated at K/Q/J/T max-ranks (47-62% of their total leak is STRUCTURE), while A is dominated by NOISE+MID (24% STR). This refines S58 "K/Q × DS_NO_JOINT" target.
+  3. **The dominant STRUCTURE mismatch family is SS_mu → SS_ms** ($10+ WG across K/Q/J/A × DS_NO_JOINT × STRUCTURE-bucket): same top, same SS bot, just suiting the mid. v44 107 features have ZERO SS+ms enumeration — clean non-derivability gap (no ho_v* feature mentions SS; per-setting bot_suit_profile alone cannot aggregate at depth=36 ml=1 saturation).
+  4. **H1 (2 features: ho_v6_topMax_SS_ms_n_configs_g + ho_v6_topMax_SS_ms_max_mid_high_g) is the direct SS-axis counterpart to ho_v3 DS-axis pair** (which shipped +$79/1000h in S57). Same enumeration shape (C(6,4)=15 candidate bots, fix top=max-rank, check suit profile + mid suiting). The fact that the DS variant shipped while v44 has no SS variant predicts H1 will ship structurally similar lift.
+  5. **Hyperparameter regime change (depth=32 ml=3 vs v44/v45 depth=36 ml=1) is itself an experiment.** Project default per S36/S58 verification is depth=32 ml=3. v44 and v45 were both at depth=36 ml=1 — the saturation regime. v46 at depth=32 ml=3 with new features tests whether the saturation hypothesis was the binding constraint. If v46 ships AND a hypothetical v46b at depth=36 ml=1 also ships, the regime change is harmless and the feature was the issue. If v46 ships but v46b NULLs, saturation was binding. If both NULL, H1 was wrong.
+  6. **Hypothesis cascade prepared.** S71 ships only H1; H2 (route-tradeoff comparator), H3 (MS_ONLY discriminator), H4 (per-suit broadway in non-max routes), H5 (drop-max signal) queued for S73+ if v46_dt ships big and creates appetite for more, or if v46 NULLs and we need a different angle.
+  7. **The setting-rank lens is reusable.** Once v46_dt grades, applying the same NOISE/MID/STRUCTURE partition to pair, two_pair, trips residuals will identify their structural concentrations. The lens is a permanent addition to the diagnostic toolkit.
+
+### S71 deliverables (Phase 1a + 1b + 2)
+
+**Phase 1a — Diagnostic sweep (drill_v44_high_only_S71.py):**
+- Iterates all 1,226,940 high_only hands; computes v44 rank in oracle sorted-EV row; partitions into MATCH (rank 1) / NOISE (rank 2-3) / MID (rank 4-9) / STRUCTURE (rank >=10) buckets.
+- Outputs: data/drill_v44_high_only_S71_per_hand.parquet (16.2 MB), data/drill_v44_high_only_S71_summary.json (248 KB), data/session71/drill_v44_high_only_S71.log (24 KB).
+- Sanity: 41.8% MATCH rate matches S59 HO11 within rounding; total $381.39 WG matches S59 $381.41 to 4 decimals.
+
+**Phase 1b — Hypothesis doc (SESSION_71_V45_FEATURE_HYPOTHESES.md):**
+- 5 hypotheses (H1-H5) with structural axis, target STRUCTURE-bucket population, non-derivability rationale, expected DT leaf-growth signature.
+- S71 implementation selection: H1 only (cleanest non-derivability story, largest STR target).
+- S72 retrain queue documented (depth=32 ml=3, 109 features).
+- NULL/ship/partial decision tree for S72+.
+
+**Phase 2 — Feature implementation (high_only_aug_v6_features_gated.py):**
+- 2 features: topMax_SS_ms_n_configs_g (0..15), topMax_SS_ms_max_mid_high_g (0..14).
+- Direct SS-axis counterpart to ho_v3 DS-axis pair.
+- 5 smoke tests pass (gating, rest 2+2+2 → 0, rest 3+1+1+1 → 0, rest 2+2+1+1 → varied configs).
+- persist_high_only_aug_v6_gated.py ready for S72 invocation.
+
+### Methodology lessons (Session 71)
+
+1. **Setting-rank diagnostic complements class-label diagnostic.** S58/S59 mined mismatches by class (SS_mu, DS_ms, etc.); S71 mines them by rank-in-sorted-EV. Both lenses are useful: the class lens identifies WHAT v44 picks; the rank lens identifies HOW WRONG v44 is. STRUCTURE bucket (rank >=10) is the feature-engineering target.
+2. **The "non-derivable feature" rule is the S59 NULL postmortem operationalized.** Three checks: (1) not a linear combination of v44 features, (2) not a bounded extension, (3) enumerates a structural axis with no representative in v44 feature taxonomy. H1 passes all 3.
+3. **Hyperparameter regime change is a separate experiment from feature design.** Switching v44/v45 depth=36 ml=1 → v46 depth=32 ml=3 is a hypothesis test of the saturation claim. Should be evaluated as such after v46 grades.
+4. **The SS-axis is a structural blind spot in v44.** Across 20 ho_v* features (v1-v5), zero feature names mention SS. Every existing high_only feature describes DS achievability, 4-flush alt, or suit-distribution counts. The SS+ms route — which oracle picks at the rate of ~10% of high_only hands per S58 matrix — has been invisible to the DT.
+5. **The diagnostic is reusable.** S71 drill code is generic in cat=0 → high_only, but the rank-partition logic generalizes.
+
+### Files (Session 71)
+
+**New code:**
+- analysis/scripts/drill_v44_high_only_S71.py — Phase 1a diagnostic sweep
+- analysis/scripts/high_only_aug_v6_features_gated.py — Phase 2 H1 features
+- analysis/scripts/persist_high_only_aug_v6_gated.py — persistence harness (queued for S72)
+
+**Data (gitignored, local-only):**
+- data/drill_v44_high_only_S71_per_hand.parquet (16.2 MB)
+- data/drill_v44_high_only_S71_summary.json (248 KB)
+- data/session71/drill_v44_high_only_S71.log (24 KB)
+
+**Documentation:**
+- SESSION_71_V45_FEATURE_HYPOTHESES.md — Phase 1b deliverable (5 hypotheses)
+- CURRENT_PHASE.md — rewritten for S72
+- DECISIONS_LOG.md — Decision 106 (this section)
+- STRATEGY_GUIDE.md — Parts 2-6 front-matter date refresh (Part 1 SKIPPED; no strategy change)
+
+**Production state at end of S71:** UNCHANGED from S70.
+- Rule chain: **v56_trips_hybrid** ($1,429 full / $794 prefix). Grader-confirmed.
+- ML champion: **v44_dt** (UNCHANGED). $1,081 full / $686 prefix.
+- Two-track divergence: $348 (no change).
+- **Total project rule count: 18** (UNCHANGED).
+- **Diagnostic established + feature batch ho_v6 ready for S72 retrain.**
