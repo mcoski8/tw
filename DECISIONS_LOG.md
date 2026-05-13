@@ -6051,3 +6051,84 @@ The largest single-category v44 residual is **high_only at $3,014/1000h within-c
 - Two-track divergence: $348 (no change).
 - **Total project rule count: 18** (UNCHANGED).
 - **v46_dt NULL recorded; v46b_dt regime-isolation retry queued for S73.**
+
+## Decision 108 — Session 73 v46b_dt PARTIAL POSITIVE / NULL ship at depth=36 ml=1; ho_v6 H1 features lift v44 by $5/1000h full (below +$10 ship threshold); regime-confound theory confirmed; pivot to H2 or gradient boosting in S74
+
+**Date:** 2026-05-13
+
+**Question:** Does the H1 SS+ms feature pair (ho_v6) ship as the v46b ML champion at v44's saturating regime (depth=36 ml=1) — isolating the feature effect from S72's depth=32 ml=3 regime change — and confirming or refuting the S72 "regime-confound dominates" hypothesis?
+
+**Options:**
+  (a) Ship v46b_dt as new ML champion if full Δ ≥ +$10/1000h (per S72 resume-prompt threshold). Build v57_v46b_hybrid (v56 with v44 → v46b in trips/two_pair/pair-PBOT routing).
+  (b) PARTIAL POSITIVE / NULL ship: H1 features productive within-cat but full-grid net below ship bar. Record regime-confound theory CONFIRMED; pivot to H2 (route-tradeoff comparator) or gradient boosting in S74.
+  (c) Ship anyway as strictly-better model (v46b ≥ v44 on every category).
+
+**Choice:** (b) — PARTIAL POSITIVE / NULL ship. Full-grid lift +$5/1000h is exactly on the NULL boundary per the stated +$10 ship / +$5 NULL threshold; user (asked) confirmed adherence to the threshold.
+
+**Why:**
+  1. **Regime-confound theory CONFIRMED — the dominant result of S73.** S72 v46_dt at depth=32 ml=3 was −$256/1000h full. S73 v46b_dt at depth=36 ml=1 (same 109 features, only hyperparameters changed) is +$5/1000h full. The $261/1000h swing is **entirely attributable to the hyperparameter regime change**. This is the cleanest empirical demonstration in the project of the S72 methodology #2 principle: "Regime change is a separate experiment from feature design."
+  2. **Surgical gating PERFECT at v44's regime.** v46b is byte-identical to v44 on 7 of 8 categories on full grid (pair, two_pair, trips, trips_pair, three_pair, quads, composite). The entire effect of +2 ho_v6 features and +12,354 leaves is concentrated in high_only, the gated target. v46 had broken this guarantee (regressed every category by $26–$572/1000h); v46b restores it. Confirms S72 methodology #3 verbatim: "byte-identity guarantee requires same hyperparameters AND same base feature set."
+  3. **H1 features PARTIALLY productive on target category.** Within-cat high_only: v44 $1,868/1000h → v46b $1,844/1000h, **−$24/1000h better** (pct_opt 41.8% → 42.5%, +0.7pp). The ho_v6 SS+ms features ARE addressing real STRUCTURE-bucket leak on the on-target category. Per the S71 diagnostic prediction of $147.59 WG STRUCTURE leak, v46b captures ~16% of it ($24/$147.59). Diagnostic-predicted WG appears to be ~10-20% recoverable per single-pair feature retrain — a calibration data point for future feature-design hypothesis cascades.
+  4. **Tripwire signals reconciled.** Tripwire #1 (feature importance): #75 (0.05%) and #105 (0.01%) — NULL signal, both deep in tail (vs S71 top-50 ship threshold). Tripwire #2 (leaf growth): +12,354 leaves vs v44 — SHIP signal at the ≥10K threshold. The mixed verdict is now empirically resolved: feature importance is the more reliable tripwire at saturating regime. Features ARE used (12K extra splits) but at LOW WEIGHT (deep tail), yielding small WG even when the tree absorbs them.
+  5. **+$5 strictly-better but below +$10 ship bar.** v46b is ≥ v44 on every category (7 tied, 1 better). The user (asked) confirmed adherence to the +$10 threshold: this codifies the project's noise margin and inference-cost ROI bar. The +$5 lift is real but the inference cost of 2 extra features + 12K extra leaves is not zero; the no-risk strictly-better ship case is rejected in favor of methodological consistency.
+
+### S73 deliverables
+
+**Phase 1 — v46b_dt training (DONE):**
+- `analysis/scripts/train_v46_dt.py --max-depth 36 --min-samples-leaf 1 --output data/v46b_dt_model.npz`.
+- Fit time 610.0s; 109 features; 2,260,527 leaves at depth=36.
+- ho_v6 features at #75 (0.05%) and #105 (0.01%) importance.
+- Tripwire mixed: leaves SHIP (+12K), importance NULL (#75/#105).
+
+**Phase 2 — strategy + grader scaffolding (DONE):**
+- `analysis/scripts/strategy_v46b_dt.py` — inference; MODEL_PATH → v46b_dt_model.npz.
+- `analysis/scripts/grade_v46b_dt.py` — head-to-head grader vs v44/v45/v46.
+
+**Phase 3 — prefix grader (DONE):**
+- Prefix grade: v44 $686 → v46b $686 ($/1000h). **BYTE-IDENTICAL** on all 7 categories (prefix grid contains 0 high_only canonical IDs). Confirms surgical-gating guarantee at v44's regime.
+
+**Phase 4 — full grader (DONE — DECISIVE):**
+- Full grade: v44 $1,081 → v46b $1,076 ($/1000h). **+$5/1000h.**
+- Per-category: high_only −$24 better, 7 others byte-identical.
+- Net contribution math: 20.4% high_only share × $24 within-cat ≈ $4.90/1000h ≈ matches observed $+5.
+
+**Phase 5 — S72 v46_dt full grader (COMPLETED retroactively in S73):**
+- `analysis/scripts/grade_v46_dt.py --grid full --baseline v44` ran fresh in S73 (was deferred from S72 due to TCC blocker).
+- Result: v46 $1,337 vs v44 $1,081 → **−$256/1000h** full.
+- Per-category: v46 worse on **every** category including on-target high_only (+$251 within-cat). Confirms S72 prefix verdict at larger magnitude. Appended to SESSION_72 NULL report under new "Phase 4 — full grader (S73 completion)" subsection.
+
+### Methodology lessons (Session 73)
+
+1. **Regime-confound is the dominant axis of NULL postmortems.** The $261/1000h v46→v46b swing from hyperparameters alone (feature set held constant) empirically validates the S72 Phase-5 doctrine. **NEVER change features AND hyperparams in the same experiment**; always isolate via single-variable retry.
+2. **Surgical gating's byte-identity guarantee is regime-locked.** Confirmed verbatim: same regime + same base features → byte-identity on gated-by-zero categories. v46 broke it (regime change); v46b restored it. Future feature work aiming for surgical ships MUST hold v44's regime constant.
+3. **Tripwire #1 (feature importance) > Tripwire #2 (leaf growth) at saturating regime.** v46b +12K leaves SHIP-signaled the grader but the +$5 lift fell below the bar — feature importance #75/#105 correctly forecast the small magnitude. Going forward, weight feature-importance tripwires more heavily; leaf-growth is confirmatory only.
+4. **Diagnostic WG is ~10-20% recoverable per single-pair feature retrain.** S71 said $147.59 WG; H1 realized $24 within-cat (16%). Calibrate ship expectations: diagnostic identifies WHERE leak is, not the recoverable magnitude. Multi-feature batches or alternate-axis features (H2 comparator) may capture the remaining $123 WG.
+5. **+$10 ship threshold codified.** Despite v46b being strictly-better with zero downside, the user (asked) confirmed adherence to the +$10 bar. This is now the canonical ship criterion: features must net ≥+$10/1000h on the full grid to ship as ML champion, regardless of within-cat magnitude. Rule 19's +$9 (S67) was a rule-chain ship, not an ML-champion ship — different bar.
+
+### Files (Session 73)
+
+**New code:**
+- `analysis/scripts/strategy_v46b_dt.py`
+- `analysis/scripts/grade_v46b_dt.py`
+
+**Data (gitignored, local-only):**
+- `data/v46b_dt_model.npz` (1,266.75 MB) — PARTIAL POSITIVE; reference only; NOT production champion.
+- `data/session72/grade_v46_full.log` — S72 v46_dt full grader (run S73).
+- `data/session73/train_v46b_dt.log`
+- `data/session73/grade_v46b_prefix.log`
+- `data/session73/grade_v46b_full.log`
+- `data/session73/grade_v46_full.log` (same content as session72/ copy).
+
+**Documentation:**
+- `SESSION_73_V46B_DT_NULL_REPORT.md`
+- `SESSION_72_V46_DT_NULL_REPORT.md` — appended "Phase 4 — full grader (S73 completion)" subsection.
+- `CURRENT_PHASE.md` — rewritten for S74.
+- `DECISIONS_LOG.md` — Decision 108 (this section).
+- `STRATEGY_GUIDE.md` — Parts 2-6 front-matter date refresh (Part 1 SKIPPED; no strategy of record changed this session).
+
+**Production state at end of S73:** UNCHANGED from S72.
+- Rule chain: **v56_trips_hybrid** ($1,429 full / $794 prefix). Grader-confirmed.
+- ML champion: **v44_dt** (UNCHANGED). $1,081 full / $686 prefix.
+- Two-track divergence: $348 (no change).
+- **Total project rule count: 18** (UNCHANGED).
+- **v46b_dt PARTIAL POSITIVE recorded; H2 (route-tradeoff comparator) or gradient boosting queued for S74.**

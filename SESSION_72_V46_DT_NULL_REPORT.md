@@ -159,6 +159,51 @@ NEW files still work (this report is one such write).
 and append the full-grid table to this report under "Phase 4 — full
 grader (S73 completion)".
 
+## Phase 4 — full grader (S73 completion)
+
+Run completed in Session 73 (2026-05-13) at
+`data/session73/grade_v46_full.log`. v44 baseline pass + v46 pass, full
+6,009,159 canonical hands, realistic 70/25/5 mixture, n=200 oracle.
+
+**Headline:**
+
+| strategy | pct_opt | $/1000h | p90 | wall |
+|---|---:|---:|---:|---:|
+| v44_dt (baseline) | 64.80% | $1,081 | 0.390 | 1114s |
+| v46_dt (+ ho_v6 SS+ms) | 55.94% | **$1,337** | 0.445 | 1069s |
+| **Δ** | **−8.86pp** | **+$256 worse** | worse | — |
+
+**Per-category full-grid breakdown:**
+
+| category | n hands | v44 $/1000h | v46 $/1000h | Δ |
+|---|---:|---:|---:|---:|
+| **high_only** (on-target) | 1,226,940 | 1,868 | 2,119 | **+$251 worse** |
+| pair | 2,800,512 | 1,097 | 1,263 | +$166 worse |
+| two_pair | 1,338,480 | 363 | 814 | **+$451 worse (2.2×)** |
+| trips | 328,185 | 1,194 | 1,360 | +$166 worse |
+| trips_pair | 171,600 | 281 | 853 | **+$572 worse (3.0×)** |
+| three_pair | 114,400 | 1,613 | 1,639 | +$26 worse |
+| quads | 14,300 | 545 | 645 | +$100 worse |
+| composite | 14,742 | 960 | 1,380 | +$420 worse |
+
+**Key finding (full-grid):** v46_dt regresses **every** category,
+including the on-target high_only. The hypothesized within-cat gain on
+high_only — the entire reason for adding ho_v6 features — does not
+materialize. The depth=32 ml=3 regime change cratered capacity *and*
+the ho_v6 features failed to lift even their target category. This is
+worse than the prefix verdict predicted ($256 vs $32 regression).
+
+The trips_pair (+$572, 3.0×) and two_pair (+$451, 2.2×) regressions
+are the largest in absolute terms — the tree at depth=32 ml=3 with
+the new ho_v6 features adopts split topologies that wreck unrelated
+categories. This is the **canonical signature of regime change
+dominating feature effect**: the new model behaves like a different
+tree entirely, not a small perturbation of v44.
+
+**Decisive: H1 SS+ms features are not productive at the depth=32 ml=3
+regime, EVEN within their gated target category.** Whether they ship
+at v44's saturating regime (depth=36 ml=1) is the S73 v46b_dt question.
+
 ## Phase 5 — Decision: NULL ship; do NOT build v57 hybrid
 
 **v46_dt does NOT replace v44_dt as ML champion.** v56_trips_hybrid

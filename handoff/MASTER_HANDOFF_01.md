@@ -2517,3 +2517,48 @@ S72 executed the S71-queued ho_v6 feature batch (H1: SS+ms route quality, 2 feat
 4. **Parallel:** run S72 full grader (was deferred) for within-cat high_only delta on the NULL record; append to SESSION_72_V46_DT_NULL_REPORT.md.
 
 Standalone session report: `SESSION_72_V46_DT_NULL_REPORT.md`.
+
+---
+
+## Session 73 — 2026-05-13 — v46b_dt PARTIAL POSITIVE / NULL ship at depth=36 ml=1; ho_v6 H1 features lift v44 by +$5/1000h full (below +$10 ship threshold); regime-confound theory CONFIRMED
+
+**Verdict: PARTIAL POSITIVE / NULL ship.** Decision 108. v44_dt remains the ML champion; v56_trips_hybrid remains the rule chain. Production state UNCHANGED.
+
+**What happened:**
+1. **v46b_dt trained at depth=36 ml=1** (v44's saturating regime; same 109 features as v46_dt). Fit 610.0s; 2,260,527 leaves (+12,354 vs v44 → SHIP-signal on leaf tripwire). Feature importance: ho_v6 at #75 (0.05%) and #105 (0.01%) → NULL-signal on importance tripwire. Mixed tripwire verdict required grader.
+2. **Prefix grader (500K canonical, n=1000):** v44 $686 → v46b $686. **BYTE-IDENTICAL** on all 7 categories (prefix grid contains 0 high_only canonical IDs). Confirms surgical-gating guarantee at v44's regime.
+3. **Full grader (6M canonical, n=200 realistic):** v44 $1,081 → v46b $1,076 = **+$5/1000h**. pct_opt 64.80% → 64.92% (+0.12pp). p90 0.390 → 0.385. **Per-category: high_only −$24 better (within-cat $1,868 → $1,844, +0.7pp); 7 of 8 other categories byte-identical to v44.** Entire effect concentrated in gated target category.
+4. **S72 v46_dt full grader completed retroactively (was TCC-blocked):** v44 $1,081 → v46 $1,337 = **−$256/1000h**. Per-category: v46 worse on EVERY category at depth=32 ml=3 including +$251 on on-target high_only. Confirms S72 prefix verdict at larger magnitude.
+5. **Regime-confound theory CONFIRMED.** v46 (depth=32 ml=3, 109 features) at −$256/1000h vs v46b (depth=36 ml=1, **same 109 features**) at +$5/1000h = **$261/1000h swing from hyperparameters alone**. Cleanest empirical demonstration in project history that regime change dominates feature effect when both vary simultaneously.
+6. **Decision 108: PARTIAL POSITIVE / NULL ship.** User (asked) confirmed adherence to +$10 ship bar. +$5 is strictly-better with zero downside but below the codified ship threshold.
+
+**Files (S73):**
+- `analysis/scripts/strategy_v46b_dt.py` — inference; MODEL_PATH → v46b_dt_model.npz.
+- `analysis/scripts/grade_v46b_dt.py` — head-to-head grader (vs v44/v45/v46).
+- `data/v46b_dt_model.npz` (1,266.75 MB) — PARTIAL POSITIVE; reference only.
+- `data/session73/{train_v46b_dt.log, grade_v46b_prefix.log, grade_v46b_full.log, grade_v46_full.log}`.
+- `data/session72/grade_v46_full.log` — S72 full grader completed in S73.
+- `SESSION_73_V46B_DT_NULL_REPORT.md` — full retrospective.
+- `SESSION_72_V46_DT_NULL_REPORT.md` — appended "Phase 4 — full grader (S73 completion)" subsection.
+
+**Methodology lessons (S73):**
+1. **Regime-confound is the dominant axis of NULL postmortems.** $261/1000h swing from hyperparameters alone empirically validates the S72 Phase-5 doctrine. NEVER change features AND hyperparams in the same experiment.
+2. **Surgical gating's byte-identity guarantee is regime-locked.** Confirmed verbatim: same regime + same base features → byte-identity. v46b restored it after v46 broke it.
+3. **Feature importance > leaf growth as tripwire at saturating regime.** Mixed verdict resolved: importance correctly forecasts small lift even when leaf growth signals SHIP.
+4. **Diagnostic WG is ~10-20% recoverable per single-pair feature retrain.** S71 said $147.59 WG; H1 realized $24 within-cat (16%). Calibrate ship expectations: diagnostic identifies WHERE leak is, not the magnitude recoverable.
+5. **+$10 ship threshold codified.** ML-champion ships hold to +$10 net full-grid regardless of within-cat magnitude or strictly-better surgical-gating math.
+
+**Production state at end of S73:** UNCHANGED from S72.
+- Rule chain: `v56_trips_hybrid` ($1,429 full / $794 prefix). Grader-confirmed.
+- ML champion: `v44_dt` ($1,081 full / $686 prefix).
+- Two-track divergence: $348/1000h.
+- Project rule count: 18.
+- Decision 108: v46b_dt PARTIAL POSITIVE; H2 (route-tradeoff comparator) or gradient boosting queued S74.
+
+**Session 74 priorities (per CURRENT_PHASE.md S73 rewrite):**
+1. **Option A (PREFERRED): Implement + persist ho_v7 H2 route-tradeoff comparator** (`ho_v7_route_tradeoff_joint_minus_nonjoint_g`, signed ∈ −13..+13) per SESSION_71_V45_FEATURE_HYPOTHESES.md §6.
+2. **Train v47_dt at depth=36 ml=1** (regime LOCKED at v44's saturating hyperparams); inspect feature-importance tripwire (target: top-50 = SHIP) + leaf growth.
+3. **Prefix + full grade v47 vs v44.** If full Δ ≥ +$10/1000h → Decision 109 ships v47; build v57_v47_hybrid. If +$5 ≤ Δ < +$10 → second PARTIAL POSITIVE; consider H1+H2 batch as v48 (4 features) for compound effect. If Δ ≤ +$5 → pivot to Option B.
+4. **Option B (SECONDARY): Gradient boosting (XGBoost / LightGBM) at full 109-feature matrix** if H2 NULLs. One-time infrastructure investment with potentially larger payoff than incremental DT feature engineering.
+
+Standalone session report: `SESSION_73_V46B_DT_NULL_REPORT.md`.
