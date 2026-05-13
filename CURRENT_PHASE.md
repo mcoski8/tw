@@ -1,171 +1,172 @@
-# Current: Sprint 8 — Session 69 SHIPS v55 two_pair hybrid. **NEW LARGEST SINGLE PRODUCTION SHIP IN PROJECT HISTORY: +$634/1000h full grid** (1.66× S68's prior $382 record). Path B (blanket two_pair → v44) captured the entire $634 WG matrix-predicted v54→v44 two_pair gap with grader-to-harness fidelity of 0.07% (best ever). Grader-confirmed v54 → v55: $2,108 → $1,473 full, $1,343 → $827 prefix; pct_opt 49.74% → 58.44% (+8.70pp). Within-two_pair $3,211 → $363 (-$2,848), 44.1% → 83.2% pct_opt (+39.1pp). All non-two_pair categories byte-identical (surgical via two_pair-blanket gate). Two-track divergence v55 vs v44_dt: $1,027 → **$393** (closed 62% in one ship — largest single-session reduction in project history). **Two_pair catalog is CLOSED**: v55 EQUALS v44 on two_pair (since the gate is total — every cell favors v44). Combined with S65's high_only closure and S68's pair closure, the THREE largest residual categories (5.36M of 6.01M canonical hands = **89% of grid**) are now ALL addressed at the limits achievable by current rule chain + v44_dt. ML champion UNCHANGED at v44_dt. **Cumulative two-track-divergence reduction across S68+S69: $1,016/1000h (72% of original).**
+# Current: Sprint 8 — Session 70 SHIPS v56 trips hybrid (+$45/1000h full grid). Third consecutive Path-B hybrid ship; **closes trips category at v44 limits**. Cumulative S68+S69+S70 = $1,061/1000h (75% of pre-S68 two-track divergence). The largest 4 residual categories (high_only, pair, two_pair, trips = 94.7% of canonical grid) are now ALL closed at the limits achievable by current rule chain + v44_dt ML champion. **Architectural-routing headroom is largely exhausted; S71+ pivots to ML retrain (v45_dt+) — any v44 improvement now compounds 4× via v54+v55+v56.** Grader-confirmed v55 → v56: $1,473 → $1,429 full, $827 → $794 prefix; pct_opt 58.44% → 59.51% (+1.07pp). Within-trips $2,010 → $1,194 (-$816), 39.0% → 58.6% pct_opt (+19.6pp). All non-trips categories byte-identical (surgical via trips-blanket gate). Three-gate hybrid chain (pair-PBOT in v54 + two_pair in v55 + trips in v56) is now the project's cleanest architecture; structurally disjoint, zero conflict. Harness predicted +$44.61 WG; grader $+45; fidelity 0.87%.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 70): trips audit OR ML retrain (v45_dt+) pivot.**
+> **🎯 IMMEDIATE NEXT ACTION (Session 71): ML retrain (v45_dt+) — high_only diagnostic-driven feature engineering.**
 >
->   With high_only, pair, and two_pair all CLOSED at v44 limits, the remaining residual map is dominated by structural categories that contribute little WG but still have v54→v44 catch potential. Two paths forward:
+>   With high_only, pair, two_pair, and trips all CLOSED at v44 limits, the remaining structural-rule headroom is exhausted. The two-track divergence remaining ($348/1000h) is concentrated in:
+>     - **trips_pair** ($155 WG, 2.9% of grid) — already collapsed S55a; minimal headroom.
+>     - **three_pair** ($32 WG, 1.9% of grid) — smallest meaningful target.
+>     - **v44's own residuals** — the ML champion still leaks $1,081/1000h full-grid; reducing this via retrain SHIFTS THE WHOLE HYBRID CHAIN downward.
 >
->   **PATH A (trips audit; mirror S69 methodology arc in 1 session)** — $110 WG residual (5.5% of grid). Cleanest structural axes (1 trip rank + 4 singletons; no pair-vs-no-pair confusion). Apply the S66-S69 playbook:
->   - Phase 1: build `analysis/scripts/drill_trips_v44_S70.py` (mirror of `drill_two_pair_v44_S69.py`). Define trips cell taxonomy: bot=trip-rank-bot vs trip-rank-mid; bot suit profile; top singleton rank.
->   - Phase 2: sweep v55 baseline (= v55 fall-through to v54/v52 for trips) on all 328,185 trips canonical hands. Produce `TRIPS_DECISION_MATRIX.md`.
->   - Phase 3a: test 3-5 catalog candidates per T1/T2/T3.
->   - Phase 3b: if hybrid extension favorable, ship v56 = v55 + blanket trips → v44.
->   - Expected ship range: $30-110 WG full-grid (smaller than S69's $634 due to smaller category share, but cleanest structural cells).
+>   The largest single-category v44 residual is **high_only at $3,014/1000h = $755 WG** (12.6% of grid). A v45_dt that reduces high_only by even 20% would ship ~$151 WG full-grid via the v54+v55+v56 chain — comparable to the early rule-era's biggest ships (Rule 6 +$113, Rule 14 +$131).
 >
->   **PATH B (ML retrain v45_dt+)** — Reduce v44's residuals further. Given v55 routes ~35% of grid through v44 (pair PBOT 12.9% + two_pair 22.3%), any v44 improvement compounds via v55. Could potentially close the remaining $393/1000h divergence further. Higher-effort path: requires diagnostic-driven feature engineering per S54 playbook + new training run (~hours).
+>   **PATH A (recommended) — high_only ML retrain (v45_dt)**: Diagnostic-driven feature engineering per S54 playbook. Mine v44's high_only mismatches; identify systematic miss patterns; build 4-8 new gated features; retrain DT at depth=32 ml=3 (project default); validate via grader. Expected ship: $50-200 WG full-grid (depending on how much high_only residual can be closed). Higher-effort path than Path-B hybrids (~2-3 sessions of compute + iteration), but the only meaningful remaining lift lever.
 >
->   **Recommended:** PATH A (trips audit) for S70. Quick, methodology-validated, ships before pivoting to higher-effort ML work. Per-S69 lesson: methodology arcs compress dramatically with reuse — trips matrix + ship may compress further than two_pair did.
+>   **PATH B (alternative) — three_pair / trips_pair audit**: Apply S69+S70 methodology to the remaining small categories. Expected ship: <$10 WG full-grid each. Quick (~1 session) but tiny lift.
 >
->   **3-PHASE PLAN (Session 70):**
+>   **Recommended:** PATH A (v45_dt high_only retrain) for S71+. Higher-effort but the only direction with meaningful headroom.
 >
->   **Phase 1a (S70 first ~1 hr)** — Phase 1 sweep: drill_trips_v44_S70.py + sweep on 328K trips hands.
->   **Phase 1b (S70 ~30 min)** — Phase 2 sweep: v55-on-trips baseline (= v52 fall-through for trips). Produce TRIPS_DECISION_MATRIX.md.
->   **Phase 2 (S70 last ~1.5 hr)** — Candidate sweep + verdict + (if hybrid favorable) v56 build + grade.
+>   **3-PHASE PLAN (Session 71 — ML retrain prep):**
 >
->   **SUCCESS CRITERIA (S70):**
->   - `drill_trips_v44_S70.py` produced + Phase 1 + Phase 2 sweeps complete.
->   - `TRIPS_DECISION_MATRIX.md` produced.
->   - 3+ candidate verdicts assigned, OR ship decision on hybrid extension (v56).
->   - S71 direction recommendation.
+>   **Phase 1a (S71 first ~1.5 hr)** — Diagnostic sweep: build `drill_v44_high_only_S71.py` mirroring S54-era diagnostic harnesses; mine v44's high_only mismatches at hand-level granularity; identify systematic structural patterns (per S54 playbook). Output: per-hand parquet + diagnostic report.
+>   **Phase 1b (S71 ~1 hr)** — Hypothesis-list: from Phase 1a output, propose 4-8 candidate features targeting the largest mismatch classes. Document in `SESSION_71_V45_FEATURE_HYPOTHESES.md`.
+>   **Phase 2 (S71 last ~1 hr)** — Implement 1-2 features as `*_aug_v3_features_gated.py`; smoke-test in isolation; queue full retrain for S72.
+>
+>   **SUCCESS CRITERIA (S71):**
+>   - `drill_v44_high_only_S71.py` produced + diagnostic sweep complete.
+>   - `SESSION_71_V45_FEATURE_HYPOTHESES.md` with 4-8 feature proposals.
+>   - 1-2 features implemented + smoke-tested.
+>   - S72 direction (full retrain) recommendation.
 
-> **✅ ARTIFACTS produced in S69:**
-> 1. **`SESSION_69_V55_TWO_PAIR_HYBRID.md`** — full Phase 1-5 report, ship narrative, per-cell breakdown.
-> 2. **`TWO_PAIR_DECISION_MATRIX.md`** — Phase 1+2 matrix doc (analog of PAIR_DECISION_MATRIX.md).
-> 3. **`analysis/scripts/strategy_v55_two_pair_hybrid.py`** — **v55 PRODUCTION** (blanket two_pair → v44 hybrid).
-> 4. **`analysis/scripts/drill_two_pair_v44_S69.py`** — Phase 1 sweep (mirror of drill_pair_v44_S66.py).
-> 5. **`analysis/scripts/sweep_v54_on_two_pair_S69.py`** — Phase 2 sweep (mirror of sweep_v52_on_pair_S66.py).
-> 6. **`analysis/scripts/test_rule_catalog_two_pair.py`** — candidate harness for two_pair (mirror of test_rule_catalog_pair.py).
-> 7. **`analysis/scripts/test_two_pair_catalog_candidates_S69.py`** — 5 candidate verdict sweep.
-> 8. **`analysis/scripts/validate_v55_routing_S69.py`** — pre-grader validation reusing existing parquet (predicted +$634.47 to 0.07% match).
-> 9. **`analysis/scripts/grade_v55_two_pair_hybrid.py`** — head-to-head grader.
-> 10. **`data/session69/`** — all phase logs + JSON summaries.
-> 11. **`DECISIONS_LOG.md`** — Decision 104.
-> 12. **`CURRENT_PHASE.md`** — rewritten for S70 (this file).
-> 13. **`STRATEGY_GUIDE.md`** — Part 1 Session 69 append + front-matter update.
+> **✅ ARTIFACTS produced in S70:**
+> 1. **`SESSION_70_V56_TRIPS_HYBRID.md`** — full Phase 1-5 report, ship narrative, per-cell breakdown.
+> 2. **`TRIPS_DECISION_MATRIX.md`** — Phase 1+2 matrix doc (analog of TWO_PAIR_DECISION_MATRIX.md).
+> 3. **`analysis/scripts/strategy_v56_trips_hybrid.py`** — **v56 PRODUCTION** (blanket trips → v44 hybrid).
+> 4. **`analysis/scripts/drill_trips_v44_S70.py`** — Phase 1 sweep (mirror of drill_two_pair_v44_S69.py).
+> 5. **`analysis/scripts/sweep_v55_on_trips_S70.py`** — Phase 2 sweep (mirror of sweep_v54_on_two_pair_S69.py).
+> 6. **`analysis/scripts/test_trips_catalog_candidates_S70.py`** — bundled candidate harness + 3-candidate verdict sweep.
+> 7. **`analysis/scripts/validate_v56_routing_S70.py`** — pre-grader validation reusing existing parquet (predicted +$44.61 to 0.87% match).
+> 8. **`analysis/scripts/grade_v56_trips_hybrid.py`** — head-to-head grader.
+> 9. **`data/session70/`** — all phase logs + JSON summaries.
+> 10. **`DECISIONS_LOG.md`** — Decision 105.
+> 11. **`CURRENT_PHASE.md`** — rewritten for S71 (this file).
+> 12. **`STRATEGY_GUIDE.md`** — Part 1 Session 70 append + front-matter update.
 
-> **📓 METHODOLOGY (Session 70+):**
-> - **The Path-B hybrid arc compresses dramatically with reuse.** Pair took 3 sessions (S66+S67+S68); two_pair took 1 session (S69) by reusing the S66 cell-taxonomy template + S68 hybrid-routing template + S68 grader template. Trips audit may compress further still — much smaller candidate space.
-> - **Methodology lesson — catalog T2 verdicts vs the rule baseline are NOT enough to ship a rule when the hybrid option exists.** S69 found 3 of 5 catalog candidates clear T2 vs v54 baseline, but ALL lose to v44 — meaning the hybrid captures strictly more. Always test "lift vs v44" alongside "lift vs baseline".
-> - **Cleaner gates ship cleaner.** v55's gate (n_pairs == 2) hit 0.07% harness-grader fidelity — best of project. Simple structural-category gates beat complex multi-condition gates.
-> - **Architectural moves dwarf rule-tuning ships.** S68 (+$382) and S69 (+$634) were both Path-B routing wrappers, not new rules. Compare to the S50-S67 era's max single rule ship of +$131 (Rule 14). The remaining headroom is dominated by architecture — trips audit is the next test of whether this generalizes.
-> - **"Speed is not necessary — clarity and perfection is."** S69 took ~4 hours including all phases (matrix, candidates, hybrid, two graders, full documentation). Methodology compression made this possible without sacrificing rigor.
+> **📓 METHODOLOGY (Session 71+):**
+> - **The Path-B hybrid arc generalizes to small categories.** S68 (pair +$382) → S69 (two_pair +$634) → S70 (trips +$45). Cumulative $1,061/1000h. Trips's smaller absolute ship reflects smaller category share (5.5% of grid) AND smaller within-cat v55→v44 gap ($44 WG vs $634 for two_pair), not diminishing methodology returns.
+> - **Methodology arcs compress to ~1 session per category once templates are in place.** S68 took 1 session (after pair-matrix S66+S67); S69 took 1 session (reusing S66+S68 templates); S70 took 1 session (reusing S66+S68+S69 templates). The structural-cell taxonomy and pre-grader validation harness now apply universally.
+> - **Catalog candidates can be even MORE dominated than S69's pattern.** S69 found 3/5 cleared T2 vs baseline but all lose vs v44. S70 found 0/4 cleared even T1 vs baseline. The catalog-vs-hybrid dominance gap WIDENS as v44 gets more selective in smaller categories.
+> - **Three-gate hybrid chain is the project's cleanest architecture.** pair-PBOT (v54) + two_pair (v55) + trips (v56) are structurally disjoint at the rank-count signature level. Zero conflict; surgical category routing. ~40% of canonical grid now routes through v44_dt.
+> - **The architectural-routing headroom is largely exhausted.** Remaining catalog targets (trips_pair, three_pair) are small absolute ships (<$10 WG each predicted). **S71+ MUST pivot to ML retrain (v45_dt+) for meaningful lift.** Any v44 improvement now compounds 4× via the hybrid chain.
+> - **"Speed is not necessary — clarity and perfection is."** S70 took ~3 hours including all phases (matrix, candidates, hybrid, two graders, full documentation). Trips's smaller scope let the methodology compress to a fast, clean ship.
 
-> Updated: 2026-05-12 (Session 69 end — v55 ships +$634/1000h; two_pair catalog CLOSED; S70 pivots to trips audit or ML retrain)
+> Updated: 2026-05-12 (Session 70 end — v56 ships +$45/1000h; trips catalog CLOSED; S71+ pivots to ML retrain v45_dt+)
 
 ---
 
-## Headline state at end of Session 69
+## Headline state at end of Session 70
 
 **Strategies of record:**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
-| **v55_two_pair_hybrid** | **PRODUCTION rule chain** (blanket two_pair → v44_dt; else → v54). **$1,473 full / $827 prefix** (grader-confirmed). | `analysis/scripts/strategy_v55_two_pair_hybrid.py` |
-| **v44_dt** | **PRODUCTION ML champion** (UNCHANGED; now invoked inside v55 for two_pair AND inside v54 for pair PBOT cells). $1,081 full / $686 prefix. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
+| **v56_trips_hybrid** | **PRODUCTION rule chain** (blanket trips → v44_dt; else → v55). **$1,429 full / $794 prefix** (grader-confirmed). | `analysis/scripts/strategy_v56_trips_hybrid.py` |
+| **v44_dt** | **PRODUCTION ML champion** (UNCHANGED; now invoked inside v56 for trips, inside v55 for two_pair, inside v54 for pair PBOT cells). $1,081 full / $686 prefix. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
 
-Two-track divergence: $1,027 → **$393** (closed 62% in S69). Cumulative S68+S69: $1,016/1000h (72% of original $1,409).
+Two-track divergence: $393 → **$348** (closed 11% in S70). Cumulative S68+S69+S70: $1,061/1000h (75% of original $1,409).
 
-**Per-category residuals (v55 framing):**
+**Per-category residuals (v56 framing):**
 
-| Category | n_hands | v55 within-cat | v55 WG | v44 WG | Status |
+| Category | n_hands | v56 within-cat | v56 WG | v44 WG | Status |
 |---|---:|---:|---:|---:|---|
 | high_only | 1,226,940 | $3,014 | $755 | $755 | ML-only, CLOSED S65 |
 | pair | 2,800,512 | $991 | $462 | $511 | Hybrid v54-PBOT-v44 + v54-PMID-v53. CLOSED S68. |
-| **two_pair** | 1,338,480 | **$363** | **$80.82** | **$80.82** | **Hybrid v55-blanket-v44. CLOSED S69 (= v44).** |
-| trips | 328,185 | $2,010 | $110 | $54 | **S70 PRIMARY target — largest remaining residual** |
-| trips_pair | 171,600 | $5,417 | $155 | $5 | Already collapsed S55a |
+| two_pair | 1,338,480 | $363 | $80.82 | $80.82 | Hybrid v55-blanket-v44. CLOSED S69 (= v44). |
+| **trips** | 328,185 | **$1,194** | **$65.18** | **$65.18** | **Hybrid v56-blanket-v44. CLOSED S70 (= v44).** |
+| trips_pair | 171,600 | $5,417 | $155 | $5 | Already collapsed S55a (small remaining target) |
 | three_pair | 114,400 | $1,696 | $32 | $35 | Small target |
 | quads + composite | 29,042 | (rounding) | <$5 | <$5 | Negligible |
 
-**Project ship records (after S69):**
+**Project ship records (after S70):**
 
 | Ship | Lift WG | Session | Type |
 |---|---:|---|---|
-| **v55 two_pair hybrid** | **+$634** | **S69** | **Hybrid chain (NEW RECORD)** |
+| v55 two_pair hybrid | +$634 | S69 | Hybrid chain (largest single ship) |
 | v54 pair hybrid | +$382 | S68 | Hybrid chain |
 | v39_dt ML retrain | +$237 | S54 | ML champion |
 | Rule 14 (A-high HIMID) | +$131 | S50 | Rule chain |
 | Rule 6 (Q4) | +$113 | S37 | Rule chain |
 | Rule 15 (K-high HIMID) | +$51 | S51 | Rule chain |
+| **v56 trips hybrid** | **+$45** | **S70** | **Hybrid chain (closes trips category)** |
 | Rule 12 (J-low two_pair DS) | +$35 | S47 | Rule chain |
 | v55 hybrid (prefix) | +$516 | S69 | Hybrid chain (prefix) |
 | v54 hybrid (prefix) | +$179 | S68 | Hybrid chain (prefix) |
 
 ---
 
-## Resume Prompt (Session 70 — trips audit)
+## Resume Prompt (Session 71 — ML retrain pivot)
 
 ```
-Resume Session 70 of the Taiwanese Poker Solver project at
+Resume Session 71 of the Taiwanese Poker Solver project at
 /Users/michaelchang/Documents/claudecode/taiwanese.
 
 Read these files for context (in this order):
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of S69 — trips audit mandated)
-- SESSION_69_V55_TWO_PAIR_HYBRID.md (v55 hybrid ship report)
-- TWO_PAIR_DECISION_MATRIX.md (S69 — methodology template)
-- DECISIONS_LOG.md (latest: Decision 104 — v55 ships +$634 hybrid chain)
-- analysis/scripts/drill_two_pair_v44_S69.py (Phase 1 sweep template)
-- analysis/scripts/sweep_v54_on_two_pair_S69.py (Phase 2 sweep template)
-- analysis/scripts/strategy_v55_two_pair_hybrid.py (current production)
+- CURRENT_PHASE.md (rewritten end of S70 — ML retrain pivot mandated)
+- SESSION_70_V56_TRIPS_HYBRID.md (v56 trips hybrid ship report)
+- TRIPS_DECISION_MATRIX.md (S70 — methodology template, now applied 3 times)
+- DECISIONS_LOG.md (latest: Decision 105 — v56 ships +$45 hybrid chain;
+  trips closed)
+- analysis/scripts/strategy_v56_trips_hybrid.py (current production)
+- SESSION_54_V39_DT_REPORT.md (last ML retrain playbook — read carefully)
 
-State (end of Session 69):
-- v55 ships hybrid chain at +$634/1000h full grid grader-confirmed.
-  NEW LARGEST SINGLE PRODUCTION SHIP IN PROJECT HISTORY (1.66× S68).
-- Two_pair catalog CLOSED (v55 EQUALS v44).
-- Pair catalog CLOSED (S68 v54 within $50 WG of v44).
-- High_only catalog CLOSED (S65, ML-only).
-- Remaining residuals: trips $110 WG, three_pair $32, trips_pair $155
-  (already collapsed S55a).
-- Two-track divergence v55 vs v44_dt: $393/1000h (closed 72% across
-  S68+S69 from original $1,409).
+State (end of Session 70):
+- v56 ships hybrid chain at +$45/1000h full grid grader-confirmed.
+  Third consecutive Path-B hybrid ship; closes trips category.
+- Cumulative S68+S69+S70 = $1,061/1000h closed (75% of pre-S68
+  divergence).
+- FOUR largest residual categories now ALL closed at v44 limits:
+  high_only (S65), pair (S68), two_pair (S69), trips (S70).
+- Remaining residuals: trips_pair $155, three_pair $32 (small),
+  composite + quads negligible.
+- Two-track divergence v56 vs v44_dt: $348/1000h.
+- **Architectural-routing headroom is largely exhausted.**
 
-USER DIRECTIVE (S59-S69 re-confirmed):
+USER DIRECTIVE (S59-S70 re-confirmed):
 - "Speed is not necessary — clarity and perfection is."
 
-DIRECTION FOR SESSION 70 — trips audit:
+DIRECTION FOR SESSION 71 — ML retrain (v45_dt+) PIVOT:
 
-  PATH A (recommended) — trips audit (mirror S69 methodology arc):
-    PHASE 1a (S70 ~1 hr) — Phase 1 sweep:
-    - Build `analysis/scripts/drill_trips_v44_S70.py` mirroring
-      drill_two_pair_v44_S69.py for trips schema (cat=3, n=328,185).
-    - Trips cell taxonomy: bot=trip-rank-bot vs trip-rank-mid; bot
-      suit profile; top singleton rank. Inspect v44's existing trips
-      features for natural axes.
-    - Sweep v44 vs oracle on all 328,185 trips canonical hands.
-    - Output: per-hand parquet + summary JSON.
+  PATH A (recommended) — v45_dt high_only retrain (diagnostic-driven):
 
-    PHASE 1b (S70 ~30 min) — Phase 2 sweep + matrix doc:
-    - Sweep v55 baseline (= v54/v52 fall-through for trips, since
-      v55's gate is two_pair-only) on same hands.
-    - Compute per-cell v55→v44 gap; identify catalog-shippable cells.
-    - Produce `TRIPS_DECISION_MATRIX.md` (mirror of two_pair matrix).
+    PHASE 1a (S71 ~1.5 hr) — Diagnostic sweep:
+    - Build `analysis/scripts/drill_v44_high_only_S71.py` mirroring
+      S54-era diagnostic harnesses. Mine v44's high_only mismatches at
+      hand-level granularity; identify systematic structural patterns
+      (per S54 playbook).
+    - High_only is currently v44's largest single-category residual:
+      $3,014/1000h within-cat = $755 WG (12.6% of grid).
+    - Output: per-hand parquet + diagnostic report.
 
-    PHASE 2 (S70 last ~1.5 hr) — Candidate sweep + verdict:
-    - Test ~3-5 candidates per T1/T2/T3 thresholds.
-    - If hybrid-extension favorable: build strategy_v56_trips_hybrid.py
-      and grade. Expected ship range: $30-110 WG full-grid.
-    - Else: ship the largest catalog candidate that clears T2.
+    PHASE 1b (S71 ~1 hr) — Hypothesis-list:
+    - From Phase 1a output, propose 4-8 candidate features targeting
+      the largest mismatch classes.
+    - Document in `SESSION_71_V45_FEATURE_HYPOTHESES.md`.
 
-  PATH B (alternative) — ML retrain v45_dt+:
-    - Reduce v44's residuals further via diagnostic-driven feature
-      engineering (per S54 playbook).
-    - Higher-effort path; would shift v44 (and via the hybrid, v55)
-      downward.
-    - Could potentially close the remaining $393/1000h divergence.
+    PHASE 2 (S71 last ~1 hr) — Implement + smoke-test:
+    - Implement 1-2 features as `ho_aug_v3_features_gated.py` (next
+      version in the gated-feature family).
+    - Smoke-test against handful of hands; queue full retrain for S72.
 
-ACCEPTANCE for Session 70:
-- TRIPS_DECISION_MATRIX.md produced.
-- 3+ candidate verdicts assigned OR hybrid-extension ship decision.
-- S71 direction recommendation.
+  PATH B (alternative) — three_pair / trips_pair audit:
+    - Apply S69+S70 methodology to remaining small categories.
+    - Expected ship: <$10 WG full-grid each.
+    - Quick (~1 session) but tiny lift; NOT recommended given Path A
+      headroom is much larger.
+
+ACCEPTANCE for Session 71:
+- drill_v44_high_only_S71.py + diagnostic sweep complete.
+- SESSION_71_V45_FEATURE_HYPOTHESES.md with 4-8 feature proposals.
+- 1-2 features implemented + smoke-tested.
+- S72 direction (full retrain) recommendation.
 
 REMINDERS:
 - Use python3, not python.
 - cargo at ~/.cargo/bin/cargo.
 - Session-end protocol: commit + push to origin/main (pre-authorized).
-- The two_pair Phase 1/2 sweep scripts are the methodology template;
-  adapt the cell taxonomy for trips's simpler structure.
-- Always test "lift vs v44" alongside "lift vs baseline" — T2 vs
-  baseline is not enough when hybrid is the alternative.
+- The S54 diagnostic playbook is the template for Phase 1a — re-read
+  SESSION_54_V39_DT_REPORT.md before building drill scripts.
+- ML retrain hyperparams default: depth=32 ml=3 (verified S36+S58).
+- Re-test depth=34 ml=2 when feature count grows ≥10 above last sweep.
 - "Speed is not necessary — clarity and perfection is."
 ```
 

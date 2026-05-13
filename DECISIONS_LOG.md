@@ -5776,3 +5776,128 @@ Remaining residual map (v55 framing):
 - Two-track divergence: $1,027 → **$393** (closed 62% in one ship — largest single-session reduction in project history).
 - **Total project rule count: 18** (UNCHANGED — v55 is a routing wrapper, not a new rule).
 - **Two_pair catalog CLOSED. Pair catalog CLOSED. High_only catalog CLOSED.** S70 pivots to trips audit ($110 WG) or ML retrain.
+
+## Decision 105 — Session 70 v56 trips hybrid SHIPS +$45/1000h full grid; closes trips category at v44 limits
+
+**Date:** 2026-05-12
+
+**Context:** S69 closed two_pair category with v55 hybrid (+$634). CURRENT_PHASE end-S69 mandated trips audit using the validated S66-S68-S69 methodology arc. S70 executed Phase 1 (drill_trips_v44_S70.py — structural cell sweep), Phase 2 (sweep_v55_on_trips_S70.py + TRIPS_DECISION_MATRIX.md), Phase 3a (catalog candidate sweep), Phase 3b (v56 build + grade) all in a single session by reusing the S69 architecture templates.
+
+**Result: v56 SHIPS. Grader-confirmed +$45/1000h full grid (v55 $1,473 → v56 $1,429). Third consecutive Path-B hybrid ship; closes trips category at v44 limits.** Harness pre-validated +$44.61/1000h matched grader to **0.87%** — well within reliable predictive range.
+
+### v56 design
+
+Single-line routing gate (mirrors v55's two_pair gate at a different rank-count signature):
+
+> If hand is trips (exactly_one_trip AND no_pairs AND no_quads) → route to `strategy_v44_dt`. Else → route to `strategy_v55_two_pair_hybrid`.
+
+Three-gate hybrid chain (pair-PBOT in v54 + two_pair in v55 + trips in v56) is structurally disjoint at the rank-count signature level. Zero conflict; surgical category routing. v56 routes ~40% of canonical grid through v44_dt.
+
+### Grader confirmation
+
+| Metric | v55 | v56 | Δ |
+|---|---:|---:|---:|
+| Full $/1000h | 1,473 | **1,429** | **−$45** |
+| Full pct_opt | 58.44% | **59.51%** | **+1.07pp** |
+| Prefix $/1000h | 827 | 794 | −$33 |
+| Prefix pct_opt | 65.31% | 66.14% | +0.83pp |
+| Within-trips full pct_opt | 39.0% | **58.6%** | **+19.6pp** |
+| Within-trips $/1000h | 2,010 | 1,194 | **−$816** |
+| Full p90 | 0.505 | 0.490 | improved |
+| Full p99 | 1.160 | 1.135 | improved |
+
+**Records / fidelity in S70:**
+- **Third consecutive session shipping a Path-B-style hybrid extension.** S68+S69+S70 cumulative = $1,061/1000h (75% of pre-S68 two-track divergence).
+- **Harness-to-grader fidelity: 0.87%** (predicted +$44.61, grader +$45). Less precise than S69's 0.07% / S68's 0.1% (both larger ships) but well within reliable predictive range.
+- **NOT a new project record by size** — S69's +$634 still holds. v56's +$45 is the project's 4th-smallest production ship by size.
+- **DOES close the trips category** at v44 limits, joining high_only (S65), pair (S68), two_pair (S69).
+
+### Per-cell verification (matrix, matches Phase 2 prediction)
+
+`sweep_v55_on_trips_S70.py` swept all 328,185 trips canonical hands. The harness predicted v56's grader lift from existing v44 + v55 sweep parquet without any new computation:
+
+| Cell | Predicted v56-v55 WG lift |
+|---|---:|
+| B_DS_AVAIL_LKR (n=163,170) | $25.50 |
+| NO_BDS_AKDOM (n=82,368) | $15.57 |
+| NO_BDS_CTOP (n=20,592) | $2.70 |
+| B_DS_AVAIL_HKR (n=62,055) | $0.84 (mostly tied) |
+| **TOTAL (after $0.76 counter-headroom forfeit)** | **$44.61** ← matches grader $45 to 0.87% |
+
+Per-rank: trips=Q peak ($5.66 lift), declining roughly proportional to trip_rank size of v55-v44 gap. Counter-headroom of $0.76 WG (B_DS_AVAIL_HKR at ranks {K,J,T,4,3}) was forfeited in the blanket hybrid; the net $44.61 already accounts for it.
+
+### Catalog candidates (S70 Phase 3a — for acceptance criteria)
+
+3 catalog candidates tested via `test_trips_catalog_candidates_S70.py`:
+
+| Candidate | Cell | lift_wg vs v55 | lift_wg vs v44 | rule pct_opt | v44 pct_opt | verdict | dominated by v44? |
+|---|---|---:|---:|---:|---:|---|---|
+| C_TR_1 / B_DS_AVAIL_HKR (Force A_DS_tkmax) | HKR | −$1.32 | −$2.16 | 47.0% | 49.6% | T3 | YES |
+| C_TR_1 / B_DS_AVAIL_LKR | LKR | −$9.59 | −$35.09 | 35.95% | 50.75% | T3 | YES |
+| C_TR_2 / NO_BDS_AKDOM (Force A_DS_tkmax) | AKDOM | −$0.11 | −$15.69 | 38.77% | 76.35% | T3 | YES |
+| C_TR_3 / NO_BDS_CTOP (Force C_top_trip) | CTOP | $0.00 | −$2.70 | 37.32% | 64.66% | T3 | YES |
+
+**0 of 4 candidates clear T1 vs v55 baseline — 3 of 4 actually LOSE to the baseline.** Even MORE decisive than S69's pattern (where 3/5 cleared T2 vs baseline but all lost vs v44). The structural rule space is GENUINELY empty at the catalog level for trips. **The within-Layout-A bot-suit selectivity that v44 performs is purely the ML-residual that crude deterministic rules cannot replicate.**
+
+### What v56 closes
+
+**Trips catalog is CLOSED.** v56's trips residual = $65.18 WG (canonical-equal); v44 alone on trips = $65.18 WG. v56 EQUALS v44 on trips (since the gate is total). Same architectural shape as v55 on two_pair.
+
+**Combined with high_only S65 + pair S68 + two_pair S69 closures**, the FOUR largest residual categories (1.226M + 2.800M + 1.338M + 0.328M = 5.69M of 6.01M canonical hands = **94.7% of grid**) are now ALL addressed at the limits achievable by current rule chain + v44_dt ML champion.
+
+### Two-track divergence cumulative reduction
+
+| Session | rule-chain vs v44 divergence | Reduction this session | Cumulative reduction |
+|---|---:|---:|---:|
+| Pre-S68 | $1,409 | — | — |
+| Post-S68 | $1,027 | $382 (27%) | $382 |
+| Post-S69 | $393 | $634 (62%) | $1,016 (72%) |
+| **Post-S70** | **$348** | **$45 (11%)** | **$1,061 (75%)** |
+
+In 3 consecutive sessions, the project closed 75% of the original two-track divergence. The remaining $348/1000h is concentrated in non-pair non-high-only non-two-pair non-trips categories (trips_pair $155 WG already collapsed S55a, three_pair $32, quads/composite negligible) — almost entirely catalog-CLOSED at this point.
+
+### What S71+ targets
+
+The architectural-routing headroom is largely exhausted. Remaining catalog targets are small absolute ships (<$10 WG each predicted). **S71+ pivots to ML retrain (v45_dt+) — the only direction with meaningful remaining headroom.**
+
+The largest single-category v44 residual is **high_only at $3,014/1000h within-cat = $755 WG full-grid** (12.6% of grid). A v45_dt that reduces high_only by even 20% would ship ~$151 WG full-grid via the v54+v55+v56 chain — comparable to the early rule-era's biggest ships (Rule 6 +$113, Rule 14 +$131).
+
+**Recommended S71:** Diagnostic-driven feature engineering targeting v44's high_only residuals per S54 playbook. Phase 1a (diagnostic sweep), Phase 1b (hypothesis-list), Phase 2 (implement + smoke-test 1-2 features), queue full retrain for S72.
+
+### Methodology lessons (S70)
+
+1. **The Path-B hybrid arc generalizes to small categories with consistent fidelity.** S68 (pair $382) → S69 (two_pair $634) → S70 (trips $45). Cumulative $1,061. Each ship's harness-to-grader fidelity within reliable range (0.1%, 0.07%, 0.87%). The methodology applies universally.
+2. **Catalog candidates can be MORE dominated as v44 gets selective on smaller categories.** S69: 3/5 candidates cleared T2 vs baseline. S70: 0/4 cleared T1 vs baseline (3/4 lose to baseline). The catalog-vs-hybrid dominance gap WIDENS for categories where v44's selectivity matters more.
+3. **Cleaner gates ship cleaner; three-gate hybrid chain is now the project's cleanest architecture.** pair-PBOT (v54) + two_pair (v55) + trips (v56) are structurally disjoint at rank-count signature. Zero conflict; surgical category routing.
+4. **The architectural-routing headroom is largely exhausted.** Remaining catalog targets (trips_pair $155 WG already-collapsed, three_pair $32 WG) ship <$10 WG each predicted. **Future big-lift wins come from ML retrain** which feeds back through all three hybrids simultaneously (4× compounding).
+5. **Smaller ships still close categories.** v56 +$45 is small by recent standards but closes the trips category at v44 limits. Closure ≠ size; the methodology's value is in completing the per-category audit.
+6. **Methodology arcs compress to ~1 session per category once templates are in place.** S68 took 1 session (after pair-matrix S66+S67); S69 took 1 session (reusing S66+S68 templates); S70 took 1 session (reusing S66+S68+S69 templates). Reuse drives compression.
+
+### Files (Session 70)
+
+**New code:**
+- `analysis/scripts/drill_trips_v44_S70.py` — Phase 1 sweep
+- `analysis/scripts/sweep_v55_on_trips_S70.py` — Phase 2 sweep
+- `analysis/scripts/test_trips_catalog_candidates_S70.py` — candidate harness + 3-candidate sweep
+- `analysis/scripts/strategy_v56_trips_hybrid.py` — **v56 PRODUCTION**
+- `analysis/scripts/validate_v56_routing_S70.py` — pre-grader validation
+- `analysis/scripts/grade_v56_trips_hybrid.py` — head-to-head grader
+
+**Data:**
+- `data/drill_trips_v44_per_hand_structural.parquet`, `data/drill_trips_v44_summary.json`
+- `data/drill_trips_v55_per_hand.parquet`, `data/drill_trips_v55_summary.json`
+- `data/session70/*.log` + `*.json` — all phase logs and JSON summaries
+
+**Documentation:**
+- `TRIPS_DECISION_MATRIX.md` — Phase 1+2 matrix doc
+- `SESSION_70_V56_TRIPS_HYBRID.md` — Phase 1-5 ship report
+- `CURRENT_PHASE.md` — rewritten for S71
+- `DECISIONS_LOG.md` — Decision 105 (this section)
+- `STRATEGY_GUIDE.md` — Part 1 Session 70 append + front-matter update
+
+**Production state at end of S70:**
+- Rule chain: **v56_trips_hybrid** ($1,429 full / $794 prefix). Grader-confirmed.
+- ML champion: **v44_dt** (UNCHANGED; now invoked inside v56 for trips, inside v55 for two_pair, inside v54 for pair PBOT cells). $1,081 full / $686 prefix.
+- Two-track divergence: $393 → **$348** (closed 11% in S70). Cumulative S68+S69+S70: $1,061 (75% of original $1,409).
+- **Total project rule count: 18** (UNCHANGED — v56 is a routing wrapper, not a new rule).
+- **Trips catalog CLOSED. Two_pair catalog CLOSED. Pair catalog CLOSED. High_only catalog CLOSED.** S71+ pivots to ML retrain (v45_dt+) — architectural-routing headroom is largely exhausted.
