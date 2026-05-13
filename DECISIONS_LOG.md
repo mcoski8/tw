@@ -5634,3 +5634,145 @@ Remaining residual map (v54 framing):
 - Two-track divergence: $1,409 → $1,027 (closed 27% in one ship).
 - **Total project rule count: 18** (UNCHANGED — v54 is a routing wrapper, not a new rule).
 - **Pair catalog CLOSED. High_only catalog CLOSED. S69 pivots to two_pair audit.**
+
+---
+
+## Decision 104 — Session 69 v55 two_pair hybrid SHIPS +$634/1000h full grid: NEW LARGEST SINGLE PRODUCTION SHIP IN PROJECT HISTORY (1.66× S68's prior $382 record)
+
+**Date:** 2026-05-12
+
+**Context:** S68 closed pair catalog with v54 hybrid (+$382). CURRENT_PHASE end-S68 mandated two_pair audit using the validated S66-S67-S68 methodology arc. S69 executed Phase 1 (drill_two_pair_v44_S69.py — structural cell sweep), Phase 2 (sweep_v54_on_two_pair_S69.py + TWO_PAIR_DECISION_MATRIX.md), Phase 3a (catalog candidate sweep), Phase 3b (v55 build + grade) all in a single session by reusing the S68 architecture template.
+
+**Result: v55 SHIPS. Grader-confirmed +$634/1000h full grid (v54 $2,108 → v55 $1,473). NEW LARGEST single production ship in project history; 1.66× S68's prior +$382 record.** Harness pre-validated +$634.47/1000h matched grader to **0.07%** — best-of-project fidelity.
+
+### v55 design
+
+Single-line routing gate (no cell-taxonomy machinery needed at inference; even simpler than v54's pair gate):
+
+> If hand is two_pair (n_pairs == 2 AND n_trips == 0 AND n_quads == 0) → route to `strategy_v44_dt`. Else → route to `strategy_v54_pair_hybrid`.
+
+Unlike v54 (which had to preserve PMID-cell routing via cell-suit-pattern checks), v55's gate is the structural category alone — every two_pair cell favors v44 uniformly (no PMID-style counter-headroom), so the routing simplifies to a category-blanket.
+
+**Architectural note:** v55 stacks atop v54 cleanly. v54 handles non-two_pair routing (pair PBOT → v44, else → v53/v52). v55 adds two_pair → v44. Two gates structurally disjoint; zero conflict risk.
+
+### Grader confirmation
+
+| Metric | v54 | v55 | Δ |
+|---|---:|---:|---:|
+| Full $/1000h | 2,108 | **1,473** | **−$634** |
+| Full pct_opt | 49.74% | **58.44%** | **+8.70pp** |
+| Prefix $/1000h | 1,343 | 827 | −$516 |
+| Prefix pct_opt | 56.64% | 65.31% | +8.67pp |
+| Within-two_pair full pct_opt | 44.1% | **83.2%** | **+39.1pp** |
+| Within-two_pair $/1000h | 3,211 | 363 | **−$2,848** |
+| Full p90 | 0.640 | 0.505 | improved |
+| Full p99 | 1.625 | 1.160 | improved |
+
+**Records set in S69:**
+- **NEW LARGEST single production ship in project history** (+$634; 1.66× S68's prior $382).
+- **NEW LARGEST pct_opt jump in production** (+8.70pp; exceeds S68's +6.31pp).
+- **Cleanest harness-to-grader fidelity ever** (0.07% error vs S68's 0.1%).
+- **Largest single-session two-track-divergence reduction in project history** (−$634/1000h closed 62% of post-S68 gap).
+- **Second consecutive session shipping a Path-B-style hybrid extension.** Confirms the pattern as a replicable methodology.
+
+### Per-cell verification (matrix, matches Phase 2 prediction exactly)
+
+`sweep_v54_on_two_pair_S69.py` swept all 1,338,480 two_pair canonical hands. The harness predicted v55's grader lift from existing v44 + v54 sweep parquet without any new computation:
+
+| Cell group | Predicted v55-v54 WG lift |
+|---|---:|
+| LAYOUT_A_DS (n=257,400) | $261.40 |
+| LAYOUT_A_SS (n=437,580) | $186.15 |
+| LAYOUT_C_DS (n=308,880) | $86.95 |
+| LAYOUT_B_DS (n=231,660) | $63.78 |
+| LAYOUT_C_SS_ONLY (n=90,090) | $29.42 |
+| LAYOUT_B_SS_ONLY (n=12,870) | $6.78 |
+| **TOTAL** | **$634.47** ← matches grader $634 to 0.07% |
+
+Per-rank: hi_pair=A peak ($129.69 lift), declining smoothly to hi_pair=3 ($6.29 lift). Top 4 ranks (A, K, Q, J) account for 69% of the lift.
+
+### Catalog candidates (S69 Phase 3a — for acceptance criteria)
+
+5 catalog candidates tested via `test_two_pair_catalog_candidates_S69.py`:
+
+| Candidate | lift_wg vs v54 | capture% | rule pct_opt | v44 pct_opt | verdict | dominant by v44? |
+|---|---:|---:|---:|---:|---|---|
+| C_T2P_1/Q (Anti-A on LAYOUT_A_DS) | +$9.75 | 22.5% | 11.3% | 83.1% | T3 | YES (v44 ahead) |
+| C_T2P_1/K | +$29.99 | 54.5% | 25.4% | 82.0% | T2 | YES (v44 ahead) |
+| C_T2P_1/A | +$59.62 | 79.7% | 45.2% | 84.5% | T2 | YES (v44 ahead) |
+| C_T2P_2/Q (Layout C on LAYOUT_C_DS) | +$12.58 | 65.2% | 67.7% | 91.0% | T2 | YES (v44 ahead) |
+| C_T2P_3/A (Layout B on LAYOUT_A_SS) | +$8.03 | 25.8% | 49.1% | 79.0% | T3 | YES (v44 ahead) |
+
+**3 of 5 candidates clear T2 vs v54 baseline — but ALL lose to v44.** This is a key finding: **a T2 verdict against the rule-chain baseline is no longer sufficient evidence to ship a rule when the hybrid option exists.** Always also test "lift vs v44" — if negative, the candidate is dominated.
+
+### What v55 closes
+
+**Two_pair catalog is CLOSED.** v55's two_pair residual = $80.82 WG (canonical-equal); v44 alone on two_pair = $80.82 WG. v55 EQUALS v44 on two_pair (since the gate is total). Cleaner than S68 v54 (which BEAT v44 on pair by $49 WG via PMID preservation) — here, no preservation needed because v44 is uniformly better.
+
+**Combined with high_only S65 + pair S68 closures**, the THREE largest residual categories (1.226M + 2.800M + 1.338M = 5.36M of 6.01M canonical hands = **89% of grid**) are now ALL addressed at the limits achievable by current rule chain + v44_dt ML champion.
+
+### Two-track divergence cumulative reduction
+
+| Session | v54/v55 vs v44 divergence | Reduction this session | Cumulative reduction |
+|---|---:|---:|---:|
+| Pre-S68 | $1,409 | — | — |
+| Post-S68 | $1,027 | $382 (27%) | $382 |
+| **Post-S69** | **$393** | **$634 (62%)** | **$1,016 (72%)** |
+
+In 2 consecutive sessions, the project closed 72% of the original two-track divergence. The remaining $393/1000h is concentrated in non-pair non-high-only non-two-pair categories (trips $54 v44 wg, three_pair $35, trips_pair $5) — small absolute target.
+
+### What S70 targets
+
+Remaining residual map (v55 framing):
+
+| Category | v55 within-cat | v55 WG | v44 WG | Status / target priority |
+|---|---:|---:|---:|---|
+| trips | $2,010 | $110 | $54 | **S70 candidate** ($110 WG residual; cleanest population) |
+| trips_pair | $5,417 | $155 | $5 | Already collapsed S55a |
+| three_pair | $1,696 | $32 | $35 | Small target ($32 WG) |
+| high_only | $3,014 | $755 | $755 | CLOSED S65 (ML-only) |
+| pair | $991 | $462 | $511 | CLOSED S68 (within $50 of v44) |
+| two_pair | $363 | $80.82 | $80.82 | **CLOSED S69 (= v44)** |
+
+**Trips is the largest remaining absolute target** ($110 WG; only 5.5% of grid). The structural axes are simpler than two_pair: 1 trip rank + 4 singletons, no pair-vs-no-pair confusion. **Recommended S70:** trips audit using S66+S67+S68+S69 methodology arc.
+
+**Alternative for S70+:** ML retrain (v45_dt+) to reduce v44's residuals further. Given the hybrids now route ~35% of grid through v44 (pair PBOT 12.9% + two_pair 22.3%), any v44 improvement compounds via v55. Could potentially close the remaining $393/1000h divergence further.
+
+### Methodology lessons (S69)
+
+1. **The Path-B hybrid arc is now the primary methodology for per-category audits.** S66-S67-S68 (pair) → S69 (two_pair) = 2 successive ships at $382 + $634 = $1,016/1000h cumulative. Each follows the matrix → catalog candidates → hybrid extension pattern.
+2. **Methodology arcs compress dramatically with reuse.** Pair took 3 sessions (S66+S67+S68); two_pair took 1 session (S69) by reusing the S66 cell-taxonomy template, S68 hybrid-routing template, and S68 grader template. Each Phase 1+2 sweep took <10 min; Phase 3a candidate sweep <2 min; Phase 3b grader confirmation ~30 min total.
+3. **Catalog rules can clear T2 against the rule baseline AND still be inferior to the hybrid.** S69 Phase 3a found 3 T2 candidates — but ALL lose to v44 ceiling. Always test "lift vs v44" — if negative, the candidate is dominated by the hybrid.
+4. **Cleaner gates ship cleaner.** v54's pair gate required suit-pattern checks. v55's two_pair gate needs only structural-category check. The simpler gate ships at higher harness-grader fidelity (0.07% vs 0.1%).
+5. **Records compound across sessions when architecture matches.** S68 set the +$382 record; S69 broke it 1 session later at +$634. Both Path-B hybrids of the same architectural family. Architectural moves produce 5-10× larger ships than rule additions — the project's remaining headroom is dominated by architecture.
+6. **Two_pair was structurally PURER ML-only than pair.** Pair had PMID-cell counter-headroom requiring a partial preservation. Two_pair had NO counter-headroom — every cell favors v44. The hybrid simplifies to "blanket: route the whole category to v44".
+
+### Files (Session 69)
+
+**New code:**
+- `analysis/scripts/drill_two_pair_v44_S69.py` — Phase 1 sweep
+- `analysis/scripts/sweep_v54_on_two_pair_S69.py` — Phase 2 sweep
+- `analysis/scripts/test_rule_catalog_two_pair.py` — candidate harness
+- `analysis/scripts/test_two_pair_catalog_candidates_S69.py` — 5-candidate sweep
+- `analysis/scripts/strategy_v55_two_pair_hybrid.py` — **v55 PRODUCTION**
+- `analysis/scripts/validate_v55_routing_S69.py` — pre-grader validation
+- `analysis/scripts/grade_v55_two_pair_hybrid.py` — head-to-head grader
+
+**Data:**
+- `data/drill_two_pair_v44_per_hand_structural.parquet`, `data/drill_two_pair_v44_summary.json`
+- `data/drill_two_pair_v54_per_hand.parquet`, `data/drill_two_pair_v54_summary.json`
+- `data/session69/*.log` + `*.json` — all phase logs and JSON summaries
+
+**Documentation:**
+- `TWO_PAIR_DECISION_MATRIX.md` — Phase 1+2 matrix doc
+- `SESSION_69_V55_TWO_PAIR_HYBRID.md` — Phase 1-5 ship report
+- `CURRENT_PHASE.md` — rewritten for S70
+- `DECISIONS_LOG.md` — Decision 104 (this section)
+- `STRATEGY_GUIDE.md` — Part 1 Session 69 append + front-matter update
+
+**Production state at end of S69:**
+- Rule chain: **v55_two_pair_hybrid** ($1,473 full / $827 prefix). Grader-confirmed.
+- ML champion: **v44_dt** (UNCHANGED; now invoked inside v55 for two_pair AND inside v54 for pair PBOT cells). $1,081 full / $686 prefix.
+- Two-track divergence: $1,027 → **$393** (closed 62% in one ship — largest single-session reduction in project history).
+- **Total project rule count: 18** (UNCHANGED — v55 is a routing wrapper, not a new rule).
+- **Two_pair catalog CLOSED. Pair catalog CLOSED. High_only catalog CLOSED.** S70 pivots to trips audit ($110 WG) or ML retrain.
