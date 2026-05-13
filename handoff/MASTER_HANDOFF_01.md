@@ -2562,3 +2562,54 @@ Standalone session report: `SESSION_72_V46_DT_NULL_REPORT.md`.
 4. **Option B (SECONDARY): Gradient boosting (XGBoost / LightGBM) at full 109-feature matrix** if H2 NULLs. One-time infrastructure investment with potentially larger payoff than incremental DT feature engineering.
 
 Standalone session report: `SESSION_73_V46B_DT_NULL_REPORT.md`.
+
+---
+
+## Session 74 — 2026-05-13 — v47_dt CLEAN NULL at depth=36 ml=1; H2 route-tradeoff comparator captures zero signal; DT-feature-engineering track exhausted; S75 pivots to gradient boosting
+
+**Verdict: CLEAN NULL.** Decision 109. v44_dt remains the ML champion; v56_trips_hybrid remains the rule chain. Production state UNCHANGED for the third consecutive session (S72 NULL, S73 PARTIAL NULL ship, S74 clean NULL).
+
+**What happened:**
+1. **ho_v7 H2 feature designed + persisted.** `ho_v7_route_tradeoff_joint_minus_nonjoint_g` = best_JOINT_mid_high − best_DS_NONJOINT_top (1 signed int8 feature gated to high_only). DS_NONJOINT mirrors drill_high_only_v43_threshold.py's binary partition. 5 hand-crafted smoke tests pass on first run. Persist time 66.3s; parquet 18.59 MB. Empirical distribution: 84.27% at 0 (gated or no DS achievable), 15.73% at -14..-1; **zero positive values** — confirms design-stage analysis that positive comparator values are structurally rare in (4,2,0,0)/(2,2,2,0) suit packings where JOINT is achievable.
+2. **v47_dt trained at depth=36 ml=1** (v44's saturating regime, LOCKED per S73 methodology lesson #1). 108 features = v44 (107) + ho_v7 (1) — H2 isolated from H1's ho_v6. Fit 567.1s; **2,248,174 leaves (+1 vs v44's 2,248,173 → cleanest "dead feature" leaf signature in project history)**. Feature importance: **#103/108 (0.01%)** — deeper in tail than v46b's #75 (0.05%). Both tripwires concur NULL.
+3. **Prefix grader (500K, n=1000):** v44 $686 → v47 $686. **BYTE-IDENTICAL on all 7 prefix categories.** Surgical-gating byte-identity guarantee preserved; +1 leaf is invisible at prefix resolution.
+4. **Full grader (6M, n=200 realistic):** v44 $1,081 → v47 $1,081 = **+$0/1000h.** All 8 per-category $/1000h match v44 to the dollar (including on-target high_only $1,868 → $1,868 — zero within-cat lift; v46b earned +$24 within-cat at same regime with H1 features). pct_opt 64.80% → 64.80% (3-hand divergence of 6M, +0.00005pp). p90/p99 tied. Wall: v44 1058.8s + v47 1137.5s.
+5. **S71 "derivable in 2 splits" trap empirically confirmed.** At depth=36 with 2.25M leaves and 2.7 rows/leaf, the DT can derive the comparator from ho_v3_topMax_DS_ms_max_mid_high_g + a near-relative of ho_v4_topNonMax_DS_ms_max_top_rank_g via axis-aligned splits. +1 leaf is the empirical fingerprint of "comparator compresses zero new information beyond 2 existing splits".
+6. **Decision 109: NULL ship.** v44_dt unchanged. DT-feature-engineering chapter functionally closed at v44's saturating regime. S75 pivots to gradient boosting (Option B per S73→S74 CURRENT_PHASE.md).
+
+**Files (S74):**
+- `analysis/scripts/high_only_aug_v7_features_gated.py` — 1 signed int8 feature; 5 smoke tests; all pass.
+- `analysis/scripts/persist_high_only_aug_v7_gated.py` — emits feature_table_high_only_aug_v7_gated.parquet.
+- `analysis/scripts/train_v47_dt.py` — depth=36 ml=1 regime-locked.
+- `analysis/scripts/strategy_v47_dt.py` — inference; 16-block gated-feature dispatch.
+- `analysis/scripts/grade_v47_dt.py` — head-to-head grader vs v44/v45/v46/v46b.
+- `data/feature_table_high_only_aug_v7_gated.parquet` (18.59 MB).
+- `data/v47_dt_model.npz` (1,260.45 MB) — clean NULL; reference only.
+- `data/session74/{persist_v7.log, train_v47_dt.log, grade_v47_prefix.log, grade_v47_full.log}`.
+- `SESSION_74_V47_DT_NULL_REPORT.md` — full retrospective.
+- `DECISIONS_LOG.md` — Decision 109.
+- `CURRENT_PHASE.md` — rewritten for S75.
+- `STRATEGY_GUIDE.md` — Part 1 SKIPPED; front-matter date refresh.
+
+**Methodology lessons (S74):**
+1. **Both tripwires concur NULL at +1 leaf + tail importance = new cleanest "dead feature" signal in project history.** New doctrine: ≤+10 leaves at saturating regime = NULL signal (was ≤+1K). The ≥+10K SHIP threshold remains.
+2. **"Derivable in N splits" is now a documented failure mode.** Axis-comparison features (subtractions of two existing values) add no information at saturating-DT regime. Future feature design must verify non-derivability before retrain investment.
+3. **Fitter wall time is a 3rd tripwire.** v47 fit 567s vs v46b's 610s at same regime — faster fit = NULL signal (DT had fewer candidate splits to evaluate); slower fit = SHIP signal. Read jointly with importance + leaf growth.
+4. **Diagnostic-WG recovery cascade asymptotes fast.** H1 captured 16% of S71's $147.59 leak; H2 captured 0%. Single-feature-pair DT retrains capture ~10-20% then asymptote. Multi-feature batches or non-DT models may capture more.
+5. **DT-feature-engineering chapter functionally closed.** Two consecutive sessions (S73 PARTIAL NULL ship +$5, S74 clean NULL +$0) at same 4-phase playbook produce diminishing returns. The +$10 ship bar excludes both. S75 pivot is mandatory.
+6. **+$10 ship bar canonical (codified S73, held S74).** Third consecutive UNCHANGED production state — the bar is filtering noise from signal.
+
+**Production state at end of S74:** UNCHANGED from S73.
+- Rule chain: `v56_trips_hybrid` ($1,429 full / $794 prefix). Grader-confirmed.
+- ML champion: `v44_dt` ($1,081 full / $686 prefix).
+- Two-track divergence: $348/1000h.
+- Project rule count: 18.
+- Decision 109: v47_dt clean NULL; gradient boosting (Option B) queued S75.
+
+**Session 75 priorities (per CURRENT_PHASE.md S74 rewrite):**
+1. **Phase 1 (~5-10 min): Install xgboost in venv.** `pip install xgboost`. Verify ≥2.0 for `multi_strategy='multi_output_tree'`; fall back to 105 sequential regressors if <2.0. Alternative: LightGBM `MultiOutputRegressor`.
+2. **Phase 2 (~20-40 min): Train v47_xgb at v44's 107 features alone** (NOT 108 — exclude ho_v7; isolate "boosting vs single-tree DT" as the only variable; defer feature additions to v48_xgb if v47_xgb ships). Hyperparams: n_estimators=500-1000, max_depth=8-12, learning_rate=0.05, early stopping on 20% validation split, tree_method='hist'. Build strategy_v47_xgb + grade_v47_xgb scaffolding.
+3. **Phase 3 (~3-5 min): Prefix grade v47_xgb vs v44_dt.**
+4. **Phase 4 (~30-40 min): Full grade v47_xgb vs v44_dt.** Decision matrix per S74 canonical +$10 ship bar. If Δ ≥ +$10 → Decision 110 ships + v57_xgb_hybrid. If Δ ≤ +$5 → boosting also caps at v44 features; pivot to grid label N=1000 re-eval OR new diagnostic.
+
+Standalone session report: `SESSION_74_V47_DT_NULL_REPORT.md`.

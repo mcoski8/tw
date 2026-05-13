@@ -6132,3 +6132,85 @@ The largest single-category v44 residual is **high_only at $3,014/1000h within-c
 - Two-track divergence: $348 (no change).
 - **Total project rule count: 18** (UNCHANGED).
 - **v46b_dt PARTIAL POSITIVE recorded; H2 (route-tradeoff comparator) or gradient boosting queued for S74.**
+
+## Decision 109 — Session 74 v47_dt clean NULL at depth=36 ml=1; H2 route-tradeoff comparator captures zero signal (+1 leaf, #103 importance, 0pp pct_opt lift, $0/1000h delta); "derivable in 2 splits" trap empirically confirmed; ML feature-engineering track exhausted at v44 saturating regime; pivot to gradient boosting in S75
+
+**Date:** 2026-05-13
+
+**Question:** Does the H2 route-tradeoff comparator (`ho_v7_route_tradeoff_joint_minus_nonjoint_g`, 1 signed int8 feature) ship as the v47 ML champion at v44's saturating regime (depth=36 ml=1) — and confirm or refute the S71-stated "derivable in 2 splits" risk?
+
+**Options:**
+  (a) Ship v47_dt as new ML champion if full Δ ≥ +$10/1000h (per S73 canonical ship bar).
+  (b) NULL ship: H2 captures zero signal; "derivable in 2 splits" trap empirically confirmed; v44_dt remains champion; pivot to gradient boosting (Option B per S73→S74 CURRENT_PHASE.md) in S75.
+  (c) PARTIAL POSITIVE: H2 mildly productive but sub-threshold; consider H1+H2 batch (v48 = v44 + ho_v6 + ho_v7, 110 features).
+
+**Choice:** (b) — NULL ship. Full-grid Δ = exactly $0/1000h with zero within-cat lift on the gated target high_only ($1,868 → $1,868). Both tripwires concur NULL (+1 leaf, #103/108 importance). H2 falsified at saturating-DT regime; pivot to gradient boosting in S75.
+
+**Why:**
+  1. **Tripwires concur NULL — cleanest "dead feature" signature in project history.** Leaf growth: +1 vs v44's 2,248,173 (vs v3's K-many SHIP, v45's +9 NULL, v46b's +12,354 SHIP-but-PARTIAL). Feature importance: #103/108 (0.01%) — deeper than v46b's #75 (0.05%). Training fit time 567s (vs v46b's 610s at same regime) — a feature that opens many new splits SLOWS fitting; v47's faster fit confirms the DT scarcely used the new feature.
+  2. **Prefix grader byte-identical** ($686 → $686) across all 7 prefix categories. Surgical-gating byte-identity guarantee preserved; the +1 leaf signature is invisible at the prefix grid's resolution.
+  3. **Full grader $0 delta with effective byte-identity on all 8 per-category $/1000h.** Including on-target high_only ($1,868 → $1,868 — zero within-cat lift; v46b earned +$24 within-cat at the same regime with H1 features). The 3-hand pct_opt divergence (3,893,731 → 3,893,734 of 6M, +0.00005pp) is the empirical fingerprint of the +1 leaf — a handful of hands route slightly differently with zero net regret.
+  4. **S71's "derivable in 2 splits" trap is now empirically confirmed.** The comparator subtracts two values the DT already has access to (JOINT mid_high via ho_v3 + best DS_NONJOINT top, a near-relative of ho_v4's `topNonMax_DS_ms_max_top_rank_g`). At depth=36 with 2.25M leaves and 2.7 rows/leaf, the DT can already extract whatever the comparator compresses via axis-aligned splits on existing features. The +1 leaf delta is the fingerprint: the DT used the new feature for exactly ONE split across 2.25M opportunities — i.e., the comparator added effectively zero new partitioning power.
+  5. **H2 hypothesis FALSIFIED at saturating-DT regime.** The S71 cascade now stands at: H1 PARTIAL POSITIVE / NULL ship ($24 within-cat, $5 full); H2 clean NULL ($0 within-cat, $0 full). H3/H4/H5 are predicted to fall between these (lower priority targets per S71). No further single-DT feature work is justified at the saturating regime.
+  6. **The DT-feature-engineering track is exhausted.** Two consecutive sessions (S73 PARTIAL NULL ship, S74 clean NULL) at the same regime with the same 4-phase playbook produce sub-threshold results. The +$10 ship bar combined with diminishing returns closes the chapter. S75 must pivot.
+
+### S74 deliverables
+
+**Phase 1 — ho_v7 feature design + persistence (DONE):**
+- `analysis/scripts/high_only_aug_v7_features_gated.py` — 1 signed int8 feature; 5 hand-crafted smoke tests; all pass on first run. Function `compute_high_only_v7_features_for_hand` enumerates over (DS bot, top, mid) settings; classifies JOINT_PICK vs DS_NONJOINT per drill_high_only_v43_threshold.py's binary partition; computes signed delta `best_JOINT_mid_high − best_DS_NONJOINT_top`.
+- `analysis/scripts/persist_high_only_aug_v7_gated.py` — emits `data/feature_table_high_only_aug_v7_gated.parquet` (18.59 MB zstd; 66.3s persist time). Empirical distribution: 5,063,643 hands (84.27%) at 0 (gated or no DS), 415,800 (6.92%) at −14, 244,860 (4.07%) at −13, 281,156 (4.67%) at −12..−1, **zero positive values** — confirms my Phase 1 design analysis that positive ho_v7 is structurally rare in (4,2,0,0) / (2,2,2,0) suit packings where JOINT is achievable.
+
+**Phase 2 — v47_dt training at depth=36 ml=1 (DONE — NULL TRIPWIRES):**
+- `analysis/scripts/train_v47_dt.py` — copy of train_v46_dt.py template with V6 → V7 columns; defaults switched to depth=36 ml=1 per S73 regime-lock.
+- Fit time 567.1s; 108 features; **2,248,174 leaves (+1 vs v44)**.
+- Top-30 importance unchanged from v44 (n_broadway 41.81%, pair_high_rank 12.27%, third_rank 10.53%, n_low 6.87%, top_rank 3.51%, ...). ho_v7 lands at **#103/108 (0.01%)** — NULL per S71 threshold.
+
+**Phase 3 — strategy + grader scaffolding + prefix grader (DONE — BYTE-IDENTITY):**
+- `analysis/scripts/strategy_v47_dt.py` — inference; 16 gated-feature blocks (v44's 15 + ho_v7); MODEL_PATH → v47_dt_model.npz.
+- `analysis/scripts/grade_v47_dt.py` — head-to-head grader vs v44/v45/v46/v46b.
+- Prefix grade: v44 $686 → v47 $686 ($/1000h). **BYTE-IDENTICAL** on all 7 prefix categories. Surgical-gating byte-identity guarantee preserved.
+
+**Phase 4 — full grader (DONE — DECISIVE NULL):**
+- Full grade: v44 $1,081 → v47 $1,081 ($/1000h). **+$0/1000h.**
+- All 8 per-category $/1000h match v44 to the dollar (high_only $1,868, pair $1,097, two_pair $363, trips $1,194, trips_pair $281, three_pair $1,613, quads $545, composite $960).
+- pct_opt 64.80% → 64.80% (3-hand divergence of 6M, +0.00005pp). p90/p99 tied.
+- Wall: v44 1058.8s + v47 1137.5s = ~36 min head-to-head.
+
+### Methodology lessons (Session 74)
+
+1. **Both tripwires concur NULL at +1 leaf + tail importance = cleanest dead-feature signal in project history.** v47's signature exceeds even v45's prior "+9 leaves" benchmark. **New doctrine: ≤+10 leaves at saturating regime = NULL signal (was ≤+1K).**
+2. **"Derivable in 2 splits" trap is now an empirically-confirmed failure mode.** Axis-comparison features that subtract two existing values add no information at saturating-DT regime. Future feature design must target NON-derivable axes (e.g., H1's SS+ms suit-counting primitive) or pivot to a non-DT model class.
+3. **Fitter wall time is a 3rd tripwire.** v47 fit 567s vs v46b's 610s (same regime). Slower fit signals feature usage; faster fit signals inert feature. Read jointly with importance + leaf growth.
+4. **Diagnostic-WG recovery cascade: H1 16%, H2 0%.** The S71 $147.59 STRUCTURE-bucket leak is empirically resolved at H1 captures ~16% within-cat (~$24); H2 captures 0%. The remaining ~$123 WG appears to be either (a) inherent label noise at the saturating regime, or (b) structurally unreachable from axis-aligned DT splits over current feature primitives. Either points to gradient boosting as the next experiment.
+5. **The DT-feature-engineering chapter is functionally closed at v44's saturating regime.** Two consecutive sessions (S73 PARTIAL NULL ship +$5, S74 clean NULL +$0) at the same 4-phase playbook produce diminishing returns. The +$10 ship bar excludes both. S75 pivot is mandatory.
+6. **"Speed is not necessary — clarity and perfection is."** S74 ran the full 4-phase playbook in ~50 min (Phase 1 ~10 min persist, Phase 2 ~10 min train, Phase 3 ~3 min prefix grade, Phase 4 ~36 min head-to-head full grade). The empirically airtight NULL closes the door on H2 — no re-runs needed, no ambiguity.
+
+### Files (Session 74)
+
+**New code:**
+- `analysis/scripts/high_only_aug_v7_features_gated.py`
+- `analysis/scripts/persist_high_only_aug_v7_gated.py`
+- `analysis/scripts/train_v47_dt.py`
+- `analysis/scripts/strategy_v47_dt.py`
+- `analysis/scripts/grade_v47_dt.py`
+
+**Data (gitignored, local-only):**
+- `data/feature_table_high_only_aug_v7_gated.parquet` (18.59 MB).
+- `data/v47_dt_model.npz` (1,260.45 MB) — NULL ship; reference only; NOT production champion.
+- `data/session74/persist_v7.log`
+- `data/session74/train_v47_dt.log`
+- `data/session74/grade_v47_prefix.log`
+- `data/session74/grade_v47_full.log`
+
+**Documentation:**
+- `SESSION_74_V47_DT_NULL_REPORT.md`
+- `CURRENT_PHASE.md` — rewritten for S75.
+- `DECISIONS_LOG.md` — Decision 109 (this section).
+- `STRATEGY_GUIDE.md` — Part 1 SKIPPED (no strategy of record changed); Parts 2-6 front-matter date refresh.
+
+**Production state at end of S74:** UNCHANGED from S73.
+- Rule chain: **v56_trips_hybrid** ($1,429 full / $794 prefix). Grader-confirmed.
+- ML champion: **v44_dt** (UNCHANGED). $1,081 full / $686 prefix.
+- Two-track divergence: $348 (no change).
+- **Total project rule count: 18** (UNCHANGED).
+- **v47_dt clean NULL recorded; DT-feature-engineering track exhausted at saturating regime; gradient boosting (Option B) queued for S75.**
