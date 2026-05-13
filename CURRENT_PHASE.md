@@ -1,278 +1,244 @@
-# Current: Sprint 8 — Session 76 cross-category setting-rank diagnostic ships; identifies PAIR as the next ML/rule target ($116.04/1000h STRUCTURE-bucket leak, fresh territory); two_pair / three_pair / trips_pair empirically confirmed as noise-ceiling-limited (Option A candidates); S77 pivots to pair-first deep-drill
+# Current: Sprint 8 — Session 77 pair-first deep-drill ships; LOW pair (rank 2-7) identified as carrier of 74.6% of pair's STRUCTURE leak ($86.54 of $116.04/1000h); 5 LOW PMID/PBOT cells carry $84.56 with a single dominant mismatch pattern (v44 over-routes to SPLIT/PBOT, oracle keeps PMID); three feature hypotheses (H6/H7/H8) queued for S78 v48_dt retrain at depth=36 ml=1
 
-S75 closed Option B (gradient boosting at moderate capacity) with a
-decisive NULL (−$1,392/1000h full grid). S76 PHASE 1 chose Option B
-(categorical diagnostic refresh) as the pivot direction per the cost/
-risk ordering (B → D → C → A) and the user directive "speed is not
-necessary — clarity and perfection is." PHASE 2 ran a category-
-AGNOSTIC setting-rank NOISE/MID/STRUCTURE diagnostic on v44_dt across
-all 8 hand categories on the full 6M-hand realistic-mixture grid
-(17.9 min wall).
+S76 cross-category diagnostic identified pair as the highest-leverage next ML/rule target ($116.04/1000h STRUCTURE-bucket leak, never drilled with the setting-rank lens). S77 PHASE 1 designed `compute_hand_structural_minimal_pair()` combining S66's 6-cell structural taxonomy (PBOT_DS_JOINT / PBOT_DS_PARTIAL / PMID_DS_MAXTOP / PMID_DS_NOMAXTOP / PMID_SS_MAXTOP / PMID_OTHER) with S71's NOISE/MID/STRUCTURE setting-rank lens, plus pair_rank_tier (LOW 2-7 / MID 8-T / HIGH J-A) and non-pair-card structural axes.
 
-**Result: empirically airtight cross-category partition with three
-actionable findings.** Production state UNCHANGED for the **fifth**
-consecutive session (S72 NULL, S73 PARTIAL/NULL ship, S74 clean NULL,
-S75 boosting NULL, S76 diagnostic ship).
+S77 PHASE 2 ran `drill_v44_pair_S77.py` on the full 2,800,512 pair hands in **10.2 min wall** (~4,500 hands/sec). Total pair WG $511.16/1000h reconstituted exactly — validates the drill against v44_dt grade.
 
-**Full-grid contribution × structure decomposition:**
+**Result: pair STRUCTURE leak concentrates in LOW tier with a single dominant mismatch pattern.** Production state UNCHANGED for the **sixth** consecutive session (S72 NULL, S73 PARTIAL/NULL ship, S74 clean NULL, S75 boosting NULL, S76 diagnostic ship, S77 diagnostic ship).
 
-| Category | v44 $/1000h contribution | STR $ | NOISE $ | STR/TOT |
-|---|---:|---:|---:|---:|
-| pair | $511.16 | **$116.04** | $206.73 | 22.7% |
-| high_only | $381.39 | $147.59 | $79.54 | 38.7% |
-| two_pair | $80.82 | $0.86 | $57.73 | **1.1%** |
-| trips | $65.18 | $13.14 | $23.08 | 20.2% |
-| three_pair | $30.70 | $0.78 | $21.78 | **2.6%** |
-| trips_pair | $8.03 | $0.21 | $4.55 | **2.6%** |
-| composite | $2.35 | $0.41 | $0.57 | 17.4% |
-| quads | $1.30 | $0.20 | $0.40 | 15.4% |
-| **TOTAL** | **$1,081.13** | **$279.23** | **$394.38** | **25.8%** |
+**Full-grid pair STRUCTURE decomposition by pair_rank_tier:**
 
-**Three findings:**
+| tier | pair ranks | n | STR $/1000h | STR/tier_total |
+|---|---|---:|---:|---:|
+| **LOW** | 22-77 | 1,292,544 | **$86.54** | **30.7%** |
+| MID | 88-TT | 646,272 | $15.93 | 16.5% |
+| HIGH | JJ-AA | 861,696 | $13.57 | 10.2% |
+| TOTAL | — | 2,800,512 | $116.04 | 22.7% |
 
-1. **PAIR is the highest-leverage next ML/rule target.** $116.04/1000h STRUCTURE-bucket leak (second-largest absolute), 22.7% of pair's leak is structurally closeable, sharp gap_2nd of 0.2109 (sharper than high_only STR's 0.1063), 59,355 hands in STR bucket, **NEVER drilled with the setting-rank lens.** Pair contributes 47% of v44's total full-grid leak.
+**Top 5 STRUCTURE-bucket cells (v48 target population):**
 
-2. **two_pair / three_pair / trips_pair are noise-ceiling-limited.** STR/TOT < 3% each; combined NOISE-bucket leak $83.55/1000h. Option A (oracle N=1000 re-eval) is now empirically justified for these specifically (not speculative). Further single-model ML feature engineering on these categories is expected to NULL at the +$10 ship bar.
+| rank | tier | cell | n_STR | STR $/1000h | gap_2nd_med |
+|---:|---|---|---:|---:|---:|
+| 1 | LOW | PMID_DS_NOMAXTOP | 11,884 | $31.00 | 0.1800 |
+| 2 | LOW | PMID_DS_MAXTOP | 6,760 | $21.68 | **0.3850** |
+| 3 | LOW | PMID_OTHER | 5,355 | $11.81 | 0.1850 |
+| 4 | LOW | PBOT_DS_PARTIAL | 7,977 | $10.36 | 0.1150 |
+| 5 | LOW | PMID_SS_MAXTOP | 4,484 | $9.71 | 0.1650 |
+| **sum** | | | **36,460** | **$84.56** | — |
 
-3. **high_only's STR leak ($147.59) is real but H1-H5 cascade exhausted.** A pair-first drill exploits cleaner residual signal without inheriting an exhausted hypothesis cascade. Marginal-return curve on high_only is diminishing.
+**Dominant mismatch pattern (the v44 systematic error):**
 
-**Decision 111: Diagnostic ship; pair-first deep-drill recommended
-for S77.** Details in DECISIONS_LOG.md.
+> **v44 systematically over-routes LOW pairs (2-7) to SPLIT (or PBOT) when oracle keeps the pair in MID.** Single largest mismatch class: `SPLIT_tmax_SS_mu → PMID_tmax_DS` in LOW × PMID_DS_MAXTOP, n=3,072 hands, $10.97/1000h on ONE class out of pair's $116 STR total. Cell 4 (LOW × PBOT_DS_PARTIAL) is the REVERSE exception (v44 stays PMID, oracle routes PBOT_DS); discriminator is kicker_max suit alignment with pair_suits.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 77): Pair-first cell-taxonomy
-> deep-drill**
->
-> Apply the S71-style cell-taxonomy diagnostic to pair (analogous to
-> drill_v44_high_only_S71.py for high_only):
->
-> 1. Design a `compute_hand_structural_minimal_pair()` capturing
->    pair-relevant structural axes:
->    - pair_rank tier (low / mid / high broadway).
->    - pair color: same-suit (JOINT pair) vs different-suit pair.
->    - pair placement: which tier consumes the pair (mid for 5-card
->      hand-strength, bot for Omaha 2+3 leverage, or split).
->    - kicker quality: max non-pair rank and its suit relationship to
->      the pair.
->    - suitedness profile of the 5 non-pair cards (DS/SS/RB/4f).
->    - broadway / wheel structural axes on the 5 non-pair cards.
->
-> 2. Cross-tabulate pair STRUCTURE-bucket hands (59,355 hands) against
->    the new cell taxonomy. Identify the top 3-5 cells carrying the
->    $116/1000h leak. Expected output format: per (pair_rank ×
->    pair_color × suitedness) cell, report n hands, total WG, and top
->    mismatch classes (what v44 picks vs oracle).
->
-> 3. Hypothesize feature(s) targeting the surfaced cells — analogous
->    to ho_v6 H1 (SS+ms route quality) for high_only. Goal: a 2-3
->    feature pack that captures ≥$30/1000h within-cat lift on the
->    surfaced cells.
->
-> 4. (S78 — if any hypothesis surfaces a clean ≥$30/1000h within-cat
->    target) Build feature pack, train v48_dt at depth=36 ml=1 (S73
->    regime LOCKED per S73 methodology lesson #1), grade vs v44 with
->    prefix + full grader. Apply +$10/1000h full-grid ship bar
->    (codified S73, held S74-S76).
->
-> **📓 METHODOLOGY (Session 77+):**
->
-> 1. **Category-agnostic setting-rank lens is portable.** No per-
->    category structural taxonomy needed for first-pass diagnostic.
->    The S76 drill identified the next target in 18 min wall.
->
-> 2. **Full-grid CONTRIBUTION ordering ≠ within-category $/1000h
->    ordering.** Pair contributes $511 vs high_only $381 in
->    full-grid terms; within-category, high_only $1,868 > pair
->    $1,097. Future session-end summaries should report BOTH numbers
->    to keep priority calls calibrated.
->
-> 3. **STR/TOT ratio separates closeable-signal from noise-ceiling
->    categories.** > 15% = closeable (high_only, pair, trips,
->    composite, quads); < 5% = noise-dominated (two_pair, three_pair,
->    trips_pair). Belongs as a per-category property in
->    STRATEGY_GUIDE.md going forward.
->
-> 4. **gap_2nd × bucket combination is the sharpness metric.** Sharp
->    optimum + STRUCTURE bucket = high-confidence feature-engineering
->    target. Pair STR gap_2nd 0.21 > high_only STR gap_2nd 0.11.
->
-> 5. **Plateau width 1.0-1.2 at EPS_REL=0.5% confirms argmax is
->    well-isolated at N=200.** Label noise lives in EV magnitude, not
->    in argmax determinacy. This refines the Option A hypothesis: N=1000
->    re-eval would tighten EV magnitude estimates (reducing noise-
->    bucket WG) but not change argmax structurally.
->
-> 6. **+$10 ship bar canonical (S73 codified, held S74-S76).** Fifth
->    consecutive session UNCHANGED production state — the bar is
->    filtering noise from signal as designed.
->
-> 7. **"Speed is not necessary — clarity and perfection is."** S76
->    spent 18 min wall on the diagnostic and produced data-supported
->    findings. Avoid the S57-S75 trap of sinking 12+ sessions into a
->    diminishing-return category (high_only H1-H5). The S76 cross-
->    category lens prevents this drift; future diagnostics should
->    re-check the lens after every 3 NULL/partial sessions on a single
->    category.
+**Three feature hypotheses queued for S78 v48_dt retrain:**
 
-> **✅ ARTIFACTS produced in S76:**
-> 1. `analysis/scripts/drill_v44_setting_rank_all_cats_S76.py` —
->    category-agnostic setting-rank diagnostic; single-pass
->    strategy_v44_dt walk over full 6M-hand grid with per-bucket
->    gap_2nd / plateau-width sampling.
-> 2. `data/drill_v44_setting_rank_all_cats_S76_summary.json` (16.0 KB)
->    — per-category bucket distribution, WG decomposition, rank
->    histogram, gap_2nd stats, plateau width.
-> 3. `data/session76/drill_v44_setting_rank_all_cats_S76.log`
->    — full console output.
-> 4. `data/session76/drill_smoke_5k.log` — 5K-per-cat smoke validation.
-> 5. `SESSION_76_DIAGNOSTIC_REPORT.md` — full retrospective +
->    Appendix A pair-first justification + Decision 111 pointer.
-> 6. `DECISIONS_LOG.md` — Session 76 Pivot Preamble (Option B chosen)
->    + Decision 111 (diagnostic findings + S77 pair-first
->    recommendation).
-> 7. `CURRENT_PHASE.md` — rewritten for S77 (this file).
-> 8. `STRATEGY_GUIDE.md` — Part 1 SKIPPED (no strategy of record
->    changed); Parts 2-6 front-matter date refresh.
+| H# | Feature | Type | Gate | Expected within-pair $ | Full-grid $ |
+|---|---|---|---|---:|---:|
+| **H6** | `pair_pmid_ds_n_configs_g` | int8 0..5 | single-pair | $15-26 | $7-12 |
+| **H7** | `pair_kicker_max_in_pair_suit_g` | bool 0/1 | single-pair | $14-21 | $5-10 |
+| **H8** | `pair_low_pmid_safety_g` | int8 0..5 | LOW pair only | $22-35 | $10-17 |
+| **H6+H7+H8 joint (50% redundancy budget)** | | | | **$30-45** | **$14-22** |
 
-> Updated: 2026-05-13 (Session 76 end — cross-category setting-rank
-> diagnostic ships; pair identified as next target with $116.04/1000h
-> STRUCTURE-bucket leak; two_pair / three_pair / trips_pair confirmed
-> noise-ceiling-limited; production state UNCHANGED for fifth
-> consecutive session; S77 pivots to pair-first cell-taxonomy
-> deep-drill)
+**Decision 112: Diagnostic ship; H6/H7/H8 feature pack queued for S78.** Details in DECISIONS_LOG.md and `PAIR_S77_FEATURE_HYPOTHESES.md`.
+
+> **🎯 IMMEDIATE NEXT ACTION (Session 78): Implement H6+H7+H8, train v48_dt at depth=36 ml=1, grade vs v44**
+>
+> 1. **(PHASE 1 — ~30 min)** Implement the 3 new pair-gated feature files:
+>    - `analysis/scripts/pair_pmid_ds_features_gated.py` — H6: `pair_pmid_ds_n_configs_g` (int8 0..5).
+>    - `analysis/scripts/pair_kicker_align_features_gated.py` — H7: `pair_kicker_max_in_pair_suit_g` (bool 0/1).
+>    - `analysis/scripts/pair_low_pmid_safety_features_gated.py` — H8: `pair_low_pmid_safety_g` (int8 0..5; gated to LOW pair only).
+>    - Each with sanity tests on canonical examples from `PAIR_S77_FEATURE_HYPOTHESES.md`.
+>
+> 2. **(PHASE 2 — ~5 min)** Persist gated parquet packs:
+>    - `analysis/scripts/persist_pair_pmid_ds_gated.py`
+>    - `analysis/scripts/persist_pair_kicker_align_gated.py`
+>    - `analysis/scripts/persist_pair_low_pmid_safety_gated.py`
+>    - Verify zero values on all non-pair hands (and non-LOW-pair hands for H8).
+>
+> 3. **(PHASE 3 — ~3-5 min)** Smoke train v48_dt on 100K rows:
+>    - depth=36, ml=1, criterion=squared_error (S73 regime LOCKED).
+>    - Verify H6/H7/H8 land in top-30 feature importance. If they don't, the new features are not being used by the saturating DT — likely redundancy-NULL; abort the full retrain and document.
+>
+> 4. **(PHASE 4 — ~25-40 min)** Full train v48_dt on 4.8M training rows. Expect ~2.25M leaves and a model ~1,260 MB (same scale as v44).
+>
+> 5. **(PHASE 5 — ~3 min)** Prefix grade v48 vs v44. Decision branches:
+>    - prefix Δ ≥ +$5 → proceed to full grade.
+>    - prefix Δ < +$5 → NULL ship; document the within-pair lift; consider pair-only sub-strategy.
+>
+> 6. **(PHASE 6 — ~18 min)** Full grade v48 vs v44 on 6M-hand realistic-mixture grid.
+>    - Δ ≥ +$10/1000h → SHIP. Update v44_dt → v48_dt as ML champion.
+>    - Δ ∈ [+$5, +$10) → PARTIAL POSITIVE; NULL ship at +$10 bar per S73 codification.
+>    - Δ < +$5 → CLEAN NULL ship.
+>
+> 7. **(PHASE 7 — ~5 min)** Decision 113 in DECISIONS_LOG.md; SESSION_78_V48_DT_REPORT.md; CURRENT_PHASE.md rewritten for S79.
+>
+> **📓 METHODOLOGY (Session 78+):**
+>
+> 1. **S73 regime LOCKED for v48.** Do NOT sweep depth/ml; v44's parameters are the validated saturating regime. Sweeping consumes hours of compute and the S36 capacity-retest lesson (`feedback_taiwanese_capacity_retest.md`) only applies when feature count grows ≥10 above last sweep — three new features doesn't qualify.
+>
+> 2. **Smoke-train BEFORE full-train.** A 100K-row sanity smoke catches "new features not used" (= structural-redundancy NULL) and "DT mis-loads features" (= integration bug) in ~30 sec wall. v44 full retrain is ~30 min; smoke saves a full session's worth of compute if features are dead-on-arrival.
+>
+> 3. **Verify feature importance lands.** H6/H7/H8 should rank in the top-30 of v48 feature importance (v44's pair features rank ~30-50; new pair features should rank similarly if they're being used). If H6/H7/H8 rank ≥80, they're effectively unused — NULL is preordained.
+>
+> 4. **Reverse-direction mismatch caveat.** Cell 4 (LOW × PBOT_DS_PARTIAL) is the exception where v44 should route to PBOT, not PMID. H8 alone would push it the wrong way; H6+H7 are needed to give the DT room to learn the kicker_max alignment discriminator. NEVER ship H8 standalone.
+>
+> 5. **+$10 ship bar canonical (S73 codified, held S74-S77).** Sixth consecutive session UNCHANGED production state. The bar is filtering noise from signal as designed.
+>
+> 6. **"Speed is not necessary — clarity and perfection is."** S77 spent ~10 min wall on the drill and ~30 min on hypothesis documentation, producing a data-supported feature pack with quantified expected lift on the cleanest fresh signal target in the project. S78 should match that discipline: smoke-validate, single training run, single grade, decision.
+
+> **✅ ARTIFACTS produced in S77:**
+> 1. `analysis/scripts/drill_v44_pair_S77.py` — pair-only setting-rank deep-drill, combines S66 6-cell taxonomy with S71 bucket lens + pair_rank_tier + non-pair-card structural axes.
+> 2. `data/drill_v44_pair_S77_summary.json` (216.7 KB) — per (tier, cell, bucket) WG decomposition, gap_2nd / plateau width stats, top mismatch classes, fingerprint distributions.
+> 3. `data/session77/drill_v44_pair_S77.log` — full console output (10.2 min wall, 4,500 hands/sec).
+> 4. `data/session77/drill_smoke_5k.log` — 5K-hand smoke validation.
+> 5. `PAIR_S77_FEATURE_HYPOTHESES.md` — H6/H7/H8 feature definitions, derivation arguments, expected lift estimates, redundancy risk assessments.
+> 6. `DECISIONS_LOG.md` — Decision 112 (S77 diagnostic findings + H6/H7/H8 hypothesis pack).
+> 7. `CURRENT_PHASE.md` — rewritten for S78 (this file).
+> 8. `STRATEGY_GUIDE.md` — Part 1 SKIPPED (no strategy of record changed); Parts 2-6 front-matter date refresh.
+
+> Updated: 2026-05-13 (Session 77 end — pair-first deep-drill ships; LOW tier carries 74.6% of pair's STRUCTURE leak; 5 LOW cells × 36,460 hands × $84.56/1000h identified as the v48 target population; dominant mismatch pattern is v44 over-routing LOW pairs to SPLIT/PBOT when oracle keeps PMID; H6/H7/H8 feature pack queued for S78; production state UNCHANGED for the sixth consecutive session)
 
 ---
 
-## Headline state at end of Session 76
+## Headline state at end of Session 77
 
-**Strategies of record (UNCHANGED from S75):**
+**Strategies of record (UNCHANGED from S76):**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
 | **v56_trips_hybrid** | PRODUCTION rule chain. **$1,429 full / $794 prefix**. | `analysis/scripts/strategy_v56_trips_hybrid.py` |
-| **v44_dt** | PRODUCTION ML champion (UNCHANGED). $1,081 full / $686 prefix. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
+| **v44_dt** | PRODUCTION ML champion. $1,081 full / $686 prefix. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
 
-Two-track divergence: **$348/1000h** (no change in S76 — pure diagnostic
-session, no model trained or rule shipped).
+Two-track divergence: **$348/1000h** (no change in S77 — pure diagnostic session, no model trained or rule shipped).
 
-**S76 diagnostic summary:**
+**S77 diagnostic summary:**
 
 | Metric | Value | Notes |
 |---|---:|---|
-| Hands swept (full grid) | 6,009,159 | matches v44_dt grade scope |
-| Wall time | 1,074.8s (17.9 min) | ~5,500 hands/sec steady-state |
-| Total $/1000h reconstituted | $1,081.13 | matches v44_dt $/1000h (validates diagnostic) |
-| Total STR-bucket $/1000h | $279.23 | 25.8% of total — closeable signal share |
-| Total NOISE-bucket $/1000h | $394.38 | 36.5% of total — noise-ceiling share |
-| Total MID-bucket $/1000h | $407.34 | 37.7% of total — marginal-headroom share |
-| Top STR-bucket cat | high_only ($147.59) | exhausted H1-H5 |
-| **Top fresh STR-bucket cat** | **pair ($116.04)** | **S77 target** |
-| Top NOISE-bucket cat | pair ($206.73) | Option A also applies |
-| Most noise-dominated cats (STR/TOT < 5%) | two_pair, three_pair, trips_pair | Option A territory |
+| Pair hands swept | 2,800,512 | full pair sub-grid |
+| Wall time | 614.5s (10.2 min) | ~4,500 hands/sec steady-state |
+| Total $/1000h reconstituted | $511.16 | matches v44_dt pair contribution exactly |
+| STRUCTURE-bucket $ | $116.04 | matches S76 exactly |
+| NOISE-bucket $ | $206.73 | matches S76 exactly |
+| MID-bucket $ | $188.38 | matches S76 exactly |
+| Top tier carrier | LOW (74.6% of STR leak) | $86.54/1000h |
+| Top single STR cell | LOW × PMID_DS_NOMAXTOP | $31.00 / 11,884 hands |
+| Sharpest STR cell | LOW × PMID_DS_MAXTOP | gap_2nd_med 0.3850 |
+| Single largest mismatch class | `SPLIT_tmax_SS_mu → PMID_tmax_DS` | n=3,072, $10.97/1000h |
 
 ---
 
-## Hypothesis cascade status (updated after S76)
+## Hypothesis cascade status (updated after S77)
 
 | Hypothesis | Description | Status |
 |---|---|---|
 | **H1** | high_only SS+ms route quality (2 ho_v6 features) | TESTED → PARTIAL POSITIVE / NULL ship at +$5/1000h (S73). |
 | **H2** | high_only route-tradeoff comparator (1 ho_v7 feature) | TESTED → CLEAN NULL at +$0/1000h (S74). |
-| **Option B (S75)** | Gradient boosting at v44 features (depth=6, n_est=200) | TESTED → DECISIVE NULL at −$1,392/1000h. Capacity mismatch. |
-| **S76 Option B (this)** | Cross-category setting-rank diagnostic | **SHIPPED → identified pair-first as next target.** |
+| Option B (S75) | Gradient boosting at v44 features (depth=6, n_est=200) | TESTED → DECISIVE NULL at −$1,392/1000h. |
+| S76 Option B | Cross-category setting-rank diagnostic | SHIPPED → identified pair-first as next target. |
+| **S77 pair drill** | Pair-only setting-rank × S66 cell deep-drill | **SHIPPED → identified H6/H7/H8 feature hypotheses.** |
 | H3 | high_only SS+ms route VARIETY signal | UNTESTED. Deprioritized — pair offers fresher signal. |
 | H4 | high_only MS_ONLY discriminator | UNTESTED. Deprioritized — small WG target. |
 | H5 | high_only Drop-max signal | UNTESTED. Dead (relied on H2 infrastructure). |
-| **NEW H6** | **pair structural cell taxonomy** | **QUEUED for S77 PHASE 2.** |
-| Option A (S77+) | Oracle-label N=1000 re-evaluation | Empirically justified for two_pair / three_pair / trips_pair specifically; **GATED on cluster access**. |
-| Option C (S77+) | Higher-capacity gradient boosting (depth=8-10, n_est=1000+) | Deprioritized — 15-25 hours wall, speculative closure of $1,392 gap. |
-| Option D (S77+) | Rule-chain extension (Rule 19) | LATENT — could ride on pair diagnostic findings if a clean cell surfaces. |
+| **NEW H6** | `pair_pmid_ds_n_configs_g` — PMID DS-bot path count | **QUEUED for S78 PHASE 1.** |
+| **NEW H7** | `pair_kicker_max_in_pair_suit_g` — kicker-max suit alignment | **QUEUED for S78 PHASE 1.** |
+| **NEW H8** | `pair_low_pmid_safety_g` — LOW-pair S66 cell categorical | **QUEUED for S78 PHASE 1.** |
+| Option A (S78+) | Oracle-label N=1000 re-evaluation | Empirically justified for two_pair / three_pair / trips_pair specifically; **GATED on cluster access**. |
+| Option C (S78+) | Higher-capacity gradient boosting (depth=8-10, n_est=1000+) | Deprioritized — 15-25 hours wall, speculative closure of $1,392 gap. |
+| Option D (S78+) | Rule-chain extension targeting LOW pair PMID-vs-SPLIT routing | LATENT — could ride on S77 drill findings if v48_dt NULLs. |
 
-**Cascade verdict (updated):** S76 reframed the residual signal map. Pair is the cleanest fresh target; high_only's diminishing-return curve is data-confirmed; the noise-ceiling-limited trio (two_pair / three_pair / trips_pair) is empirically identified. **S77 pivots to pair-first cell-taxonomy deep-drill.**
+**Cascade verdict (updated):** S77 produced the cleanest fresh feature-pack hypothesis the project has surfaced since the S33-S35 pair_aug_v2 work. H6/H7/H8 jointly expected to clear the +$10 ship bar with moderate margin (estimated $14-22 full-grid lift at 50% redundancy budget). **S78 will test the pair-feature track at v44 saturation; either ships v48 or definitively closes pair feature engineering at v44's regime.**
 
 ---
 
-## Resume Prompt (Session 77 — Pair-first cell-taxonomy deep-drill)
+## Resume Prompt (Session 78 — Implement H6+H7+H8, train v48_dt, grade vs v44)
 
 ```
-Resume Session 77 of the Taiwanese Poker Solver project at
+Resume Session 78 of the Taiwanese Poker Solver project at
 /Users/michaelchang/CODE/taiwanese.
 
 Read these files for context (in this order):
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of S76 — pair identified as next
-  target with $116.04/1000h STRUCTURE-bucket leak)
-- SESSION_76_DIAGNOSTIC_REPORT.md (cross-category setting-rank
-  diagnostic findings + Appendix A pair-first justification)
-- SESSION_75_V47_XGB_NULL_REPORT.md (decisive boosting NULL, capacity
-  mismatch confirmed)
-- DECISIONS_LOG.md (latest: Decision 111 — S76 diagnostic + pair-first
-  recommendation)
-- analysis/scripts/drill_v44_high_only_S71.py (template — adapt for pair)
-- analysis/scripts/drill_v44_setting_rank_all_cats_S76.py (S76
-  diagnostic for reference)
+- CURRENT_PHASE.md (rewritten end of S77 — H6/H7/H8 pair feature pack
+  queued for v48_dt retrain)
+- PAIR_S77_FEATURE_HYPOTHESES.md (full hypothesis definitions, expected
+  lifts, redundancy risk assessments)
+- SESSION_76_DIAGNOSTIC_REPORT.md + drill_v44_pair_S77 outputs
+  (data/drill_v44_pair_S77_summary.json) for the underlying data
+- DECISIONS_LOG.md (latest: Decision 112 — S77 pair drill + H6/H7/H8 plan)
+- analysis/scripts/pair_aug_v5_features_gated.py (template for H6 feature
+  code; mirror the file structure)
+- analysis/scripts/strategy_v44_dt.py (feature loader; H6/H7/H8 need new
+  _PAIR_*_NAMES entries + index_in_full)
 
-State (end of S76):
-- Cross-category setting-rank diagnostic ran on full 6M-hand grid
-  (17.9 min wall). Total v44 leak ($1,081/1000h) decomposes as:
-  STRUCTURE $279 (25.8%), NOISE $394 (36.5%), MID $407 (37.7%).
-- Pair carries $116.04/1000h STRUCTURE-bucket leak (22.7% of pair's
-  total) with sharp gap_2nd 0.2109 (sharper than high_only STR's
-  0.1063). 59,355 hands in pair STR bucket. NEVER drilled with the
-  setting-rank lens.
-- two_pair / three_pair / trips_pair are noise-ceiling-limited
-  (STR/TOT < 3% each; combined $83.55/1000h NOISE-bucket leak that
-  Option A could partially unlock).
-- high_only STR leak ($147.59) remains but H1-H5 cascade exhausted;
-  pair offers fresher territory.
-- Production UNCHANGED for fifth consecutive session.
+State (end of S77):
+- Pair drill complete (10.2 min wall, 2.8M hands swept). LOW tier (2-7)
+  carries 74.6% of pair's STRUCTURE-bucket leak ($86.54 of $116.04/1000h).
+- Top 5 LOW cells × 36,460 hands × $84.56/1000h identified as v48 target
+  population. Dominant mismatch pattern: v44 over-routes LOW pairs to
+  SPLIT/PBOT, oracle keeps PMID.
+- H6 (`pair_pmid_ds_n_configs_g`, int8 0..5, single-pair gated): expected
+  $7-12/1000h full-grid.
+- H7 (`pair_kicker_max_in_pair_suit_g`, bool 0/1, single-pair gated):
+  expected $5-10/1000h full-grid.
+- H8 (`pair_low_pmid_safety_g`, int8 0..5, LOW-pair-only gated): expected
+  $10-17/1000h full-grid.
+- H6+H7+H8 joint expected lift (50% redundancy budget): $14-22/1000h
+  full-grid — clears the +$10 ship bar with moderate margin.
+- Production state UNCHANGED for the sixth consecutive session.
 
-USER DIRECTIVE (S59-S76 re-confirmed):
+USER DIRECTIVE (S59-S77 re-confirmed):
 - "Speed is not necessary — clarity and perfection is."
-- +$10 ship threshold canonical (codified S73, held S74-S76).
+- +$10 ship threshold canonical (codified S73, held S74-S77).
 
-DIRECTION FOR SESSION 77 — Pair-first deep-drill:
+DIRECTION FOR SESSION 78 — Implement H6+H7+H8, train v48_dt, grade vs v44:
 
-  PHASE 1 (S77 ~30-45 min) — Design `compute_hand_structural_minimal_pair()`
-  capturing pair-relevant axes:
-    - pair_rank tier (low / mid / high broadway)
-    - pair color (JOINT pair = same suit; non-JOINT = different suits)
-    - pair placement option: mid for 5-card Hold'em strength vs bot for
-      Omaha 2+3 leverage vs split-pair placements
-    - kicker quality: max non-pair rank + its suit relationship to pair
-    - suitedness profile of the 5 non-pair cards
-    - broadway / wheel axes on the 5 non-pair cards
+  PHASE 1 (S78 ~30 min) — Implement 3 new pair-gated feature files:
+    - analysis/scripts/pair_pmid_ds_features_gated.py
+    - analysis/scripts/pair_kicker_align_features_gated.py
+    - analysis/scripts/pair_low_pmid_safety_features_gated.py
+    With sanity tests on canonical examples from
+    PAIR_S77_FEATURE_HYPOTHESES.md.
 
-  PHASE 2 (S77 ~20-40 min) — Adapt drill_v44_high_only_S71.py to
-  drill_v44_pair_S77.py. Run on the 2,800,512 pair hands (will be
-  faster than high_only's 17.9 min full grid since pair-only is 47%
-  of the grid). Output: per (cell × bucket) WG decomposition, top
-  mismatch classes, gap_2nd by bucket.
+  PHASE 2 (S78 ~5 min) — Persist gated parquet packs.
+    Verify zero values on non-pair hands (and non-LOW-pair for H8).
 
-  PHASE 3 (S77 ~10 min) — Hypothesize feature(s) for the top 3-5
-  STRUCTURE-bucket cells. Document as PAIR_S77_FEATURE_HYPOTHESES.md
-  with: H6 / H7 / H8 candidate definitions, expected within-cat lift,
-  derivation arguments, redundancy-with-v44 risk assessment.
+  PHASE 3 (S78 ~3-5 min) — Smoke-train v48_dt on 100K rows at depth=36
+  ml=1. Verify H6/H7/H8 in top-30 feature importance. If they're not
+  used, abort the full retrain — likely structural-redundancy NULL.
 
-  PHASE 4 (S77 ~5 min) — Decision 112 in DECISIONS_LOG.md; CURRENT_PHASE.md
-  rewritten for S78 (v48_dt training).
+  PHASE 4 (S78 ~25-40 min) — Full-train v48_dt at depth=36 ml=1 on
+  4.8M training rows. S73 regime LOCKED; no hyperparameter sweep.
 
-  ACCEPTANCE for Session 77:
-  - Pair structural cell taxonomy designed and validated.
-  - drill_v44_pair_S77.py shipped with summary JSON + log.
-  - Top 3-5 STRUCTURE-bucket cells identified, each with explicit
-    n hands + WG + top mismatch class.
-  - At least one feature hypothesis (H6) with expected within-cat
-    lift ≥$30/1000h queued for S78 v48_dt retrain.
+  PHASE 5 (S78 ~3 min) — Prefix grade vs v44.
+    Δ ≥ +$5 → proceed to full grade.
+    Δ < +$5 → NULL ship; document pair-only sub-strategy alternative.
+
+  PHASE 6 (S78 ~18 min) — Full grade on 6M-hand realistic-mixture grid.
+    Δ ≥ +$10 → SHIP. v44_dt → v48_dt as ML champion.
+    Δ ∈ [+$5, +$10) → PARTIAL; NULL ship at +$10 bar.
+    Δ < +$5 → CLEAN NULL ship.
+
+  PHASE 7 (S78 ~5 min) — Decision 113; SESSION_78_V48_DT_REPORT.md;
+  CURRENT_PHASE.md rewritten for S79.
+
+  ACCEPTANCE for Session 78:
+  - 3 new feature files implemented with sanity tests passing.
+  - Gated parquet packs persisted with zero-on-non-gated verification.
+  - Smoke train completes; H6/H7/H8 importance verified.
+  - v48_dt full-trained, prefix + full graded vs v44.
+  - Ship decision made and documented in Decision 113.
 
 REMINDERS:
 - Use python3, not python.
 - cargo at ~/.cargo/bin/cargo.
 - Session-end protocol: commit + push to origin/main (pre-authorized
   per session-end-prompt.md).
-- v44_dt model + features remain unchanged; pair_aug feature packs
-  (pair_aug, pair_aug_v2, pair_aug_v5) are reference for the feature-
-  taxonomy design.
+- v44_dt model + features remain unchanged unless v48 ships.
 - "Speed is not necessary — clarity and perfection is."
+- Reverse-direction caveat: LOW × PBOT_DS_PARTIAL cell is where v44
+  should route to PBOT (not PMID). H6+H7 must let the DT learn the
+  kicker_max-alignment discriminator. NEVER ship H8 standalone.
 ```
 
 ---

@@ -6420,3 +6420,108 @@ S77 acceptance: pair diagnostic + feature pack hypothesis recorded; if any hypot
 - Two-track divergence: $348/1000h (no change).
 - **Total project rule count: 18** (UNCHANGED).
 - **S76 diagnostic recorded; pair-first deep-drill queued for S77; Option A (oracle N=1000) empirically justified for two_pair / three_pair / trips_pair if cluster access becomes available.**
+
+---
+
+## Decision 112 — Session 77 pair-first deep-drill identifies LOW pair (rank 2-7) as the carrier of 74.6% of pair's STRUCTURE leak ($86.54 of $116.04/1000h); 5 LOW PMID/PBOT cells carry $84.56 with a single dominant mismatch pattern (v44 over-routes to SPLIT/PBOT, oracle keeps PMID); three feature hypotheses (H6/H7/H8) queued for S78 v48_dt retrain; production state UNCHANGED for the sixth consecutive session
+
+**Date:** 2026-05-13 (Session 77 end)
+**Question:** What did S77's pair-first cell-taxonomy deep-drill find, and which feature hypotheses should v48_dt test in S78?
+
+### Result summary
+
+`drill_v44_pair_S77.py` swept all 2,800,512 pair hands in 10.2 min wall, applying the combined (pair_rank_tier × S66 cell × setting-rank bucket) lens. Total pair WG $511.16/1000h reconstituted exactly (validates the drill against v44_dt grade).
+
+**STRUCTURE-bucket partition by pair_rank_tier:**
+
+| tier | pair ranks | n | STR $/1000h | STR/tier_total |
+|---|---|---:|---:|---:|
+| **LOW** | 22-77 | 1,292,544 | **$86.54** | 30.7% |
+| MID | 88-TT | 646,272 | $15.93 | 16.5% |
+| HIGH | JJ-AA | 861,696 | $13.57 | 10.2% |
+| TOTAL | — | 2,800,512 | $116.04 | 22.7% |
+
+**Headline: LOW pairs carry 74.6% of pair's STRUCTURE-bucket leak.** Higher signal-to-structure-ratio than MID or HIGH; closeable-signal density is 3× higher in LOW.
+
+**Top 5 STRUCTURE-bucket cells (the v48 target population):**
+
+| rank | tier | cell | n_STR | STR $ | gap_2nd_med |
+|---:|---|---|---:|---:|---:|
+| 1 | LOW | PMID_DS_NOMAXTOP | 11,884 | $31.00 | 0.1800 |
+| 2 | LOW | PMID_DS_MAXTOP | 6,760 | $21.68 | **0.3850** (very sharp) |
+| 3 | LOW | PMID_OTHER | 5,355 | $11.81 | 0.1850 |
+| 4 | LOW | PBOT_DS_PARTIAL | 7,977 | $10.36 | 0.1150 |
+| 5 | LOW | PMID_SS_MAXTOP | 4,484 | $9.71 | 0.1650 |
+| **sum** | | | **36,460** | **$84.56** | — |
+
+**Dominant mismatch pattern:**
+
+The single largest mismatch class is `SPLIT_tmax_SS_mu → PMID_tmax_DS` in LOW × PMID_DS_MAXTOP: n=3,072 hands × $21,459 mean regret = **$10.97/1000h on ONE mismatch class**. Across all top-5 cells except cell 4, the pattern is consistent:
+
+> **v44 picks SPLIT (or PBOT) routings with SS/RB/31 bot profiles. Oracle keeps the pair in MID with DS or SS bot. v44 systematically over-routes LOW pairs away from PMID.**
+
+Cell 4 (LOW × PBOT_DS_PARTIAL) is the EXCEPTION — v44 stays PMID, oracle routes to PBOT_DS. The discriminator: kicker_max suit alignment with pair_suits — 70% TRUE in PBOT_DS_PARTIAL vs 32-34% TRUE in the PMID-target cells.
+
+### Three feature hypotheses
+
+Documented in detail in `PAIR_S77_FEATURE_HYPOTHESES.md`. Brief:
+
+| H# | Feature | Type | Gate | Expected within-pair $ | Full-grid $ |
+|---|---|---|---|---:|---:|
+| **H6** | `pair_pmid_ds_n_configs_g` | int8 0..5 | single-pair | $15-26 | $7-12 |
+| **H7** | `pair_kicker_max_in_pair_suit_g` | bool 0/1 | single-pair | $14-21 | $5-10 |
+| **H8** | `pair_low_pmid_safety_g` | int8 0..5 | LOW pair only | $22-35 | $10-17 |
+| **H6+H7+H8 joint (50% redundancy budget)** | | | | **$30-45** | **$14-22** |
+
+* **H6** adds the missing PMID_DS path-count signal. v44 has `pair_aug_v5_bot_DS_n_configs_g` (PBOT_DS count) but no symmetric PMID_DS count. Directly addresses LOW × PMID_DS_{MAXTOP,NOMAXTOP} cells ($52.68/1000h leak).
+* **H7** is a 1-bit "max-kicker suit ∈ pair_suits" signal. v44's `pair_kickers_in_pair_suit_max_g` counts kickers per pair-suit but doesn't specifically identify whether the MAX-RANK kicker is in a pair-suit. Discriminator between PBOT_DS-tempting (1) and PMID-preferred (0).
+* **H8** synthesizes the S66 cell taxonomy into a single categorical for LOW pairs only. Cell synthesis is a 5+-split AND-NOT cascade — too deep for a saturated DT to derive consistently. Gated to LOW (74.6% of STR leak lives there) for signal density.
+
+### S78 plan
+
+1. Implement H6 (`pair_pmid_ds_features_gated.py`), H7 (`pair_kicker_align_features_gated.py`), H8 (`pair_low_pmid_safety_features_gated.py`).
+2. Persist gated parquet packs (`persist_pair_pmid_ds_gated.py`, etc).
+3. Train v48_dt at **depth=36, ml=1** (S73 regime LOCKED). No hyperparameter sweep.
+4. Smoke train on 100K rows first; verify H6/H7/H8 in top-30 feature importance.
+5. Prefix grade (v44 baseline). If Δ ≥ +$10/1000h prefix, proceed to full grade.
+6. Full grade on 6M-hand realistic-mixture grid. Apply **+$10/1000h full-grid ship bar** (codified S73, held S74-S77).
+7. NULL ship if Δ < +$10. PARTIAL ship at +$5 only if user directive changes.
+
+### Methodology lessons (Session 77)
+
+1. **The S71 setting-rank lens × S66 structural cells is a clean PRODUCT lens.** Each was applied independently before; their combination IS the never-before-applied diagnostic. ~10 min wall for 2.8M pair hands at ~4,500 hands/sec — substantially faster than S71 high_only (~17 min for 1.2M) because the S66 cell synthesis is cheap once the structural counts are computed.
+
+2. **A tier-collapse is a powerful first-cut.** Pair-rank-tier (LOW/MID/HIGH = 3 bins) cleanly partitioned 74.6% of the STRUCTURE leak to LOW alone. This justifies LOW-only gating on H8 — gating tightens signal density 3× vs all-pair gating.
+
+3. **gap_2nd at the STRUCTURE bucket × cell intersection is the cleanest target-confidence metric.** LOW × PMID_DS_MAXTOP STR-bucket has gap_2nd_med 0.385 — the SHARPEST optimum across all (cat, cell, bucket) cells observed in S76/S77. Misses in this cell are "v44 picked structurally wrong AND oracle's #1 is well-isolated" = highest-confidence feature-engineering target.
+
+4. **A single mismatch class can carry 10% of a category's STRUCTURE leak.** `SPLIT_tmax_SS_mu → PMID_tmax_DS` (n=3,072) = $10.97/1000h on ONE class out of pair's $116 STR total. When a single mismatch class concentrates this much regret, a single feature targeting it has unusually high expected lift — but ALSO unusually high redundancy risk (the saturated DT may already be one split away from getting this right).
+
+5. **Reverse-direction mismatch cells exist within a category's leak.** LOW × PBOT_DS_PARTIAL is the exception where v44 stays PMID, oracle routes to PBOT_DS. A H6/H7/H8 pack that routes ALL LOW pairs to PMID would worsen this cell. The kicker_max-in-pair-suits alignment (70% TRUE in PBOT cell vs 32% in PMID-target cells) is a clean reverse-direction discriminator — H7 captures it as the same 1-bit signal, applied with opposite gradient.
+
+6. **"Speed is not necessary — clarity and perfection is."** S77 spent ~30 min on PHASE 1+2 (taxonomy design + drill) and ~20 min on PHASE 3 (hypothesis documentation), producing a data-supported feature pack with quantified expected lift. The S77 pivot from high_only-H1-H5 cascade to pair-first is data-confirmed, not narrative-justified.
+
+7. **+$10 ship bar holds (S73 codified, held S74-S77).** Production state UNCHANGED for the sixth consecutive session. S77 was a pure diagnostic session; no model trained or rule shipped.
+
+### Files (Session 77)
+
+**New code:**
+- `analysis/scripts/drill_v44_pair_S77.py` — pair-only setting-rank deep-drill with combined S66 cell × S71 bucket lens.
+
+**Data (gitignored, local-only):**
+- `data/drill_v44_pair_S77_summary.json` (216.7 KB) — per (tier, cell, bucket) WG decomposition, gap_2nd / plateau width stats, top mismatch classes, fingerprint distributions.
+- `data/session77/drill_v44_pair_S77.log` — full console output (10.2 min wall).
+- `data/session77/drill_smoke_5k.log` — 5K-hand smoke validation.
+
+**Documentation:**
+- `PAIR_S77_FEATURE_HYPOTHESES.md` — H6/H7/H8 feature definitions, expected lifts, redundancy risk assessments.
+- `CURRENT_PHASE.md` — rewritten for S78 (v48_dt training with H6+H7+H8 pack).
+- `DECISIONS_LOG.md` — Decision 112 (this section).
+- `STRATEGY_GUIDE.md` — Part 1 SKIPPED (no strategy of record changed); Parts 2-6 front-matter date refresh.
+
+**Production state at end of S77:** UNCHANGED from S76.
+- Rule chain: **v56_trips_hybrid** ($1,429 full / $794 prefix). Grader-confirmed.
+- ML champion: **v44_dt** ($1,081 full / $686 prefix).
+- Two-track divergence: $348/1000h (no change).
+- **Total project rule count: 18** (UNCHANGED).
+- **Pair diagnostic complete; H6/H7/H8 feature pack queued for S78 v48_dt retrain at depth=36 ml=1 with +$10/1000h ship bar.**
