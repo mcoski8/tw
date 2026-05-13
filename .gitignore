@@ -14,6 +14,7 @@ data/*.json
 data/session*/*.json
 data/*.parquet
 data/*.npz
+data/*.ubj
 data/*.log
 
 # Python

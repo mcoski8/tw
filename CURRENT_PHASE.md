@@ -1,303 +1,321 @@
-# Current: Sprint 8 — Session 74 v47_dt clean NULL at depth=36 ml=1; DT-feature-engineering track exhausted; gradient boosting (Option B) queued for S75
+# Current: Sprint 8 — Session 75 v47_xgb decisive NULL at depth=6/n_est=200/lr=0.1 (−$1,392/1000h full); single-model ML track exhausted at v44 saturating regime; S76 pivots to oracle-label refinement / diagnostic refresh / rule-chain extension / high-capacity boosting retry
 
-S73 v46b_dt (H1 SS+ms route quality, 2 ho_v6 features) landed at
-**+$5/1000h full** (PARTIAL POSITIVE / NULL ship per +$10 bar). S74
-tested H2 (route-tradeoff comparator `ho_v7_route_tradeoff_joint_minus_
-nonjoint_g`, 1 signed int8 feature) at the SAME regime (depth=36 ml=1,
-LOCKED).
+S74 v47_dt (H2 route-tradeoff comparator) clean NULL closed the DT-
+feature-engineering chapter at v44's saturating regime. S75 tested
+Option B (gradient boosting via XGBoost 3.2) at v44's exact 107
+features (NO ho_v7 — clean "boosting vs DT" isolation) with hyperparams
+depth=6, n_estimators=200, learning_rate=0.1, multi_strategy=
+'multi_output_tree', subsample=0.7, colsample_bytree=0.7,
+early_stopping_rounds=20 on a 20% validation split.
 
-**Result: clean NULL. +$0/1000h full grid.** All 8 per-category
-$/1000h match v44 to the dollar (including on-target high_only:
-$1,868 → $1,868). pct_opt 64.80% → 64.80% (3-hand divergence of 6M).
-Prefix grader byte-identical ($686 → $686 across all 7 categories).
+**Result: decisive NULL. −$1,392/1000h full grid (vs +$10 ship bar
+and +$5 PARTIAL bar — orders of magnitude below).** Every per-
+category $/1000h regresses substantially:
+* high_only: $1,868 → **$3,461** (Δ −$1,593)
+* pair: $1,097 → **$2,291** (Δ −$1,194)
+* two_pair: $363 → **$1,845** (Δ −$1,482)
+* trips: $1,194 → **$2,716** (Δ −$1,523)
+* trips_pair: $281 → **$3,027** (Δ −$2,746)
+* three_pair: $1,613 → **$2,069** (Δ −$456)
+* quads: $545 → **$2,265** (Δ −$1,720)
+* composite: $960 → **$3,351** (Δ −$2,392)
 
-Both tripwires concur NULL:
-* Feature importance: **#103 / 108 (0.01%)** — deeper in tail than
-  v46b's #75 (0.05%).
-* Leaf growth: **+1 vs v44's 2,248,173** — cleanest "dead feature"
-  signature in project history (v45 was +9 NULL; v46b was +12,354
-  SHIP-but-PARTIAL).
-* Training fit: 567s vs v46b's 610s at same regime — faster fit
-  confirms DT scarcely used the new feature.
+Pct opt collapses 64.80% → 41.96% (−22.84pp).
 
-The S71-stated "derivable in 2 splits" trap is **empirically confirmed**:
-at depth=36 with 2.25M leaves at 2.7 rows/leaf, the DT has ample
-headroom to derive the comparator (best_JOINT_mid_high − best_DS_
-NONJOINT_top) from existing features (ho_v3 max_mid_high + ho_v4
-topNonMax_DS_ms_max_top_rank or similar) via axis-aligned splits.
+Prefix grader confirms with **−$765/1000h** regression on the 500K
+subset that has 0 high_only IDs — so the regression is on the 7 non-
+high_only categories alone, all of which v44 has well-tuned features
+for via the S57-S72 feature stack.
 
-Decision 109: **NULL ship per +$10 threshold AND +$5 PARTIAL bar.**
-v44_dt remains ML champion; v56_trips_hybrid remains rule chain of
-record. Production state UNCHANGED for the third consecutive session
-(S72 NULL, S73 PARTIAL POSITIVE / NULL ship, S74 clean NULL).
+**The structural cause is capacity mismatch.** v44_dt has 2,248,173
+leaves at 2.7 rows/leaf — effectively a memorized lookup over the
+4.8M training rows. v47_xgb at depth=6 with 200 trees has at most
+64×200 = 12,800 distinct partition cells (175× fewer). The boosting
+model's smooth weighted-sum prediction cannot match the saturating-DT
+partition capacity for argmax-of-105-outputs accuracy.
 
-**The DT-feature-engineering chapter is functionally closed at v44's
-saturating regime.** Two consecutive sessions at the same 4-phase
-playbook produce diminishing returns ($24 within-cat for H1, $0 for
-H2). The +$10 ship bar excludes both. **S75 pivots to gradient
-boosting (Option B).**
+The val-curve tripwire FIRED — model still improving at iter limit
+(last-50 Δ +0.011, best_iter=199/200) — so v47_xgb is also UNDER-
+CONVERGED. But closing a $1,392 gap by tuning alone is implausible;
+to match v44's partition capacity, boosting would need ~depth=10 ×
+n_est≈2200 = 24-40 hours wall on this hardware. Even then, structural
+argmax-vs-smooth-prediction precision concerns remain.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 75): Gradient boosting (v47_xgb / v47_lgbm)**
+**Decision 110: NULL ship.** v44_dt remains ML champion at $1,081/1000h
+full / $686 prefix. v56_trips_hybrid remains rule chain at $1,429
+full / $794 prefix. Production state UNCHANGED for the **fourth**
+consecutive session (S72 NULL, S73 PARTIAL POSITIVE / NULL ship, S74
+clean NULL, S75 decisive NULL).
+
+**The entire single-model ML track is exhausted at v44's saturating
+regime.** Four consecutive sessions at the +$10 ship bar have
+produced 0 ML-champion ships. The bar is doing its job; the track is
+closed. **S76 must pivot.**
+
+> **🎯 IMMEDIATE NEXT ACTION (Session 76): Pivot direction**
 >
->   PHASE 1 (S75 ~10 min) — Install xgboost or lightgbm in the venv:
->   ```
->   pip install xgboost
->   ```
->   Note: scikit-learn DT used `multi-output regression` natively
->   (Y is (n, 105) — one EV per setting per hand). XGBoost requires
->   either `multi_strategy='multi_output_tree'` (since v2.0) OR
->   training 105 separate regressors (slower at train but simpler).
->   Start with multi-output if XGBoost ≥2.0 is available; fall back
->   to 105 sequential regressors if not.
+> Four options on the table. They are NOT mutually exclusive; the
+> user should pick one to drive S76, with the others as backstops
+> if the first stalls.
 >
->   PHASE 2 (S75 ~20-40 min) — Train v47_xgb at v44's 107 features +
->   ho_v7 (1) = 108 features. Hyperparams (resume-prompt suggestion):
->   `n_estimators=500-1000, max_depth=8-12, learning_rate=0.05,
->   early stopping on validation split`. Save inference scaffolding
->   parallel to strategy_v47_dt.py.
+> **(A) Oracle-label N=1000 re-evaluation.** Hypothesis: the saturating-
+> DT regime has hit a label-noise ceiling. Current grid samples 200
+> board draws per (hand, setting) cell; N=1000 reduces label variance
+> by ~√5 ≈ 2.24×. If v44_dt's $1,081/1000h is partly noise-induced,
+> a re-evaluated grid could un-stick the regret floor. Cost: ~10×
+> compute vs the original grid build (~weeks at single-machine; manageable
+> on a cluster). Risk: the ceiling may NOT be noise-induced (the
+> per-category breakdown is suspiciously uniform). Payoff if it
+> works: potentially $200-500/1000h closure of the gap to oracle.
+> **Recommended if cluster access is available.**
 >
->   **Alternative scope** — train v47_xgb on **v44's 107 features
->   alone** (no ho_v7). The H1+H2 NULL results have shown that ho_v6
->   and ho_v7 add diminishing-or-zero info at the DT regime; XGBoost
->   may benefit similarly little. Testing v44-only features isolates
->   "boosting vs single-tree" as the variable, with H1/H2 deferred to
->   v48_xgb if v47_xgb ships.
+> **(B) Categorical diagnostic refresh.** Re-run drill_v44_high_only_S71.py
+> (and equivalent drills for other categories) to identify a NEW
+> feature-engineering target outside the H1-H5 axes that S71-S74 tested.
+> The S71 diagnostic surfaced $147.59 of high_only STRUCTURE-bucket
+> leak; H1 captured $24 within-cat (~16%), H2 captured $0. Remaining
+> ~$123 may live in axes not yet surfaced by the H1-H5 hypothesis
+> cascade. Cost: ~30-60 min/diagnostic run; multiple drills feasible
+> in one session. Risk: low — diagnostic refresh is cheap regardless
+> of outcome. **Recommended as a low-cost exploratory pivot.**
 >
->   PHASE 3 (S75 ~3 min) — Prefix grade v47_xgb vs v44.
+> **(C) Higher-capacity gradient-boosting retry.** v48_xgb at
+> depth=8-10, n_estimators=1000+, lr=0.05, multi_output_tree.
+> Estimated wall: 15-25 hours. Hypothesis: matching v44's partition
+> capacity (~2.25M cells) requires boosting at depth=10 × n_est≈2200.
+> If boosting at FULL capacity also caps at v44, the structural-mismatch
+> conclusion is proven. If it ships, the 55× inference speedup is a
+> real production-runtime advantage. **Lower priority than (A) and
+> (B)** due to wall-time cost and speculative payoff.
 >
->   PHASE 4 (S75 ~30-40 min) — Full grade v47_xgb vs v44. Decision
->   matrix per S74 (canonical +$10 ship bar):
->     * Δ ≥ +$10/1000h full → Decision 110 ships v47_xgb as new ML
->       champion. Build v57_v47_xgb_hybrid per v56 template.
->     * +$5 ≤ Δ < +$10 → PARTIAL POSITIVE. Document; consider tuning
->       boosting hyperparams (depth=15, n_estimators=2000) in v48_xgb.
->     * Δ ≤ +$5 → boosting also caps at the v44 regime. The track is
->       **fully exhausted at v44 features**. Pivot to (a) grid label
->       re-evaluation at N=1000 (vs current N=200) — addresses
->       label-noise ceiling; ~10× compute cost. OR (b) categorical
->       diagnostic refresh — re-run drill_v44_high_only_S71.py to
->       identify a new feature-engineering target if the residual
->       structure has shifted.
+> **(D) Rule-chain extension.** The two-track divergence is $348/1000h
+> (v56_trips_hybrid leads v44_dt). The rule-chain track has residual
+> signal that the ML track does not — extending v56 with a 19th rule
+> targeting one of the residual leak categories (pair, two_pair,
+> composite) could ship a new rule chain. Cost: ~30-60 min per rule
+> hypothesis + grader confirmation. Risk: low — rule-chain extension
+> has shipped 18 prior rules without regression. **Recommended if
+> the user wants a near-term ship.**
 >
-> **📓 METHODOLOGY (Session 75+):**
+> **📓 METHODOLOGY (Session 76+):**
 >
-> 1. **DT-feature-engineering at saturating regime is dead-end.** S73
->    (H1 ho_v6) and S74 (H2 ho_v7) both ran the canonical 4-phase
->    playbook at depth=36 ml=1; combined yield is $5/1000h (16% of
->    diagnostic $147.59 leak). Further single-feature-pair DT retrains
->    are not justified. **Do not run more DT-feature retrains at
->    saturating regime without a new diagnostic target or an
->    architectural change.**
+> 1. **Single-model ML track is closed at v44 saturating regime.**
+>    Four consecutive NULL sessions confirm: no further single-DT
+>    feature engineering AND no moderate-capacity boosting will clear
+>    the +$10 ship bar. Future ML retrains MUST either change model
+>    class (LightGBM, ensemble of v44 + boosted residual, neural net)
+>    OR change input signal (re-evaluated grid labels, new feature
+>    primitives).
 >
-> 2. **Leaf growth ≤+10 = NULL doctrine.** v47's +1 leaf is the new
->    floor for "DT didn't use the feature" detection. Tighter than
->    S59's "≤+1K = NULL" rule. The ≥+10K SHIP threshold remains.
+> 2. **Single deep DT beats shallow boosting for argmax-over-N tasks
+>    on saturating-memorization data.** S75 finding: a 2.25M-leaf
+>    depth=36 DT outperforms a depth=6 × 200-tree XGBoost ensemble by
+>    $1,392/1000h on the same features. Contradicts typical ML wisdom
+>    that boosting wins; the contradiction is task-specific. Document
+>    this in future model-class decisions.
 >
-> 3. **Fitter wall-time as 3rd tripwire.** Same-regime retrain that
->    fits FASTER than baseline = NULL signal (DT had fewer splits
->    to evaluate, so the new feature added little). Same-regime
->    retrain that fits SLOWER = SHIP signal (more candidate splits).
->    Read jointly with importance + leaf growth.
+> 3. **Val-curve tripwire is the boosting analog of DT leaf-growth
+>    tripwire.** When val RMSE is still dropping at the iter limit,
+>    the boosting model is undertrained. v47_xgb fired this tripwire
+>    (last-50 Δ +0.011). But underconvergence does NOT explain a
+>    $1,392/1000h gap; capacity mismatch does.
 >
-> 4. **"Derivable in N splits" is now a documented failure mode.**
->    Feature design must explicitly verify non-derivability before
->    investing in persistence + retrain cost. Going forward, any
->    candidate feature `f(hand)` whose computation can be expressed
->    as a binary combination of ≤3 existing features in the v44
->    taxonomy is high-risk for the "derivable in 2 splits" trap at
->    saturating regime.
+> 4. **Inference speedup is a separate axis from accuracy.** v47_xgb
+>    is 55× faster than v44 (18.9s vs 1,046s for 6M-hand prediction).
+>    A capacity-matched boosting attempt that ships AT v44 accuracy
+>    (Δ ≥ +$0/1000h, even before clearing +$10) may still be worth
+>    pursuing for grader wall-time reduction if the project ever
+>    becomes grader-bound.
 >
-> 5. **"Speed is not necessary — clarity and perfection is."** S74
->    closed the H2 chapter with maximal empirical clarity in ~50 min
->    wall. The clean NULL is more valuable than a fast PARTIAL would
->    have been; both tripwires + the prefix + full graders all concur,
->    and the hypothesis is falsified at the saturating regime
->    unambiguously.
+> 5. **"Speed is not necessary — clarity and perfection is."** S75
+>    ran the full 4-phase playbook in ~5 hours wall and produced an
+>    empirically airtight NULL verdict. Both prefix and full graders
+>    concur; every category regresses; the structural cause is
+>    identified. No re-runs needed.
 >
-> 6. **+$10 ship bar canonical (codified S73, held S74).** Third
+> 6. **+$10 ship bar canonical (codified S73, held S74-S75).** Fourth
 >    consecutive session UNCHANGED production state — the bar is
 >    doing its job, filtering noise from signal. ML-champion ships
 >    must clear +$10/1000h full grid.
 
-> **✅ ARTIFACTS produced in S74:**
-> 1. `analysis/scripts/high_only_aug_v7_features_gated.py` — 1 signed
->    int8 feature; 5 hand-crafted smoke tests; all pass.
-> 2. `analysis/scripts/persist_high_only_aug_v7_gated.py` — emits
->    `data/feature_table_high_only_aug_v7_gated.parquet` (18.59 MB).
-> 3. `analysis/scripts/train_v47_dt.py` — depth=36 ml=1 regime-locked.
-> 4. `analysis/scripts/strategy_v47_dt.py` — inference for v47.
-> 5. `analysis/scripts/grade_v47_dt.py` — head-to-head grader vs
->    v44/v45/v46/v46b.
-> 6. `data/v47_dt_model.npz` (1,260.45 MB) — clean NULL; reference
->    only, NOT production champion.
-> 7. `data/session74/persist_v7.log`, `train_v47_dt.log`,
->    `grade_v47_prefix.log`, `grade_v47_full.log` — phase logs.
-> 8. `SESSION_74_V47_DT_NULL_REPORT.md` — full NULL retrospective +
->    Decision 109 reference.
-> 9. `DECISIONS_LOG.md` — Decision 109 appended.
-> 10. `CURRENT_PHASE.md` — rewritten for S75 (this file).
-> 11. `STRATEGY_GUIDE.md` — Part 1 SKIPPED (no strategy of record
->     changed); Parts 2-6 front-matter date refresh only.
+> **✅ ARTIFACTS produced in S75:**
+> 1. `analysis/scripts/train_v47_xgb.py` — XGBoost training with
+>    multi_strategy='multi_output_tree', early stopping, val-curve
+>    tripwire, feature-importance dump.
+> 2. `analysis/scripts/strategy_v47_xgb.py` — inference module; provides
+>    `predict_all_chosen()` for batch grading and `strategy_v47_xgb(hand)`
+>    for per-hand compatibility (cache-backed).
+> 3. `analysis/scripts/grade_v47_xgb.py` — batch-mode head-to-head
+>    grader bypassing per-hand strategy_fn pattern.
+> 4. `data/v47_xgb_model.ubj` (16.89 MB UBJSON booster).
+> 5. `data/v47_xgb_meta.json` (~12 KB hyperparams + val curve + top-30 importance).
+> 6. `data/session75/{train_v47_xgb,grade_v47_xgb_prefix,grade_v47_xgb_full}.log`.
+> 7. `SESSION_75_V47_XGB_NULL_REPORT.md` — full NULL retrospective.
+> 8. `DECISIONS_LOG.md` — Decision 110 appended.
+> 9. `CURRENT_PHASE.md` — rewritten for S76 (this file).
+> 10. `STRATEGY_GUIDE.md` — Part 1 SKIPPED; Parts 2-6 front-matter
+>     date refresh.
 
-> Updated: 2026-05-13 (Session 74 end — v47_dt clean NULL at +$0/1000h
-> full grid; DT-feature-engineering track exhausted at saturating
-> regime; gradient boosting Option B queued for S75)
+> Updated: 2026-05-13 (Session 75 end — v47_xgb decisive NULL at
+> −$1,392/1000h full grid; Option B closed at moderate capacity;
+> entire single-model ML track exhausted at v44 saturating regime;
+> S76 pivots to oracle-label refinement / diagnostic refresh / rule-
+> chain extension / high-capacity boosting retry)
 
 ---
 
-## Headline state at end of Session 74
+## Headline state at end of Session 75
 
-**Strategies of record (UNCHANGED from S73):**
+**Strategies of record (UNCHANGED from S74):**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
 | **v56_trips_hybrid** | PRODUCTION rule chain. **$1,429 full / $794 prefix**. | `analysis/scripts/strategy_v56_trips_hybrid.py` |
 | **v44_dt** | PRODUCTION ML champion (UNCHANGED). $1,081 full / $686 prefix. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
 
-Two-track divergence: **$348/1000h** (no change in S74 — clean NULL
-ML retrain attempt).
+Two-track divergence: **$348/1000h** (no change in S75 — NULL ML
+retrain attempt).
 
-**S74 v47_dt clean NULL grade summary:**
+**S75 v47_xgb decisive NULL grade summary:**
 
-| Metric | v44_dt | v46b_dt (S73 H1) | v47_dt (S74 H2) | Δ v47 vs v44 |
+| Metric | v44_dt | v47_dt (S74) | v47_xgb (S75) | Δ v47_xgb vs v44 |
 |---|---:|---:|---:|---:|
-| Prefix grid $/1000h | $686 | $686 | **$686** | **+$0 (byte-identical)** |
-| Full grid $/1000h | $1,081 | $1,076 | **$1,081** | **+$0 (identical)** |
-| Full pct_opt | 64.80% | 64.92% | **64.80%** | +0.00005pp (3 hands of 6M) |
-| Full p90 regret | 0.390 | 0.385 | **0.390** | tied |
-| Full p99 regret | 0.970 | 0.970 | **0.970** | tied |
-| Within-cat high_only $/1000h | $1,868 | $1,844 | **$1,868** | **+$0** |
-| Within-cat high_only pct_opt | 41.8% | 42.5% | **41.8%** | **+0** |
-| Leaves | 2,248,173 | 2,260,527 | **2,248,174** | **+1 only** |
-| Features | 107 | 109 | 108 | +1 ho_v7 |
-| Depth / ml | 36 / 1 | 36 / 1 | **36 / 1** | same as v44 |
-| Top-importance rank | n/a | #75 + #105 | **#103** | NULL |
+| Prefix grid $/1000h | $686 | $686 | **$1,451** | **−$765** |
+| Full grid $/1000h | $1,081 | $1,081 | **$2,473** | **−$1,392** |
+| Full pct_opt | 64.80% | 64.80% | **41.96%** | **−22.84pp** |
+| Full p90 regret | 0.390 | 0.390 | **0.720** | worse |
+| Full p99 regret | 0.970 | 0.970 | **1.360** | worse |
+| Within-cat high_only $/1000h | $1,868 | $1,868 | **$3,461** | **−$1,593** |
+| Leaves / trees | 2,248,173 leaves | 2,248,174 leaves | **200 trees × 105 outputs** | — |
+| Features | 107 | 108 | **107** | same as v44 |
+| Model size | 1,260 MB | 1,260 MB | **16.89 MB** | 75× smaller |
+| Training fit | — | 567s | **13,367s** | — |
+| Inference (full grid) | 1,046s | 1,046s | **18.9s (batch)** | 55× faster |
 
-**Per-category full-grid (v47 vs v44) — all 8 byte-identical:**
+**Per-category full-grid (v47_xgb vs v44):**
 
-| category | n hands | v44 $/1000h | v47 $/1000h | Δ |
+| category | n hands | v44 $/1000h | v47_xgb $/1000h | Δ |
 |---|---:|---:|---:|---:|
-| high_only | 1,226,940 | 1,868 | 1,868 | **0** |
-| pair | 2,800,512 | 1,097 | 1,097 | **0** |
-| two_pair | 1,338,480 | 363 | 363 | **0** |
-| trips | 328,185 | 1,194 | 1,194 | **0** |
-| trips_pair | 171,600 | 281 | 281 | **0** |
-| three_pair | 114,400 | 1,613 | 1,613 | **0** |
-| quads | 14,300 | 545 | 545 | **0** |
-| composite | 14,742 | 960 | 960 | **0** |
+| high_only | 1,226,940 | 1,868 | **3,461** | **−1,593** |
+| pair | 2,800,512 | 1,097 | **2,291** | **−1,194** |
+| two_pair | 1,338,480 | 363 | **1,845** | **−1,482** |
+| trips | 328,185 | 1,194 | **2,716** | **−1,523** |
+| trips_pair | 171,600 | 281 | **3,027** | **−2,746** |
+| three_pair | 114,400 | 1,613 | **2,069** | **−456** |
+| quads | 14,300 | 545 | **2,265** | **−1,720** |
+| composite | 14,742 | 960 | **3,351** | **−2,392** |
 
-Including the on-target high_only category — where v46b (H1) earned
-+$24/1000h within-cat. H2 generates **zero** within-cat lift.
+**Every category regresses** — uniform devastation, no localized miss.
+This is a capacity-mismatch result, not a feature-engineering miss.
 
 ---
 
-## Hypothesis cascade status (per SESSION_71_V45_FEATURE_HYPOTHESES.md §6)
+## Hypothesis cascade status (FINAL — all paths tested or deprioritized)
 
 | Hypothesis | Description | Status |
 |---|---|---|
-| **H1** | SS+ms route quality (2 ho_v6 features) | **TESTED → PARTIAL POSITIVE / NULL ship at +$5/1000h full.** Within-cat $24/1000h on high_only (16% of S71's $147 diagnostic prediction). |
-| **H2** | Route-tradeoff comparator (1 ho_v7 feature) | **TESTED → CLEAN NULL at +$0/1000h full.** +1 leaf, #103 importance. "Derivable in 2 splits" trap empirically confirmed. |
-| H3 | SS+ms route VARIETY signal (max_top_suit_count) | UNTESTED. **Deprioritized** — expected similar saturation ceiling. |
-| H4 | MS_ONLY discriminator (2 features) | UNTESTED. **Deprioritized** — smaller WG target ($4.39 WG by S71). |
-| H5 | Drop-max signal | UNTESTED. **Deprioritized** — needed H2 comparator to be useful; H2 is dead. |
+| **H1** | SS+ms route quality (2 ho_v6 features) | **TESTED → PARTIAL POSITIVE / NULL ship at +$5/1000h full.** Within-cat $24/1000h on high_only. |
+| **H2** | Route-tradeoff comparator (1 ho_v7 feature) | **TESTED → CLEAN NULL at +$0/1000h.** "Derivable in 2 splits" trap confirmed. |
+| **Option B** | Gradient boosting at v44 features (depth=6, n_est=200, lr=0.1) | **TESTED → DECISIVE NULL at −$1,392/1000h.** Capacity mismatch; smooth boosting cannot match saturating-DT memorization. |
+| H3 | SS+ms route VARIETY signal | UNTESTED. Deprioritized — similar saturation ceiling expected. |
+| H4 | MS_ONLY discriminator | UNTESTED. Deprioritized — small WG target ($4.39 WG by S71). |
+| H5 | Drop-max signal | UNTESTED. Dead — relied on H2 infrastructure. |
 
-**Cascade verdict:** DT-feature-engineering track exhausted at v44's
-saturating regime. **S75 pivots to gradient boosting (XGBoost/LightGBM)
-to test whether iterative residual correction unlocks the structural
-ceiling that the saturating-DT regime has hit.**
+**Cascade verdict (final):** The ENTIRE single-model ML track (DT
+feature engineering AND gradient boosting at moderate capacity) is
+exhausted at v44's saturating regime. **S76 must pivot to a NEW
+track outside the H1-H5 + Option B space.**
 
 ---
 
-## Resume Prompt (Session 75 — Gradient boosting Option B)
+## Resume Prompt (Session 76 — Pick pivot direction)
 
 ```
-Resume Session 75 of the Taiwanese Poker Solver project at
+Resume Session 76 of the Taiwanese Poker Solver project at
 /Users/michaelchang/CODE/taiwanese.
 
 Read these files for context (in this order):
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of S74 — gradient boosting queued)
-- SESSION_74_V47_DT_NULL_REPORT.md (clean NULL retrospective;
-  "derivable in 2 splits" trap empirically confirmed)
-- SESSION_73_V46B_DT_NULL_REPORT.md (H1 PARTIAL POSITIVE / NULL ship)
-- DECISIONS_LOG.md (latest: Decision 109 — v47 clean NULL)
-- analysis/scripts/train_v47_dt.py (template for train_v47_xgb.py —
-  build_X function reusable; swap DecisionTreeRegressor for XGBoost)
-- analysis/scripts/strategy_v47_dt.py (template for strategy_v47_xgb.py)
-- analysis/scripts/grade_v47_dt.py (template for grade_v47_xgb.py)
+- CURRENT_PHASE.md (rewritten end of S75 — single-model ML track
+  exhausted; S76 must pivot)
+- SESSION_75_V47_XGB_NULL_REPORT.md (decisive boosting NULL;
+  capacity-mismatch hypothesis confirmed)
+- SESSION_74_V47_DT_NULL_REPORT.md (DT-feature-engineering closed)
+- DECISIONS_LOG.md (latest: Decision 110 — v47_xgb decisive NULL)
 
-State (end of S74):
-- v47_dt CLEAN NULL at +$0/1000h full grid (109 features, ho_v7
-  comparator added zero signal; +1 leaf delta; #103 importance).
-- "Derivable in 2 splits" trap empirically confirmed at depth=36 ml=1.
-- DT-feature-engineering track exhausted at v44's saturating regime
-  (S73 H1 PARTIAL +$5, S74 H2 clean NULL $0 — chapter closed).
+State (end of S75):
+- v47_xgb decisive NULL at −$1,392/1000h full grid (depth=6, n_est=200,
+  lr=0.1, multi_output_tree). Every category regresses substantially.
+- Val-curve tripwire FIRED (model still improving at iter limit); but
+  closing $1,392 gap by tuning alone is implausible.
+- Capacity-mismatch hypothesis CONFIRMED: 2.25M-leaf DT vs 12,800
+  boosting cells (175× partition gap).
+- Entire single-model ML track exhausted at v44 saturating regime
+  (4 consecutive NULL/partial-NULL sessions: S72, S73, S74, S75).
+- Inference speedup: v47_xgb is 55× faster than v44 (18.9s vs 1,046s
+  per 6M-hand prediction). Real but moot at −$1,392 accuracy.
 
-USER DIRECTIVE (S59-S74 re-confirmed):
+USER DIRECTIVE (S59-S75 re-confirmed):
 - "Speed is not necessary — clarity and perfection is."
-- +$10 ship threshold canonical (codified S73, held S74).
+- +$10 ship threshold canonical (codified S73, held S74-S75).
 
-DIRECTION FOR SESSION 75 — Option B (gradient boosting):
+DIRECTION FOR SESSION 76 — Pick ONE pivot direction.
 
-  PHASE 1 (S75 ~5-10 min) — Install xgboost in venv:
-    pip install xgboost
-  Verify XGBoost ≥2.0 (for `multi_strategy='multi_output_tree'`).
-  Fall back to 105 sequential regressors if <2.0 (slower but works).
+  Option A — Oracle-label N=1000 re-evaluation.
+    Hypothesis: the saturating-DT regime has hit a label-noise ceiling.
+    Current grid samples 200 board draws per (hand, setting) cell;
+    N=1000 reduces label variance by ~√5 ≈ 2.24×.
+    Cost: ~10× compute vs original grid build (~weeks single-machine;
+          manageable on a cluster).
+    Risk: ceiling may NOT be noise-induced.
+    Recommended if cluster access available.
 
-  PHASE 2 (S75 ~20-40 min) — Train v47_xgb at v44's 107 features
-  (NOT 108 — exclude ho_v7; isolate "boosting vs DT" as the only
-  variable; defer feature additions to v48_xgb if v47_xgb ships).
-  Hyperparams: n_estimators=500-1000, max_depth=8-12,
-  learning_rate=0.05, early stopping on 20% validation split,
-  tree_method='hist'. Save inference scaffolding parallel to
-  strategy_v47_dt.py. Tripwires:
-    * Validation curve: does the boosting model continue to improve
-      past iteration 500? If yes, the single-DT's saturation ceiling
-      WAS the binding constraint. If no, the ceiling is label-noise.
-    * Inference cost: per-hand time vs DT. XGBoost multi-output may
-      be 2-10× slower than DT depending on n_estimators.
+  Option B — Categorical diagnostic refresh.
+    Re-run drill_v44_high_only_S71.py and equivalent drills for other
+    categories to identify a NEW feature-engineering target outside
+    the H1-H5 axes.
+    Cost: ~30-60 min per diagnostic run.
+    Risk: LOW — diagnostic refresh is cheap regardless of outcome.
+    Recommended as a low-cost exploratory pivot.
 
-  PHASE 3 (S75 ~3-5 min) — Prefix grade v47_xgb vs v44_dt.
+  Option C — Higher-capacity gradient-boosting retry.
+    v48_xgb at depth=8-10, n_est=1000+, lr=0.05.
+    Cost: 15-25 hours wall on this hardware.
+    Risk: speculative payoff; even capacity-matched boosting may not
+          beat v44.
+    Lower priority than A and B.
 
-  PHASE 4 (S75 ~30-40 min) — Full grade v47_xgb vs v44_dt. Decision
-  matrix:
-    * Δ ≥ +$10/1000h full → Decision 110 ships v47_xgb as ML
-      champion. Build v57_xgb_hybrid per v56 template.
-    * +$5 ≤ Δ < +$10 → PARTIAL POSITIVE. Document; consider tuning
-      (depth=15, n_estimators=2000) in v48_xgb.
-    * Δ ≤ +$5 → boosting also caps at v44. Track exhausted at
-      current features. Pivot to (a) grid label N=1000 re-eval, OR
-      (b) new diagnostic to find next feature-engineering target.
+  Option D — Rule-chain extension.
+    Two-track divergence is $348/1000h (v56_trips_hybrid leads v44).
+    Extending v56 with a 19th rule targeting one of pair / two_pair /
+    composite leak categories could ship a new rule chain.
+    Cost: ~30-60 min per rule hypothesis + grader confirmation.
+    Risk: LOW — 18 prior rules without regression.
+    Recommended if user wants a near-term ship.
 
-  ALTERNATIVE — if XGBoost install proves complex (M-series Mac
-  compile issues common), try LightGBM as a one-liner alternative
-  (`pip install lightgbm`). LightGBM's `MultiOutputRegressor`
-  wrapper is the standard multi-output path.
+  PHASE 1 (S76 ~10 min) — Pick one pivot direction. State the choice
+  + rationale in DECISIONS_LOG.md preamble.
 
-  ACCEPTANCE for Session 75:
-  - At minimum: v47_xgb (or v47_lgbm) fully tested through prefix +
-    full grader.
-  - Decision 110 in DECISIONS_LOG.md: ship / NULL / partial.
+  PHASE 2 (S76 ~varies) — Execute the chosen pivot.
+
+  PHASE 3 (S76 ~30 min) — Grade the result (if applicable). Decision
+  111 in DECISIONS_LOG.md.
+
+  ACCEPTANCE for Session 76:
+  - Pivot direction chosen and rationale documented.
+  - At minimum: one diagnostic + Decision 111 (ship / NULL / partial).
   - If ship: STRATEGY_GUIDE.md Part 1 entry + v57 hybrid build.
-  - If NULL/partial: SESSION_75 report mirroring SESSION_74 structure.
-  - Two-track divergence may change if v47_xgb ships and feeds
-    v54/v55/v56 hybrids — recompute.
+  - If NULL/partial: SESSION_76 report mirroring SESSION_75 structure.
 
 REMINDERS:
 - Use python3, not python.
 - cargo at ~/.cargo/bin/cargo.
 - Session-end protocol: commit + push to origin/main (pre-authorized
   per session-end-prompt.md).
-- For boosting hyperparams, do NOT vary regime + features in same
-  experiment (S73 methodology lesson #1). Lock features at v44's 107
-  for first XGBoost run; add ho_v6/ho_v7 in subsequent experiments if
-  boosting clears the ship bar.
-- Leaf-growth tripwire is DT-specific and does NOT apply to boosting.
-  For XGBoost, the closest analog is `train_logloss` curve flattening
-  vs val_logloss continuing to improve.
-- Feature importance tripwire DOES apply to boosting (XGBoost has
-  `feature_importances_`). Same thresholds: top-50 SHIP, #50-100
-  AMBIGUOUS, #100+ NULL.
+- XGBoost 3.2 installed; libomp via Homebrew. If Option C selected,
+  no install needed.
+- v47_xgb model file (16.89 MB) remains in data/ as reference for
+  future high-capacity boosting comparison.
 - "Speed is not necessary — clarity and perfection is."
 ```
 
