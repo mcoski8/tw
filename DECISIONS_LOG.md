@@ -5970,3 +5970,84 @@ The largest single-category v44 residual is **high_only at $3,014/1000h within-c
 - Two-track divergence: $348 (no change).
 - **Total project rule count: 18** (UNCHANGED).
 - **Diagnostic established + feature batch ho_v6 ready for S72 retrain.**
+
+## Decision 107 — Session 72 v46_dt NULL at depth=32 ml=3; ho_v6 H1 features regress v44 by $32/1000h on prefix; v46b_dt at depth=36 ml=1 queued for S73 regime-isolation
+
+**Date:** 2026-05-12
+
+**Question:** Does the H1 SS+ms feature pair (ho_v6) ship as the v46 ML champion at depth=32 ml=3, after the S71 setting-rank diagnostic identified $147.59 WG of STRUCTURE-bucket leak in v44's high_only residual with `SS_mu → SS_ms` as the dominant mismatch family?
+
+**Options:**
+  (a) Ship v46_dt as new ML champion if prefix Δ ≥ +$10/1000h and full Δ ≥ +$10/1000h.
+  (b) NULL: do not ship; reason about why (feature design vs regime change vs both) and queue next-direction pivot.
+
+**Choice:** (b) — NULL. v46_dt regresses v44 by −$32/1000h on prefix.
+
+**Why:**
+  1. **Tripwire-1 (feature importance) flagged NULL pre-grader:** ho_v6 features ranked #79 (0.03%) and #105 (0.01%) of 109 features — deep in the tail. S71 prediction was top-50 = ship, #50+ = ambiguous, #100+ = NULL. Both features at or near NULL tier.
+  2. **Tripwire-2 (leaf growth) flagged NULL pre-grader:** v46 has 1,097,621 leaves vs v44's 2,248,173 (−1,150,552, −51%). The leaf collapse is dominated by the depth+ml regime change, not feature failure — but a non-saturated tree was expected to ABSORB new feature splits at >10K leaf-growth per the S71 ship criterion.
+  3. **Prefix grader confirmed:** v46 loses on every >1% share category except pair. Per-cat deltas (v46 − v44 in $/1000h, prefix): pair −15, two_pair +66, trips +30, trips_pair +183, three_pair −13, quads −40, composite +156. Regression is broad-based, not concentrated. The ho_v6 features did not concentrate their lift sharply enough to outweigh the capacity loss.
+  4. **Per CURRENT_PHASE.md S71** ("check both BEFORE running grader to avoid wasted compute"), the full grader was queued but not run within the session (TCC sandbox issue mid-session blocked it; subsequent repo relocation to ~/CODE/taiwanese/ unblocked S73 access). The prefix verdict + tripwire are unambiguous regardless.
+  5. **Regime-confound NOT YET resolved.** v46b_dt at depth=36 ml=1 is the prescribed S73 retry to isolate feature effect from regime effect. If v46b ships → saturation hypothesis was FALSE for SS-axis; ho_v6 was killed by the regime change. If v46b NULLs → H1 is conclusively wrong; pivot to H2 (route-tradeoff comparator) or to gradient boosting.
+
+### S72 deliverables
+
+**Phase 1 — ho_v6 feature persistence (DONE):**
+- `analysis/scripts/persist_high_only_aug_v6_gated.py` run over 6,009,159 canonical hands at ~134K hands/s.
+- `data/feature_table_high_only_aug_v6_gated.parquet` (18.69 MB, zstd).
+- Distribution: 86.3% of hands have 0 SS+ms configs; values ∈ {0, 2, 3, 6} match the SS+ms enumeration algebra given rest-card suit distributions (2+2+1+1 → 2 configs; 3+2+1+0 → 3; 4+1+1+0 → 6).
+
+**Phase 2 — v46_dt training (DONE — NULL tripwire):**
+- `analysis/scripts/train_v46_dt.py --max-depth 32 --min-samples-leaf 3 --output data/v46_dt_model.npz`.
+- Fit time 478.3s; 109 features; 1,097,621 leaves at depth=32.
+- ho_v6 features at #79 (0.03%) and #105 (0.01%) importance.
+
+**Phase 3 — strategy + grader scaffolding (DONE):**
+- `analysis/scripts/strategy_v46_dt.py` — mirrors strategy_v45_dt.py with ho_v5 → ho_v6 swap.
+- `analysis/scripts/grade_v46_dt.py` — mirrors grade_v45_dt.py.
+- `analysis/scripts/verify_v46_gating_S72.py` — auxiliary surgical-gating per-category byte-identity sweep (queued S73; NOT run S72 due to TCC blocker).
+
+**Phase 4 — prefix grader (DONE); full grader DEFERRED to S73:**
+- Prefix grade: v44 $686 → v46 $718 ($/1000h); pct_opt 67.13% → 66.63%.
+- Full grader queued for S73 (informational; ship/NULL decision was decisive from prefix).
+
+### Methodology lessons (Session 72)
+
+1. **The S59 NULL postmortem was incomplete.** S71's setting-rank diagnostic correctly identified $147.59 WG of structurally-addressable STRUCTURE-bucket leak. The H1 features SHOULD have shipped per the diagnostic. They didn't — so the diagnostic-to-ship pipeline has another failure mode beyond saturation: **regime change confounds.** When testing a new feature under new hyperparameters, the experiment is under-specified; you can't tell if a NULL is "feature was bad" or "regime was bad" without holding one variable constant.
+2. **Tripwire predictions held up.** Both indicators (feature importance + leaf growth) correctly forecast NULL before the grader ran. The S59 lesson generalizes: ho_v6's #79/#105 importance ≈ ho_v5's #66/#97/#106/#110 importance. Anything outside top-50 is suspect; anything outside top-100 is functionally inert.
+3. **Surgical gating is broken when the regime changes.** S58 v44 (depth=36 ml=1 with ho_v4 features) was byte-identical to v43 on the 7 non-high_only categories. v46 (depth=32 ml=3 with ho_v6) REGRESSED non-high_only categories by $30–$183/1000h. Same gating-by-zero, different tree topology — the byte-identity guarantee requires same hyperparameters AND same base feature set.
+4. **The 4-phase playbook now has a 5th phase: regime-isolation.** Drill → hand-level → 4 features → train → **(NEW) retrain at v44 hyperparams to isolate regime confound.** S73 v46b_dt is the prototype of this 5th phase.
+5. **Prefix grader is a strong NULL detector even without high_only coverage.** If a new model loses to baseline on 95%+ of prefix categories, the within-cat improvement on high_only would need to be HUGE to flip the verdict. Prefix-loss → strong NULL prior; on-target win on full → unlikely.
+6. **Sandbox state can change mid-session.** Mid-S72 the macOS TCC (Documents folder) re-quarantined pre-existing project files. The block came after the prefix grade ran but before the full grade could start. **Resolution:** project relocated from `~/Documents/claudecode/taiwanese/` to `~/CODE/taiwanese/` — ~/CODE/ is not TCC-protected, future sessions resume from there. The 4 memory entries in `~/.claude/projects/-Users-michaelchang/memory/` referencing the old path were updated (MEMORY.md, project_taiwanese.md, feedback_taiwanese_commits.md, project_taiwanapp.md).
+
+### Files (Session 72)
+
+**New code:**
+- `analysis/scripts/train_v46_dt.py`
+- `analysis/scripts/strategy_v46_dt.py`
+- `analysis/scripts/grade_v46_dt.py`
+- `analysis/scripts/verify_v46_gating_S72.py`
+
+**Data (gitignored, local-only):**
+- `data/feature_table_high_only_aug_v6_gated.parquet` (18.69 MB)
+- `data/v46_dt_model.npz` (691.97 MB) — kept for reference; NOT production champion.
+- `data/session72/persist_ho_v6.log`
+- `data/session72/train_v46_dt.log`
+- `data/session72/grade_v46_prefix.log`
+
+**Documentation:**
+- `SESSION_72_V46_DT_NULL_REPORT.md`
+- `CURRENT_PHASE.md` — rewritten for S73
+- `DECISIONS_LOG.md` — Decision 107 (this section)
+- `STRATEGY_GUIDE.md` — Parts 2-6 front-matter date refresh (Part 1 SKIPPED; no strategy of record changed this session)
+- `handoff/MASTER_HANDOFF_01.md` — Session 72 log entry appended
+
+**Infrastructure:**
+- Repo physical location moved from `~/Documents/claudecode/taiwanese/` to `~/CODE/taiwanese/` to dodge macOS TCC com.apple.provenance blocks on Documents folder. Git remote unchanged (origin = https://github.com/mcoski8/tw.git). 4 memory files updated to point at new path.
+
+**Production state at end of S72:** UNCHANGED from S71.
+- Rule chain: **v56_trips_hybrid** ($1,429 full / $794 prefix). Grader-confirmed.
+- ML champion: **v44_dt** (UNCHANGED). $1,081 full / $686 prefix.
+- Two-track divergence: $348 (no change).
+- **Total project rule count: 18** (UNCHANGED).
+- **v46_dt NULL recorded; v46b_dt regime-isolation retry queued for S73.**

@@ -1,0 +1,53 @@
+  scanned     200000/500000  rate=  6904 hands/s  ETA= 43.5s
+  scanned     400000/500000  rate=  7312 hands/s  ETA= 13.7s
+
+Strategy: v44_dt (baseline)
+  hands evaluated:   500,000
+  pct optimal:       67.13%  (335,662 hands matched the grid argmax)
+  mean regret:       +0.0686  ≈ $686/1000h vs ceiling
+  median regret:     0.0000
+  p90 regret:        0.2640
+  p99 regret:        0.6240
+  max regret:        1.5330
+  wall time:         67.3s
+
+  By hand category ($/1000h is mean regret × $10 × 1000):
+  category         n_hands pct_optimal   mean_regret     $/1000h   share %
+  pair             215,162       69.2%        0.0595        595     37.3%
+  two_pair         204,275       66.8%        0.0663        663     39.5%
+  trips             25,245       56.8%        0.1086      1,086      8.0%
+  trips_pair        25,943       63.3%        0.0727        727      5.5%
+  three_pair        25,614       67.8%        0.1143      1,143      8.5%
+  quads              1,100       66.4%        0.0783        783      0.3%
+  composite          2,661       56.3%        0.1226      1,226      1.0%
+  scanned     200000/500000  rate=  6564 hands/s  ETA= 45.7s
+  scanned     400000/500000  rate=  6995 hands/s  ETA= 14.3s
+
+Strategy: v46_dt (+ high_only_aug_v6 SS+ms)
+  hands evaluated:   500,000
+  pct optimal:       66.63%  (333,127 hands matched the grid argmax)
+  mean regret:       +0.0718  ≈ $718/1000h vs ceiling
+  median regret:     0.0000
+  p90 regret:        0.2750
+  p99 regret:        0.6450
+  max regret:        2.3350
+  wall time:         70.2s
+
+  By hand category ($/1000h is mean regret × $10 × 1000):
+  category         n_hands pct_optimal   mean_regret     $/1000h   share %
+  pair             215,162       69.7%        0.0580        580     34.8%
+  two_pair         204,275       65.4%        0.0729        729     41.5%
+  trips             25,245       56.9%        0.1116      1,116      7.8%
+  trips_pair        25,943       60.0%        0.0910        910      6.6%
+  three_pair        25,614       68.3%        0.1130      1,130      8.1%
+  quads              1,100       67.5%        0.0743        743      0.2%
+  composite          2,661       54.0%        0.1382      1,382      1.0%
+
+======================================================================
+v46_dt vs v44_dt (prefix grid)
+======================================================================
+strategy                                   pct_opt   mean_regret     $/1000h     p90    wall
+v44_dt (baseline)                           67.13%        0.0686        686   0.264     67s
+v46_dt (+ high_only_aug_v6 SS+ms)           66.63%        0.0718        718   0.275     70s
+
+v46_dt vs v44_dt: -0.0032  ≈ $-32/1000h

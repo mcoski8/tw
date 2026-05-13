@@ -1,0 +1,63 @@
+loading parquets ...
+  loaded 0.6s
+  v23 base X: (6009159, 49)  loading composite gated ...
+  v24 base X: (6009159, 53)  loading pair gated ...
+  v25 base X: (6009159, 59)  loading two_pair gated ...
+  v26 base X: (6009159, 65)  loading high_only gated ...
+  v27 base X: (6009159, 69)  loading pair_r4 gated ...
+  v29 base X: (6009159, 73)  loading trips gated ...
+  v30 base X: (6009159, 79)  loading trips_v2 gated ...
+  v31b base X: (6009159, 83)  loading pair_aug_v5 gated ...
+  v39 base X: (6009159, 87)  loading trips_pair_aug_v2 gated ...
+  v40 base X: (6009159, 91)  loading two_pair_aug_v2 gated ...
+  v41 base X: (6009159, 95)  loading high_only_aug_v2 gated ...
+  v42 base X: (6009159, 99)  loading high_only_aug_v3 gated ...
+  v43 base X: (6009159, 103)  loading high_only_aug_v4 gated ...
+  v44 base X: (6009159, 107)  loading high_only_aug_v6 gated ...
+X=(6009159, 109)  (109 features)
+loading Y from grid ...
+  Y=(6009159, 105)  2523.8 MB
+
+fitting DT depth=32 ml=3 ...
+  fit 478.3s  leaves=1,097,621  depth=32
+
+saved data/v46_dt_model.npz (691.97 MB)
+
+Top-30 feature importances:
+    1. n_broadway                                      42.52%
+    2. third_rank                                      10.64%
+    3. pair_high_rank                                   8.60%
+    4. n_low                                            7.01%
+    5. has_premium_pair                                 4.30%
+    6. top_rank                                         3.89%
+    7. has_ace_singleton                                3.19%
+    8. second_rank                                      2.72%
+    9. pair_low_rank                                    2.22%
+   10. trips_rank                                       1.53%
+   11. has_king_singleton                               0.91%
+   12. t2p_low_singleton_rank_g                         0.82%
+   13. has_high_pair                                    0.74%
+   14. category_id                                      0.60%
+   15. pair_alt_top_rank_g                              0.59%
+   16. connectivity                                     0.56%
+   17. pair_r4_bot_max_rank_g                           0.50%
+   18. pair_aug_v5_bot_DS_min_top_rank_g                0.45%
+   19. suit_max                                         0.35%
+   20. t2p_top_singleton_rank_g                         0.31%
+   21. pair_default_top_rank_g                          0.30%
+   22. n_pairs                                          0.29%
+   23. pair_aug_v5_bot_DS_max_mid_sum_g                 0.28%
+   24. ho_v2_bot_DS_max_mid_sum_g                       0.27%
+   25. suit_3rd                                         0.26%
+   26. pair_r4_bot_suit_profile_g                       0.26%
+   27. max_suited_pair_high_rank_g                      0.25%
+   28. ho_v2_bot_DS_max_top_rank_g                      0.22%
+   29. pair_r4_n_low_kickers_g                          0.20%
+   30. ho_v2_bot_DS_min_top_rank_g                      0.19%
+
+TRIPWIRE — new ho_v6_*_g features placement:
+  #105 ho_v6_topMax_SS_ms_n_configs_g                 0.01%
+  #79  ho_v6_topMax_SS_ms_max_mid_high_g              0.03%
+
+TRIPWIRE — leaf growth vs v44 (2,248,173): -1,150,552
+  <1K leaf growth → NULL signal (like v45's +9)

@@ -2476,3 +2476,44 @@ Evidence backing the claim:
 3. **Recommended order:** Path A Phase 1 FIRST (information value before committing to hybrid), then Path B if pair shows similar ML-only ceiling.
 
 Standalone session reports: `SESSION_60_A_HIGH_CATALOG.md` through `SESSION_64_T98_HIGH_CATALOG.md` (five per-max-rank pages); `HIGH_ONLY_RULE_CATALOG.md` (S65 aggregate synthesis).
+
+## Session 66-71 — Hybrid chain arc + S71 diagnostic (Decisions 101-106)
+
+Six sessions of architectural-routing work that closed the four largest residual categories at v44_dt's ceiling, then transitioned back to ML retrain via S71's setting-rank diagnostic. Per-session ships are documented in DECISIONS_LOG.md Decisions 101-106 and in `SESSION_66_*` … `SESSION_71_V45_FEATURE_HYPOTHESES.md` standalone reports. Cumulative production state at end of S71: rule chain `v56_trips_hybrid` ($1,429 full / $794 prefix); ML champion `v44_dt` ($1,081 full / $686 prefix); two-track divergence reduced from $1,409 → $348 (75% closed across S68+S69+S70).
+
+## Session 72 — v46_dt NULL at depth=32 ml=3 (Decision 107)
+
+S72 executed the S71-queued ho_v6 feature batch (H1: SS+ms route quality, 2 features) and trained v46_dt at depth=32 ml=3 (deliberate regime change from v44/v45's depth=36 ml=1 saturated regime, testing the S59 saturation hypothesis).
+
+**Result: NULL ship. v46_dt regresses v44_dt by −$32/1000h on prefix grid** ($686 → $718), broad-based regression (two_pair +$66, trips +$30, trips_pair +$183, composite +$156 worse). Tripwire confirmed NULL pre-grader: ho_v6 features ranked #79 (0.03%) and #105 (0.01%) of 109 features; leaf count collapsed 51% (2.25M → 1.10M) under the regime shift.
+
+**Regime confound:** v46_dt mixed two changes (new features + new hyperparams) in one experiment. Cannot conclude whether H1 features are inert or killed-by-regime without holding hyperparams constant. **S73 v46b_dt at depth=36 ml=1 (v44's regime, same ho_v6 features) is the prescribed single-variable retry.**
+
+**Mid-session blocker:** macOS TCC re-applied `com.apple.provenance` xattrs to pre-existing project files under `~/Documents/claudecode/`, blocking `python3` and `git` from reading project scripts. **Resolution:** repo physically relocated to `~/CODE/taiwanese/` (not TCC-protected). 4 memory files updated to reflect new path: MEMORY.md, project_taiwanese.md, feedback_taiwanese_commits.md, project_taiwanapp.md. Full grader was queued but not run S72; queued for S73 alongside v46b training.
+
+**Files produced (S72):**
+- `analysis/scripts/train_v46_dt.py` — DT trainer; default --max-depth 32 --min-samples-leaf 3.
+- `analysis/scripts/strategy_v46_dt.py` — inference; mirrors v45 with ho_v5 → ho_v6 swap.
+- `analysis/scripts/grade_v46_dt.py` — head-to-head grader vs v44 or v45.
+- `analysis/scripts/verify_v46_gating_S72.py` — surgical-gating sanity check (queued S73).
+- `data/feature_table_high_only_aug_v6_gated.parquet` (18.69 MB).
+- `data/v46_dt_model.npz` (691.97 MB) — NULL; kept for reference.
+- `data/session72/{persist_ho_v6.log, train_v46_dt.log, grade_v46_prefix.log}`.
+- `SESSION_72_V46_DT_NULL_REPORT.md` — full retrospective.
+
+**Methodology lesson (S72):** The 4-phase playbook gains a 5th phase: **regime-isolation retry.** Before testing a new feature batch at new hyperparams, plan the apples-to-apples retry at prior hyperparams in the same session-pair. NULL ambiguity (feature vs regime) is the unforced error to avoid going forward.
+
+**Production state at end of S72:** UNCHANGED from S71.
+- Rule chain: `v56_trips_hybrid` ($1,429 full / $794 prefix). Grader-confirmed.
+- ML champion: `v44_dt` ($1,081 full / $686 prefix).
+- Two-track divergence: $348/1000h.
+- Project rule count: 18.
+- Decision 107: v46_dt NULL; v46b_dt regime-isolation retry queued S73.
+
+**Session 73 priorities (per CURRENT_PHASE.md S72 rewrite):**
+1. **Train v46b_dt at depth=36 ml=1.** ~10 min fit. Inspect tripwire (top-50 importance + leaves ≥2.26M = ship signal).
+2. **Build strategy_v46b_dt + grade_v46b_dt** (cp from v46 variants; change MODEL_PATH).
+3. **Prefix grade + full grade vs v44_dt.** If v46b ships ≥ +$10 WG full → new ML champion; build v57_v46b_hybrid. If NULL → H1 conclusively wrong; pivot to H2 (route-tradeoff comparator) or gradient boosting.
+4. **Parallel:** run S72 full grader (was deferred) for within-cat high_only delta on the NULL record; append to SESSION_72_V46_DT_NULL_REPORT.md.
+
+Standalone session report: `SESSION_72_V46_DT_NULL_REPORT.md`.

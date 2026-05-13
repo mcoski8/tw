@@ -1,0 +1,22 @@
+loaded 6,009,159 canonical hands (0.0s)
+computing high_only_aug_v6 features ...
+  ho_v6    500,000/6,009,159  rate=249525/s  elapsed    2s  ETA   22s
+  ho_v6  1,000,000/6,009,159  rate=161800/s  elapsed    6s  ETA   31s
+  ho_v6  1,500,000/6,009,159  rate=134870/s  elapsed   11s  ETA   33s
+  ho_v6  2,000,000/6,009,159  rate=126100/s  elapsed   16s  ETA   32s
+  ho_v6  2,500,000/6,009,159  rate=126250/s  elapsed   20s  ETA   28s
+  ho_v6  3,000,000/6,009,159  rate=134656/s  elapsed   22s  ETA   22s
+  ho_v6  3,500,000/6,009,159  rate=131254/s  elapsed   27s  ETA   19s
+  ho_v6  4,000,000/6,009,159  rate=129800/s  elapsed   31s  ETA   15s
+  ho_v6  4,500,000/6,009,159  rate=133488/s  elapsed   34s  ETA   11s
+  ho_v6  5,000,000/6,009,159  rate=131952/s  elapsed   38s  ETA    8s
+  ho_v6  5,500,000/6,009,159  rate=134307/s  elapsed   41s  ETA    4s
+  ho_v6  6,000,000/6,009,159  rate=137518/s  elapsed   44s  ETA    0s
+  done (43.7s)
+writing /Users/michaelchang/Documents/claudecode/taiwanese/data/feature_table_high_only_aug_v6_gated.parquet (compression=zstd) ...
+wrote 18.69 MB
+
+re-reading for sanity ...
+  rows: 6,009,159
+    ho_v6_topMax_SS_ms_n_configs_g             0:5,185,479, 2:308,880, 3:411,840, 6:102,960
+    ho_v6_topMax_SS_ms_max_mid_high_g          0:5,185,479, 4:2,520, 5:8,904, 6:20,496, 7:38,640, 8:64,180, 9:96,460, 10:131,824, 11:161,616, 12:169,680, 13:...
