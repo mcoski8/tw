@@ -6296,3 +6296,127 @@ The largest single-category v44 residual is **high_only at $3,014/1000h within-c
 - Two-track divergence: $348 (no change).
 - **Total project rule count: 18** (UNCHANGED).
 - **v47_xgb decisive NULL recorded; Option B (gradient boosting at moderate capacity) closed; entire single-model ML track exhausted at v44 saturating regime; S76 pivots to oracle-label refinement / diagnostic refresh / rule-chain extension / high-capacity boosting retry.**
+
+---
+
+## Session 76 Pivot Preamble — Categorical diagnostic refresh chosen (pre-Decision 111)
+
+**Date:** 2026-05-13 (Session 76 PHASE 1, pre-execution)
+**Question:** Which of the four S76 pivot directions (A/B/C/D) should drive S76?
+**Options on the table:**
+- **A.** Oracle-label N=1000 re-evaluation (~10× compute, requires cluster access).
+- **B.** Categorical diagnostic refresh (~30-60 min per drill, low risk).
+- **C.** Higher-capacity boosting retry (~15-25 hours wall, speculative).
+- **D.** Rule-chain extension (~30-60 min/rule hypothesis, low risk, near-term ship).
+
+**Choice: Option B — Categorical diagnostic refresh.**
+
+**Why this over A/C/D:**
+1. **A is gated on cluster access I do not have.** Single-machine N=1000 re-evaluation is multi-week wall and infeasible for a single session.
+2. **C is structurally speculative.** S75 already proved depth=6/n_est=200 boosting regresses by $1,392/1000h via capacity mismatch. Scaling to depth=8-10 × n_est=1000+ might close 10-30% of the gap (per S75 Appendix B back-of-envelope) — still NULL ship — at the cost of 15-25 hours wall. Inappropriate first move when the user wants "clarity and perfection" and we have cheaper signal available.
+3. **D is the near-term-ship path BUT benefits from running B first.** Rule-chain extension needs a target category; the v44 per-category $/1000h leaderboard (high_only $1,868, three_pair $1,613, trips $1,194, pair $1,097, composite $960) tells me WHERE leaks live in aggregate but not WHICH structural axis to attack within a category. The S71 high_only diagnostic surfaced $147.59 of STRUCTURE-bucket leak; H1 captured only $24 (~16%). The remaining ~$123 informs hypothesis H6+ for high_only specifically. Equivalent drills on other categories will inform whether Option D's next rule should attack three_pair, pair, or composite, and along what structural axis.
+4. **B is the cheapest, lowest-risk move and unlocks both ML and rule-chain tracks downstream.** A diagnostic that surfaces a clean within-category structural leak feeds either a v48_dt feature engineering attempt OR a v57 rule chain extension. Negative result (diagnostic clean / no fresh axes) also has value: it strengthens the "single-model ML track exhausted at v44 saturating regime" conclusion and makes the case to commit S77 compute to Option C or A.
+
+**Acceptance for this preamble entry:** Pivot choice documented before any drill runs, so the rationale is recoverable if the session is interrupted.
+
+**Decision 111 (final shipping verdict for S76) is appended at session end with the diagnostic finding and next-target recommendation.**
+
+---
+
+## Decision 111 — Session 76 cross-category setting-rank diagnostic identifies PAIR as the highest-leverage next ML/rule target ($116.04/1000h STRUCTURE-bucket leak; never drilled with the S71 lens); two_pair / three_pair / trips_pair empirically confirmed as noise-ceiling-limited (Option A candidates); production state UNCHANGED for the fifth consecutive session
+
+**Date:** 2026-05-13 (Session 76 end)
+**Question:** What did S76's Option B diagnostic find, and what is the recommended S77 pivot target?
+
+### Result summary
+
+`drill_v44_setting_rank_all_cats_S76.py` swept all 6,009,159 canonical hands (17.9 min wall) and partitioned each category's v44 leak into NOISE (rank 2-3) / MID (rank 4-9) / STRUCTURE (rank ≥10) buckets, with gap_2nd (optimum sharpness) and plateau width sampled per bucket.
+
+**Full-grid contribution + structure decomposition:**
+
+| Category | v44 $/1000h contribution | STR $ | NOISE $ | STR/TOT | Verdict |
+|---|---:|---:|---:|---:|---|
+| pair | $511.16 | **$116.04** | $206.73 | 22.7% | **S77 PRIMARY TARGET — fresh structure signal** |
+| high_only | $381.39 | $147.59 | $79.54 | 38.7% | H1-H5 exhausted; deprioritized for S77 |
+| two_pair | $80.82 | $0.86 | $57.73 | 1.1% | **Noise-ceiling-limited; Option A candidate** |
+| trips | $65.18 | $13.14 | $23.08 | 20.2% | v56 rule already shipped; small absolute |
+| three_pair | $30.70 | $0.78 | $21.78 | 2.6% | **Noise-ceiling-limited; Option A candidate** |
+| trips_pair | $8.03 | $0.21 | $4.55 | 2.6% | **Noise-ceiling-limited; Option A candidate** |
+| composite | $2.35 | $0.41 | $0.57 | 17.4% | Tiny absolute; deprioritized |
+| quads | $1.30 | $0.20 | $0.40 | 15.4% | Tiny absolute; deprioritized |
+| **TOTAL** | **$1,081.13** | **$279.23** | **$394.38** | **25.8%** | matches v44_dt full-grid grade |
+
+### Three findings
+
+**Finding 1 — PAIR is the highest-leverage next feature-engineering / rule-extension target.**
+
+Pair contributes $511.16/1000h (47%) of v44's $1,081 full-grid leak — almost half the total and 1.34× high_only's $381 contribution. Within pair:
+* STR-bucket: $116.04 (22.7% of pair's leak) — sharp gap_2nd of 0.2109 (sharper than high_only STR's 0.1063).
+* 59,355 hands sit in the STR bucket — v45+ feature-engineering target population.
+* Never drilled with the setting-rank lens. S66's pair drill used a class-label PBOT-routing lens, not setting-rank.
+* MATCH rate 65.7% (vs high_only's 41.8%) — pair is the "moderately well-fit but not saturated" sweet spot.
+
+**Finding 2 — two_pair / three_pair / trips_pair are empirically noise-ceiling-limited.**
+
+| cat | NOISE % | STR % | NOISE $ | STR $ | NOISE/TOT |
+|---|---:|---:|---:|---:|---:|
+| two_pair | 14.3% | 0.0% | $57.73 | $0.86 | 71.4% |
+| three_pair | 33.9% | 0.5% | $21.78 | $0.78 | 70.9% |
+| trips_pair | 11.3% | 0.1% | $4.55 | $0.21 | 56.7% |
+
+These three categories have <3% STR/TOT share each. Combined NOISE-bucket leak: $83.55/1000h. Further single-model ML feature engineering is expected to NULL at the +$10 ship bar (structure leak too small to lift). **Option A (oracle N=1000 re-eval) is the empirically-justified pivot for these specifically** — N=1000 reduces label-variance by ~√5 ≈ 2.24×, potentially closing 30-50% of the NOISE-bucket leak on these categories alone. The case for Option A is now data-supported, not speculative.
+
+**Finding 3 — high_only's STR leak is real but H1-H5 cascade exhausted.**
+
+$147.59 of STR-bucket signal remains in high_only, but H1 (SS+ms route quality) captured $24 within-cat, H2 (route-tradeoff comparator) captured $0, and H3-H5 were deprioritized for known structural reasons (S74 CURRENT_PHASE.md). The marginal-return curve on high_only is diminishing; a pair-first drill exploits the cleanest residual signal without inheriting an exhausted hypothesis cascade.
+
+### S77 recommendation (pair-first deep-drill)
+
+Apply the S71-style cell-taxonomy diagnostic to pair:
+
+1. Design a `compute_hand_structural_minimal_pair()` capturing pair-relevant structure: pair_rank tier (low/mid/high), pair color (JOINT/non-JOINT bot vs mid placement), kicker quality, suitedness profile, broadway/wheel axes.
+2. Cross-tabulate pair STRUCTURE-bucket hands against the new cell taxonomy; identify the $116/1000h leak's top 3-5 cells.
+3. Hypothesize feature(s) targeting those cells (analogous to ho_v6 H1 for high_only).
+4. Train v48_dt at depth=36 ml=1 (S73 regime); grade vs v44 with prefix + full grader.
+5. Apply +$10/1000h ship bar (codified S73, held S74-S76).
+
+S77 acceptance: pair diagnostic + feature pack hypothesis recorded; if any hypothesis surfaces a clean within-cell leak ≥$30/1000h within-cat, queue v48_dt retrain for S78.
+
+### Methodology lessons
+
+1. **Category-agnostic setting-rank lens is portable.** No per-category structural taxonomy needed for the first-pass diagnostic. ~18 min wall on a single strategy_v44_dt walk over the full grid identifies the next drill target across all 8 categories.
+
+2. **Full-grid CONTRIBUTION ordering ≠ within-category $/1000h ordering.** CURRENT_PHASE.md historically reported within-category numbers (high_only $1,868 > pair $1,097). Full-grid CONTRIBUTION ordering puts pair $511 > high_only $381 because pair has 2.3× as many hands. Both numbers should be reported going forward.
+
+3. **STR/TOT ratio cleanly separates closeable-signal from noise-ceiling categories.** STR/TOT > 15% = closeable. STR/TOT < 5% = noise-dominated (Option A territory). This metric belongs in STRATEGY_GUIDE.md as a per-category property.
+
+4. **gap_2nd × bucket combination is a high-confidence signal sharpness metric.** Pair STR gap_2nd 0.21 = oracle's #1 is well-isolated even when v44 picks rank ≥10 = high-confidence "v44 picked structurally wrong" = strong feature-engineering target.
+
+5. **Plateau width ~1.0-1.2 at EPS_REL=0.5% across all (cat,bucket) cells.** Label noise lives in EV magnitude, not in argmax determinacy. The realistic-mixture N=200 grid produces well-isolated argmax decisions.
+
+6. **"Speed is not necessary — clarity and perfection is."** S76 ran one diagnostic drill in 18 min wall and produced an empirically airtight cross-category partition with three actionable findings. The S77 pivot target is data-supported, not narrative-justified.
+
+7. **+$10 ship bar holds (S73 codified, held S74-S76).** Production state UNCHANGED for the fifth consecutive session. The bar is doing its filtering job.
+
+### Files (Session 76)
+
+**New code:**
+- `analysis/scripts/drill_v44_setting_rank_all_cats_S76.py` — category-agnostic setting-rank diagnostic.
+
+**Data (gitignored, local-only):**
+- `data/drill_v44_setting_rank_all_cats_S76_summary.json` (16.0 KB).
+- `data/session76/drill_v44_setting_rank_all_cats_S76.log` (full console output).
+- `data/session76/drill_smoke_5k.log` (smoke validation).
+
+**Documentation:**
+- `SESSION_76_DIAGNOSTIC_REPORT.md` (full retrospective + Appendix A pair-first justification).
+- `CURRENT_PHASE.md` — rewritten for S77.
+- `DECISIONS_LOG.md` — Decision 111 (this section) + Session 76 Pivot Preamble.
+- `STRATEGY_GUIDE.md` — Part 1 SKIPPED (no strategy of record changed); Parts 2-6 front-matter date refresh.
+
+**Production state at end of S76:** UNCHANGED from S75.
+- Rule chain: **v56_trips_hybrid** ($1,429 full / $794 prefix). Grader-confirmed.
+- ML champion: **v44_dt** ($1,081 full / $686 prefix).
+- Two-track divergence: $348/1000h (no change).
+- **Total project rule count: 18** (UNCHANGED).
+- **S76 diagnostic recorded; pair-first deep-drill queued for S77; Option A (oracle N=1000) empirically justified for two_pair / three_pair / trips_pair if cluster access becomes available.**
