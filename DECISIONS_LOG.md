@@ -6525,3 +6525,153 @@ Documented in detail in `PAIR_S77_FEATURE_HYPOTHESES.md`. Brief:
 - Two-track divergence: $348/1000h (no change).
 - **Total project rule count: 18** (UNCHANGED).
 - **Pair diagnostic complete; H6/H7/H8 feature pack queued for S78 v48_dt retrain at depth=36 ml=1 with +$10/1000h ship bar.**
+
+## Decision 113 — Session 78 v48_dt CLEAN NULL ship at prefix grade (Δ +$2/1000h); H6/H7/H8 pair feature pack absorbed by v44's saturating DT via existing splits; structural-redundancy doctrine empirically reconfirmed at v44 regime; single-model ML feature-engineering track formally closed
+
+**Date:** 2026-05-13 (Session 78 end)
+**Question:** Does the H6+H7+H8 pair-gated feature pack queued in S77 lift v48_dt above v44_dt's prefix baseline by at least +$5/1000h, qualifying for full-grid grade?
+
+### Answer
+
+**No. v48_dt's prefix Δ vs v44_dt is +$2/1000h** (v44 $686 → v48 $684). Within-pair lift is +$5/1000h ($595 → $590) on the 215,162 prefix pair hands — far below S77's predicted $30-45/1000h joint within-pair lift. All other categories byte-identical. Per the S78 directive (`prefix Δ < +$5 → NULL ship`), Phase 6 (full grade) was skipped. **CLEAN NULL ship.**
+
+### Phase outcomes
+
+| Phase | Status | Notes |
+|---|---|---|
+| 1. Feature files | PASS | H6/H7/H8 implemented with sanity tests; H8 cell logic cross-validated against S66 on 23,377 hands (0 disagreements) |
+| 2. Persist parquets | PASS | All three gates verified (0 non-zero on non-gated hands); H6 distribution {0,1,3} only |
+| 3. Smoke train (100K rows) | PASS-with-caveat | H7 #51, H8 #69, H6 #73 — under abort-rank #80 but well below top-30 ideal |
+| 4. Full train (4.8M rows) | PASS | 578s wall, 2.29M leaves, 1,285 MB; H7 #43, H8 #57, H6 #68 — slight rank improvement at scale |
+| 5. Prefix grade | NULL ship | Δ +$2/1000h (within-pair +$5); below +$5 abort threshold |
+| 6. Full grade | SKIPPED | Per directive |
+| 7. Decision + report | DONE | Decision 113; SESSION_78_V48_DT_REPORT.md; CURRENT_PHASE.md rewritten |
+
+### Per-category prefix delta
+
+| category | n_hands | v44 $/1000h | v48 $/1000h | Δ |
+|---|---:|---:|---:|---:|
+| **pair** | 215,162 | **$595** | **$590** | **−$5 (within-cat)** |
+| two_pair | 204,275 | $663 | $663 | 0 (identical) |
+| trips | 25,245 | $1,086 | $1,086 | 0 |
+| trips_pair | 25,943 | $727 | $727 | 0 |
+| three_pair | 25,614 | $1,143 | $1,143 | 0 |
+| quads | 1,100 | $783 | $783 | 0 |
+| composite | 2,661 | $1,226 | $1,226 | 0 |
+
+The H6/H7/H8 pack moves ONLY pair, exactly as designed. Other categories are byte-identical (gating works correctly). The lift is real but tiny.
+
+### Why the predicted lift didn't land — structural-redundancy NULL (empirically reconfirmed)
+
+S77 budgeted 50% redundancy across H6+H7+H8. **Observed redundancy is closer to 85-90%.** Three contributors:
+
+1. **H6 only emits {0, 1, 3}** (not the planned {0..5}) — the deck structure for 5 non-pair singletons admits only suit-profile {2+2+1 → 1 config, 3+2 → 3 configs, else → 0}. Partitioning surface is ~3 bits, not 6.
+2. **H7 is a 1-bit signal** the saturated DT can derive in 2 splits from `pair_kickers_in_pair_suit_max_g ≥ 1 AND pair_default_top_rank_g == max_sing_rank` (the latter is always true under default routing).
+3. **H8's 5-split cell synthesis** is reachable in 3-4 splits at the DT's 2.25M-leaf capacity using `pair_aug_v5_bot_DS_n_configs_g`, `pair_r4_bot_suit_profile_g`, and `pair_kickers_in_pair_suit_*_g`.
+
+This empirically reconfirms the **S74 redundancy doctrine** that S77 attempted to circumvent with deeper-cascade features:
+
+> At v44's saturating regime (depth=36, ml=1, 2.25M leaves), features the DT can derive in 2-4 splits from existing features capture zero-to-negligible incremental signal — regardless of how cleanly the diagnostic surfaces them.
+
+The corollary is that S77's diagnostic-quality-driven hypothesis methodology (sharp gap_2nd cells, single-dominant mismatch class, structurally distinct signal) **does not break the redundancy ceiling**. Diagnostic precision and feature novelty are orthogonal.
+
+### What WAS achieved
+
+* +$5/1000h within-pair on prefix = ~0.8% relative lift on pair's prefix contribution.
+* Pair `pct_optimal` improved 69.2% → 69.3% (+0.1pp on 215K hands).
+* Per-category byte-identity confirms the gating works correctly — the new features touch ONLY pair hands as designed.
+* H8's inline cell logic cross-validates against S66's compute_pair_structural on 23,377 random single-pair canonical hands with zero disagreements — a reusable building block for any future pair-cell-conditional work.
+
+### Pair-only sub-strategy alternative — REJECTED
+
+The S78 directive offered "consider pair-only sub-strategy alternative" as a fallback for prefix Δ < +$5. The math:
+
+* v48 captures +$5/1000h within pair on prefix.
+* Pair contributes $511/1000h to v44's full-grid leak.
+* A pair-only hybrid (route pair → v48, else → v44) would lift production by ~$2/1000h full-grid at best.
+* **Below the +$10 ship bar. Not worth shipping.**
+
+### Hypothesis cascade — final state
+
+| Hypothesis | Description | Status |
+|---|---|---|
+| H1 (ho_v6) | high_only SS+ms route quality | PARTIAL POSITIVE / NULL ship at +$5 (S73). |
+| H2 (ho_v7) | high_only route-tradeoff comparator | CLEAN NULL at +$0 (S74). |
+| Option B (S75) | Gradient boosting at v44 features | DECISIVE NULL at −$1,392/1000h. |
+| S76 cross-cat diagnostic | Setting-rank lens cross-cat | SHIPPED diagnostic; identified pair as next target. |
+| S77 pair drill | Pair-only structural + bucket | SHIPPED diagnostic; identified H6/H7/H8 cells. |
+| **H6** | `pair_pmid_ds_n_configs_g` | **CLEAN NULL** (within-pair $5 of $15-26 budget — 17-30%). |
+| **H7** | `pair_kicker_max_in_pair_suit_g` | **CLEAN NULL** (rank #43 importance; saturation absorbs). |
+| **H8** | `pair_low_pmid_safety_g` | **CLEAN NULL** (rank #57; derivable in 3-4 splits). |
+| H3 | high_only SS+ms VARIETY signal | UNTESTED. Deprioritized — same redundancy ceiling as H1/H6. |
+| H4 | high_only MS_ONLY discriminator | UNTESTED. Deprioritized — small WG target. |
+| H5 | high_only Drop-max signal | UNTESTED. Dead (relied on H2 infrastructure). |
+| Option A | Oracle-label N=1000 re-eval | GATED on cluster access. |
+| Option C | Higher-capacity boosting | Deprioritized — 15-25 hr speculative. |
+| Option D | Rule-chain extension on S77 LOW pair findings | LATENT — could ride on the kicker_max-alignment discriminator at the rule layer. |
+
+### Decision: Single-model ML feature-engineering track is formally CLOSED at v44's saturating regime
+
+Six consecutive feature-engineering or capacity attempts (H1, H2, H6, H7, H8, boosting) have produced no ship-grade lift against v44_dt. The redundancy ceiling is empirically robust:
+
+* S72 v46_dt: ho_v6 NULL ($−32 prefix)
+* S73 v46b_dt: ho_v6 H1 PARTIAL ($+5)
+* S74 v47_dt: ho_v7 H2 NULL ($+0)
+* S75 v47_xgb: boosting NULL ($−1,392)
+* **S78 v48_dt: H6+H7+H8 pair pack NULL ($+2)**
+
+Future v44-improvement attempts at the single-model ML track are deprioritized. **Path forward priority order:**
+
+1. **Option D** (rule-chain extension on S77 LOW pair findings) — the kicker_max-in-pair-suit discriminator (70% TRUE in PBOT_DS_PARTIAL vs 32-34% in PMID-target cells) is a clean 1-bit signal that may capture more lift as a deterministic rule applied surgically on top of the v54+v55+v56 hybrid stack than as a DT feature absorbed at v44 saturation. Worth a one-session probe targeting the $10.97/1000h `SPLIT_tmax_SS_mu → PMID_tmax_DS` mismatch class.
+2. **Option A** (oracle-label N=1000 re-eval) — empirically justified for two_pair / three_pair / trips_pair specifically; remains gated on cluster access.
+3. **Diagnostic refresh on the next-largest residual category** if Option D NULLs. Pair STRUCTURE is depleted; two_pair STRUCTURE / trips STRUCTURE haven't been probed under the S71 setting-rank lens × cell decomposition combined product.
+
+### Methodology lessons (Session 78)
+
+1. **A 50% redundancy budget is too generous at v44's saturating regime.** S77 budgeted 50% redundancy on H6+H7+H8 and predicted $14-22/1000h full-grid lift. Observed is ~85-90% redundancy and $2/1000h prefix. Future feature-engineering hypotheses at this regime should assume **80%+ redundancy as the default**, not 50%.
+
+2. **Diagnostic quality does not predict feature lift.** S77 produced the cleanest diagnostic in the project (LOW × PMID_DS_MAXTOP gap_2nd 0.385, single dominant mismatch class with $10.97/1000h on 3,072 hands). The features built from this diagnostic captured 1/5 to 1/10 of the predicted lift. **Diagnostic precision is a NECESSARY but not SUFFICIENT condition for feature engineering at saturation.**
+
+3. **H6 value-distribution under-reach is a recoverable hypothesis sin.** The S77 H6 spec called out int8 0..5, but the deck structure for single-pair hands only admits {0, 1, 3}. A 5-minute simulation against canonical hands would have caught this. Future feature specs should include an empirical value-distribution check before persisting to parquet.
+
+4. **The smoke-train rank-<80 abort gate held but proved soft.** H6/H7/H8 all cleared rank-80 at smoke (#73, #69, #51) and rank improved at full scale (#68, #57, #43), but the full-grade outcome was still CLEAN NULL. **Future smoke gates should add a per-category prefix mini-grade** (5K-hand sub-grid for the target category) to test signal *materialization*, not just feature *usage*. A feature that ranks #43 at full scale but yields $0 incremental category lift is a different signal than "the feature is being used productively."
+
+5. **+$10 ship bar canonical (S73 codified, held S74-S78).** Seventh consecutive session with production UNCHANGED. The bar continues to filter noise correctly.
+
+6. **Compute efficiency lesson — Full train at 4.8M rows is now ~10 min, not 30.** v48_dt's 578s wall (vs v44's historical ~30 min) suggests sklearn's DT fit is benefiting from caching/JIT effects after multiple v40+ retrains, OR the H6/H7/H8 features happen to compress splits efficiently. Worth noting for capacity planning of any future v49+.
+
+7. **"Speed is not necessary — clarity and perfection is."** S78 executed every phase per directive without short-cuts. The NULL outcome is unambiguous and well-documented. Decision quality is paramount; result direction is secondary.
+
+### Files (Session 78)
+
+**New code:**
+* `analysis/scripts/pair_pmid_ds_features_gated.py` (H6)
+* `analysis/scripts/pair_kicker_align_features_gated.py` (H7)
+* `analysis/scripts/pair_low_pmid_safety_features_gated.py` (H8)
+* `analysis/scripts/persist_pair_pmid_ds_gated.py`
+* `analysis/scripts/persist_pair_kicker_align_gated.py`
+* `analysis/scripts/persist_pair_low_pmid_safety_gated.py`
+* `analysis/scripts/train_v48_dt.py`
+* `analysis/scripts/strategy_v48_dt.py`
+* `analysis/scripts/grade_v48_dt.py`
+
+**Data (gitignored, local-only):**
+* `data/feature_table_pair_pmid_ds_gated.parquet` (18.69 MB)
+* `data/feature_table_pair_kicker_align_gated.parquet` (18.64 MB)
+* `data/feature_table_pair_low_pmid_safety_gated.parquet` (18.60 MB)
+* `data/v48_dt_smoke.npz` (32.90 MB)
+* `data/v48_dt_model.npz` (1,285 MB) — kept for audit
+* `data/session78/*.log` — persist + train + grade logs
+
+**Documentation:**
+* `SESSION_78_V48_DT_REPORT.md` — session report.
+* `DECISIONS_LOG.md` — Decision 113 (this section).
+* `CURRENT_PHASE.md` — rewritten for S79.
+* `STRATEGY_GUIDE.md` — Part 1 SKIPPED (no strategy of record changed); Parts 2-6 front-matter date refresh.
+
+**Production state at end of S78:** UNCHANGED from S77.
+- Rule chain: **v56_trips_hybrid** ($1,429 full / $794 prefix). Grader-confirmed.
+- ML champion: **v44_dt** ($1,081 full / $686 prefix).
+- Two-track divergence: $348/1000h (no change).
+- **Total project rule count: 18** (UNCHANGED).
+- **Single-model ML feature-engineering track formally CLOSED at v44 regime. Path forward: Option D rule-chain extension on S77 LOW pair findings, or Option A oracle-label re-eval (gated on cluster access).**
