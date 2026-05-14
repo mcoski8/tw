@@ -1,241 +1,237 @@
-# Current: Sprint 8 — Session 78 v48_dt H6+H7+H8 pair feature pack CLEAN NULL ships at prefix grade (Δ +$2/1000h); single-model ML feature-engineering track formally CLOSED at v44 saturating regime; **user (S78 end-of-session) rejected "ship at 65%" path and chose A-path: S79 pivots to label-noise measurement on existing N=1000 prefix grid to decide A-path (better labels) vs C-path (bigger model) for the next 3-5 sessions**
+# Current: Sprint 8 — Session 79 label-noise measurement returned MIXED verdict; pre-committed shift-based criterion has a blind spot for v44's overfit-to-N=200-noise mode (oracle self-disagreement 32%, MATCH bucket loses 21.9pp, NOISE bucket gains 43.6pp); **S80 runs M2 (parallel A1 + C2 one-session experiments) to disambiguate label noise from memorization before committing to A-path or C-path for the next 3-5 sessions**
 
-S77 queued three pair-gated feature hypotheses (H6/H7/H8) for v48_dt retrain at the S73 regime (depth=36, ml=1). S78 executed Phase 1-5 as planned. Phase 1 implemented and sanity-tested H6 (`pair_pmid_ds_n_configs_g`, int8 0..5 — though actual reachable values are {0,1,3}), H7 (`pair_kicker_max_in_pair_suit_g`, bool 0/1), H8 (`pair_low_pmid_safety_g`, int8 0..5, LOW-pair-only). H8's inline cell logic cross-validated against S66's `compute_pair_structural` + `cell_for_pair_hand` on 23,377 random single-pair canonical hands with zero disagreements.
+S78's NULL closed the single-model ML feature-engineering track at v44's saturating regime. S79 was a one-session measurement to decide between A-path (better labels via N=1000) and C-path (higher-capacity model) for the next 3-5 sessions of compute investment.
 
-Phase 2 persisted all three gated parquet packs (~18.6 MB each) with verified zero-on-non-gated. Phase 3 smoke train (100K rows, 2.5s wall) placed H7 #51 / H8 #69 / H6 #73 — all below the top-30 ideal but above the rank-80 abort gate. Phase 4 full train (4.8M rows, 578s wall, 2.29M leaves, 1,285 MB) improved placements to H7 #43 / H8 #57 / H6 #68.
+S79 ran `analysis/scripts/label_noise_measurement_S79.py` end-to-end on the existing 500K N=1000 prefix grid (FREE compute, no new oracle sampling — 68.8s wall, 7,263 hands/s). For each prefix hand it computed v44's pick, the N=200 argmax (from the full grid at the same canonical_id), the N=1000 argmax (from the prefix grid), the match flags, and the regret distributions.
 
-**Phase 5 prefix grade returned Δ +$2/1000h (v44 $686 → v48 $684).** Within-pair lift was +$5/1000h ($595→$590) on 215,162 prefix pair hands. All other categories byte-identical (gating works correctly; new features touch only pair hands as designed). Per S78 directive (`prefix Δ < +$5 → NULL ship`), Phase 6 (full grade) was SKIPPED.
+**Headline numbers:**
 
-**Production state UNCHANGED for the seventh consecutive session** (S72 NULL, S73 PARTIAL/NULL, S74 NULL, S75 boosting NULL, S76 diagnostic, S77 diagnostic, S78 NULL).
+| Metric | N=200 | N=1000 | Δ |
+|---|---:|---:|---:|
+| v44 match rate | 72.98% | 67.05% | **−5.93pp** |
+| v44 mean regret | $703/1000h | $686/1000h | −$17 |
+| Oracle self-agreement (N=200 argmax == N=1000 argmax) | — | — | **68.00%** |
 
-**Why the predicted lift didn't land — structural-redundancy NULL reconfirmed:** S77 budgeted 50% redundancy across H6+H7+H8 and predicted $30-45/1000h within-pair joint lift. Observed is ~$5 within-pair = effective 85-90% redundancy. Three contributors: H6 only emits {0,1,3} (deck structure caps partitioning surface at ~3 bits); H7's 1-bit signal is derivable in 2 splits from existing v44 features; H8's 5-split cell synthesis is reachable in 3-4 splits at v44's 2.25M-leaf capacity. The S74 redundancy doctrine — features derivable in <few splits at saturation get zero or near-zero lift — is empirically reconfirmed. S77's cleanest-diagnostic-in-the-project hypothesis methodology does NOT break the redundancy ceiling.
+**The criterion has a blind spot:** it was designed under the implicit assumption that match-rate shift cleanly indicates label-noise impact. The data refutes that assumption. Oracle self-disagreement of **32%** says labels are *not* stable. Bucket-level decomposition (S76 setting-rank lens) shows the MATCH bucket loses 21.9pp at N=1000 (v44 had memorized N=200 noise) while the NOISE bucket gains +43.6pp (most of v44's "rank 2-3" leak at N=200 was just label noise). Per-category, two_pair (−13.7pp) and trips_pair (−19.4pp) are most-overfit; pair (+2.1pp) and three_pair (+1.6pp) are least-overfit — meaning S77/S78's pair-focused feature work was in the *wrong* category for the memorization story.
 
-**Decision 112 (S77): pair drill diagnostic ship. Decision 113 (S78): v48_dt CLEAN NULL ship; single-model ML feature-engineering track formally CLOSED at v44 regime.**
+**Mechanical verdict (script output): C_PATH** (shift < +2pp).
+**Honest verdict (this writeup, per S79 directive's MIXED clause): MIXED.** The criterion cannot discriminate the label-noise-plus-memorization mode the data actually shows. Per the directive ("surface options; do NOT pre-commit"), the A/C/M decision is deferred to a measurement comparison in S80.
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 79): Label-noise measurement via existing N=1000 prefix grid — answer "is the gap real or is it label noise?" before committing to N=1000 expansion vs higher-capacity model**
->
-> **The strategic question after S78's NULL:** v44_dt is at ~65% match rate against the oracle (full grid pct_opt 64.80%). Goal is 95%+. After 7 consecutive sessions with UNCHANGED production state, the user (S78 end-of-session conversation) explicitly rejected the "ship at 65%" path and asked us to find the gap. The S78 NULL empirically closed the single-model feature-engineering door; the next strategic decision is whether to invest in (A) better labels via N=1000 oracle re-evaluation, or (C) higher-capacity boosting models. **Step 1 is measurement, not commitment** — we have a 500K-hand N=1000 prefix grid already (`data/oracle_grid_prefix500k_n1000.bin`), and we have the same 500K hands labeled at N=200 in the full grid (since the prefix IS the first 500K canonical IDs). Comparing v44's regret under both labelings tells us how much of v44's measured leak is *real model error* vs *N=200 sampling noise*.
->
-> 1. **(PHASE 1 — ~30 min)** Write `analysis/scripts/label_noise_measurement_S79.py`. For each of the 500K prefix canonical hands:
->    - Read v44's pick (cached from prior grade run, or recompute).
->    - Read oracle's #1 pick at N=200 (full grid evs[i].argmax()).
->    - Read oracle's #1 pick at N=1000 (prefix grid evs[i].argmax()).
->    - Compute n200_regret = full_evs[i][n200_pick] − full_evs[i][v44_pick].
->    - Compute n1000_regret = prefix_evs[i][n1000_pick] − prefix_evs[i][v44_pick].
->    - **Critical:** the two regret numbers are measured on DIFFERENT sample sizes against DIFFERENT label sets — they're not directly subtractable, but the *distribution shift* between them quantifies label noise.
->
-> 2. **(PHASE 2 — ~15 min)** Aggregate by setting-rank bucket (S71 lens) and per-category:
->    - % of hands where v44 matches oracle changes: v44=n200 vs v44=n1000.
->    - $/1000h aggregate regret: v44 vs n200 oracle, v44 vs n1000 oracle.
->    - Per-bucket NOISE / MID / STRUCTURE breakdown (S76 hypothesis: label noise concentrates in NOISE bucket).
->    - Per-category breakdown (pair, two_pair, trips, etc.).
->
-> 3. **(PHASE 3 — ~15 min)** Decision criterion:
->    - **If pct_opt(v44 vs N=1000) − pct_opt(v44 vs N=200) ≥ +5pp on prefix:** label noise is materially shifting which setting is "optimal." Confirms N=1000 expansion is high-ROI. → Phase 4 plans the targeted N=1000 grid expansion.
->    - **If pct_opt shifts < +2pp:** the labels are mostly stable; the gap is genuine model error. → Phase 4 plans Option C (high-capacity gradient boosting at depth=10-12, n_est=1000+).
->    - **If +2pp ≤ shift < +5pp:** mixed result; document and discuss with user before committing.
->
-> 4. **(PHASE 4 — ~30 min)** Plan the next ~3-5 sessions based on Phase 3 verdict:
->    - **A-path (label noise wins):** design targeted N=1000 expansion. Candidates: (a) full-grid N=1000 on STRUCTURE-bucket hands only (~25.8% of grid ≈ 1.55M hands, ~24 hr local compute); (b) extend N=1000 prefix from 500K → 2M hands sampled uniformly across grid; (c) full N=1000 on the 6M grid (~5 days local compute, may need cluster). Pick one based on Phase 3 magnitude.
->    - **C-path (real gap wins):** scope a high-capacity XGBoost retry. S75 used depth=6 / n_est=200; the new attempt uses depth=10-12 / n_est=1000-2000 / longer-run early stopping. Build a smoke + full plan for S80.
->
-> 5. **(PHASE 5 — ~10 min)** Decision 114 + `SESSION_79_LABEL_NOISE_REPORT.md` + CURRENT_PHASE.md rewrite for S80 with concrete next-step plan.
->
-> ACCEPTANCE for Session 79:
-> - Label-noise measurement complete with quantified pct_opt shift and regret-distribution comparison.
-> - Per-bucket and per-category breakdown produced.
-> - Phase 3 decision criterion applied; A-path or C-path declared.
-> - DECISIONS_LOG.md updated with Decision 114.
-> - CURRENT_PHASE.md rewritten for S80 with concrete next-step plan.
->
-> **NOTE: This session does NOT attempt a ship.** It is a one-session diagnostic to decide which long-arm investment (A vs C) gets the next 3-5 sessions of compute. No +$10 ship bar applies. The deliverable is a clean answer to "where does the remaining 35-percentage-point gap to oracle live."
->
-> **📓 METHODOLOGY (Session 79+):**
->
-> 1. **Measure before committing.** S77 spent 30 min on a diagnostic that justified 1 session of feature engineering (S78). S79 spends 1-2 hours on measurement that justifies 3-5 sessions of compute investment (A-path or C-path). The asymmetry is intentional — the next move is bigger than any prior move.
->
-> 2. **Use what we already have before generating new data.** The N=1000 prefix grid already exists; comparing it to the N=200 full grid is FREE compute. This should have been the first move after S75's boosting NULL, not the eighth.
->
-> 3. **Decision criterion lives BEFORE the measurement.** Pre-committing to "if shift ≥ +5pp → A-path; if < +2pp → C-path" prevents post-hoc rationalization of whatever the data shows.
->
-> 4. **No production state change expected in S79.** v44_dt + v56_trips_hybrid remain authoritative. The session output is a strategy-direction decision, not a new model or rule.
->
-> 5. **+$10 ship bar canonical (S73 codified, held S74-S78).** Eight consecutive sessions UNCHANGED. Bar still filters correctly; S79 just doesn't pass through it (measurement, not ship).
->
-> 6. **"Speed is not necessary — clarity and perfection is."** S79 should produce one clear answer to one clear question, well-documented. Don't bundle multiple investigations.
->
-> 7. **The 65%-vs-95% gap framing is the operative goal.** All future strategic decisions should map back to "does this close the gap to 95% match rate" — not "does this ship +$X/1000h." The dollar-regret metric correlates with but doesn't equal the headline goal.
+**Decision 114 (S79): MIXED verdict + criterion blind spot + S80 = M2 (parallel A1 + C2 one-session experiments).**
 
-> **✅ ARTIFACTS produced in S78:**
-> 1. `analysis/scripts/pair_pmid_ds_features_gated.py` — H6 feature, 8 sanity tests pass.
-> 2. `analysis/scripts/pair_kicker_align_features_gated.py` — H7 feature, 9 sanity tests pass.
-> 3. `analysis/scripts/pair_low_pmid_safety_features_gated.py` — H8 feature, 12 sanity tests pass; inline cell logic cross-validated against S66 on 23,377 hands (0 disagreements).
-> 4. `analysis/scripts/persist_pair_pmid_ds_gated.py` + parquet (18.69 MB, 0-on-non-gated verified).
-> 5. `analysis/scripts/persist_pair_kicker_align_gated.py` + parquet (18.64 MB, 0-on-non-gated verified).
-> 6. `analysis/scripts/persist_pair_low_pmid_safety_gated.py` + parquet (18.60 MB, 0-on-non-LOW-pair verified).
-> 7. `analysis/scripts/train_v48_dt.py` — full + smoke train with --max-rows.
-> 8. `analysis/scripts/strategy_v48_dt.py` — v44 strategy + 3 new feature blocks.
-> 9. `analysis/scripts/grade_v48_dt.py` — v48 vs v44 prefix/full grader.
-> 10. `data/v48_dt_smoke.npz` (32.90 MB) — 100K-row smoke model.
-> 11. `data/v48_dt_model.npz` (1,285 MB) — full v48 DT (kept for audit; production UNCHANGED).
-> 12. `data/session78/*.log` — persist + train + grade logs.
-> 13. `SESSION_78_V48_DT_REPORT.md` — Phase 1-5 report.
-> 14. `DECISIONS_LOG.md` — Decision 113 (S78 CLEAN NULL ship + ML feature-engineering track CLOSED).
-> 15. `CURRENT_PHASE.md` — rewritten for S79 (this file).
-> 16. `STRATEGY_GUIDE.md` — Part 1 SKIPPED (no strategy of record changed); Parts 2-6 front-matter date refresh.
+> **🎯 IMMEDIATE NEXT ACTION (Session 80): M2 — Run A1 and C2 one-session experiments in parallel to disambiguate label noise from memorization**
+>
+> Two ~30-min retrain experiments at the v44-architecture baseline (depth=36, ml=1, sklearn DecisionTreeClassifier, 4.8M canonical-hand training rows). Both grade against BOTH the N=200 full grid AND the N=1000 prefix grid. Same code path for both — the only knobs are train-labels and capacity.
+>
+> 1. **(PHASE 1 — ~5 min)** Confirm S79 outputs are committed & pushed; read `SESSION_79_LABEL_NOISE_REPORT.md` and `DECISIONS_LOG.md` Decision 114 for the M2 setup.
+>
+> 2. **(PHASE 2 — ~30 min, A1 experiment)** Write `analysis/scripts/train_v49_a1_dt.py`. Same training pipeline as `train_v44_dt.py`/`train_v48_dt.py`. ONE change: for the first 500K canonical hands (those that have N=1000 labels in `data/oracle_grid_prefix500k_n1000.bin`), use the N=1000 argmax as the training label instead of the N=200 argmax. For the remaining 4.3M hands, use N=200 labels as before. Train at depth=36, ml=1 (v44's hyperparams).
+>
+> 3. **(PHASE 3 — ~30 min, C2 experiment)** Write `analysis/scripts/train_v49_c2_dt.py`. Same training pipeline. ONE change vs v44: regularize. Set `max_leaf_nodes=500_000` (vs v44's effective ~2.25M) AND `min_samples_leaf=5` (vs v44's `1`). Training labels = N=200 (unchanged). Train at the same depth=36 cap.
+>
+> 4. **(PHASE 4 — ~15 min, grade both)** Write `analysis/scripts/grade_v49_experiments.py` that grades v44_dt (baseline), v49_a1_dt, v49_c2_dt against:
+>    * The N=200 full grid (existing $/1000h regret metric)
+>    * The N=1000 prefix grid (match rate AND regret)
+>    Produce a 3-column table. Report whether match rate vs N=1000 lifts above v44's 67.05% for either or both.
+>
+> 5. **(PHASE 5 — ~15 min)** Decision matrix:
+>    * **Both A1 and C2 lift N=1000 match rate** → S81 plans M1 hybrid: regularized DT trained on N=1000 labels for the prefix subset.
+>    * **Only A1 lifts** → label noise is dominant → S81 plans A2 (targeted N=1000 expansion on two_pair + trips_pair, ~24-36 hr local compute).
+>    * **Only C2 lifts** → memorization is dominant → S81 plans C1 (high-capacity well-regularized boosting at depth=10-12, n_est=1000-2000, ~3-6 hr compute).
+>    * **Neither lifts** → 95% headline-goal recalibration: the 32% oracle self-disagreement may imply the goal is unattainable against any noisy oracle. Surface to user before committing more compute.
+>
+> 6. **(PHASE 6 — ~10 min)** Decision 115; `SESSION_80_M2_REPORT.md`; CURRENT_PHASE.md rewrite for S81 with the chosen path's concrete plan.
+>
+> ACCEPTANCE for Session 80:
+> - `train_v49_a1_dt.py` runs end-to-end, produces `data/v49_a1_dt_model.npz`.
+> - `train_v49_c2_dt.py` runs end-to-end, produces `data/v49_c2_dt_model.npz`.
+> - `grade_v49_experiments.py` produces a 3-column comparison table (v44 / v49_a1 / v49_c2) against both grids.
+> - Decision matrix declared per S80 Phase 5.
+> - DECISIONS_LOG.md updated with Decision 115.
+> - CURRENT_PHASE.md rewritten for S81 with concrete plan for whichever lever moved the needle.
+>
+> **+$10 ship bar STILL HOLDS for any future ship decisions.** S80 is a *measurement* session like S79 — it does NOT attempt a ship. The output is a sharper picture of where the 35pp gap to 95% match rate actually lives.
+>
+> **📓 METHODOLOGY (Session 80+):**
+>
+> 1. **Trust the bucket pattern over the headline number.** S79's overall shift was a small negative number that the mechanical criterion classified as C-PATH; the bucket-level signature (MATCH −22pp, NOISE +44pp) is what made the memorization story legible. Apply this lens to S80's experiments — don't read the single match-rate number; decompose by bucket and category.
+>
+> 2. **Target where the memorization is concentrated.** Two_pair and trips_pair show the largest negative shifts (−13.7pp, −19.4pp). Any future targeted N=1000 expansion or category-specific intervention should start there, not in pair (where v44 is already noise-stable).
+>
+> 3. **Free-compute moves first.** S79 was 69s of CPU on already-existing data. S80's experiments are ~1 hour total. The cluster-heavy A3 option (full 6M N=1000 grid, ~5 days) stays in reserve until S80 + S81 confirm the lever before committing serious compute.
+>
+> 4. **No ship attempt this session.** S80 is the second consecutive measurement-only session. The +$10 ship bar applies the moment any S81+ candidate strategy gets graded against the production v44_dt + v56_trips_hybrid stack. For S80 itself the question is "which lever moves match rate against N=1000 labels," not "does this ship."
+>
+> 5. **"Speed is not necessary — clarity and perfection is."** Both A1 and C2 experiments should run with the v44 training script as the template; do NOT introduce new feature engineering, NEW hyperparams beyond what S79 specified, or new architecture. The cleanest one-knob-at-a-time experimental design is the goal.
+>
+> 6. **Pre-commit the decision matrix BEFORE running the experiments.** S79's lesson was that the criterion has to anticipate all signs of the metric. The S80 decision matrix above pre-commits an interpretation for each of the four outcomes (both lift / only A1 / only C2 / neither). Stick to it; if a fifth outcome shows up, document it as a criterion-extension question for the user before improvising.
+>
+> 7. **The 65%-vs-95% gap framing is the operative goal — but the goal itself may need recalibration.** S79 revealed that N=200's own argmax is only 68% stable against N=1000. If the oracle is intrinsically noisy, 95% may not be a reachable target against ANY noisy oracle. If S80 returns "neither lever lifts", treat that as evidence to renegotiate the headline metric with the user, not as evidence that further investment is pointless.
 
-> Updated: 2026-05-13 (Session 78 end + end-of-session user discussion — v48_dt H6+H7+H8 pair feature pack CLEAN NULL ship at prefix grade Δ +$2/1000h; structural-redundancy doctrine reconfirmed at v44 saturating regime; single-model ML feature-engineering track formally closed; production state UNCHANGED for the seventh consecutive session. **User flagged 7-session production stall and rejected the "ship at 65% match rate" path; explicitly chose A-path (N=1000 oracle re-evaluation) to find the 30+pp gap to the 95% goal.** S79 plan rewritten: one-session label-noise measurement using existing 500K-hand N=1000 prefix grid (FREE compute — no new oracle sampling needed) to decide between A-path (label noise dominant → invest in N=1000 expansion) and C-path (real model gap → invest in high-capacity gradient boosting). Pre-committed decision criterion: match-rate shift ≥+5pp → A-path; <+2pp → C-path; +2-5pp → MIXED.)
+> **✅ ARTIFACTS produced in S79:**
+> 1. `analysis/scripts/label_noise_measurement_S79.py` — measurement script (500K hands × 2 grids in 69s wall).
+> 2. `data/label_noise_S79_summary.json` — full summary breakdown (4.4 KB, gitignored per project convention).
+> 3. `data/session79/label_noise_measurement_full.log` — full sweep log (gitignored).
+> 4. `SESSION_79_LABEL_NOISE_REPORT.md` — Phase 1-5 report including plain-language TL;DR for non-technical user.
+> 5. `DECISIONS_LOG.md` — Decision 114 (S79 MIXED verdict + criterion blind spot + S80 M2 plan).
+> 6. `CURRENT_PHASE.md` — rewritten for S80 (this file).
+
+> Updated: 2026-05-13 (Session 79 end — label-noise measurement diagnostic completed in 69s wall; pre-committed shift-based criterion read mechanically as C-PATH on shift = −5.93pp but the criterion's underlying assumption is refuted by 32% oracle self-disagreement and 21.9pp MATCH-bucket loss showing v44 is overfit to N=200 noise rather than measuring stable labels; honest verdict is MIXED per S79 directive's MIXED clause. **No production state change in S79 — eighth consecutive UNCHANGED session.** S80 plan: M2 = run A1 (retrain on N=1000 prefix labels) and C2 (regularize: max_leaf_nodes=500K, min_samples_leaf=5) as parallel one-session experiments; grade vs BOTH N=200 and N=1000 oracles; the 4-cell decision matrix in Phase 5 above chooses between A2 / C1 / M1 / headline-goal recalibration for S81.)
 
 ---
 
-## Headline state at end of Session 78
+## Headline state at end of Session 79
 
-**Strategies of record (UNCHANGED from S77):**
+**Strategies of record (UNCHANGED for the EIGHTH consecutive session):**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
 | **v56_trips_hybrid** | PRODUCTION rule chain. **$1,429 full / $794 prefix**. | `analysis/scripts/strategy_v56_trips_hybrid.py` |
 | **v44_dt** | PRODUCTION ML champion. $1,081 full / $686 prefix. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
 
-Two-track divergence: **$348/1000h** (no change in S78 — pure feature-engineering NULL session; v48 not adopted).
+Two-track divergence: **$348/1000h** (no change in S79 — pure measurement session; no model trained).
 
-**S78 summary table:**
+**S79 summary table:**
 
 | Metric | Value | Notes |
 |---|---:|---|
-| Features added (v44→v48) | 3 | H6, H7, H8 |
-| Total features (v48) | 110 | up from v44's 107 |
-| v48 leaves | 2,294,001 | +44,001 vs v44 (+1.96%) |
-| v48 depth | 36 | identical to v44 |
-| Full train wall | 578s (9.6 min) | sklearn DT depth=36 ml=1 |
-| Model size (v48) | 1,285 MB | similar to v44 |
-| Prefix Δ vs v44 | **+$2/1000h** | below +$5 abort threshold |
-| Within-pair Δ vs v44 (prefix) | **+$5/1000h** | $595 → $590 on 215K hands |
-| Non-pair categories Δ | 0 (byte-identical) | gating works correctly |
-| Full grade | SKIPPED | per directive |
-| Within-pair pct_opt lift | +0.1pp | 69.2% → 69.3% |
+| Hands swept | 500,000 | First 500K canonical IDs (shared between prefix N=1000 and full N=200 grids) |
+| Wall time | 68.8s | 7,263 hands/s |
+| v44 match rate vs N=200 | 72.98% | Production-baseline lens |
+| v44 match rate vs N=1000 | **67.05%** | **−5.93pp shift** |
+| Oracle self-agreement (N=200 vs N=1000 argmax) | **68.00%** | **32% disagreement — labels not stable** |
+| v44 regret vs N=200 | $703/1000h | — |
+| v44 regret vs N=1000 | $686/1000h | $-17/1000h |
+| MATCH bucket shift | **−21.89pp** | v44 was memorizing N=200 noise |
+| NOISE bucket shift | **+43.58pp** | Most of v44's rank 2-3 "leak" was just label noise |
+| two_pair category shift | **−13.69pp** | Most-overfit large category |
+| trips_pair category shift | **−19.43pp** | Most-overfit overall |
+| pair category shift | +2.10pp | Least-overfit (S77/S78 invested here — wrong category) |
 
 ---
 
-## Hypothesis cascade status (updated after S78)
+## Hypothesis cascade status (updated after S79)
 
 | Hypothesis | Description | Status |
 |---|---|---|
-| **H1** | high_only SS+ms route quality (ho_v6, 2 features) | TESTED → PARTIAL POSITIVE / NULL ship at +$5/1000h (S73). |
-| **H2** | high_only route-tradeoff comparator (ho_v7, 1 feature) | TESTED → CLEAN NULL at +$0/1000h (S74). |
-| Option B (S75) | Gradient boosting at v44 features | TESTED → DECISIVE NULL at −$1,392/1000h. |
-| S76 Option B | Cross-category setting-rank diagnostic | SHIPPED diagnostic → identified pair as next target. |
-| S77 pair drill | Pair-only setting-rank × S66 cell deep-drill | SHIPPED diagnostic → identified H6/H7/H8 hypotheses. |
-| **H6** | `pair_pmid_ds_n_configs_g` | **TESTED S78 → CLEAN NULL (within-pair $5 of $15-26 budget; rank #68 importance).** |
-| **H7** | `pair_kicker_max_in_pair_suit_g` | **TESTED S78 → CLEAN NULL (rank #43 importance; saturation absorbs).** |
-| **H8** | `pair_low_pmid_safety_g` | **TESTED S78 → CLEAN NULL (rank #57; derivable in 3-4 splits at saturation).** |
-| H3 | high_only SS+ms VARIETY signal | UNTESTED. Deprioritized — same redundancy ceiling. |
-| H4 | high_only MS_ONLY discriminator | UNTESTED. Deprioritized — small WG target. |
-| H5 | high_only Drop-max signal | UNTESTED. Dead (relied on H2 infrastructure). |
-| **Option A (S79)** | Oracle-label N=1000 re-eval | **PRIORITIZED — START with FREE measurement on existing 500K N=1000 prefix grid.** |
-| Option C | Higher-capacity boosting (depth=10-12, n_est=1000-2000) | Standby — selected only if S79 label-noise measurement shows gap is real model error. |
-| Option D | Rule-chain extension on S77 LOW pair kicker_max discriminator | Deferred — borderline at ship bar ($5-8 expected); revisit after S79 if A/C dry. |
+| H1 | high_only SS+ms route quality | NULL ship +$5 (S73). |
+| H2 | high_only route-tradeoff | CLEAN NULL +$0 (S74). |
+| Option B (S75) | Gradient boosting at depth=6 / n_est=200 | DECISIVE NULL −$1,392/1000h. |
+| S76 / S77 diagnostics | Cross-cat → pair drill | Shipped diagnostics; identified H6/H7/H8. |
+| H6 / H7 / H8 (S78) | Pair gated features | CLEAN NULL +$2 prefix. |
+| Single-model ML feature-engineering track | At v44 saturating regime | **FORMALLY CLOSED (Decision 113).** |
+| **S79 label-noise measurement** | Existing N=1000 prefix vs N=200 full | **MIXED — 32% oracle disagreement reveals criterion blind spot; M2 deferred to S80.** |
+| **A1 (S80)** | Retrain v44 DT on N=1000 prefix labels (N=200 elsewhere) | **PRIORITIZED — one-session experiment.** |
+| **C2 (S80)** | Regularize v44 DT (max_leaf_nodes=500K, ml=5) | **PRIORITIZED — one-session experiment.** |
+| A2 | Targeted N=1000 expansion on two_pair + trips_pair | Standby for S81 if A1 lifts. |
+| A3 | Full 6M-hand N=1000 grid | Heavy compute; reserve. |
+| C1 | High-capacity boosting (depth=10-12, n_est=1000-2000) | Standby for S81 if C2 lifts. |
+| M1 | Hybrid: regularized DT trained on N=1000 prefix labels | Standby for S81 if both A1+C2 lift. |
+| Option D | Rule-chain extension on S77 LOW pair findings | Latent — pair is the LEAST-overfit category; deprioritize. |
 
-**Cascade verdict (updated post user discussion S78 end):** Single-model ML feature-engineering track CLOSED at v44 regime. The 65%-vs-95% match-rate gap is the operative strategic goal (user, S78 end-of-session). User explicitly rejected the "ship at 65%" path. **S79 pivots to a one-session label-noise measurement using existing N=1000 prefix grid — answers whether next compute investment should go into A-path (better labels) or C-path (bigger model).**
+**Cascade verdict (updated post S79):** Single-model feature-engineering track stays CLOSED. Label-noise problem is empirically confirmed (32% oracle self-disagreement) AND v44 memorization is empirically confirmed (MATCH bucket loses 21.9pp at N=1000). S80 disambiguates which lever (better labels / regularization / both) moves the N=1000 match rate.
 
 ---
 
-## Resume Prompt (Session 79 — Label-noise measurement via existing N=1000 prefix grid)
+## Resume Prompt (Session 80 — M2: parallel A1 + C2 one-session experiments)
 
 ```
-Resume Session 79 of the Taiwanese Poker Solver project at
+Resume Session 80 of the Taiwanese Poker Solver project at
 /Users/michaelchang/CODE/taiwanese.
 
 Read these files for context (in this order):
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of S78 — label-noise measurement
-  diagnostic; A-path vs C-path decision session)
-- SESSION_78_V48_DT_REPORT.md (S78 NULL ship; ML feature-engineering
-  track CLOSED at v44 saturating regime)
-- DECISIONS_LOG.md (latest: Decision 113 — S78 v48 NULL + track CLOSED)
-- analysis/src/tw_analysis/oracle_grid.py (read_oracle_grid API; both
-  prefix and full grids load the same way)
-- analysis/scripts/grade_v44_dt.py (template for the canonical/grid
-  read pattern; the S79 measurement script borrows from this)
+- CURRENT_PHASE.md (rewritten end of S79 — S80 runs M2: parallel A1 + C2
+  one-session experiments to disambiguate label noise from memorization)
+- SESSION_79_LABEL_NOISE_REPORT.md (S79 label-noise measurement; MIXED
+  verdict; criterion blind spot for v44 overfitting to N=200 noise)
+- DECISIONS_LOG.md (latest: Decision 114 — S79 MIXED + S80 M2 plan)
+- analysis/scripts/train_v44_dt.py (template for the v44-class DT
+  training pipeline that both v49_a1 and v49_c2 will fork from)
+- analysis/scripts/grade_v44_dt.py (template for grading against
+  both grids)
+- analysis/scripts/label_noise_measurement_S79.py (the S79 sweep —
+  worth re-reading the bucket/category breakdown logic for the S80
+  grader)
 
-KEY DATA FILES:
-- data/oracle_grid_prefix500k_n1000.bin — 500K hands × 105 settings at
-  N=1000 samples. Prefix = first 500K canonical IDs.
-- data/oracle_grid_full_realistic_n200.bin — 6M hands × 105 settings
-  at N=200 samples. First 500K canonical IDs of this grid are the SAME
-  hands as the prefix, but labeled at lower fidelity.
-- data/canonical_hands.bin — 6M canonical 7-card hands.
+KEY DATA FILES (UNCHANGED from S79):
+- data/oracle_grid_prefix500k_n1000.bin — 500K × 105 at N=1000
+- data/oracle_grid_full_realistic_n200.bin — 6M × 105 at N=200
+- data/canonical_hands.bin — 6M canonical 7-card hands
+- data/v44_dt_model.npz — production ML champion (baseline)
+- data/label_noise_S79_summary.json — S79 results to compare against
 
-STATE (end of S78):
-- v44_dt match rate vs full-grid oracle: 64.80% (35.2pp gap to 95% goal).
+STATE (end of S79):
+- v44_dt match rate vs N=200: 72.98%
+- v44_dt match rate vs N=1000: 67.05% (−5.93pp shift)
+- Oracle self-agreement N=200 vs N=1000 argmax: 68.00% (32% disagreement)
+- MATCH bucket loses 21.89pp at N=1000 (v44 memorizing N=200 noise)
+- NOISE bucket gains 43.58pp at N=1000 (v44's "leak" was partly mislabeled)
+- two_pair shift −13.69pp; trips_pair shift −19.43pp (most-overfit categories)
+- pair shift +2.10pp (least-overfit; S77/S78 invested in wrong category)
 - Production: v56_trips_hybrid ($1,429 full / $794 prefix) + v44_dt
-  ($1,081 full / $686 prefix). UNCHANGED for seventh consecutive session.
-- Single-model ML feature-engineering track formally CLOSED (S72-S78
-  six consecutive NULL ships).
+  ($1,081 full / $686 prefix). UNCHANGED for eighth consecutive session.
+- Single-model ML feature-engineering track formally CLOSED (Decision 113).
+- S79 verdict: MIXED (Decision 114). Criterion blind spot for negative-shift
+  case where v44 overfit to N=200 noise.
 
-USER DIRECTIVE (S78 end-of-session conversation — primary driver of S79):
-- User rejected "ship at 65%" path; wants to find the 30+pp gap to 95%.
-- User explicitly chose A-path (N=1000) over shipping.
+USER DIRECTIVE (S79 end-of-session — primary driver of S80):
 - "Speed is not necessary — clarity and perfection is."
-- The +$10 ship bar still holds for future ship decisions; S79 itself
-  is measurement-only and does NOT attempt a ship.
+- The +$10 ship bar still holds for future ship decisions; S80 itself
+  is measurement-only.
+- Continue the A-path vs C-path discrimination one more session before
+  committing to N=1000 expansion or higher-capacity boosting.
 
-DIRECTION FOR SESSION 79 — Label-noise measurement on existing N=1000
-prefix grid; one-session A-path-vs-C-path decision:
+DIRECTION FOR SESSION 80 — M2: parallel A1 + C2 one-session experiments
+to disambiguate label noise from memorization:
 
-  PHASE 1 (S79 ~30 min) — Write analysis/scripts/label_noise_measurement_S79.py.
-    For each of the 500K prefix canonical hands:
-      • v44_pick = strategy_v44_dt(hand)  (or load cached)
-      • n200_pick = argmax of full_grid.evs[i] (N=200 labels)
-      • n1000_pick = argmax of prefix_grid.evs[i] (N=1000 labels)
-      • n200_match = (v44_pick == n200_pick)
-      • n1000_match = (v44_pick == n1000_pick)
-      • n200_regret_internal = full_evs[i][n200_pick] − full_evs[i][v44_pick]
-      • n1000_regret_internal = prefix_evs[i][n1000_pick] − prefix_evs[i][v44_pick]
-    The match-rate shift n1000_match − n200_match is the load-bearing
-    metric; the regret deltas are descriptive.
+  PHASE 1 (S80 ~5 min) — Confirm S79 commit/push state; read S79 report
+    + Decision 114 + label_noise_measurement_S79.py.
 
-  PHASE 2 (S79 ~15 min) — Aggregate breakdowns:
-    • Overall: pct(n200_match), pct(n1000_match), shift.
-    • By setting-rank bucket (S71 lens):
-      - NOISE bucket (rank ≤3 of 105): expected to show largest shift
-        if label noise is dominant.
-      - MID bucket (rank 4-9).
-      - STRUCTURE bucket (rank ≥10): should be most stable.
-    • By hand category (pair, two_pair, trips, trips_pair, three_pair,
-      quads, composite, high_only) per existing categorize_hands().
-    • Save summary JSON: data/label_noise_S79_summary.json.
+  PHASE 2 (S80 ~30 min) — A1 experiment.
+    Write analysis/scripts/train_v49_a1_dt.py.
+    Same pipeline as train_v44_dt.py. ONE change:
+      for the first 500K canonical hands (those with N=1000 labels in
+      data/oracle_grid_prefix500k_n1000.bin), use the N=1000 argmax as
+      the training label.
+      For the remaining 4.3M hands, use the N=200 argmax (unchanged).
+    Hyperparams identical to v44: depth=36, min_samples_leaf=1.
+    Output: data/v49_a1_dt_model.npz.
 
-  PHASE 3 (S79 ~15 min) — Apply pre-committed decision criterion:
-    If (n1000_match − n200_match) ≥ +5pp on prefix:
-      A-PATH VERDICT — label noise is materially shifting "optimal."
-      Phase 4 plans targeted N=1000 expansion.
-    If (n1000_match − n200_match) < +2pp:
-      C-PATH VERDICT — labels are stable; gap is real model error.
-      Phase 4 plans high-capacity gradient boosting retry.
-    If +2pp ≤ shift < +5pp:
-      MIXED — document; surface options to user; do NOT pre-commit.
+  PHASE 3 (S80 ~30 min) — C2 experiment.
+    Write analysis/scripts/train_v49_c2_dt.py.
+    Same pipeline. ONE change vs v44:
+      max_leaf_nodes=500_000 (vs v44's effective 2.25M)
+      min_samples_leaf=5 (vs v44's 1)
+    Training labels = N=200 (unchanged from v44).
+    Hyperparams: depth=36 (same cap as v44).
+    Output: data/v49_c2_dt_model.npz.
 
-  PHASE 4 (S79 ~30 min) — Plan the next 3-5 sessions based on verdict:
-    A-PATH plan options:
-      (a) N=1000 on full-grid STRUCTURE-bucket hands only (~25.8% of grid
-          ≈ 1.55M hands; estimate ~24 hr local compute).
-      (b) Extend N=1000 prefix from 500K → 2M uniformly sampled hands.
-      (c) Full N=1000 on 6M grid (~5 days local; may need cluster).
-    C-PATH plan:
-      Scope XGBoost retry at depth=10-12, n_est=1000-2000, longer
-      early-stopping window. Smoke + full plan for S80.
+  PHASE 4 (S80 ~15 min) — Grade both.
+    Write analysis/scripts/grade_v49_experiments.py.
+    For each of v44_dt (baseline), v49_a1_dt, v49_c2_dt:
+      - Grade vs N=200 full grid (production-baseline regret/match)
+      - Grade vs N=1000 prefix grid (match rate AND regret)
+    Produce a 3-column comparison table. Bucket + category breakdown
+    via the same lens as S79.
 
-  PHASE 5 (S79 ~10 min) — Decision 114; SESSION_79_LABEL_NOISE_REPORT.md;
-  CURRENT_PHASE.md rewritten for S80 with the chosen path's concrete plan.
+  PHASE 5 (S80 ~15 min) — Decision matrix:
+    Threshold for "lifts": N=1000 match rate ≥ 70% (3pp above v44's 67.05%).
+    - Both A1 AND C2 lift → S81 plans M1 hybrid.
+    - Only A1 lifts → S81 plans A2 (targeted N=1000 on two_pair + trips_pair).
+    - Only C2 lifts → S81 plans C1 (high-capacity boosting).
+    - Neither lifts → headline-goal recalibration; surface to user.
 
-  ACCEPTANCE for Session 79:
-  - label_noise_measurement_S79.py runs end-to-end; summary JSON written.
-  - Match-rate shift computed and bucketed.
-  - A-path or C-path declared per pre-committed criterion (or MIXED
-    verdict with options presented).
-  - Decision 114 documented.
-  - CURRENT_PHASE.md rewritten for S80 with the chosen path's plan.
+  PHASE 6 (S80 ~10 min) — Decision 115; SESSION_80_M2_REPORT.md;
+  CURRENT_PHASE.md rewritten for S81 with chosen path's concrete plan.
+
+  ACCEPTANCE for Session 80:
+  - train_v49_a1_dt.py runs end-to-end; v49_a1_dt_model.npz produced.
+  - train_v49_c2_dt.py runs end-to-end; v49_c2_dt_model.npz produced.
+  - grade_v49_experiments.py produces 3-column table across both grids.
+  - Decision matrix declared per S80 Phase 5 (pre-committed thresholds).
+  - Decision 115 documented.
+  - CURRENT_PHASE.md rewritten for S81 with concrete plan.
 
 REMINDERS:
 - Use python3, not python.
@@ -244,10 +240,10 @@ REMINDERS:
   per session-end-prompt.md).
 - v44_dt model + features remain unchanged.
 - This session is MEASUREMENT, not ship. The +$10 ship bar does not
-  apply; the question is "where does the 35pp gap live."
+  apply; the question is "which lever moves N=1000 match rate".
 - "Speed is not necessary — clarity and perfection is."
-- The user is non-technical; the measurement output and verdict should
-  be summarized in plain language at the top of the session report.
+- The user is non-technical; the session report should open with a
+  plain-language summary of the decision-matrix outcome.
 ```
 
 ---

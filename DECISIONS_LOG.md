@@ -6675,3 +6675,129 @@ Future v44-improvement attempts at the single-model ML track are deprioritized. 
 - Two-track divergence: $348/1000h (no change).
 - **Total project rule count: 18** (UNCHANGED).
 - **Single-model ML feature-engineering track formally CLOSED at v44 regime. Path forward: Option D rule-chain extension on S77 LOW pair findings, or Option A oracle-label re-eval (gated on cluster access).**
+
+
+---
+
+## Decision 114 — Session 79 label-noise measurement reveals MIXED verdict; pre-committed criterion has a blind spot for v44's overfitting-to-N=200-noise mode; recommend S80 M2 (parallel A1 + C2 one-session experiments) before committing to A-path or C-path
+**Date:** 2026-05-13
+**Question:** Where does the 35pp gap between v44_dt (65% match rate) and the 95% goal live — in label noise, in model error, or both? And which long-arm investment (A-path: N=1000 labels, C-path: higher-capacity model) should the next 3-5 sessions pursue?
+
+### Pre-committed criterion (S78 end-of-session, codified in CURRENT_PHASE.md)
+
+Per the S79 plan, the decision was to fall out mechanically from the match-rate shift on the existing 500K N=1000 prefix grid:
+
+* `shift ≥ +5pp` → A-PATH (label noise dominant)
+* `shift < +2pp` → C-PATH (real model error)
+* `+2pp ≤ shift < +5pp` → MIXED (surface options to user)
+
+### Measurement (analysis/scripts/label_noise_measurement_S79.py, 500K hands, 68.8s wall)
+
+| Metric | N=200 oracle | N=1000 oracle | Δ |
+|---|---:|---:|---:|
+| v44 match rate | 72.98% | 67.05% | **−5.93pp** |
+| v44 mean regret | $703/1000h | $686/1000h | −$17 |
+| Oracle self-agreement (N=200 argmax == N=1000 argmax) | — | — | **68.00%** |
+
+Bucket breakdown (S76 lens, v44_rank against N=200):
+
+| Bucket | n | N=200 match% | N=1000 match% | Δ |
+|---|---:|---:|---:|---:|
+| MATCH (rank 1) | 366,390 | 99.59% | 77.70% | **−21.89pp** |
+| NOISE (rank 2-3) | 97,336 | 0.00% | 43.58% | **+43.58pp** |
+| MID (rank 4-9) | 32,854 | 0.00% | 23.66% | +23.66pp |
+| STRUCTURE (rank ≥10) | 3,420 | 0.00% | 10.61% | +10.61pp |
+
+Category breakdown:
+
+| Category | n | N=200 match% | N=1000 match% | Δ |
+|---|---:|---:|---:|---:|
+| pair | 215,162 | 67.00% | 69.09% | **+2.10pp** |
+| two_pair | 204,275 | 80.44% | 66.76% | **−13.69pp** |
+| trips | 25,245 | 61.22% | 56.57% | −4.65pp |
+| trips_pair | 25,943 | 82.58% | 63.15% | **−19.43pp** |
+| three_pair | 25,614 | 66.15% | 67.73% | +1.59pp |
+| quads | 1,100 | 78.09% | 65.27% | −12.82pp |
+| composite | 2,661 | 65.31% | 55.69% | −9.62pp |
+
+### Verdict — mechanical reading vs honest reading
+
+**Mechanical**: shift = −5.93pp falls in the `< +2pp` bin → C_PATH.
+
+**Honest**: the criterion's underlying assumption was that match-rate shift cleanly indicates label-noise impact. The data refutes that assumption:
+
+1. **Oracle self-disagreement is 32%.** The N=200 and N=1000 oracles disagree on the "best setting" for one hand in three. Labels are *not* stable.
+
+2. **v44 is overfit to N=200 noise.** The MATCH bucket loses 22pp of its apparent match rate when we move to N=1000. v44 was scoring "right" on hands where it had merely matched the N=200 oracle's noise, not the underlying truth.
+
+3. **NOISE/MID/STRUCTURE buckets all gain match rate at N=1000** (+44, +24, +11pp respectively). On hands where v44 disagreed with N=200, the cleaner oracle often agrees with v44. v44's "leak" against N=200 was partly mislabeled noise, not model error.
+
+4. **Two opposing effects offset to a small negative shift.** The criterion was designed for either "labels matter" (shift up) or "labels stable" (shift zero). It cannot tell the difference between "labels stable + bad model" and "labels noisy + memorized model". The data is the second case.
+
+5. **Per-category breakdown reveals the spatial structure.** Pair and three_pair show near-zero or slightly-positive shift (labels are roughly aligned with v44 there). Two_pair and trips_pair show the worst negative shifts (−13.7pp, −19.4pp) — v44 is most overfit to N=200 noise in these categories. Note that S77/S78 invested feature engineering in PAIR specifically — exactly the wrong category given this lens.
+
+**Recorded verdict: MIXED.** The criterion is unable to discriminate the label-noise-plus-memorization mode the data actually shows. Per the S79 directive's MIXED clause ("document; surface options to user; do NOT pre-commit"), the actual A/C/M strategic decision is deferred to a measurement comparison in S80.
+
+### S80 Plan — M2 (parallel A1 + C2 one-session experiments)
+
+Two ~30-min experiments. Both retrain a v44-architecture DT (depth=36, ml=1) on the 4.8M canonical hands, varying only:
+
+* **A1 experiment**: train labels = N=1000 prefix labels for the 500K hands that have them; N=200 labels everywhere else. Grade vs N=200 full grid AND vs N=1000 prefix grid. Direct test of the label-noise lever.
+* **C2 experiment**: train labels = N=200 (unchanged from v44). Regularize: max_leaves=500,000 (vs v44's 2.25M) and min_samples_leaf=5 (vs v44's 1). Grade vs both grids. Direct test of the memorization lever.
+
+Decision matrix at end of S80:
+
+* **Both lift match rate vs N=1000 above v44's 67.05%** → hybrid M1 in S81 (regularized + N=1000-labeled).
+* **Only A1 lifts** → label noise is dominant → A2 (targeted N=1000 expansion on two_pair + trips_pair) in S81.
+* **Only C2 lifts** → memorization is dominant → C1 (high-capacity well-regularized boosting at depth=10-12 / n_est=1000-2000) in S81.
+* **Neither lifts** → 95% headline goal recalibration: 32% oracle self-disagreement implies the goal may be unattainable against any noisy oracle. Surface to user.
+
+### S79 acceptance vs deliverables
+
+| Acceptance criterion | Met? |
+|---|---|
+| `label_noise_measurement_S79.py` runs end-to-end; summary JSON written | ✓ |
+| Match-rate shift computed and bucketed | ✓ |
+| A-path or C-path declared per pre-committed criterion (or MIXED verdict) | ✓ MIXED |
+| Decision 114 documented | ✓ this section |
+| CURRENT_PHASE.md rewritten for S80 with chosen path's plan | ✓ |
+
+### Methodology lessons (Session 79)
+
+1. **Pre-committed criteria must specify behavior for ALL signs of the metric.** S79's criterion was designed under "shift ≥ 0" assumption. The negative-shift case fell into the C-PATH bucket by lexical default but doesn't match the C-PATH semantic ("labels are stable"). Future criteria must enumerate the underlying-mechanism interpretation for each output, and flag when the data is inconsistent with the criterion's model.
+
+2. **Oracle self-disagreement is a one-line measurement that should have been done sessions ago.** S25-S78 ran with N=200 labels under the implicit assumption that they were ground truth. The 32% disagreement number reframes the entire 65→95 gap question. Future grids should ship with an "oracle stability" diagnostic by default.
+
+3. **Setting-rank bucketing isolates the memorization signature.** The MATCH-bucket loss (−22pp) is invisible in the overall −6pp number. Bucket-level decomposition turned a "muddled" result into a clean memorization-hypothesis confirmation. Worth applying to any future label-quality measurement.
+
+4. **Category breakdown told us where to invest.** S77/S78 invested in pair (the LEAST overfit category, +2.1pp). The data says trips_pair (−19.4pp) and two_pair (−13.7pp) are where memorization is concentrated. Future N=1000 expansion or regularization work should target those categories first.
+
+5. **Free compute moves should run early in the cascade.** S79's measurement was FREE compute — the data already existed (N=1000 prefix grid was generated long ago) and only required 69s of CPU. The same diagnostic could have run after S75's boosting NULL — four sessions earlier. Generalize: before doubling down on either features or capacity, validate the labels with whatever data already exists.
+
+6. **C-PATH alone would have been a risky default.** A higher-capacity model is MORE likely to memorize N=200 noise, not less. S75's boosting NULL at $-1,392/1000h was a warning shot from this exact direction (lower-capacity boosting failed catastrophically, but the failure was due to *insufficient* capacity, not too much). Going straight from S79's mechanical C-PATH read to a higher-capacity boosting retry would have risked repeating S75's failure mode at a costlier scale.
+
+7. **A-PATH alone defers the harder question.** Even at N=1000, the oracle has remaining variance. At some point the variance bottoms out and what's left is genuine model error. A-PATH alone doesn't tell us whether v44's architecture can capture the residual gap.
+
+8. **"Speed is not necessary — clarity and perfection is."** Followed. 500K-hand sweep in 69s; the bulk of the session was on interpretation. The MIXED verdict is the clearest defensible call given the data.
+
+### Files (Session 79)
+
+**New code:**
+* `analysis/scripts/label_noise_measurement_S79.py` — the measurement script.
+
+**Data (gitignored, local-only — per project convention for summary JSONs):**
+* `data/label_noise_S79_summary.json` — full summary breakdown (4.4 KB).
+* `data/session79/label_noise_measurement_full.log` — full sweep log.
+
+**Documentation:**
+* `SESSION_79_LABEL_NOISE_REPORT.md` — session report.
+* `DECISIONS_LOG.md` — Decision 114 (this section).
+* `CURRENT_PHASE.md` — rewritten for S80 with the M2 plan.
+
+### Production state at end of S79 (UNCHANGED — eighth consecutive session)
+
+* Rule chain: **v56_trips_hybrid** ($1,429 full / $794 prefix). Grader-confirmed.
+* ML champion: **v44_dt** ($1,081 full / $686 prefix on prefix grid; confirmed at $686/1000h vs N=1000 labels too).
+* Two-track divergence: $348/1000h (no change).
+* Total project rule count: 18 (UNCHANGED).
+* **Single-model ML feature-engineering track remains formally CLOSED at v44 regime per Decision 113. Path forward in S80: M2 (parallel A1 + C2 one-session experiments) → S81 decision matrix.**
