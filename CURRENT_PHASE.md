@@ -1,4 +1,4 @@
-# Current: Sprint 8 — Session 78 v48_dt H6+H7+H8 pair feature pack CLEAN NULL ships at prefix grade (Δ +$2/1000h; within-pair +$5/1000h); structural-redundancy doctrine empirically reconfirmed; single-model ML feature-engineering track formally CLOSED at v44 saturating regime; S79 pivots to Option D rule-chain extension on S77 LOW pair findings
+# Current: Sprint 8 — Session 78 v48_dt H6+H7+H8 pair feature pack CLEAN NULL ships at prefix grade (Δ +$2/1000h); single-model ML feature-engineering track formally CLOSED at v44 saturating regime; **user (S78 end-of-session) rejected "ship at 65%" path and chose A-path: S79 pivots to label-noise measurement on existing N=1000 prefix grid to decide A-path (better labels) vs C-path (bigger model) for the next 3-5 sessions**
 
 S77 queued three pair-gated feature hypotheses (H6/H7/H8) for v48_dt retrain at the S73 regime (depth=36, ml=1). S78 executed Phase 1-5 as planned. Phase 1 implemented and sanity-tested H6 (`pair_pmid_ds_n_configs_g`, int8 0..5 — though actual reachable values are {0,1,3}), H7 (`pair_kicker_max_in_pair_suit_g`, bool 0/1), H8 (`pair_low_pmid_safety_g`, int8 0..5, LOW-pair-only). H8's inline cell logic cross-validated against S66's `compute_pair_structural` + `cell_for_pair_hand` on 23,377 random single-pair canonical hands with zero disagreements.
 
@@ -12,47 +12,59 @@ Phase 2 persisted all three gated parquet packs (~18.6 MB each) with verified ze
 
 **Decision 112 (S77): pair drill diagnostic ship. Decision 113 (S78): v48_dt CLEAN NULL ship; single-model ML feature-engineering track formally CLOSED at v44 regime.**
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 79): Option D rule-chain extension on S77 LOW pair findings, OR pivot to next-residual-category cross-product diagnostic**
+> **🎯 IMMEDIATE NEXT ACTION (Session 79): Label-noise measurement via existing N=1000 prefix grid — answer "is the gap real or is it label noise?" before committing to N=1000 expansion vs higher-capacity model**
 >
-> The S77 drill surfaced a clean 1-bit signal (kicker_max-in-pair-suit: 70% TRUE in LOW × PBOT_DS_PARTIAL vs 32-34% TRUE in LOW × PMID-target cells) that the v48_dt absorbed without producing ship-grade lift. **The redundancy ceiling does NOT apply at the rule layer** — the v54+v55+v56 hybrid stack routes through v44_dt only on specific category gates, and a surgical rule applied on top of those gates operates outside the DT's saturation regime. The S77 single-largest-mismatch class (`SPLIT_tmax_SS_mu → PMID_tmax_DS` in LOW × PMID_DS_MAXTOP, n=3,072 hands, $10.97/1000h on ONE class) is a candidate Option D target.
+> **The strategic question after S78's NULL:** v44_dt is at ~65% match rate against the oracle (full grid pct_opt 64.80%). Goal is 95%+. After 7 consecutive sessions with UNCHANGED production state, the user (S78 end-of-session conversation) explicitly rejected the "ship at 65%" path and asked us to find the gap. The S78 NULL empirically closed the single-model feature-engineering door; the next strategic decision is whether to invest in (A) better labels via N=1000 oracle re-evaluation, or (C) higher-capacity boosting models. **Step 1 is measurement, not commitment** — we have a 500K-hand N=1000 prefix grid already (`data/oracle_grid_prefix500k_n1000.bin`), and we have the same 500K hands labeled at N=200 in the full grid (since the prefix IS the first 500K canonical IDs). Comparing v44's regret under both labelings tells us how much of v44's measured leak is *real model error* vs *N=200 sampling noise*.
 >
-> 1. **(PHASE 1 — ~30 min)** Read S77 drill outputs (`data/drill_v44_pair_S77_summary.json`) and S77 hypotheses doc. Re-confirm the kicker_max-in-pair-suit discriminator and the SPLIT→PMID mismatch class fingerprint.
+> 1. **(PHASE 1 — ~30 min)** Write `analysis/scripts/label_noise_measurement_S79.py`. For each of the 500K prefix canonical hands:
+>    - Read v44's pick (cached from prior grade run, or recompute).
+>    - Read oracle's #1 pick at N=200 (full grid evs[i].argmax()).
+>    - Read oracle's #1 pick at N=1000 (prefix grid evs[i].argmax()).
+>    - Compute n200_regret = full_evs[i][n200_pick] − full_evs[i][v44_pick].
+>    - Compute n1000_regret = prefix_evs[i][n1000_pick] − prefix_evs[i][v44_pick].
+>    - **Critical:** the two regret numbers are measured on DIFFERENT sample sizes against DIFFERENT label sets — they're not directly subtractable, but the *distribution shift* between them quantifies label noise.
 >
-> 2. **(PHASE 2 — ~45 min)** Design a Rule 19 candidate targeting LOW × PMID_DS_MAXTOP with the kicker_max-in-pair-suit discriminator:
->    - Trigger: single-pair AND pair_rank ∈ {2,3,4,5,6,7} AND kicker_max NOT in pair_suits AND PMID_DS_w_maxtop achievable (n_PMID_DS_w_maxtop ≥ 1).
->    - Action: Force PMID_tmax_DS routing (pair in mid, top = max_sing, bot = 4 non-max singletons in 2+2 pattern).
->    - Acceptance: Rule applies to ~6,760 LOW × PMID_DS_MAXTOP STR hands × ~$22/1000h within-cell residual ≈ $15-22 WG if it captures the cell cleanly. Full-grid ≈ $5-8 — borderline for ship bar.
+> 2. **(PHASE 2 — ~15 min)** Aggregate by setting-rank bucket (S71 lens) and per-category:
+>    - % of hands where v44 matches oracle changes: v44=n200 vs v44=n1000.
+>    - $/1000h aggregate regret: v44 vs n200 oracle, v44 vs n1000 oracle.
+>    - Per-bucket NOISE / MID / STRUCTURE breakdown (S76 hypothesis: label noise concentrates in NOISE bucket).
+>    - Per-category breakdown (pair, two_pair, trips, etc.).
 >
-> 3. **(PHASE 3 — ~15 min)** Grader-confirm vs v56_trips_hybrid baseline. Apply +$10/1000h ship bar.
->    - Δ ≥ +$10 → SHIP v57; advance rule chain. 19th rule in project.
->    - Δ ∈ [+$5, +$10) → PARTIAL POSITIVE / NULL ship at bar per S73 codification.
->    - Δ < +$5 → CLEAN NULL ship; document; consider tighter-gated variant.
+> 3. **(PHASE 3 — ~15 min)** Decision criterion:
+>    - **If pct_opt(v44 vs N=1000) − pct_opt(v44 vs N=200) ≥ +5pp on prefix:** label noise is materially shifting which setting is "optimal." Confirms N=1000 expansion is high-ROI. → Phase 4 plans the targeted N=1000 grid expansion.
+>    - **If pct_opt shifts < +2pp:** the labels are mostly stable; the gap is genuine model error. → Phase 4 plans Option C (high-capacity gradient boosting at depth=10-12, n_est=1000+).
+>    - **If +2pp ≤ shift < +5pp:** mixed result; document and discuss with user before committing.
 >
-> 4. **(PHASE 4 — ~20 min)** If Rule 19 NULLs: pivot to next-residual cross-product diagnostic. Two_pair STRUCTURE-bucket WG ($66/1000h S76) and trips STRUCTURE-bucket WG ($21/1000h S76) haven't been probed with the S71-bucket × cell-decomposition product lens. Generate `drill_v44_two_pair_S79.py` mirroring S77's structure on two_pair.
+> 4. **(PHASE 4 — ~30 min)** Plan the next ~3-5 sessions based on Phase 3 verdict:
+>    - **A-path (label noise wins):** design targeted N=1000 expansion. Candidates: (a) full-grid N=1000 on STRUCTURE-bucket hands only (~25.8% of grid ≈ 1.55M hands, ~24 hr local compute); (b) extend N=1000 prefix from 500K → 2M hands sampled uniformly across grid; (c) full N=1000 on the 6M grid (~5 days local compute, may need cluster). Pick one based on Phase 3 magnitude.
+>    - **C-path (real gap wins):** scope a high-capacity XGBoost retry. S75 used depth=6 / n_est=200; the new attempt uses depth=10-12 / n_est=1000-2000 / longer-run early stopping. Build a smoke + full plan for S80.
 >
-> 5. **(PHASE 5 — ~10 min)** Decision 114 + SESSION_79_*_REPORT.md + CURRENT_PHASE.md rewrite for S80.
+> 5. **(PHASE 5 — ~10 min)** Decision 114 + `SESSION_79_LABEL_NOISE_REPORT.md` + CURRENT_PHASE.md rewrite for S80 with concrete next-step plan.
 >
 > ACCEPTANCE for Session 79:
-> - EITHER Rule 19 candidate trained, graded, ship decision made
-> - OR fresh diagnostic ship (e.g., two_pair S79 drill) with quantified hypothesis pack for S80
-> - DECISIONS_LOG.md updated with Decision 114
-> - CURRENT_PHASE.md rewritten for S80
+> - Label-noise measurement complete with quantified pct_opt shift and regret-distribution comparison.
+> - Per-bucket and per-category breakdown produced.
+> - Phase 3 decision criterion applied; A-path or C-path declared.
+> - DECISIONS_LOG.md updated with Decision 114.
+> - CURRENT_PHASE.md rewritten for S80 with concrete next-step plan.
+>
+> **NOTE: This session does NOT attempt a ship.** It is a one-session diagnostic to decide which long-arm investment (A vs C) gets the next 3-5 sessions of compute. No +$10 ship bar applies. The deliverable is a clean answer to "where does the remaining 35-percentage-point gap to oracle live."
 >
 > **📓 METHODOLOGY (Session 79+):**
 >
-> 1. **Redundancy ceiling escape — RULE LAYER, not feature layer.** S78 closed the single-model ML feature-engineering track. The path forward for residual-leak closure is the rule layer (v54+v55+v56 hybrid stack), where surgical category-gated rules apply BEFORE v44_dt routes the residual. Rules operate outside saturation.
+> 1. **Measure before committing.** S77 spent 30 min on a diagnostic that justified 1 session of feature engineering (S78). S79 spends 1-2 hours on measurement that justifies 3-5 sessions of compute investment (A-path or C-path). The asymmetry is intentional — the next move is bigger than any prior move.
 >
-> 2. **Decision 113 redundancy lesson — assume 80%+ default budget.** Any future feature-engineering hypothesis at v44 saturating regime should assume 80%+ redundancy until proven otherwise via empirical pre-flight (smoke train + per-category mini-grade, not just rank-importance check).
+> 2. **Use what we already have before generating new data.** The N=1000 prefix grid already exists; comparing it to the N=200 full grid is FREE compute. This should have been the first move after S75's boosting NULL, not the eighth.
 >
-> 3. **Diagnostic precision is necessary but NOT sufficient.** S77 produced the project's cleanest diagnostic (sharp gap_2nd, single dominant mismatch class, structurally distinct signal); the features built from it captured 1/10 of predicted lift. **Stop equating diagnostic precision with feature lift.** They are orthogonal at saturation.
+> 3. **Decision criterion lives BEFORE the measurement.** Pre-committing to "if shift ≥ +5pp → A-path; if < +2pp → C-path" prevents post-hoc rationalization of whatever the data shows.
 >
-> 4. **Empirical value-distribution pre-flight.** H6's planned 0..5 reduces to {0,1,3} due to deck structure. A 5-minute simulation against canonical hands would have caught this. Future feature specs should include this check.
+> 4. **No production state change expected in S79.** v44_dt + v56_trips_hybrid remain authoritative. The session output is a strategy-direction decision, not a new model or rule.
 >
-> 5. **Smoke + per-category mini-grade BEFORE full train.** Smoke train's rank-<80 abort gate is insufficient — v48's features all cleared smoke but yielded $2/1000h overall. Add a 5K-hand category-targeted prefix mini-grade to the smoke phase to detect feature-lift materialization (vs feature usage) before committing to the 10-30 min full train.
+> 5. **+$10 ship bar canonical (S73 codified, held S74-S78).** Eight consecutive sessions UNCHANGED. Bar still filters correctly; S79 just doesn't pass through it (measurement, not ship).
 >
-> 6. **+$10 ship bar canonical (S73 codified, held S74-S78).** Eight consecutive sessions UNCHANGED production state. The bar continues to filter noise from signal as designed.
+> 6. **"Speed is not necessary — clarity and perfection is."** S79 should produce one clear answer to one clear question, well-documented. Don't bundle multiple investigations.
 >
-> 7. **"Speed is not necessary — clarity and perfection is."** S78 executed Phases 1-5 cleanly with no short-cuts and produced an unambiguous NULL with full documentation of WHY. S79 should match this discipline.
+> 7. **The 65%-vs-95% gap framing is the operative goal.** All future strategic decisions should map back to "does this close the gap to 95% match rate" — not "does this ship +$X/1000h." The dollar-regret metric correlates with but doesn't equal the headline goal.
 
 > **✅ ARTIFACTS produced in S78:**
 > 1. `analysis/scripts/pair_pmid_ds_features_gated.py` — H6 feature, 8 sanity tests pass.
@@ -72,7 +84,7 @@ Phase 2 persisted all three gated parquet packs (~18.6 MB each) with verified ze
 > 15. `CURRENT_PHASE.md` — rewritten for S79 (this file).
 > 16. `STRATEGY_GUIDE.md` — Part 1 SKIPPED (no strategy of record changed); Parts 2-6 front-matter date refresh.
 
-> Updated: 2026-05-13 (Session 78 end — v48_dt H6+H7+H8 pair feature pack CLEAN NULL ship at prefix grade Δ +$2/1000h; within-pair +$5/1000h on 215K hands; structural-redundancy doctrine reconfirmed at v44 saturating regime; single-model ML feature-engineering track formally closed; production state UNCHANGED for the seventh consecutive session; S79 pivots to Option D rule-chain extension on S77 LOW pair kicker_max-in-pair-suit discriminator, OR fresh two_pair / trips cross-product diagnostic)
+> Updated: 2026-05-13 (Session 78 end + end-of-session user discussion — v48_dt H6+H7+H8 pair feature pack CLEAN NULL ship at prefix grade Δ +$2/1000h; structural-redundancy doctrine reconfirmed at v44 saturating regime; single-model ML feature-engineering track formally closed; production state UNCHANGED for the seventh consecutive session. **User flagged 7-session production stall and rejected the "ship at 65% match rate" path; explicitly chose A-path (N=1000 oracle re-evaluation) to find the 30+pp gap to the 95% goal.** S79 plan rewritten: one-session label-noise measurement using existing 500K-hand N=1000 prefix grid (FREE compute — no new oracle sampling needed) to decide between A-path (label noise dominant → invest in N=1000 expansion) and C-path (real model gap → invest in high-capacity gradient boosting). Pre-committed decision criterion: match-rate shift ≥+5pp → A-path; <+2pp → C-path; +2-5pp → MIXED.)
 
 ---
 
@@ -120,15 +132,15 @@ Two-track divergence: **$348/1000h** (no change in S78 — pure feature-engineer
 | H3 | high_only SS+ms VARIETY signal | UNTESTED. Deprioritized — same redundancy ceiling. |
 | H4 | high_only MS_ONLY discriminator | UNTESTED. Deprioritized — small WG target. |
 | H5 | high_only Drop-max signal | UNTESTED. Dead (relied on H2 infrastructure). |
-| Option A | Oracle-label N=1000 re-eval | GATED on cluster access. |
-| Option C | Higher-capacity boosting | Deprioritized — 15-25 hr speculative. |
-| **Option D (S79)** | Rule-chain extension on S77 LOW pair kicker_max discriminator | **PRIORITIZED for S79.** |
+| **Option A (S79)** | Oracle-label N=1000 re-eval | **PRIORITIZED — START with FREE measurement on existing 500K N=1000 prefix grid.** |
+| Option C | Higher-capacity boosting (depth=10-12, n_est=1000-2000) | Standby — selected only if S79 label-noise measurement shows gap is real model error. |
+| Option D | Rule-chain extension on S77 LOW pair kicker_max discriminator | Deferred — borderline at ship bar ($5-8 expected); revisit after S79 if A/C dry. |
 
-**Cascade verdict (updated):** Single-model ML feature-engineering track CLOSED at v44 regime. S79 pivots to either Option D (rule-chain extension — operates outside saturation) or a fresh cross-product diagnostic on the next-largest residual category.
+**Cascade verdict (updated post user discussion S78 end):** Single-model ML feature-engineering track CLOSED at v44 regime. The 65%-vs-95% match-rate gap is the operative strategic goal (user, S78 end-of-session). User explicitly rejected the "ship at 65%" path. **S79 pivots to a one-session label-noise measurement using existing N=1000 prefix grid — answers whether next compute investment should go into A-path (better labels) or C-path (bigger model).**
 
 ---
 
-## Resume Prompt (Session 79 — Option D rule extension OR fresh diagnostic)
+## Resume Prompt (Session 79 — Label-noise measurement via existing N=1000 prefix grid)
 
 ```
 Resume Session 79 of the Taiwanese Poker Solver project at
@@ -136,85 +148,106 @@ Resume Session 79 of the Taiwanese Poker Solver project at
 
 Read these files for context (in this order):
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of S78 — Option D rule-chain extension
-  on S77 LOW pair findings, OR fresh two_pair/trips cross-product
-  diagnostic)
-- SESSION_78_V48_DT_REPORT.md (Phase 1-5 details for the CLEAN NULL ship)
-- DECISIONS_LOG.md (latest: Decision 113 — S78 v48 NULL + ML
-  feature-engineering track CLOSED)
-- PAIR_S77_FEATURE_HYPOTHESES.md (re-read for the LOW × PMID_DS_MAXTOP
-  cell fingerprint and the SPLIT_tmax_SS_mu → PMID_tmax_DS class)
-- data/drill_v44_pair_S77_summary.json (per-cell × per-bucket WG and
-  mismatch class data)
-- analysis/scripts/strategy_v56_trips_hybrid.py (production rule chain;
-  any Rule 19 extension wires in here)
-- analysis/scripts/drill_v44_pair_S77.py (S77 drill — template for any
-  S79 two_pair/trips analog if Option D NULLs)
+- CURRENT_PHASE.md (rewritten end of S78 — label-noise measurement
+  diagnostic; A-path vs C-path decision session)
+- SESSION_78_V48_DT_REPORT.md (S78 NULL ship; ML feature-engineering
+  track CLOSED at v44 saturating regime)
+- DECISIONS_LOG.md (latest: Decision 113 — S78 v48 NULL + track CLOSED)
+- analysis/src/tw_analysis/oracle_grid.py (read_oracle_grid API; both
+  prefix and full grids load the same way)
+- analysis/scripts/grade_v44_dt.py (template for the canonical/grid
+  read pattern; the S79 measurement script borrows from this)
 
-State (end of S78):
-- v48_dt CLEAN NULL ship at prefix grade Δ +$2/1000h. Single-model ML
-  feature-engineering track formally CLOSED at v44 saturating regime.
-- Within-pair lift was +$5/1000h ($595 → $590) on 215K prefix pair
-  hands. All other categories byte-identical (gating correct).
-- v48_dt model saved at data/v48_dt_model.npz (1,285 MB) — kept for
-  audit only; production UNCHANGED.
+KEY DATA FILES:
+- data/oracle_grid_prefix500k_n1000.bin — 500K hands × 105 settings at
+  N=1000 samples. Prefix = first 500K canonical IDs.
+- data/oracle_grid_full_realistic_n200.bin — 6M hands × 105 settings
+  at N=200 samples. First 500K canonical IDs of this grid are the SAME
+  hands as the prefix, but labeled at lower fidelity.
+- data/canonical_hands.bin — 6M canonical 7-card hands.
+
+STATE (end of S78):
+- v44_dt match rate vs full-grid oracle: 64.80% (35.2pp gap to 95% goal).
 - Production: v56_trips_hybrid ($1,429 full / $794 prefix) + v44_dt
-  ($1,081 full / $686 prefix). Two-track divergence $348/1000h.
-- Seventh consecutive session with production state UNCHANGED.
+  ($1,081 full / $686 prefix). UNCHANGED for seventh consecutive session.
+- Single-model ML feature-engineering track formally CLOSED (S72-S78
+  six consecutive NULL ships).
 
-USER DIRECTIVE (S59-S78 re-confirmed):
+USER DIRECTIVE (S78 end-of-session conversation — primary driver of S79):
+- User rejected "ship at 65%" path; wants to find the 30+pp gap to 95%.
+- User explicitly chose A-path (N=1000) over shipping.
 - "Speed is not necessary — clarity and perfection is."
-- +$10 ship threshold canonical (codified S73, held S74-S78).
+- The +$10 ship bar still holds for future ship decisions; S79 itself
+  is measurement-only and does NOT attempt a ship.
 
-DIRECTION FOR SESSION 79 — Option D rule-chain extension OR fresh diagnostic:
+DIRECTION FOR SESSION 79 — Label-noise measurement on existing N=1000
+prefix grid; one-session A-path-vs-C-path decision:
 
-  PHASE 1 (S79 ~30 min) — Re-read S77 drill outputs; confirm the
-  kicker_max-in-pair-suit discriminator (70% TRUE in LOW × PBOT_DS_PARTIAL
-  vs 32-34% in LOW × PMID-target cells) and the SPLIT_tmax_SS_mu →
-  PMID_tmax_DS mismatch class (n=3,072 hands, $10.97/1000h on one class
-  out of pair's $116 STR total).
+  PHASE 1 (S79 ~30 min) — Write analysis/scripts/label_noise_measurement_S79.py.
+    For each of the 500K prefix canonical hands:
+      • v44_pick = strategy_v44_dt(hand)  (or load cached)
+      • n200_pick = argmax of full_grid.evs[i] (N=200 labels)
+      • n1000_pick = argmax of prefix_grid.evs[i] (N=1000 labels)
+      • n200_match = (v44_pick == n200_pick)
+      • n1000_match = (v44_pick == n1000_pick)
+      • n200_regret_internal = full_evs[i][n200_pick] − full_evs[i][v44_pick]
+      • n1000_regret_internal = prefix_evs[i][n1000_pick] − prefix_evs[i][v44_pick]
+    The match-rate shift n1000_match − n200_match is the load-bearing
+    metric; the regret deltas are descriptive.
 
-  PHASE 2 (S79 ~45 min) — Design Rule 19 candidate:
-    - Trigger: single-pair AND pair_rank ∈ {2,3,4,5,6,7} AND
-      kicker_max NOT in pair_suits AND n_PMID_DS_w_maxtop ≥ 1.
-    - Action: Force PMID_tmax_DS routing.
-    - Expected: ~6,760 LOW × PMID_DS_MAXTOP STR hands × ~$22 within-cell
-      residual ≈ $15-22 WG if rule captures cell cleanly. Full-grid
-      ≈ $5-8 — borderline at ship bar.
+  PHASE 2 (S79 ~15 min) — Aggregate breakdowns:
+    • Overall: pct(n200_match), pct(n1000_match), shift.
+    • By setting-rank bucket (S71 lens):
+      - NOISE bucket (rank ≤3 of 105): expected to show largest shift
+        if label noise is dominant.
+      - MID bucket (rank 4-9).
+      - STRUCTURE bucket (rank ≥10): should be most stable.
+    • By hand category (pair, two_pair, trips, trips_pair, three_pair,
+      quads, composite, high_only) per existing categorize_hands().
+    • Save summary JSON: data/label_noise_S79_summary.json.
 
-  PHASE 3 (S79 ~15 min) — Grader-confirm v57 (rule 19 + v56) vs
-  v56_trips_hybrid baseline.
-    Δ ≥ +$10 → SHIP v57 (rule 19); 19th rule in project.
-    Δ ∈ [+$5, +$10) → PARTIAL POSITIVE / NULL ship at +$10 bar.
-    Δ < +$5 → CLEAN NULL ship.
+  PHASE 3 (S79 ~15 min) — Apply pre-committed decision criterion:
+    If (n1000_match − n200_match) ≥ +5pp on prefix:
+      A-PATH VERDICT — label noise is materially shifting "optimal."
+      Phase 4 plans targeted N=1000 expansion.
+    If (n1000_match − n200_match) < +2pp:
+      C-PATH VERDICT — labels are stable; gap is real model error.
+      Phase 4 plans high-capacity gradient boosting retry.
+    If +2pp ≤ shift < +5pp:
+      MIXED — document; surface options to user; do NOT pre-commit.
 
-  PHASE 4 (S79 ~20 min) — If Rule 19 NULLs: pivot to fresh diagnostic.
-    Two_pair STRUCTURE WG ($66/1000h S76) and trips STRUCTURE WG
-    ($21/1000h S76) haven't been probed with S71-bucket × cell lens.
-    Generate drill_v44_two_pair_S79.py mirroring S77's structure.
+  PHASE 4 (S79 ~30 min) — Plan the next 3-5 sessions based on verdict:
+    A-PATH plan options:
+      (a) N=1000 on full-grid STRUCTURE-bucket hands only (~25.8% of grid
+          ≈ 1.55M hands; estimate ~24 hr local compute).
+      (b) Extend N=1000 prefix from 500K → 2M uniformly sampled hands.
+      (c) Full N=1000 on 6M grid (~5 days local; may need cluster).
+    C-PATH plan:
+      Scope XGBoost retry at depth=10-12, n_est=1000-2000, longer
+      early-stopping window. Smoke + full plan for S80.
 
-  PHASE 5 (S79 ~10 min) — Decision 114; SESSION_79_*_REPORT.md;
-  CURRENT_PHASE.md rewritten for S80.
+  PHASE 5 (S79 ~10 min) — Decision 114; SESSION_79_LABEL_NOISE_REPORT.md;
+  CURRENT_PHASE.md rewritten for S80 with the chosen path's concrete plan.
 
   ACCEPTANCE for Session 79:
-  - EITHER Rule 19 trained, graded, ship decision made
-  - OR fresh diagnostic ship with quantified hypothesis pack for S80
-  - Decision 114 documented in DECISIONS_LOG.md
-  - CURRENT_PHASE.md rewritten for S80
+  - label_noise_measurement_S79.py runs end-to-end; summary JSON written.
+  - Match-rate shift computed and bucketed.
+  - A-path or C-path declared per pre-committed criterion (or MIXED
+    verdict with options presented).
+  - Decision 114 documented.
+  - CURRENT_PHASE.md rewritten for S80 with the chosen path's plan.
 
 REMINDERS:
 - Use python3, not python.
 - cargo at ~/.cargo/bin/cargo.
 - Session-end protocol: commit + push to origin/main (pre-authorized
   per session-end-prompt.md).
-- v44_dt model + features remain unchanged; v48 retained for audit only.
+- v44_dt model + features remain unchanged.
+- This session is MEASUREMENT, not ship. The +$10 ship bar does not
+  apply; the question is "where does the 35pp gap live."
 - "Speed is not necessary — clarity and perfection is."
-- Option D operates at the rule layer (outside DT saturation) — the
-  redundancy ceiling that NULLed H6/H7/H8 does NOT apply here. Rules
-  apply BEFORE v44_dt routes the residual.
-- If Rule 19 NULLs, the diagnostic pivot (two_pair / trips
-  cross-product) is the second-priority path; the third is Option A
-  (oracle-label N=1000 re-eval, gated on cluster access).
+- The user is non-technical; the measurement output and verdict should
+  be summarized in plain language at the top of the session report.
 ```
 
 ---
