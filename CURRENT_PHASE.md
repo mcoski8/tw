@@ -1,4 +1,10 @@
-# Current: Sprint 8 — Session 81 A2 launched (oracle ~15h ETA; harness shipped); Session 82 = train v49_a2, grade three lenses, declare ship verdict per pre-committed thresholds in `analysis/scripts/grade_v49_a2_holdout.py`
+# Current: Sprint 8 — Session 82 check-in confirmed oracle still running and healthy (~16h ETA remaining at S82 open); train + grade + ship-verdict deferred until oracle completes (estimated ~2026-05-15 ~00:30 CDT). Session 82 plan unchanged; resume same prompt when oracle is done.
+
+**S82 check-in (2026-05-14 08:40 CDT) — read first:** Verified oracle process PID 4112 alive (851% CPU, RUNNING state), last log write fresh (17 seconds before check), file growing on disk. Progress at check-in: **28,000 / 1,508,080 records (1.86%)**, sustained rate **~25.8 hands/s** — slightly slower than the 28.5 hands/s pilot, but within 10%. **Updated ETA: ~57,336 s ≈ 15.9 hours from log time of 08:40**, putting oracle completion at ~**2026-05-15 00:35 CDT** — still consistent with the "morning of 2026-05-15 Pacific" window the S82 resume prompt was written for. **No train + grade run in this check-in by design** (oracle data not yet available). Production state UNCHANGED for the eleventh consecutive session by virtue of the oracle still running. **The S82 resume prompt below is unchanged and remains the correct prompt to use when the oracle finishes.**
+
+---
+
+
 
 S81 built the 1,510,080-hand two_pair + trips_pair subset, reserved 151,008 hands (every 10th) as held-out, ran a 2,000-hand N=1000 pilot to measure throughput (28.5 hands/sec), and launched the full N=1000 RealisticHumanMixture oracle in the background with empirical ETA ~14.7 hours from launch (materially faster than the 24-36 hour estimate). While the oracle runs, S81 wrote and smoke-tested both downstream scripts: `train_v49_a2_dt.py` (three-zone hybrid Y → DT fit) and `grade_v49_a2_holdout.py` (three-lens grader with pre-committed SHIP/NULL/MIXED verdict thresholds embedded in code). All S81 acceptance gates are met; the only blocker to declaring a ship verdict is the oracle finishing.
 
