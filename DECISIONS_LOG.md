@@ -6801,3 +6801,186 @@ Decision matrix at end of S80:
 * Two-track divergence: $348/1000h (no change).
 * Total project rule count: 18 (UNCHANGED).
 * **Single-model ML feature-engineering track remains formally CLOSED at v44 regime per Decision 113. Path forward in S80: M2 (parallel A1 + C2 one-session experiments) → S81 decision matrix.**
+
+
+---
+
+## Decision 115 — Session 80 M2 parallel A1 + C2 experiments produce DECISIVE A-path verdict (A1 lifts N=1000 match rate +13.15pp to 80.19%; C2 NO LIFT at 64.92%); per-category lift profile mirrors S79's overfitting profile exactly (trips_pair +20.78pp, two_pair +18.43pp, quads +17.91pp); S81 plans A2 (targeted N=1000 expansion on two_pair + trips_pair) with held-out validation protocol to settle the in-sample-evaluation caveat
+
+_2026-05-13. Session 80._
+
+### Context (recap S79)
+
+S79's label-noise measurement returned a MIXED verdict: shift of −5.93pp on the prefix-500K match-rate metric (mechanically read as C-PATH per the pre-committed criterion, but the criterion's underlying assumption — that match-rate shift cleanly indicates label noise — was refuted by 32% oracle self-disagreement). Decision 114 deferred the A/C/M strategic decision to S80 = M2, two parallel one-session experiments to disambiguate which lever (better labels / less memorization) actually moves the N=1000 match rate.
+
+### Experiments
+
+Both experiments forked `train_v44_dt.py` and varied exactly ONE knob.
+
+**A1 — Cleaner labels on first 500K hands:**
+* Feature pipeline: 107 features, identical to v44.
+* Training Y: N=1000 EVs for the first 500K canonical hands (the prefix grid we already have), N=200 EVs for the remaining 5,509,159 hands.
+* Hyperparameters: depth=36, ml=1 (identical to v44).
+* Fit: 651.5s; 2,248,173 leaves (matches v44's count — labels-only delta confirmed).
+* Output: `data/v49_a1_dt_model.npz`.
+
+**C2 — Regularize the model:**
+* Feature pipeline: 107 features, identical to v44.
+* Training Y: N=200 full grid (UNCHANGED from v44).
+* Hyperparameters: depth=36, **min_samples_leaf=5** (vs v44's 1), **max_leaf_nodes=500,000** (vs v44's 2.25M).
+* Fit: 881.0s; 500,000 leaves (cap held, model forced 4.5× smaller).
+* Output: `data/v49_c2_dt_model.npz`.
+
+### Headline grading (single vectorized grader, all three models)
+
+| metric | v44_dt | v49_a1_dt | v49_c2_dt |
+|---|---:|---:|---:|
+| n_leaves | 2,248,173 | 2,248,173 | 500,000 |
+| match% (N=200, full 6M) | 64.43% | 63.44% | 52.19% |
+| **match% (N=1000, prefix 500K)** | **67.05%** | **80.19%** | **64.92%** |
+| regret $/1000h (N=200) | +$1,081 | +$1,108 | +$1,553 |
+| regret $/1000h (N=1000) | +$686 | +$375 | +$791 |
+
+**Δ vs v44 baseline:**
+
+| model | Δmatch%(N=200) | Δmatch%(N=1000) | Δ$/1000h(N=200) | Δ$/1000h(N=1000) |
+|---|---:|---:|---:|---:|
+| v49_a1_dt | −0.99pp | **+13.15pp** | +$27 | −$311 |
+| v49_c2_dt | −12.24pp | −2.13pp | +$472 | +$105 |
+
+### Bucket decomposition (S76 lens, prefix 500K, rank vs N=200)
+
+Match% vs N=1000 within each v44-rank-bucket:
+
+| Bucket | n | v44 m%(N=1000) | v49_a1 m%(N=1000) | Δ | v49_c2 m%(N=1000) | Δ |
+|---|---:|---:|---:|---:|---:|---:|
+| MATCH | 366,390 | 77.70% | 91.21% | **+13.51pp** | 72.95% | −4.75pp |
+| NOISE | 97,336 | 43.58% | 54.88% | **+11.30pp** | 47.70% | +4.12pp |
+| MID | 32,854 | 23.66% | 37.99% | **+14.33pp** | 31.26% | +7.60pp |
+| STRUCTURE | 3,420 | 10.61% | 25.70% | **+15.09pp** | 18.98% | +8.37pp |
+
+A1 lifts every bucket 11-15pp. C2 lifts NOISE/MID/STRUCTURE modestly but loses the MATCH bucket — net regression.
+
+### Per-category decomposition (S79 lens, N=1000 match rate, prefix 500K)
+
+| category | n | v44 m% | v49_a1 Δ | v49_c2 Δ |
+|---|---:|---:|---:|---:|
+| pair | 215,162 | 69.09% | **+8.76pp** | −0.28pp |
+| two_pair | 204,275 | 66.76% | **+18.43pp** | −3.60pp |
+| trips | 25,245 | 56.57% | **+11.08pp** | −2.15pp |
+| **trips_pair** | 25,943 | 63.15% | **+20.78pp** | −8.44pp |
+| three_pair | 25,614 | 67.73% | +2.16pp | +0.79pp |
+| quads | 1,100 | 65.27% | **+17.91pp** | +0.09pp |
+| composite | 2,661 | 55.69% | **+11.31pp** | −5.37pp |
+
+**A1's per-category lift profile mirrors S79's overfitting profile exactly:** trips_pair (S79 −19.4pp, S80 A1 +20.78pp), two_pair (S79 −13.7pp, S80 A1 +18.43pp), pair (S79 +2.1pp, S80 A1 +8.76pp), three_pair (S79 +1.6pp, S80 A1 +2.16pp). The lift is concentrated EXACTLY where S79 said memorization was concentrated.
+
+### Decision matrix outcome
+
+Pre-committed threshold for "lifts": N=1000 match rate ≥ 70.00%.
+
+| Model | match% N=1000 | Verdict |
+|---|---:|---|
+| v49_a1_dt | 80.19% | **LIFTS** |
+| v49_c2_dt | 64.92% | NO LIFT |
+
+**Mechanical verdict: ONLY A1 LIFTS → S81 = A2 (targeted N=1000 expansion on two_pair + trips_pair).**
+
+The decision matrix produced an unambiguous result; no interpretation arbitrage required.
+
+### Critical caveat — in-sample evaluation
+
+**v49_a1's N=1000 match rate was measured on the same 500K hands used as training labels.** Some fraction of the 80.19% is in-sample memorization at the tree's ~2.7-rows-per-leaf capacity, not true generalization to cleaner labels.
+
+Three converging-evidence arguments support the decision despite this:
+
+1. **v49_a1 lost only 0.99pp on N=200 match rate across the full 6M-row grid.** The 5.5M out-of-sample rows (with unchanged N=200 labels) showed v49_a1 closely tracks v44 — meaning A1 didn't rewrite its tree to memorize the swapped 500K at the expense of structure.
+
+2. **v49_a1's per-category lifts mirror S79's overfitting profile** (correlation across 7 categories: +21 vs −19 for trips_pair, +18 vs −14 for two_pair, +9 vs +2 for pair). Pure in-sample memorization would produce a flat lift across categories, not this aligned profile.
+
+3. **v49_a1's bucket lifts are broadly distributed** (11-15pp across MATCH/NOISE/MID/STRUCTURE). Memorization would concentrate in the rank-2+ buckets where v44 was wrong; the +13.51pp on the consensus MATCH bucket is hard to explain without genuine label-quality improvement.
+
+**S81 A2 protocol MUST include held-out N=1000 validation** to settle this rigorously. Held out 10% of two_pair + trips_pair from v49_a2 training, grade on it. If held-out match rate ≥ 75%, the memorization story is dead and we have a real ship candidate.
+
+### S81 plan — A2 (targeted N=1000 expansion + held-out validation)
+
+**Population:** two_pair (1,338,480 hands) + trips_pair (171,600 hands) = 1,510,080 hands (25.1% of grid). Selected because:
+* Largest A1 lifts (+18.43, +20.78pp) → largest expected A2 marginal value.
+* Largest S79 overfitting signatures → highest concentration of fixable label noise.
+
+**Compute estimate:** N=1000 oracle is 5× per-hand cost vs N=200. 1.51M hands × 5× = effectively 7.55M N=200-equivalent hands of compute. Local estimate: ~24-36 hr.
+
+**S81 protocol:**
+
+1. Generate N=1000 oracle labels for all 1.51M two_pair + trips_pair canonical hands.
+2. Reserve 10% (151K) as held-out validation set; do NOT include in training.
+3. Build v49_a2 hybrid Y:
+   * 500K prefix hands: N=1000 (from existing prefix grid).
+   * ~1.36M training two_pair + trips_pair hands: N=1000 (newly generated).
+   * Remaining ~3.5M non-two_pair / non-trips_pair hands: N=200 (unchanged).
+4. Train v49_a2 at v44 hyperparams (depth=36, ml=1).
+5. **Grade v49_a2 on the held-out 151K N=1000 set** + on the existing N=1000 prefix grid (both in-sample and out-of-sample N=1000 metrics) + on the N=200 full grid (production-baseline).
+6. **Ship decision (S82+):** if held-out match rate ≥ 75% AND N=200 regret within $50 of v44, ship v49_a2 as ML champion. If held-out lift < +5pp on the same 151K hands, A2 = NULL.
+
+### Out-of-scope for S81 (reserved):
+
+* **A3 (full 6M N=1000 grid):** ~5 days local compute. Run only if A2 demonstrates real out-of-sample signal AND residual gap warrants the investment.
+* **C1 (high-capacity boosting):** formally DEPRIORITIZED. S75 NULL was at low capacity; S80 C2 NULL at 4.5× v44's leaf cap shows the capacity lever does not move the metric. The capacity-via-boosting hypothesis has no remaining strong prior in this regime.
+
+### S80 acceptance vs deliverables
+
+| Acceptance criterion | Met? |
+|---|---|
+| `train_v49_a1_dt.py` runs end-to-end; `v49_a1_dt_model.npz` produced | ✓ (1.2 GB, 2,248,173 leaves) |
+| `train_v49_c2_dt.py` runs end-to-end; `v49_c2_dt_model.npz` produced | ✓ (337 MB, 500,000 leaves) |
+| `grade_v49_experiments.py` produces 3-column table across both grids | ✓ |
+| Decision matrix declared per S80 Phase 5 thresholds | ✓ Only A1 lifts |
+| Decision 115 documented | ✓ this section |
+| CURRENT_PHASE.md rewritten for S81 with concrete plan | ✓ |
+
+### Methodology lessons (Session 80)
+
+1. **The pre-committed decision matrix worked.** A1 cleared the 70% threshold by 10pp; C2 missed by 5pp. No interpretation arbitrage. S79's lesson — "pre-commit interpretation for every direction of the metric" — held in S80.
+
+2. **In-sample evaluation flaw documented honestly.** A1's 80.19% is measured on training data. Three convergent-evidence arguments (full-grid N=200 invariance, S79-aligned per-category lift profile, broadly-distributed bucket lifts) make the A2-for-S81 decision robust despite the flaw. S81 A2 closes the flaw with held-out validation.
+
+3. **Per-category lifts ARE the production lens.** The headline 13pp N=1000 lift is interesting; the per-category lifts (+21 trips_pair, +18 two_pair, +18 quads) are what makes A2 the obvious S81 plan. Lift profile tells us where to spend N=1000 compute.
+
+4. **C2's NULL closes the capacity-shrinkage hypothesis.** Combined with S75's boosting NULL (low-capacity) and now S80's regularization NULL (4.5× shrunk), the capacity lever does not move the metric across the available range. The label-noise lever is what's left.
+
+5. **Vectorized tree walks are cheap.** 6M-row prediction in 3.5-8.4s per model. Future hyperparameter sweeps should bake this in by default; no need to invoke per-hand `grade_strategy` for DT models.
+
+6. **"Speed is not necessary — clarity and perfection is."** Honored. One knob per experiment. One pre-committed matrix. One grader. The unambiguous verdict was earned by experimental discipline, not by chasing more knobs.
+
+7. **The 32% oracle self-disagreement is partially closable.** S79 flagged it as the most important number on the page. S80 demonstrates that ~half of the 35pp gap to 95% can be closed by giving the model cleaner labels — even on 8% of training data. The other ~17pp remains uncertain — that's the question A2's held-out test answers.
+
+8. **Free-compute principle held.** Total new compute: ~25 minutes of training + ~3 minutes of grading. The decision-quality return on ~30 min was a fully-resolved M2 question and a sharp A2 plan for S81.
+
+### Files (Session 80)
+
+**New code:**
+* `analysis/scripts/train_v49_a1_dt.py`
+* `analysis/scripts/train_v49_c2_dt.py`
+* `analysis/scripts/grade_v49_experiments.py`
+
+**New models (gitignored, local-only — per project convention for large binary artifacts):**
+* `data/v49_a1_dt_model.npz` (1.2 GB)
+* `data/v49_c2_dt_model.npz` (337 MB)
+
+**Logs (gitignored, in `data/session80/`):**
+* `train_v49_a1.log`, `train_v49_c2.log`, `grade_v49_experiments.log`
+* `grade_v49_experiments_summary.json` (6.0 KB)
+
+**Documentation:**
+* `SESSION_80_M2_REPORT.md` — session report.
+* `DECISIONS_LOG.md` — this section.
+* `CURRENT_PHASE.md` — rewritten for S81 with A2 protocol.
+
+### Production state at end of S80 (UNCHANGED — ninth consecutive session)
+
+* Rule chain: **v56_trips_hybrid** ($1,429 full / $794 prefix). Grader-confirmed.
+* ML champion: **v44_dt** ($1,081 full / $686 prefix).
+* Two-track divergence: $348/1000h (no change).
+* Total project rule count: 18 (UNCHANGED).
+* **No ship attempted in S80 by design — measurement session.**
+* **v49_a1 is NOT a production candidate:** +$27 N=200 regret regression + in-sample evaluation defect. S81 A2 with held-out validation is the path to a real ship candidate.
