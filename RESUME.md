@@ -2,7 +2,7 @@
 
 If you're starting a new Claude Code session here, just paste this:
 
-> Resume the project. Read CLAUDE.md, CURRENT_PHASE.md, and the latest entries in DECISIONS_LOG.md (031, 032). Then follow the IMMEDIATE NEXT ACTION at the top of CURRENT_PHASE.md.
+> Resume the project. Read CLAUDE.md, CURRENT_PHASE.md, and the latest entries in DECISIONS_LOG.md (most recent: Decision 116). Then follow the IMMEDIATE NEXT ACTION at the top of CURRENT_PHASE.md.
 
 That's it. CURRENT_PHASE.md has the full state, the methodology agreed with Gemini, and the resume prompt with all carry-forward.
 

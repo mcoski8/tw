@@ -2681,3 +2681,38 @@ S77: Pair-first deep-drill identifies LOW pair (rank 2-7) as carrier of 74.6% of
 5. **PHASE 5 (~10 min):** Decision 114 + SESSION_79_*_REPORT.md + CURRENT_PHASE.md rewrite for S80.
 
 Standalone session report: `SESSION_78_V48_DT_REPORT.md`.
+
+---
+
+## Session 81 (2026-05-14) — A2 launch + harness shipped (interim)
+
+**Goal:** Launch S82's experiment by building the 1.51M two_pair + trips_pair subset, kicking off the ~15h N=1000 oracle generation, and writing/smoke-testing the downstream training + grading scripts so S82 is just two commands + interpretation.
+
+**Decision 115 follow-through (Decision 116):** A2 = targeted N=1000 expansion on two_pair + trips_pair with held-out OOS validation. The S80 verdict (A1 lifts N=1000 prefix match% +13.15pp in-sample) needs the held-out test to settle the memorization-vs-real-signal question.
+
+**What S81 produced:**
+- `analysis/scripts/build_s81_subset.py` — built `data/session81/canonical_hands_s81_subset.bin` (1,510,080 hands; exact-match expected counts: two_pair 1,338,480 + trips_pair 171,600). Reserved 151,008 (every 10th subset index, offset 0) as held-out. Stratification mirrored full subset within 0.04pp of two_pair/trips_pair shares.
+- Five sidecars: `v49_a2_subset_to_canonical.npy`, `v49_a2_holdout_ids.npy`, `v49_a2_holdout_subset_indices.npy`, `v49_a2_subset_categories.npy`, `build_summary.json`.
+- 2,000-hand oracle pilot: sustained **28.5 hands/sec** at N=1000 RealisticHumanMixture; output header validated. Full ETA computed empirically as **14.7 hours** (materially better than the 24-36h estimate).
+- Full oracle launched in background (task `b2nqj55g5`); 8,000/1,510,080 records written by S81 end. Resume mechanism verified (engine detects records on disk and resumes at next position). Launch metadata in `data/session81/oracle_launch.json`.
+- `analysis/scripts/train_v49_a2_dt.py` — three-zone hybrid trainer (Option B mutually-exclusive zones). Smoke-tested without S81 grid; training Y composition: Zone 1 = 8.14% (N=1000 prefix), Zone 2 = 19.66% (N=1000 S81), Zone 3 = 72.20% (N=200 fallback). **Total N=1000 share = 27.80%** (3.4× A1's 8.14% coverage, concentrated on the most-overfit categories).
+- `analysis/scripts/grade_v49_a2_holdout.py` — three-lens grader (N=200 full / N=1000 prefix / N=1000 held-out OOS). Pre-committed SHIP/NULL/MIXED verdict thresholds embedded in code: SHIP if held-out match% ≥ 75 AND |N=200 regret(v49_a2) − N=200 regret(v44)| ≤ $50; NULL if held-out match% < 72; MIXED in between. Smoke-tested with v44 alone; reproduced S80 numbers exactly (64.43% / 67.05% / +$1,081 / +$686).
+
+**Engine pre-flight skipped:** Engine source unchanged in S81 (Python-only changes). Skipping `cargo build --release` and `cargo test` because (a) nothing in `engine/` was modified, (b) the oracle is competing for CPU and the test suite would slow it down.
+
+**Production state at end of S81:** UNCHANGED from S80 — tenth consecutive session.
+- Rule chain: `v56_trips_hybrid` ($1,429 full / $794 prefix).
+- ML champion: `v44_dt` ($1,081 full / $686 prefix).
+- Two-track divergence: $348/1000h.
+- Project rule count: 18.
+- **v49_a2 is the first real ship candidate since S78 — verdict deferred to S82.**
+
+**What S82 will run (when oracle completes, est. 2026-05-15 morning Pacific):**
+1. Verify oracle finished (~5 min).
+2. `python3 analysis/scripts/train_v49_a2_dt.py` (~15-20 min).
+3. `python3 analysis/scripts/grade_v49_a2_holdout.py` (~3 min). Auto-fires SHIP/NULL/MIXED verdict.
+4. Decision 117 + `SESSION_82_REPORT.md` + STRATEGY_GUIDE.md update if SHIP.
+5. Commit + push.
+
+Standalone session report: `SESSION_81_LAUNCH_REPORT.md`.
+

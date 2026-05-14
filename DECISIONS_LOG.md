@@ -6984,3 +6984,128 @@ Three converging-evidence arguments support the decision despite this:
 * Total project rule count: 18 (UNCHANGED).
 * **No ship attempted in S80 by design — measurement session.**
 * **v49_a1 is NOT a production candidate:** +$27 N=200 regret regression + in-sample evaluation defect. S81 A2 with held-out validation is the path to a real ship candidate.
+
+## Decision 116 — Session 81 A2 launch (interim — verdict deferred to S82+ when oracle completes); built 1.51M two_pair + trips_pair subset with 151K held-out (every 10th by subset index), launched N=1000 RealisticHumanMixture oracle in background (pilot throughput 28.5 hands/s → full-run ETA ~15 hours, materially faster than the 24-36h estimate); training + grading scripts written and smoke-tested before oracle output exists; ship verdict thresholds locked in code
+
+### Session
+
+Session 81 — A2 launch (Decision 115 follow-up).
+
+### Context
+
+Decision 115 selected A2 as S81's lever: generate N=1000 oracle labels for the 1,510,080 two_pair + trips_pair canonical hands (the highest-overfit categories per S79's per-category profile, with the largest A1 lift per S80), reserve 10% as held-out, and grade the resulting v49_a2 DT on three lenses — N=200 full grid (production baseline), N=1000 prefix (S80 lens), and N=1000 held-out (the OOS test that settles whether A1's 80.19% prefix lift was real or in-sample memorization).
+
+The dominant cost was always the oracle generation itself (estimated 24-36 hours of local compute). S81's role was to launch it correctly and write every downstream harness *while it runs*, so that when the oracle completes (S82) only one command stands between us and a ship verdict.
+
+### What S81 produced
+
+**Subset construction (build_s81_subset.py):**
+* Categorized all 6,009,159 canonical hands. Counts match the expected pre-committed numbers exactly: two_pair = 1,338,480, trips_pair = 171,600, total = 1,510,080.
+* Selected every 10th subset index (offset 0) as held-out: 151,008 hands (10.000% of subset).
+* Held-out category distribution mirrors the full subset within 0.04 percentage points (two_pair 88.68% vs 88.64% / trips_pair 11.32% vs 11.36%) — stratification by category was free.
+* Wrote `canonical_hands_s81_subset.bin` (10.57 MB; canonical_hands.bin format) plus four NumPy sidecars: `v49_a2_subset_to_canonical.npy` (subset_pos → full canonical_id), `v49_a2_holdout_ids.npy` (held-out full canonical_ids), `v49_a2_holdout_subset_indices.npy` (held-out subset positions for direct S81-grid lookup), `v49_a2_subset_categories.npy` (per-row category for breakdown).
+* Persisted `build_summary.json` with input/output sha256 + counts for downstream provenance.
+
+**Oracle pilot + launch:**
+* Pilot: 2,000 hands at N=1000 on the subset file, block_size=500, opp=realistic.
+* Sustained throughput **28.5 hands/sec** (blocks 17.41-17.72s). Output header verified: TWOG magic, samples=1000, opp=RealisticHumanMixture (tag 8), canonical_total=1,510,080. First-record argmax/EV sanity-checked.
+* Full run launched in background at offset 2000 with block_size=1000. Resume mechanism confirmed: OgWriter.open_or_create detected the existing 2000 records and resumed at canonical_id=2000 of 1,510,080.
+* Empirical full-run ETA: (1,510,080 − 2,000) / 28.5 ≈ **52,915 s ≈ 14.7 hours**, materially faster than the 24-36h estimate. The improvement comes from the subset being uniformly tp/3p (slightly faster eval than the full distribution).
+* Background log path: `data/session81/oracle_full_run.log`. Resume is idempotent — re-launching the same command after any crash continues from the next unwritten record.
+
+**Training script (train_v49_a2_dt.py):**
+* Forked train_v49_a1_dt.py. Same 107-feature pipeline (build_X from train_v44_dt). Same hyperparameters: depth=36, ml=1, criterion=squared_error.
+* Y is a three-zone hybrid (Option B — zones are mutually exclusive in canonical_id space):
+  * Zone 1 (canonical_id < 500,000) → N=1000 prefix grid (same as A1).
+  * Zone 2 (canonical_id ≥ 500,000 AND category in {two_pair, trips_pair} AND not held-out) → N=1000 S81 grid, indexed via subset_to_canonical mapping.
+  * Zone 3 (everything else not held-out) → N=200 full grid (the v44 baseline source).
+* Held-out rows (151,008) are dropped from both X_train and Y_train entirely.
+* Smoke-tested without the S81 grid present. Training set composition: 5,858,151 rows of which Zone 1 = 476,978 (8.14%), Zone 2 = 1,151,876 (19.66%), Zone 3 = 4,229,297 (72.20%). **Total N=1000 share of training labels = 27.80%** (vs 8.14% in A1 — a 3.4× increase in cleaner-label coverage, concentrated on the most-overfit categories).
+* Note: Zone 1 in the training set is 476,978 not 500,000 because 23,022 held-out rows fall within the first 500K full-grid canonical_ids. (The tp/3p density in the first 500K is ~46%, higher than the overall 25%, owing to the lex sort over packed card bytes.)
+
+**Grading script (grade_v49_a2_holdout.py):**
+* Three lenses with pre-committed thresholds embedded in code:
+  * Lens 1: N=200 full grid (6M rows) — production-baseline regret + match.
+  * Lens 2: N=1000 prefix grid (500K rows) — same lens as S80.
+  * Lens 3: N=1000 S81 held-out (151,008 rows) — OUT-OF-SAMPLE test that settles the in-sample evaluation question from S80.
+* Held-out EVs fetched directly via subset positions (`gs.evs[holdout_subset_idx]`) — no per-row search.
+* Pre-committed ship verdict logic baked into the grader:
+  * SHIP if Lens 3 match% ≥ 75.0% AND |Lens 1 $/1000h(v49_a2) − Lens 1 $/1000h(v44)| ≤ $50.
+  * NULL if Lens 3 match% < 72.0%.
+  * MIXED if 72.0% ≤ Lens 3 match% < 75.0% — re-examine alongside A3 in S83+.
+* Smoke-tested with v44_dt only (v49_a2 model not yet built). Reproduces v44's S80 numbers exactly: 64.43% match% (N=200), 67.05% match% (N=1000 prefix), $1,081/1000h N=200 regret, $686/1000h N=1000 regret. Lens-3 plumbing (held-out sidecar cross-check, subset-position indexing) validated end-to-end.
+
+### Why the three-zone vs two-zone decision matters
+
+Option A (S81 grid wins for tp/3p rows even in the first 500K range) would have given all tp/3p training rows labels from a single RNG family (the S81 grid). Option B (chosen, per the spec's literal "First 500K → prefix grid; remaining tp/3p → S81 grid") preserves the prefix grid's role and treats Zone 1 as a static N=1000 enclave that includes both targeted and non-targeted categories.
+
+Both options yield statistically equivalent labels (both are N=1000 RealisticHumanMixture, just different RNG seeds). The choice doesn't affect the ship-verdict logic — only the small fraction of tp/3p rows in the first 500K get a different RNG seed. Option B was chosen because it's the literal reading of the resume prompt and is auditable against earlier S80 decisions.
+
+### Acceptance gates (all met for S81)
+
+* ✅ `data/session81/v49_a2_holdout_ids.npy` saved (151,008 rows).
+* ✅ Oracle N=1000 generation launched and confirmed running on 1,510,080 hands (2,000 records persisted before backgrounding; full run resuming at offset 2,000).
+* ✅ `analysis/scripts/train_v49_a2_dt.py` written, smoke-tested without S81 grid.
+* ✅ `analysis/scripts/grade_v49_a2_holdout.py` written, smoke-tested with v44 alone.
+* ✅ `data/session81/oracle_launch.json` captures launch metadata + ETA.
+* ✅ Decision 116 (this entry) records the interim launch state.
+* ✅ CURRENT_PHASE.md updated with oracle status + S82 plan.
+
+### What S82+ will do
+
+When the oracle completes (estimated ~2026-05-15 morning Pacific):
+1. (~15 min) Run `train_v49_a2_dt.py` → `data/v49_a2_dt_model.npz` (expected ~1.2 GB, similar to A1).
+2. (~3 min) Run `grade_v49_a2_holdout.py`. The grader will print the headline 2-column comparison + 3-lens breakdown + per-category Lens-3 split + auto-fire the pre-committed ship verdict.
+3. Write `SESSION_82_REPORT.md` (or merge into a continuation if S82 starts before oracle completes).
+4. Decision 117 records the ship verdict.
+
+### Production state (UNCHANGED — tenth consecutive session)
+
+* Rule chain: **v56_trips_hybrid** ($1,429 full / $794 prefix).
+* ML champion: **v44_dt** ($1,081 full / $686 prefix).
+* Two-track divergence: $348/1000h.
+* Total project rule count: 18.
+* **No ship attempted in S81 by design — oracle-launch + harness-prep session.**
+* **v49_a2 is the first real ship candidate since S78.** Verdict deferred to S82+.
+
+### Files (Session 81)
+
+**New code (will be committed):**
+* `analysis/scripts/build_s81_subset.py` — subset + held-out construction.
+* `analysis/scripts/train_v49_a2_dt.py` — three-zone hybrid trainer.
+* `analysis/scripts/grade_v49_a2_holdout.py` — three-lens grader with pre-committed ship verdict.
+
+**New artifacts (all under `data/session81/`, gitignored):**
+* `canonical_hands_s81_subset.bin` — 10.57 MB, 1,510,080 hands.
+* `v49_a2_subset_to_canonical.npy` — 6.04 MB, uint32[1,510,080].
+* `v49_a2_holdout_ids.npy` — 0.60 MB, uint32[151,008].
+* `v49_a2_holdout_subset_indices.npy` — 0.60 MB, uint32[151,008].
+* `v49_a2_subset_categories.npy` — 1.51 MB, int8[1,510,080].
+* `build_summary.json` — provenance.
+* `oracle_launch.json` — launch metadata + ETA.
+* `oracle_grid_s81_n1000.bin` — IN PROGRESS, will be ~611 MB at completion.
+* `oracle_full_run.log` — IN PROGRESS, per-block throughput + ETA stream.
+* `oracle_pilot.log`, `build_subset.log`, `train_v49_a2_smoke.log`, `grade_v49_a2_smoke.log` — session logs.
+
+**Documentation:**
+* `SESSION_81_LAUNCH_REPORT.md` — session report.
+* `DECISIONS_LOG.md` — this section (Decision 116, interim).
+* `CURRENT_PHASE.md` — rewritten for S82.
+
+### Methodology notes (Session 81)
+
+1. **Empirical throughput pilot before overnight launch.** The 2,000-hand pilot took 70 seconds and produced a real ETA (14.7h) that beat the 24-36h estimate. The pilot's output is byte-identical to what the full run would have written for those rows, so no compute is wasted — it IS the first 2,000 records of the real run. This is the right pattern for any multi-hour batch: a brief pilot run with the actual binary and actual input file always beats a wall-time model.
+
+2. **Free-compute during the wait.** S81 wrote two scripts and smoke-tested them while the oracle generated the data they consume. When the oracle completes, the entire remaining S82 workload is two commands (~18 min wall) plus interpretation. The "speed is not necessary — clarity and perfection is" doctrine cashes out here as "use the long wait for the careful work."
+
+3. **Smoke-test without the real labels.** Both the trainer (`--smoke-test` skips DT fit + S81 grid read) and the grader (`--smoke-test` skips Lens 3 + v49_a2 model) ran cleanly today. The trainer validated zone composition (8.14% / 19.66% / 72.20%). The grader reproduced v44's S80 numbers exactly, confirming the X pipeline and Lens 1/2 plumbing. The only thing untested is the part that requires the oracle to finish — which is unavoidable.
+
+4. **Pre-committing the ship verdict in CODE, not in a doc.** The grader has the SHIP/NULL/MIXED thresholds hardcoded; it will print the verdict next to the numbers, with the reasoning. Removes any interpretation arbitrage when the data lands.
+
+5. **Resume-from-anywhere is the right batch-job pattern.** The engine's OgWriter detects existing records on disk and resumes at the next position. The pilot + full-run sequence proved this end-to-end. No state machine, no checkpoint files — just "open the output file, count the records, start there."
+
+6. **Held-out sidecar redundancy is worth the storage.** Both `holdout_ids.npy` (full canonical_ids) and `holdout_subset_indices.npy` (subset positions) are stored. Either alone would be sufficient, but the redundancy lets each consumer pick the cheapest lookup path and lets the grader cross-check them at startup (which it does — a single line of safety that would have caught a silent shuffle bug).
+
+7. **Stratification was free.** Held-out hands distribute 88.68% / 11.32% across two_pair / trips_pair, vs 88.64% / 11.36% in the full subset — within 0.04 percentage points of the population mean. Every 10th subset index gave us stratified sampling without explicit stratification logic.
+
+8. **The 27.8% vs 8.1% leverage.** A1 had 8.14% of training labels at N=1000 and produced a +13.15pp prefix match-rate lift (in-sample). A2 has 27.80% at N=1000, concentrated on the two highest-overfit categories. If the OOS Lens 3 match% on the held-out 151K beats ~72%, A2 has succeeded structurally; if it clears 75% with N=200 regret within $50 of v44, it ships. The cleanness of the experimental design — one knob, locked thresholds, a pre-committed grader — is what makes this a legitimate test rather than a fishing expedition.
