@@ -7391,3 +7391,149 @@ Default: drill **LOW pair × PMID_DS_MAXTOP** using the S83 playbook. S77 measur
 
 Other candidates surfaced in CURRENT_PHASE.md include LOW × PMID_SS_MAXTOP, LOW × PMID_OTHER, MID pair × PMID_DS_NOMAXTOP, and HIGH_ONLY × J-high-and-below.
 
+
+## Decision 119 — Session 84 v58 candidate MIXED: rule clears prefix-grid SHIP gate (+$5.59/1000h) but fails full-grid SHIP gate (+$1.36/1000h); production stays at v57; S83 playbook does not transfer mechanically to soft-discriminator small-residual cells
+
+### Session
+
+Session 84 — first cell-level MIXED verdict; first Option D-revised continuation that did not ship.
+
+### Context
+
+S83 demonstrated the Option D-revised playbook on LOW × PMID_DS_NOMAXTOP, shipping Rule 20 at +$16.81/1000h prefix. S84 extended the playbook to the next-largest under-rule-covered LOW pair cell: **LOW × PMID_DS_MAXTOP** ($21.68/1000h STRUCTURE leak under v44_dt per S77, 128,304 cell hands).
+
+The default expectation (per CURRENT_PHASE.md): similar swap discriminator with shifted gate, since the cell is the structural sister of NOMAXTOP (DS achievable WITH max on top, instead of only without). Result: the residual leak under PRODUCTION v57 is much smaller than v44's headline ($7.24 vs $33.16 — v52 routing already closes 78% of the v44 leak), the discriminator is softer (`top_alt_rank` peaks at 67% on full grid vs S83's `max_sing` peaking at 92.8%), and the multi-gate grader produced a grid-disagreement (full NULL, prefix SHIP) instead of a clean SHIP.
+
+### What S84 ran (phases)
+
+**Phase A — Cell verification (no new compute).** Confirmed S77's `cell_stats['LOW|PMID_DS_MAXTOP']` reports n=128,304, $33.16 total / $21.68 STRUCTURE under v44_dt. Confirmed Rule 20 cannot fire on this cell by construction (Rule 20 trigger requires n_PMID_DS_w_maxtop == 0; cell is defined by n_PMID_DS_w_maxtop > 0). So v57 = v56 on this cell.
+
+**Phase B — Drill v57 on cell (~50s compute).** Wrote `drill_v57_low_pmid_ds_maxtop_S84.py`. Filtered S77's per-hand parquet to cell_idx==2 (PMID_DS_MAXTOP) AND pair_rank∈{2-7}. Ran v57 on each hand. Aggregated mismatches and bucket totals.
+
+* v57 cell-leak: **$7.24/1000h whole-grid** (vs v44's $33.16 — −$25.92 already closed by v52).
+* v57 placement on cell: 100% PMID (no SPLIT, no PBOT).
+* Rule 20 fires on cell (sanity check): **0** ✓ (correct, by construction).
+* Dominant residual: **bidirectional within-PMID-DS variant mismatches**:
+  * v57=PMID_tnomax_DS, oracle=PMID_tmax_DS: 4,312 hands, $2.41/1000h (v57 should swap to max-on-top)
+  * v57=PMID_tmax_DS, oracle=PMID_tnomax_DS: 6,054 hands, $2.05/1000h (v57 should swap to max-in-bot)
+  * v57=PMID_tmax_DS, oracle=PBOT_tmax_SS_ms: 1,733 hands, $0.53/1000h (PBOT side-channel)
+* Within-PMID-DS variant theoretical ceiling: $4.46/1000h whole-grid bidirectional + $1.50 PBOT side-channel = ~$6 total.
+
+**Phase B+ — Discriminator drill (~46s compute).** Wrote `drill_v57_pmid_ds_variant_discriminator_S84.py` with four target populations (KEEP_TMAX, KEEP_TNOMAX, SWAP_TO_TMAX, SWAP_TO_TNOMAX) and 11 candidate discriminators. Result:
+
+| feature | KEEP_TMAX | KEEP_TNOMAX | SWAP_TO_TMAX | SWAP_TO_TNOMAX |
+|---|---:|---:|---:|---:|
+| max_sing | 13.17 | 10.18 | 10.53 | 12.19 |
+| **top_alt_rank** | 2.95 | 3.71 | **4.89** | 4.47 |
+| best_bph_tnomax | 7.86 | 10.18 | 10.53 | 12.19 |
+| bph_advantage | −3.05 | +1.52 | +1.88 | +1.80 |
+
+Best discriminator for the SWAP_TO_TMAX direction: `top_alt_rank` (rank of the leftover singleton in the best tnomax_DS config — i.e., the "alternative top" we'd put on top under tnomax_DS). Per-value swap-right within (KEEP_TNOMAX ∪ SWAP_TO_TMAX): 23.9% at top_alt=2 → 67.2% at top_alt=9. Peak 67% — substantially softer than S83's max_sing at 92.8%.
+
+The SWAP_TO_TNOMAX direction is razor-sharp against firing (bph_advantage > 0 is necessary just to have an alternative — and even there, only 7-13% of hands want the swap) but the in-range swap-right rate is catastrophic (~10% at best gate), making no rule profitable in that direction.
+
+**Phase C-1 — Full grid multi-gate grade (~15s compute, 6 gates).** Wrote `strategy_v58_lo_pair_ds_maxtop.py` with parametric `top_alt_rank_gate` and `grade_v58_lo_pair_ds_maxtop_S84.py` iterating cell hands only. Pre-committed thresholds (locked in code): SHIP ≥ $5/1000h whole-grid, NULL < $2/1000h.
+
+| Gate | n_fired | n_changed | swap-right | Lift $/1000h whole-grid | Verdict |
+|---|---:|---:|---:|---:|---|
+| 2 (always) | 85,536 | 11,358 | 50.8% | +$0.09 | NULL |
+| 5 | 45,306 | 4,725 | 69.7% | **+$1.36** | NULL |
+| 6 | 34,776 | 3,150 | 72.5% | +$1.04 | NULL |
+| 7 | 25,683 | 1,890 | 74.1% | +$0.66 | NULL |
+| 8 | 18,018 | 825 | 74.4% | +$0.29 | NULL |
+| 9 | 10,908 | 225 | 77.8% | +$0.08 | NULL |
+
+>>> ALL GATES AUTO-FIRED NULL. Best gate (top_alt_rank ≥ 5) at +$1.36/1000h is below the $2 NULL threshold by $0.64. By full-grid grader alone, the candidate is decisively NULL.
+
+**Phase C-2/3 — Prefix grid multi-gate grade (~90s compute, 6 gates).** Wrote `grade_v58_prefix_S84.py` (single-gate at the best full-grid gate) AND `grade_v58_prefix_multigate_S84.py` (6-gate sweep). Same pre-committed thresholds.
+
+| Gate | n_fired (prefix) | n_changed | swap-right | Δ match% | Lift $/1000h prefix | Verdict |
+|---|---:|---:|---:|---:|---:|---|
+| 2 (always) | 14,238 | 2,268 | 63.9% | +0.12pp | +$4.33 | MIXED |
+| **5** | 8,658 | 1,113 | **88.1%** | +0.16pp | **+$5.59** | **SHIP** |
+| 6 | 6,408 | 693 | 93.2% | +0.11pp | +$4.11 | MIXED |
+| 7 | 4,518 | 378 | 94.4% | +0.06pp | +$2.31 | MIXED |
+| 8 | 2,985 | 165 | 91.5% | +0.03pp | +$0.78 | NULL |
+| 9 | 1,800 | 45 | 93.3% | +0.01pp | +$0.22 | NULL |
+
+>>> Best gate (top_alt_rank ≥ 5) at +$5.59/1000h auto-fired SHIP. Adjacent gates 2, 6, 7 are MIXED (above NULL but below SHIP). Gates 8, 9 are NULL.
+
+### The grid disagreement
+
+The full-grid and prefix-grid graders disagree at the same gate:
+
+| Metric | Full grid (N=200 labels) | Prefix grid (N=1000 labels) |
+|---|---:|---:|
+| Gate=5 verdict | NULL | SHIP |
+| Gate=5 lift | +$1.36/1000h whole-grid | +$5.59/1000h prefix |
+| Gate=5 swap-right rate | 69.7% | 88.1% |
+| Gate=5 swap-wrong rate | 30.3% | 11.7% |
+
+The 18.4pp swap-right gap is **purely a label-noise effect** — the underlying hands are identical (canonical IDs 0-499,999 are in both grids). The only difference is the labels used to compute regret and oracle pick. Per S82 Decision 114, N=200 disagrees with N=1000 on ~32% of PAIR hands. For our rule's fired-and-changed population, ~30% wrong under N=200 vs ~12% under N=1000 is consistent with that disagreement rate.
+
+### Verdict + production state (UNCHANGED)
+
+**VERDICT: MIXED.** Pre-committed graders honestly fired different verdicts on the two grids; the disagreement IS the verdict. By S83's precedent (full +$16.47 + prefix +$16.81, ratio 1.02× — both grids must clear $5), S84's $1.36 / $5.59 (ratio 4×) is not enough confidence to ship a production rule.
+
+**Production stays at v57.** No strategy-of-record change.
+
+* v57_lo_pair_defensive: **UNCHANGED** at $1,412.53/1000h full / $776.88/1000h prefix.
+* v44_dt ML champion: UNCHANGED ($1,081 full / $686 prefix).
+* Two-track divergence: $332/1000h (unchanged).
+* Total project rule count: **20** (unchanged — Rule 21 candidate did not ship).
+
+### What this answers about the cascade
+
+1. **S83's Option D-revised playbook is cell-dependent.** S83 shipped on a sharp-discriminator + large-residual cell. S84 MIXED on a soft-discriminator + small-residual cell. The playbook generates valid candidates and clean verdicts in either case — but ship rate depends on cell properties, not on methodology.
+
+2. **v52's routing already closes much of LOW pair's leak.** v44 measured $33.16 on this cell; v57 has $7.24. The under-rule-covered framing (which uses v44 as the diagnostic baseline per S77) overstates the available residual on cells where v52 has good defensive routing. **Always re-measure under production before targeting.** S83 made this observation; S84 confirms.
+
+3. **The label-noise floor is real and matters at small-signal magnitudes.** S82 Decision 114 quantified N=200 vs N=1000 disagreement at ~32% on PAIR. For S84's cell with $7.24 total leak, label noise can flip the verdict ($1.36 vs $5.59 lift depending on which labels you trust). At S83's cell ($59 leak), the same label noise was negligible — the signal stood above it. **Future small-residual cells will inherit this sensitivity.**
+
+4. **MIXED is a legitimate output of the playbook, not a methodology failure.** The pre-committed-verdict pattern produced an unambiguous "verdicts disagree" output, which prevents us from talking ourselves into a SHIP based on the more favorable grid alone. The right action on MIXED is to not ship, document the divergence, and reassess the strategy fork: try a different cell, or invest compute in resolving the divergence.
+
+### Methodology lessons
+
+1. **Pre-committed verdicts saved us from a post-hoc SHIP narrative.** When the prefix's $5.59 SHIP landed, the temptation to declare SHIP — and rationalize the full-grid NULL as "label noise we expected" — was substantial. The S83 two-grid precedent + the mechanical verdict in code made MIXED the unambiguous reading. This is the cleanest demonstration of the pattern's value to date.
+
+2. **Multi-gate grading on both grids is the right resolution.** Single-gate prefix would have left the divergence unmapped ("is gate=5 a fluke?"). Multi-gate prefix showed the lift surface (gate=5 peak, neighbors MIXED, far gates NULL) — internal consistency suggests real signal, but the magnitude doesn't decisively clear.
+
+3. **The under-rule-covered map needs a production-leak overlay.** S77 measured leak under v44_dt; S83 + S84 show that v52's routing has differentially closed cells. Future Option D extractions should be ordered by **PRODUCTION leak** (= residual after v57), not v44 leak, since the smaller the production residual, the smaller the ceiling and the more label-noise-sensitive the verdict.
+
+4. **Three new graders form a reusable template for future cells.** `drill_<v_strategy>_<cell>_S<n>.py`, `drill_<v_strategy>_<cell>_discriminator_S<n>.py`, `strategy_v<n>_<rule_name>.py`, `grade_v<n>_<rule_name>_S<n>.py`, `grade_v<n>_prefix_multigate_S<n>.py`. Each new cell adapts these with cell-specific filtering and feature extraction. Infrastructure cost amortizes.
+
+5. **"Speed is not necessary — clarity and perfection is" cashed out twice in S84.** Once in running multi-gate full + multi-gate prefix (~3 min total compute) instead of single-gate (~30s); once in declaring MIXED instead of post-hoc SHIP. Both choices traded ~minutes of clarity-yielding compute for an unambiguous verdict.
+
+### Files (Session 84)
+
+**New code (committed):**
+* `analysis/scripts/drill_v57_low_pmid_ds_maxtop_S84.py` — Phase B drill
+* `analysis/scripts/drill_v57_pmid_ds_variant_discriminator_S84.py` — Phase B+ discriminator
+* `analysis/scripts/strategy_v58_lo_pair_ds_maxtop.py` — v58 candidate (DID NOT SHIP)
+* `analysis/scripts/grade_v58_lo_pair_ds_maxtop_S84.py` — Phase C full-grid multi-gate grader
+* `analysis/scripts/grade_v58_prefix_S84.py` — Phase C single-gate prefix grader
+* `analysis/scripts/grade_v58_prefix_multigate_S84.py` — Phase C multi-gate prefix grader
+
+**New artifacts (gitignored under `data/session84/`):**
+* `drill_v57_low_pmid_ds_maxtop_summary.json`
+* `drill_v57_pmid_ds_variant_discriminator_summary.json`
+* `grade_v58_summary.json`
+* `grade_v58_prefix_summary.json`
+* `grade_v58_prefix_multigate_summary.json`
+* `*.log` for each phase
+
+**Documentation:**
+* `SESSION_84_REPORT.md` — session report with plain-language TL;DR
+* `DECISIONS_LOG.md` — this section (Decision 119)
+* `CURRENT_PHASE.md` — rewritten for S85
+* `STRATEGY_GUIDE.md` — NOT updated (no production change)
+
+### Path forward (S85 candidates)
+
+The Option D-revised playbook is alive but variable. S85 default: extend the playbook to **LOW × PMID_SS_MAXTOP** (S77: $9.71 STRUCTURE leak, 85,536 hands). Smaller cell than S84's but possibly cleaner population. Expected outcome: another MIXED or NULL is plausible; SHIP would require either a sharper discriminator than top_alt_rank or a fundamentally different structural mismatch.
+
+Alternative S85 directions:
+* **LOW × PMID_OTHER** (catchall, $11.81 STRUCTURE / 137,808 hands) — may need a richer feature set.
+* **MID pair × PMID_DS_NOMAXTOP** — extend Rule 20 (currently gates on pair_rank 2-7) to higher pair ranks (8-T) with shifted max_sing gate. Tests rule transfer across pair-rank tiers.
+* **Resolve S84 divergence**: run N=1000 labels on the full 128k cell hands (~3-5h compute) to definitively measure whether v58's signal is real or noise. Higher diligence cost, lower information yield than testing a different cell.
+* **HIGH_ONLY × J-high and below** (S71: $14.47 + $4.31 STRUCTURE) — different category, same defensive archetype.

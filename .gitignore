@@ -12,6 +12,7 @@ data/results/
 data/pilot/
 data/*.json
 data/session*/*.json
+data/session*/*.log
 data/*.parquet
 data/*.npz
 data/*.ubj
