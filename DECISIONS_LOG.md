@@ -7537,3 +7537,239 @@ Alternative S85 directions:
 * **MID pair × PMID_DS_NOMAXTOP** — extend Rule 20 (currently gates on pair_rank 2-7) to higher pair ranks (8-T) with shifted max_sing gate. Tests rule transfer across pair-rank tiers.
 * **Resolve S84 divergence**: run N=1000 labels on the full 128k cell hands (~3-5h compute) to definitively measure whether v58's signal is real or noise. Higher diligence cost, lower information yield than testing a different cell.
 * **HIGH_ONLY × J-high and below** (S71: $14.47 + $4.31 STRUCTURE) — different category, same defensive archetype.
+
+
+## Decision 120 — Session 85 v59 candidate NULL: rule auto-fires NULL on both full and prefix grids across all six gates; LOW × PMID_SS_MAXTOP cell residual is real but distributed across three direction-conflicting populations, ceiling argument rules out single-direction extraction
+
+### Session
+
+Session 85 — second cell-level non-ship verdict; first CLEAN NULL on both grids
+(S83 SHIP, S84 MIXED, S85 NULL). The three-session arc on Option D-revised
+continuation now has the cell-property fingerprints needed to predict outcomes.
+
+### Context
+
+S83 shipped Rule 20 on LOW × PMID_DS_NOMAXTOP (sharp discriminator, large
+residual). S84 MIXED on LOW × PMID_DS_MAXTOP (soft discriminator, small
+residual). S85 extends to **LOW × PMID_SS_MAXTOP** (n=85,536, $9.71/1000h
+STRUCTURE leak under v44_dt per S77).
+
+The default expectation (per S85 resume prompt): smaller cell, smaller a
+priori lift, plausibly cleaner population. Result: cell is structurally
+different from S83/S84 (no DS bot achievable at all), residual decomposes
+into three direction-conflicting populations, and no single-direction rule
+clears SHIP by ceiling argument before grading.
+
+### What S85 ran (phases)
+
+**Phase A — Cell verification (no new compute).** Confirmed S77's
+`cell_stats['LOW|PMID_SS_MAXTOP']` reports n=85,536, $25.16 total / $9.71
+STRUCTURE under v44_dt, evenly distributed across pair_ranks 2-7 (14,256 each).
+Confirmed Rule 20 cannot fire on this cell by construction (Rule 20 requires
+n_PMID_DS > 0; cell precondition is n_PMID_DS == 0). So v57 = v56 = v52 on
+this cell.
+
+**Phase B — Drill v57 on cell (~34s compute).** Wrote `drill_v57_low_pmid_ss_maxtop_S85.py`.
+Filtered S77 per-hand parquet to cell_idx==4 (PMID_SS_MAXTOP) AND pair_rank ∈ {2-7}.
+
+* v57 cell-leak: **$15.33/1000h whole-grid** (vs v44's $25.16 — only 39% closed
+  by v52, vs 78% closure on S84's PMID_DS_MAXTOP cell).
+* v57 placement on cell: 100% PMID (no SPLIT, no PBOT).
+* Rule 20 fires on cell (sanity check): **0** ✓.
+* Dominant residual is FRAGMENTED:
+  * v57=PMID_tmax_SS, oracle=PBOT_tmax_SS_mu: 6,508 hands, $2.84/1000h
+  * v57=PMID_tmax_SS, oracle=PBOT_tmax_SS_ms: 5,566 hands, $2.79
+  * v57=PMID_tmax_SS, oracle=PMID_tnomax_31: 6,295 hands, $2.64
+  * v57=PMID_tmax_SS, oracle=PMID_tnomax_SS: 4,130 hands, $1.70
+  * v57=PMID_tmax_SS, oracle=PBOT_tnomax_SS_ms: 2,044 hands, $1.22
+* **Three competing swap-directions:** PBOT-route ($6.85), within-PMID variant
+  ($4.34), OTHER ($4.14).
+* Passes early-out ceiling check ($15.33 > $5).
+
+**Phase B+ — Discriminator drill (~35s compute).** Wrote
+`drill_v57_pmid_ss_swap_discriminator_S85.py` with 4 target populations
+(KEEP_PMID_TMAX, SWAP_TO_PBOT_SS, SWAP_TO_PMID_TNOMAX, OTHER) and 18 candidate
+discriminators.
+
+| feature | KEEP | SWAP_PBOT | Δ_PBOT | SWAP_TNOMAX | Δ_TNOMAX |
+|---|---:|---:|---:|---:|---:|
+| max_sing | 13.42 | 13.24 | −0.17 | **12.33** | **−1.09** |
+| third_max | 8.96 | 8.29 | −0.68 | 7.86 | −1.10 |
+| best_pmid_ss_bph_tmax | 9.67 | 9.39 | −0.28 | 8.52 | −1.15 |
+| best_pbot_ss_bph_tmax_ms | 4.89 | **5.73** | **+0.83** | 4.92 | +0.02 |
+| n_sing_in_pair_suit | 1.72 | 1.38 | −0.34 | 1.69 | −0.03 |
+
+Best discriminator for SWAP_TO_PMID_TNOMAX: `max_sing` (Δ = −1.09, peak swap-rate
+65.9% at max_sing ≤ 11). Best for SWAP_TO_PBOT_SS: `best_pbot_ss_bph_tmax_ms`
+(Δ = +0.83, peak swap-rate 45.9% at val=5). Both substantially softer than
+S83's max_sing (peak 92.8%) and softer than S84's top_alt_rank (peak 67%).
+
+Picked the TNOMAX direction for Phase C because `max_sing` is the cleaner
+feature and the swap-direction is more interpretable as a deterministic rule.
+
+**Phase C-1a — Full grid multi-gate grade, v59 v1 (~6s compute, 6 gates).**
+Wrote `strategy_v59_lo_pair_ss_tnomax.py` (v1) and
+`grade_v59_lo_pair_ss_tnomax_S85.py`. v1 fired on ALL hands matching cell +
+max_sing gate, regardless of v57's pick.
+
+Result: All 6 gates auto-fired NULL. Best gate=9: -$1.51/1000h, 12.1%
+swap-right. Diagnosis: v1 was overriding v57 on populations where v57 was
+already correct (OTHER hands where v57 picks tnomax variants; SWAP_TO_PBOT_SS
+where v57 picks tmax_SS but oracle wants PBOT — forcing tnomax pure harm).
+
+**Phase C-1b — v59 v2 revision.** Restricted the rule to fire only when v57's
+pick is `PMID_tmax_SS`. This scopes the rule to the
+{KEEP_PMID_TMAX ∪ SWAP_TO_PBOT_SS ∪ SWAP_TO_PMID_TNOMAX} subset (~72k of cell's
+85k), excluding the OTHER population where v57 already chose tnomax.
+
+**Phase C-1c — Re-grade full grid with v59 v2 (~6s compute).** All 6 gates
+NULL again. Best gate=9: **-$0.09/1000h, 27.5% swap-right**. Better than v1
+but still NULL by $2.09 (below the $2 NULL threshold).
+
+| Gate (max_sing ≤) | n_fired | swap-right | Lift $/1000h whole-grid | Verdict |
+|---|---:|---:|---:|---|
+|  9 |    360 | 27.5% | **−$0.09** | NULL |
+| 10 |    990 | 29.0% | **−$0.24** | NULL |
+| 11 |  2,250 | 30.6% | **−$0.52** | NULL |
+| 12 | 15,858 | 22.6% | **−$6.49** | NULL |
+| 13 | 38,538 | 18.2% | **−$20.27** | NULL |
+| 14 | 74,178 | 11.0% | **−$62.45** | NULL |
+
+**Phase C-2 — Prefix grid multi-gate grade, v59 v2 (~30s compute, 6 gates).**
+
+| Gate (max_sing ≤) | n_fired | swap-right | Lift $/1000h prefix | Verdict |
+|---|---:|---:|---:|---|
+|  9 |      0 |   —    | **+$0.00**  | NULL |
+| 10 |      0 |   —    | **+$0.00**  | NULL |
+| 11 |      0 |   —    | **+$0.00**  | NULL |
+| 12 |  2,268 | 10.6% | **−$12.81** | NULL |
+| 13 |  6,048 |  7.6% | **−$41.36** | NULL |
+| 14 | 11,970 |  3.9% | **−$131.27**| NULL |
+
+Gates 9-11 fire 0 times in the prefix (canonical IDs 0-499,999 skew toward
+weak hands per `taiwanese_canonical_id_prefix_lesson` memory — few qualifying
+cell hands at low max_sing). Higher gates fire with strongly negative lift.
+
+### Verdict + production state (UNCHANGED)
+
+**VERDICT: NULL (clean).** Both full grid and prefix grid auto-fire NULL on
+all six gates. No two-grid disagreement; the verdict is unambiguous. Even an
+idealized rule with 100% accuracy on SWAP_TO_PMID_TNOMAX would yield
+$4.36/1000h — below the $5 SHIP threshold. The cell's structural composition
+(three direction-conflicting populations) rules out single-direction
+extraction by ceiling argument.
+
+**Production stays at v57.** No strategy-of-record change.
+
+* v57_lo_pair_defensive: **UNCHANGED** at $1,412.53/1000h full / $776.88/1000h prefix.
+* v44_dt ML champion: UNCHANGED ($1,081 full / $686 prefix).
+* Two-track divergence: $332/1000h (unchanged).
+* Total project rule count: **20** (unchanged).
+
+### What this answers about the cascade
+
+1. **Option D-revised playbook ship rate is now 1/3 across tested cells.**
+   S83 SHIP (sharp + large + single-direction), S84 MIXED (soft + small +
+   bidirectional), S85 NULL (moderate + multi-direction). The methodology
+   produces clean candidates and verdicts in all three cases; the verdict
+   is determined by cell properties.
+
+2. **The "sharp discriminator + large residual + single direction" recipe is
+   necessary, not just sufficient.** S85's cell has the largest residual of
+   the three ($15.33) but fails the "single direction" test — residual splits
+   across PBOT, PMID-tnomax, OTHER. No single feature isolates one direction
+   sharply enough to clear SHIP.
+
+3. **A cell can have BOTH high residual AND no shippable single-direction
+   rule.** S85's $15.33 is bigger than S83's measured-after-v56 $59 looks
+   addressable, but the addressable-by-single-direction subset ($4.36 tnomax,
+   $6.98 PBOT) is below SHIP. The under-covered map needs both a
+   **production-residual** column (already established by S84 lessons) AND
+   a **direction-concentration** column.
+
+4. **Cumulative ship potential of remaining cells is bounded.** With 1/3
+   ship rate and ~3 remaining viable cells (MID pair × PMID_DS_NOMAXTOP,
+   LOW × PMID_OTHER, HIGH_ONLY × J-low), the expected additional Rule-20-
+   style ships is roughly 1. This makes the headline-goal recalibration
+   strategy fork more attractive than further cell drilling alone.
+
+### Methodology lessons
+
+1. **The v1 → v2 iteration within Phase C is now a documented pattern:
+   "check v57's pick before overriding."** S85's v1 made the wrong-scope
+   mistake (overrode v57 on populations where v57 was already correct).
+   The grader exposed this clearly (best lift -$1.51, 12% swap-right). v2's
+   restriction (only fire when v57 picks the explicitly-wrong config)
+   narrowed scope and revealed cleaner numbers (best lift -$0.09, 27% swap-
+   right). Both NULL, but v2 is the architecturally correct design.
+   **Future Option D-revised rules should default to v57-pick-restriction.**
+
+2. **Phase B+'s "within {KEEP ∪ SWAP}" swap-rate is an upper bound on rule
+   swap-rate.** The discriminator measures direction-relevant
+   discriminative power; the actual rule fires on a broader population
+   including direction-conflicting cells. **Don't extrapolate Phase B+
+   peak swap-rates to rule swap-rates directly.** Phase C grader is the
+   ground truth.
+
+3. **Ceiling argument is the most important Phase B/B+ output.** If the
+   addressable residual (within the rule's swap direction) is below
+   $5/1000h whole-grid, the rule cannot SHIP regardless of discriminator
+   quality. S85's tnomax-direction ceiling was $4.36 — already below SHIP
+   before Phase C. The Phase B+ analysis should explicitly compute
+   "addressable-direction-residual" as a SHIP-ceiling check, parallel to
+   the Phase B "cell-residual" ceiling check.
+
+4. **Both grids agreeing on NULL is the cleanest outcome shape.** No
+   divergence narrative to navigate. S85's NULL is more decisive than S84's
+   MIXED because both grids point the same direction. The pre-committed-
+   verdict pattern gives this for free.
+
+5. **"Speed is not necessary — clarity and perfection is" cashed out as
+   the v1 → v2 iteration.** Running v1, seeing -$1.51, and *not* declaring
+   NULL prematurely but instead diagnosing the design flaw and fixing it,
+   then re-running, was the right move. The cleaner -$0.09 verdict (vs
+   -$1.51) makes the NULL more robust and the lesson cleaner. Honest
+   iteration > clean narrative.
+
+### Files (Session 85)
+
+**New code (committed):**
+* `analysis/scripts/drill_v57_low_pmid_ss_maxtop_S85.py` — Phase B drill
+* `analysis/scripts/drill_v57_pmid_ss_swap_discriminator_S85.py` — Phase B+
+* `analysis/scripts/strategy_v59_lo_pair_ss_tnomax.py` — v59 candidate (DID NOT SHIP; v1 → v2 iteration)
+* `analysis/scripts/grade_v59_lo_pair_ss_tnomax_S85.py` — Phase C full-grid multi-gate grader
+* `analysis/scripts/grade_v59_prefix_multigate_S85.py` — Phase C prefix multi-gate grader
+
+**New artifacts (gitignored under `data/session85/`):**
+* `drill_v57_low_pmid_ss_maxtop_summary.json`
+* `drill_v57_pmid_ss_swap_discriminator_summary.json`
+* `grade_v59_summary.json`
+* `grade_v59_prefix_multigate_summary.json`
+* `*.log` for each phase (including v1 + v2 full-grid logs)
+
+**Documentation:**
+* `SESSION_85_REPORT.md` — session report with plain-language TL;DR
+* `DECISIONS_LOG.md` — this section (Decision 120)
+* `CURRENT_PHASE.md` — rewritten for S86
+* `STRATEGY_GUIDE.md` — NOT updated (no production change)
+
+### Path forward (S86 candidates)
+
+The Option D-revised playbook is alive but its ship rate is converging
+toward ~1/3. S86 default: extend to **MID pair (rank 8-T) × PMID_DS_NOMAXTOP**,
+the closest analog of S83's shipped Rule 20 cell. Tests whether Rule 20's
+pattern (sharp max_sing discriminator + within-cell variant choice)
+transfers across pair-rank tiers, possibly with a shifted max_sing gate.
+This is the most likely-to-ship next cell because it inherits a known-
+working structural premise.
+
+Alternative S86 directions:
+* **LOW × PMID_OTHER** (catchall, $11.81 STRUCTURE / 138k hands). Largest
+  remaining LOW cell by hand count. Structural premise is "no DS, no SS
+  with maxtop" — these are weak hands with no bot upgrade. Rule may be
+  about pair placement (PMID vs PBOT vs SPLIT) at the macro level.
+* **HIGH_ONLY × J-high and below** (S71: $14.47 + $4.31 STRUCTURE) —
+  different category but similar defensive-routing archetype.
+* **Headline-goal recalibration** — increasingly attractive given S83+S84+S85
+  ship-rate trend. With ~1 more ship expected from remaining cells, the
+  cumulative under-covered-cell potential is bounded.
