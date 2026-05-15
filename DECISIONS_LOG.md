@@ -7773,3 +7773,274 @@ Alternative S86 directions:
 * **Headline-goal recalibration** — increasingly attractive given S83+S84+S85
   ship-rate trend. With ~1 more ship expected from remaining cells, the
   cumulative under-covered-cell potential is bounded.
+
+## Decision 121 — Session 86 v60 candidate MIXED by methodology: full-grid SHIP at +$6.43/1000h on MID × PMID_DS_NOMAXTOP (Rule 20 extension to MID pair tier), but prefix-grid has ZERO applicable hands (canonical_id coverage gap — MID pair × PMID_DS_NOMAXTOP starts at canonical_id 593,072, outside prefix 0-499,999); two-grid SHIP standard cannot be applied; production stays at v57
+
+### Session
+
+Session 86 — first MIXED verdict driven by methodology coverage rather than
+signal failure. Surfaces a previously-implicit limitation of the S84 two-grid
+SHIP standard.
+
+### Context
+
+S83 shipped Rule 20 on LOW × PMID_DS_NOMAXTOP (sharp discriminator, single-
+direction-concentrated $59 residual, +$16.81 prefix). S84 MIXED on LOW ×
+PMID_DS_MAXTOP (small residual, soft discriminator). S85 NULL on LOW ×
+PMID_SS_MAXTOP (fragmented residual). S86 extends to **MID pair (rank 8-T)
+× PMID_DS_NOMAXTOP** — the natural cell-shape analog of S83's shipped cell,
+expected to be the most likely-to-ship next cell.
+
+### What S86 ran (phases)
+
+**Phase A — Cell verification (no new compute).** From S77 cell_stats:
+n=114,048 hands across pair_rank {8,9,T} (38,016 each), v44 leak $27.26/1000h.
+Top mismatch pattern mirrors S83's exactly: PMID_tmax_SS → PMID_tnomax_DS
+is the #1 swap-direction (15,770 hands @ $8.09/1000h under v44 combined
+across ranks 8/9/T). Rule 20 confirmed by code inspection to never fire on
+MID pair (its pair_rank gate is LOW {2-7}).
+
+**Phase B — Drill v57 on cell (44s compute).** Wrote
+`drill_v57_mid_pmid_ds_nomaxtop_S86.py`.
+
+* v57 cell-leak: **$31.17/1000h whole-grid** (vs v44's $27.26 — v52's
+  pair-routing-to-mid INCREASES the within-PMID variant leak because v52
+  defaults to tmax variants).
+* 100% PMID placement under v57 (no SPLIT, no PBOT).
+* Rule 20 fires on MID cell (sanity check): **0** ✓.
+* Top mismatches:
+  * PMID_tmax_SS → PMID_tnomax_DS: 23,657 hands, $14.72/1000h
+  * PMID_tmax_31 → PMID_tnomax_DS: 13,166 hands, $8.21/1000h (NEW at MID
+    tier — not present at LOW tier where v52 picks tmax_SS dominantly)
+  * Combined direction-residual PMID_tmax_{SS,31} → PMID_tnomax_DS:
+    **~$22.96/1000h**.
+* PASSES early-out ceiling check ($31.17 ≫ $5).
+
+**Phase B+ — Discriminator drill (42s compute).** Wrote
+`drill_v57_mid_pmid_ds_swap_discriminator_S86.py`.
+
+Population summary:
+
+| Population | n | % of cell | $/1000h |
+|---|---:|---:|---:|
+| KEEP_TMAX (v57=oracle=tmax) | 54,221 | 47.5% | $0.00 |
+| SWAP_TO_TNOMAX_DS | 38,499 | 33.8% | **$22.98** |
+| SWAP_TO_PBOT_SS | 10,468 | 9.2% | $4.77 |
+| OTHER | 6,876 | 6.0% | $2.88 |
+| NOT_TMAX | 3,984 | 3.5% | $0.53 |
+
+max_sing discriminator per-value (within KEEP_TMAX ∪ SWAP_TO_TNOMAX_DS):
+
+| max_sing | KEEP | SWAP | swap_pct |
+|---:|---:|---:|---:|
+| 9 | 97 | 519 | **84.3%** |
+| T | 634 | 2,187 | 77.5% |
+| J | 2,023 | 6,100 | 75.1% |
+| Q | 5,341 | 9,840 | 64.8% |
+| K | 12,342 | 12,827 | 51.0% |
+| A | 33,784 | 7,026 | 17.2% |
+
+Softer than S83's max_sing (peak 92.8%) but still meaningfully sharp. Per-pair-
+rank breakdown shows rank 8 sharpest, rank T softest — consistent with higher
+pair tiers reducing the marginal value of max-on-top.
+
+**Addressable-direction-residual (S85 ceiling check):** SWAP_TO_TNOMAX_DS at
+**$22.98** — 4.6× the SHIP ceiling. PROCEED-PHASE-C.
+
+**Phase C-1 — Full grid multi-gate grade (~30s compute, 5 gates).** Wrote
+`strategy_v60_mid_pair_ds_nomaxtop.py` (with v57-pick-restriction per S85
+design pattern) and `grade_v60_mid_pair_ds_nomaxtop_S86.py`.
+
+| Gate (max_sing ≤) | n_fired | swap-right | rank 8 | rank 9 | rank T | TOTAL $/1000h | Verdict |
+|---|---:|---:|---:|---:|---:|---:|---|
+| 10 | 4,080 | 74.7% | +$1.12 | +$0.51 | +$0.00 | +$1.63 | NULL |
+| 11 | 14,160 | 70.6% | +$2.76 | +$1.59 | +$0.50 | +$4.85 | MIXED |
+| **12 (Q)** | **32,304** | **62.0%** | **+$4.14** | **+$2.20** | **+$0.09** | **+$6.43** | **SHIP** |
+| 13 | 62,544 | 50.6% | +$3.28 | +$0.07 | -$3.43 | -$0.08 | NULL |
+| 14 | 110,064 | 33.1% | -$14.39 | -$17.10 | -$22.97 | -$54.47 | NULL |
+
+**Best full-grid verdict: SHIP at gate=Q at +$6.43/1000h.** Per-rank lift
+positive on all three pair_ranks (rank 8 +$4.14, rank 9 +$2.20, rank T +$0.09)
+— signal is distributed, not single-rank artifact.
+
+**Phase C-2 — Prefix grid multi-gate grade (~110s compute, 5 gates).** Wrote
+`grade_v60_prefix_multigate_S86.py`.
+
+| Gate (max_sing ≤) | n_fired | Lift $/1000h prefix | Verdict |
+|---|---:|---:|---|
+| 10 | 0 | $0.00 | NULL |
+| 11 | 0 | $0.00 | NULL |
+| 12 | 0 | $0.00 | NULL |
+| 13 | 0 | $0.00 | NULL |
+| 14 | 0 | $0.00 | NULL |
+
+**n_fired = 0 across all five gates.** Investigation:
+```
+MID × PMID_DS_NOMAXTOP cell hands (n=114,048):
+  canonical_id range: 593,072 to 6,000,984
+  hands with canonical_id < 500,000: 0  ← prefix sees none
+```
+
+The prefix grader is **structurally silent** for this cell, not contradictory.
+The prefix grid's canonical-id ordering (0-499,999 = weakest hands) excludes
+MID pair × PMID_DS_NOMAXTOP entirely.
+
+### Verdict + production state (UNCHANGED)
+
+**VERDICT: MIXED.** Full grid clears SHIP at +$6.43; prefix grid is silent
+(zero applicable hands by canonical-id coverage gap). By the S84 two-grid
+SHIP standard ("both grids ≥ $5"), full-grid SHIP alone is not sufficient.
+The mechanical verdict is MIXED.
+
+**Production stays at v57.** No strategy-of-record change.
+
+* v57_lo_pair_defensive: **UNCHANGED** at $1,412.53/1000h full / $776.88/1000h prefix.
+* v44_dt ML champion: UNCHANGED ($1,081 full / $686 prefix).
+* Two-track divergence: $332/1000h (unchanged).
+* Total project rule count: **20** (unchanged).
+
+### Session-meta discovery — prefix-grid coverage limit
+
+S86 surfaces a previously-implicit limitation of the project's two-grid SHIP
+standard: **the prefix grid (canonical_id 0-499,999, N=1000 oracle labels)
+has a hand-rank coverage gap.** Cells whose canonical_id range starts above
+500K are invisible to the prefix grader.
+
+**Affected zones (estimated from canonical-ordering structure):**
+* MID-pair cells (rank 8-T) for the four pair-cell variants tested or
+  to-be-tested by Option D-revised.
+* HIGH-pair cells (rank J-A) for any pair-based extension.
+* High-card cells (HIGH_ONLY with strong top cards) — likely fully outside
+  prefix.
+
+**Cells already-tested where prefix coverage held:**
+* LOW pair (rank 2-7) cells had prefix coverage (S83 ship had ~17% of LOW
+  × PMID_DS_NOMAXTOP cell within prefix; S84 / S85 cells similarly covered).
+  The two-grid standard works as designed for LOW pair.
+
+**Implication for Option D-revised continuation:** Future cells in
+under-rule-covered zones above LOW pair will face the same coverage gap.
+The two-grid SHIP standard cannot be applied mechanically.
+
+### What this answers about the cascade
+
+1. **The S84 two-grid SHIP standard has a hand-rank coverage limit.** It
+   works as designed for LOW-pair cells but is silent for MID-pair and
+   higher tiers. This is a methodology issue, not a signal-quality issue.
+
+2. **The full-grid signal for v60 is structurally robust.** Per-rank lift
+   positive on all three ranks; single-direction residual $22.98 (4.6×
+   ceiling); sharp monotone discriminator; mechanism mirrors shipped Rule 20.
+   The reasons the full-grid signal is trustworthy are the same reasons
+   S83's Rule 20 shipped at LOW pair.
+
+3. **Cumulative ship potential of remaining cells depends on the
+   methodology call.** If the two-grid standard is relaxed for prefix-silent
+   cells, v60 ships immediately. If maintained strictly, S86's MIXED holds
+   and the prefix-coverage gap caps Option D-revised at LOW pair only.
+
+4. **S86 ship rate is 1/4 across tested cells (1 strict SHIP / 1 strict
+   MIXED / 1 NULL / 1 methodology-bound MIXED).** The recipe for STRICT
+   SHIP requires: sharp discriminator × large residual × single direction
+   × prefix coverage. Cells missing the last condition can have everything
+   else right and still fail the standard.
+
+### Methodology lessons
+
+1. **The Phase B/B+/C playbook is now a 4-cell-validated infrastructure.**
+   Same scripts adapted across pair-rank tiers. Each new cell adapts:
+   `drill_v57_<cell>_S<n>.py`, `drill_v57_<cell>_discriminator_S<n>.py`,
+   `strategy_v<n>_<rule>.py`, `grade_v<n>_<cell>_S<n>.py`,
+   `grade_v<n>_prefix_multigate_S<n>.py`. Infrastructure cost is near-zero
+   per cell.
+
+2. **The S85 v57-pick-restriction design pattern transferred cleanly to
+   v60.** No v1→v2 iteration needed; the pattern is now standardized for
+   under-covered-cell rules. The extension was a 1-function change
+   (`_v57_picked_pmid_tmax_style` checks top=max_sing AND mid=pair).
+
+3. **Pre-committed thresholds removed all interpretive ambiguity again.**
+   Full grid auto-fired SHIP at gate=Q. Prefix auto-fired NULL across all
+   gates. The verdict synthesis (MIXED) was mechanical, not narrative.
+
+4. **NEW S86 lesson — distinguish "prefix-NULL" from "prefix-silent" in
+   grader output.** When n_fired=0 across all gates, the verdict should be
+   reported as "uninformative due to coverage gap" rather than "NULL".
+   Future graders should emit canonical_id range metadata alongside the
+   prefix-lift value to make the distinction explicit.
+
+5. **NEW S86 lesson — canonical_id coverage check belongs in Phase A.**
+   Before designing a rule for a cell, check whether the cell has hands
+   in the prefix's canonical_id range. If not, surface the two-grid
+   standard's inapplicability immediately, not at the end of Phase C.
+
+6. **NEW S86 lesson — the two-grid SHIP standard needs an explicit clause
+   for prefix-silent cells.** Three resolution options for project policy:
+   (a) Require prefix coverage as a prerequisite (rules out MID+ pair
+       extensions until N=1000 oracle is expanded).
+   (b) Relax to "two-grid-when-applicable" (full-grid SHIP suffices when
+       prefix is silent; tightens other safeguards).
+   (c) Generate per-cell N=1000 oracle subsets to extend prefix coverage
+       as needed (~hours-per-cell compute).
+   **This is a user decision surfaced for S87.**
+
+7. **"Speed is not necessary — clarity and perfection is" cashed out as
+   running the prefix grader even when the cell-coverage analysis predicted
+   it would be silent.** The mechanical $0.00 prefix lift confirms the
+   coverage gap empirically. This makes the methodology discovery
+   defensible rather than speculative.
+
+### Files (Session 86)
+
+**New code (committed):**
+* `analysis/scripts/drill_v57_mid_pmid_ds_nomaxtop_S86.py` — Phase B drill
+* `analysis/scripts/drill_v57_mid_pmid_ds_swap_discriminator_S86.py` — Phase B+ discriminator
+* `analysis/scripts/strategy_v60_mid_pair_ds_nomaxtop.py` — v60 candidate (DID NOT SHIP — MIXED)
+* `analysis/scripts/grade_v60_mid_pair_ds_nomaxtop_S86.py` — Phase C full-grid multi-gate grader
+* `analysis/scripts/grade_v60_prefix_multigate_S86.py` — Phase C prefix multi-gate grader
+
+**New artifacts (gitignored under `data/session86/`):**
+* `drill_v57_mid_pmid_ds_nomaxtop_summary.json`
+* `drill_v57_mid_pmid_ds_swap_discriminator_summary.json`
+* `grade_v60_summary.json`
+* `grade_v60_prefix_multigate_summary.json`
+* `*.log` for each phase
+
+**Documentation:**
+* `SESSION_86_REPORT.md` — session report with plain-language TL;DR
+* `DECISIONS_LOG.md` — this section (Decision 121)
+* `CURRENT_PHASE.md` — rewritten for S87
+* `STRATEGY_GUIDE.md` — NOT updated (no production change)
+
+### Path forward (S87 candidates)
+
+**Primary question for user (surfaced from S86 discovery):** How to handle
+the prefix-grid coverage gap?
+
+* **Option A — Accept MIXED and pivot to LOW × PMID_OTHER** (S77: $11.81
+  v44 STRUCTURE / 138K hands). Largest remaining LOW pair cell by hand
+  count. Prefix coverage holds (37,969 of 228K LOW × PMID_DS_NOMAXTOP hands
+  are in the prefix; LOW × PMID_OTHER similar). Different rule shape (no
+  DS available — likely about pair placement at the macro level).
+
+* **Option B — Override S86 MIXED and ship v60 on full-grid evidence.**
+  Precedent: S83 shipped Rule 20 on full-grid alone (the two-grid standard
+  didn't exist yet). The full-grid signal for v60 is structurally robust
+  (per-rank validated, single-direction-concentrated, mechanism-identical-
+  to-S83). Production becomes v60_lo_pair_defensive + Rule 21
+  (MID-pair extension). Ship gate=Q; ~+$6.43 full-grid lift.
+
+* **Option C — Run N=1000 oracle subset on cell to validate rigorously.**
+  Generate N=1000 labels on the 32,304 fired hands at gate=Q (or all 114K
+  cell hands). ~few hours compute. Confirms full-grid lift against label
+  noise. Most rigorous but most expensive.
+
+* **Option D — Headline-goal recalibration discussion.** With ship rate
+  trending toward 1/4 (1 strict SHIP / 3 non-SHIP across S83-S86), the
+  cumulative under-covered-cell reachable lift is bounded. The gap to 95%
+  match% is unlikely to close by extraction alone. Worth surfacing.
+
+Default S87 plan if user defers: pursue **Option A** (LOW × PMID_OTHER)
+as the safest next test, retaining v60 in scripts as documented MIXED
+candidate. Methodology question deferred until cumulative evidence
+warrants policy change.
