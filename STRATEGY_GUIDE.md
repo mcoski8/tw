@@ -12,7 +12,7 @@
 > 5. Where each rule + model lives in code
 > 6. **The Current Standard** (at the bottom — the rules to memorize, the model to call)
 >
-> Last updated: 2026-05-13 (Session 79 — **MEASUREMENT-ONLY / NO STRATEGY OF RECORD CHANGED: label-noise measurement on existing 500K N=1000 prefix grid vs the same 500K hands labeled at N=200 in the full grid.** 500K hands swept in 68.8s (~7,263 hands/s). v44 match rate vs N=200 = 72.98%, vs N=1000 = 67.05% — **match-rate shift = −5.93pp**, with **oracle self-agreement of 68.00%** (N=200 vs N=1000 argmax disagree on 32% of hands). Bucket-level decomposition shows the MATCH bucket (rank 1, 73% of mass) loses 21.89pp at N=1000 (v44 memorizing N=200 noise) while the NOISE bucket (rank 2-3, 19.5% of mass) gains +43.58pp (most of v44's apparent "leak" at N=200 was just label noise). Per-category, pair (+2.10pp) and three_pair (+1.59pp) are least-overfit; two_pair (−13.69pp) and trips_pair (−19.43pp) are most-overfit. The pre-committed shift-based criterion read mechanically as **C-PATH** (shift < +2pp → "labels stable, real model error") but its underlying assumption is refuted by the 32% oracle self-disagreement, so the **honest verdict is MIXED — surface options to user**. Decision 114 records the MIXED verdict + criterion blind spot + S80 plan: **M2 = parallel A1 + C2 one-session experiments** (A1: retrain v44 DT on N=1000 prefix labels; C2: regularize v44 DT with max_leaf_nodes=500K and min_samples_leaf=5). S81 chooses among A2/C1/M1/headline-recalibration based on which experiment lifts N=1000 match rate above v44's 67.05%. **No ship attempted; production UNCHANGED for the eighth consecutive session.** Previous front-matter (S78 — v48_dt H6/H7/H8 NULL): v48_dt H6+H7+H8 pair feature pack CLEAN NULL at prefix grade Δ +$2/1000h** (v44_dt $686 → v48_dt $684; within-pair lift +$5/1000h on 215,162 hands, $595→$590; all other categories byte-identical, confirming gating works correctly). Per S78 directive `prefix Δ < +$5 → NULL ship`, Phase 6 (full grade) was SKIPPED. Phase 1 implemented and sanity-tested H6 (`pair_pmid_ds_n_configs_g`, int8 0..5 — actual reachable values {0,1,3}), H7 (`pair_kicker_max_in_pair_suit_g`, bool 0/1), H8 (`pair_low_pmid_safety_g`, int8 0..5 LOW-pair-only). H8's inline cell logic cross-validated against S66's `compute_pair_structural` on 23,377 random pair hands (0 disagreements). Phase 2 persisted three gated parquets (~18.6 MB each) with zero-on-non-gated verification. Phase 3 smoke train (100K rows, 2.5s wall) placed H7 #51 / H8 #69 / H6 #73 — under abort-rank #80 but well below top-30 ideal. Phase 4 full train (4.8M rows, 578s wall, 2.29M leaves, 1,285 MB) improved placements to H7 #43 / H8 #57 / H6 #68. **Why the predicted lift didn't land — structural-redundancy NULL reconfirmed.** S77 budgeted 50% redundancy across H6+H7+H8 and predicted $30-45/1000h within-pair joint lift; observed effective redundancy is ~85-90% at v44's 2.25M-leaf saturating regime. Three contributors: (a) H6 only emits {0,1,3} due to deck structure (suit profile 2+2+1 → 1 config, 3+2 → 3 configs, else → 0) — partitioning surface ~3 bits, not the planned 6; (b) H7's 1-bit signal is derivable in 2 splits from `pair_kickers_in_pair_suit_max_g ≥ 1 AND pair_default_top_rank_g == max_sing_rank`; (c) H8's 5-split cell synthesis is reachable in 3-4 splits at v44's saturating capacity via `pair_aug_v5_bot_DS_n_configs_g` + `pair_r4_bot_suit_profile_g` + `pair_kickers_in_pair_suit_*_g`. **The S74 redundancy doctrine — features the DT can derive in <few splits at saturation capture zero or near-zero lift — is empirically reconfirmed.** S77's project-cleanest diagnostic (sharp gap_2nd 0.385, single dominant mismatch class with $10.97/1000h on 3,072 hands) does NOT break the redundancy ceiling. Diagnostic precision and feature lift are orthogonal at saturation. **Decision 113: single-model ML feature-engineering track formally CLOSED at v44 regime.** Six consecutive sessions (S72 NULL, S73 PARTIAL/NULL, S74 NULL, S75 boosting NULL, S77 diagnostic, S78 NULL) failed to ship. Path forward priority order: (1) Option D rule-chain extension on S77 LOW pair kicker_max-in-pair-suit discriminator — operates at rule layer outside DT saturation, where redundancy ceiling does NOT apply; (2) fresh cross-product diagnostic on two_pair / trips STRUCTURE under S71-bucket × cell lens (never probed); (3) Option A oracle-label N=1000 re-eval (gated on cluster access). Production state UNCHANGED for the **seventh** consecutive session.)
+> Last updated: 2026-05-15 (Session 83 — **STRATEGY OF RECORD CHANGED: v56 → v57_lo_pair_defensive. First production change in 12 sessions.** v57 adds Rule 20 (LOW pair × PMID_DS_NOMAXTOP × max_sing ≤ Q → force PMID with DS-bot and non-max top) over v56. Pre-committed grader auto-fired SHIP on both grids: +$16.47/1000h whole-grid (v56 $1,429 → v57 $1,412.53), +$16.81/1000h prefix (v56 $794 → v57 $776.88), prefix match% 66.07% → 66.49% (+0.42pp). Mechanism: v56 (= v52 for this cell) over-routes to max-kicker-on-top + single-suited bot when oracle wants drop-max + double-suited bot; the LOW pair has no offensive top potential so the DS-bot trade is the real value. Discriminator `max_sing` is razor-sharp: swap-right 89-93% at ≤J, 77% at Q, 54% at K, WRONG 86% at A. Multi-gate grade chose Q as the lift maximum (K still ships at +$12.94 but smaller; A is catastrophic NULL at −$89). User's strategic redirect at end of S82 — "stop min-maxing well-covered areas, focus on under-rule-covered weak-hand zones" — was the load-bearing decision. Rule count: 19 → **20**. Two-track divergence v57-vs-v44: $332/1000h (was $348; cumulative closure since pre-S68 is 76% of original $1,409). Decision 118 records the ship + methodology. The Option D rule-layer track is now FORMALLY VALIDATED as alive while the ML-cascade track remains exhausted at v44 saturating regime per Decisions 113 + 117. S84 default plan: extend playbook to LOW pair × PMID_DS_MAXTOP ($21.68 STRUCTURE leak). Previous front-matter (S79 — **MEASUREMENT-ONLY / NO STRATEGY OF RECORD CHANGED: label-noise measurement on existing 500K N=1000 prefix grid vs the same 500K hands labeled at N=200 in the full grid.** 500K hands swept in 68.8s (~7,263 hands/s). v44 match rate vs N=200 = 72.98%, vs N=1000 = 67.05% — **match-rate shift = −5.93pp**, with **oracle self-agreement of 68.00%** (N=200 vs N=1000 argmax disagree on 32% of hands). Bucket-level decomposition shows the MATCH bucket (rank 1, 73% of mass) loses 21.89pp at N=1000 (v44 memorizing N=200 noise) while the NOISE bucket (rank 2-3, 19.5% of mass) gains +43.58pp (most of v44's apparent "leak" at N=200 was just label noise). Per-category, pair (+2.10pp) and three_pair (+1.59pp) are least-overfit; two_pair (−13.69pp) and trips_pair (−19.43pp) are most-overfit. The pre-committed shift-based criterion read mechanically as **C-PATH** (shift < +2pp → "labels stable, real model error") but its underlying assumption is refuted by the 32% oracle self-disagreement, so the **honest verdict is MIXED — surface options to user**. Decision 114 records the MIXED verdict + criterion blind spot + S80 plan: **M2 = parallel A1 + C2 one-session experiments** (A1: retrain v44 DT on N=1000 prefix labels; C2: regularize v44 DT with max_leaf_nodes=500K and min_samples_leaf=5). S81 chooses among A2/C1/M1/headline-recalibration based on which experiment lifts N=1000 match rate above v44's 67.05%. **No ship attempted; production UNCHANGED for the eighth consecutive session.** Previous front-matter (S78 — v48_dt H6/H7/H8 NULL): v48_dt H6+H7+H8 pair feature pack CLEAN NULL at prefix grade Δ +$2/1000h** (v44_dt $686 → v48_dt $684; within-pair lift +$5/1000h on 215,162 hands, $595→$590; all other categories byte-identical, confirming gating works correctly). Per S78 directive `prefix Δ < +$5 → NULL ship`, Phase 6 (full grade) was SKIPPED. Phase 1 implemented and sanity-tested H6 (`pair_pmid_ds_n_configs_g`, int8 0..5 — actual reachable values {0,1,3}), H7 (`pair_kicker_max_in_pair_suit_g`, bool 0/1), H8 (`pair_low_pmid_safety_g`, int8 0..5 LOW-pair-only). H8's inline cell logic cross-validated against S66's `compute_pair_structural` on 23,377 random pair hands (0 disagreements). Phase 2 persisted three gated parquets (~18.6 MB each) with zero-on-non-gated verification. Phase 3 smoke train (100K rows, 2.5s wall) placed H7 #51 / H8 #69 / H6 #73 — under abort-rank #80 but well below top-30 ideal. Phase 4 full train (4.8M rows, 578s wall, 2.29M leaves, 1,285 MB) improved placements to H7 #43 / H8 #57 / H6 #68. **Why the predicted lift didn't land — structural-redundancy NULL reconfirmed.** S77 budgeted 50% redundancy across H6+H7+H8 and predicted $30-45/1000h within-pair joint lift; observed effective redundancy is ~85-90% at v44's 2.25M-leaf saturating regime. Three contributors: (a) H6 only emits {0,1,3} due to deck structure (suit profile 2+2+1 → 1 config, 3+2 → 3 configs, else → 0) — partitioning surface ~3 bits, not the planned 6; (b) H7's 1-bit signal is derivable in 2 splits from `pair_kickers_in_pair_suit_max_g ≥ 1 AND pair_default_top_rank_g == max_sing_rank`; (c) H8's 5-split cell synthesis is reachable in 3-4 splits at v44's saturating capacity via `pair_aug_v5_bot_DS_n_configs_g` + `pair_r4_bot_suit_profile_g` + `pair_kickers_in_pair_suit_*_g`. **The S74 redundancy doctrine — features the DT can derive in <few splits at saturation capture zero or near-zero lift — is empirically reconfirmed.** S77's project-cleanest diagnostic (sharp gap_2nd 0.385, single dominant mismatch class with $10.97/1000h on 3,072 hands) does NOT break the redundancy ceiling. Diagnostic precision and feature lift are orthogonal at saturation. **Decision 113: single-model ML feature-engineering track formally CLOSED at v44 regime.** Six consecutive sessions (S72 NULL, S73 PARTIAL/NULL, S74 NULL, S75 boosting NULL, S77 diagnostic, S78 NULL) failed to ship. Path forward priority order: (1) Option D rule-chain extension on S77 LOW pair kicker_max-in-pair-suit discriminator — operates at rule layer outside DT saturation, where redundancy ceiling does NOT apply; (2) fresh cross-product diagnostic on two_pair / trips STRUCTURE under S71-bucket × cell lens (never probed); (3) Option A oracle-label N=1000 re-eval (gated on cluster access). Production state UNCHANGED for the **seventh** consecutive session.)
 
 ---
 
@@ -1868,6 +1868,62 @@ In 3 consecutive sessions, the project closed 75% of the original two-track dive
 
 **End of S70:** Rule chain ADVANCES to v56 ($1,429 full / $794 prefix). ML champion UNCHANGED at v44_dt. **Trips catalog CLOSED. Two_pair catalog CLOSED. Pair catalog CLOSED. High_only catalog CLOSED.** S71+ pivots to ML retrain (v45_dt+) — high_only diagnostic-driven feature engineering targeting v44's largest single-category residual ($755 WG = 12.6% of grid). Any v44 improvement now compounds 4× via v54+v55+v56.
 
+## Session 83: v57 SHIPS Rule 20 (LOW pair defensive PMID-DS swap) — first production change in 12 sessions; rule-layer Option D-revised track validated alive
+
+**The story:** S71-S82 ran 12 consecutive sessions of ML cascade work — diagnostic, feature engineering (S78 NULL), gradient boosting (S75 NULL), oracle label expansion (A2 S82 NULL). All zero-signal at v44's saturating regime (Decisions 113 + 117). End of S82 surfaced a user-owned strategic fork (A3 vs headline-recalibration vs Option D dormant lever). User picked **Option D with a refinement: "stop min-maxing well-covered areas; focus on under-rule-covered weak-hand zones."** This reframe was the load-bearing decision.
+
+S83 executed in one session by reusing all S66 + S77 diagnostic templates. Phase A synthesized existing drill outputs (no new compute) → coverage map: PAIR carries $511 total leak with only one rule (Rule 19 on Q-pair PBOT_DS_JOINT), while HIGH_ONLY carries $381 with three rules + Rule 17 defensive. PAIR is 4× under-covered by rule count. Phase B drilled LOW × PMID_DS_NOMAXTOP under PRODUCTION v56 (NOT v44, per "always grade production" lesson): v56 leaks $59.42/1000h there but with a totally different leak structure from v44 — v56 doesn't SPLIT low pair at all (100% PMID), and instead picks the wrong PMID variant. Phase B+ identified `max_sing` (rank of largest non-pair card) as a razor-sharp discriminator. Phase C wrote v57 with parametric gate and ran multi-gate grade with **pre-committed SHIP/NULL/MIXED thresholds hardcoded in code** (S81/S82 NULL-pattern transferred cleanly to a SHIP).
+
+**Result: v57 SHIPS. Pre-committed grader auto-fired SHIP on both grids.** Full grid: +$16.47/1000h whole-grid (v56 $1,429 → v57 $1,412.53). Prefix N=1000: +$16.81/1000h (v56 $794 → v57 $776.88), match% 66.07% → 66.49% (+0.42pp). 6,048 picks changed on the prefix grid out of 12,096 rule fires.
+
+### Rule 20 design
+
+Trigger (all must be true):
+* pair_rank ∈ {2,3,4,5,6,7} (LOW)
+* PBOT_DS not achievable (neither pair-suit represented among 5 singletons)
+* PMID_DS achievable (some 4-of-5-singleton subset has 2+2 pattern)
+* All PMID_DS configs require max_sing in bot (no DS-with-maxtop config)
+* max_sing ≤ Q (12)
+
+Setting (when triggered):
+* mid = both pair cards
+* bot = 4-singleton subset forming the best DS config (highest bot_pair_high — must include max_sing per cell)
+* top = leftover singleton (NOT max_sing per cell definition)
+
+Plain-language: "small pair (2-7) with no flush draw, max kicker is Queen or lower, DS-bot achievable only if max kicker goes in bot — drop max into bot, take the DS, put a smaller singleton on top. The LOW pair has no offensive top potential; the DS-bot trade is the real value."
+
+### Multi-gate grade
+
+| Gate (max_sing ≤) | n_fired | swap-right rate | Full-grid lift | Verdict |
+|---|---:|---:|---:|---|
+| J (≤11) | 36,288 | 85.0% | +$3.69 | MIXED |
+| **Q (≤12)** | **72,576** | **72.8%** | **+$16.47** | **SHIP** |
+| K (≤13) | 133,056 | 56.9% | +$12.94 | SHIP (smaller) |
+| A (≤14) | 228,096 | 33.6% | −$88.95 | NULL (catastrophic) |
+
+Q is the lift maximum. The full surface (J: $3.69 / Q: $16.47 / K: $12.94 / A: −$88.95) shows clean structure — a single-gate grade would have shipped Q but missed the surface. Multi-gate is now the standard for parametric rules.
+
+### Cumulative two-track divergence closure
+
+| Session | rule-chain vs v44 divergence | Δ this session |
+|---|---:|---:|
+| Pre-S68 | $1,409 | baseline |
+| Post-S68 (v54) | $1,027 | −$382 |
+| Post-S69 (v55) | $393 | −$634 |
+| Post-S70 (v56) | $348 | −$45 |
+| S71-S82 (UNCHANGED for 12 sessions) | $348 | $0 (ML cascade NULL) |
+| **Post-S83 (v57)** | **$332** | **−$16 (rule-layer extraction)** |
+
+Cumulative closure since pre-S68: **$1,077 of $1,409 = 76%** (was 75%).
+
+**Score: $1,412.53/1000h on full grid, $776.88 on prefix. Improvement: −$1,952 vs v8 baseline, −$16 vs v56.** Rule count: 19 → **20** (Rule 20 added).
+
+**Methodology lesson — the user's strategic redirect at end of S82 was load-bearing.** Option D was originally "implement S77's specific kicker_max-in-pair-suit discriminator." User reframed it to "under-rule-covered weak-hand zones broadly." That shift moved the scope from a narrow v44-mismatch fix to a production-leak fix. S83 then proved that the rule-layer track operates OUTSIDE the v44 saturating regime that NULLed S78 and S82 — the same cells that the DT can't help (because of v44's structural-redundancy ceiling per Decision 113) can yield clean rule-extraction ships at the rule-chain level. **The Option D playbook generalizes:** S84+ extends it to LOW × PMID_DS_MAXTOP (next-largest under-covered cell at $21.68 STRUCTURE), then the other three LOW pair cells, then MID pair cells, then HIGH_ONLY LOW.
+
+**Also: pre-committed grader thresholds in code transferred cleanly from S81/S82's NULL pattern to S83's SHIP.** SHIP/NULL/MIXED thresholds hardcoded before the data lands; grader prints the verdict next to the numbers; no interpretation arbitrage. This is now project standard for any ship-or-null experiment.
+
+**End of S83:** Rule chain ADVANCES to **v57_lo_pair_defensive** ($1,412.53 full / $776.88 prefix). ML champion UNCHANGED at v44_dt ($1,081 full / $686 prefix). **Option D-revised rule-layer track FORMALLY VALIDATED as alive while ML-cascade track remains exhausted per Decisions 113 + 117.** S84 default: extend playbook to LOW pair × PMID_DS_MAXTOP using identical recipe (Phase B drill on v57, Phase B+ discriminator, Phase C multi-gate grade with pre-committed verdicts).
+
 ---
 
 # Part 2 — ML champion progression (the full table)
@@ -2114,7 +2170,13 @@ guide can keep them as human-memorizable approximations.
 - Combined chain (14 rules) → `analysis/scripts/strategy_v45_rule14_Ahigh_DS.py` (wraps v44 with Rule 14). Superseded by v46.
 - Combined chain (15 rules) → `analysis/scripts/strategy_v46_rule15_Khigh_DS.py` (wraps v45 with Rule 15). Superseded by v47.
 - Combined chain (16 rules) → `analysis/scripts/strategy_v47_rule16_Qhigh_DS.py` (wraps v46 with Rule 16). Superseded by v52.
-- **Combined chain (17 rules, CURRENT PRODUCTION)** → `analysis/scripts/strategy_v52_full_high_only_handler.py` (wraps v47 with Rule 17 = comprehensive high_only generalized handler covering all max ≥ 7 sub-pops)
+- Combined chain (17 rules, S53) → `analysis/scripts/strategy_v52_full_high_only_handler.py` (wraps v47 with Rule 17 = comprehensive high_only generalized handler covering all max ≥ 7 sub-pops). Supersesed by the S67-S70 hybrid chain (v53/v54/v55/v56 = architectural routing through v44_dt for pair-PBOT-DS, two_pair, and trips categories) and now by v57 with Rule 20.
+- Rule 19 — Q-pair × PBOT_DS_JOINT (Session 67) → embedded in `analysis/scripts/strategy_v53_qpair_joint_pbot.py` — trigger: cat=pair AND pair_rank=Q AND PBOT_DS_JOINT cell. Setting: both Q's to bot + 2 singletons completing DS pattern, mid = 2 same-suited remaining singletons, top = max singleton. **+$8.50/1000h whole-grid (S67 ship).** First single-cell pair rule.
+- Hybrid chain v54 (pair PBOT routing, Session 68) → `analysis/scripts/strategy_v54_pair_hybrid.py` — routes pair PBOT cells to v44_dt; rest to v53. **+$382/1000h full grid ship (S68).** Architectural routing, not a numbered rule.
+- Hybrid chain v55 (two_pair routing, Session 69) → `analysis/scripts/strategy_v55_two_pair_hybrid.py` — routes two_pair to v44_dt; rest to v54. **+$634/1000h full grid ship (S69).** Largest single ship in project history (still).
+- Hybrid chain v56 (trips routing, Session 70) → `analysis/scripts/strategy_v56_trips_hybrid.py` — routes trips to v44_dt; rest to v55. **+$45/1000h full grid ship (S70).** Closed three-gate hybrid chain (pair-PBOT + two_pair + trips through v44).
+- **Rule 20 — LOW pair defensive PMID-DS swap (Session 83, CURRENT PRODUCTION)** → `analysis/scripts/strategy_v57_lo_pair_defensive.py` — trigger: pair_rank ∈ {2-7} AND PMID_DS_NOMAXTOP cell AND max_sing ≤ Q (12). Setting: mid=both pair cards, bot=4-singleton subset forming best DS config (must include max_sing per cell), top=leftover non-max singleton. Fires on 12,096 prefix hands / 72,576 full-grid hands (changes 6,048 / 42,288 picks respectively at the Q gate; 72.8% swap-right rate within changed). **+$16.47/1000h whole-grid (full) + +$16.81/1000h prefix — grader-confirmed both grids with pre-committed SHIP/NULL/MIXED thresholds in code.** First rule extraction in the under-rule-covered weak-hand zone; validates Option D-revised rule-layer track as alive while ML-cascade track remains exhausted per Decisions 113 + 117.
+- **Combined chain (20 rules, CURRENT PRODUCTION)** → `analysis/scripts/strategy_v57_lo_pair_defensive.py` (wraps v56 with Rule 20; v56 itself is the trips → v55 → v54 → v53 → v52 hybrid chain)
 - **DEFERRED (Session 42, reaffirmed Session 43)**: `analysis/scripts/strategy_v38_rule8_two_pair_DEFERRED.py` — would-be Rule 8 for two_pair (+$197 full / -$512 prefix). Confirmed ML-only after Session 42 overnight investigation; reaffirmed Session 43 Q4 defensive re-examination.
 
 **Probes:**
@@ -2280,16 +2342,19 @@ print(result.summary())
 > codification. The per-rank deviation cost from v29 is highest on low
 > trips (2-9 each leak $7-8/rank-share). See Decision 065 and 066.
 >
-> **Production rule chain (end of Session 69): v55_two_pair_hybrid** —
-> stacks atop v54 with a single binary gate: if hand is two_pair
-> (n_pairs == 2 AND no_trips AND no_quads), route to v44_dt; else route
-> to v54_pair_hybrid (which itself routes single-pair PBOT cells → v44,
-> all else → v53/v52). Score: **$1,473/1000h full grid / $827 prefix** —
-> beats v14 by **+$2,191/1000h** on the full grid and **+$1,510/1000h**
+> **Production rule chain (end of Session 83): v57_lo_pair_defensive** —
+> stacks atop v56 with a single defensive trigger (Rule 20): for LOW pair
+> (rank 2-7) in the PMID_DS_NOMAXTOP cell with max_sing ≤ Q, force PMID
+> with DS-bot (= max kicker in bot) and a non-max singleton on top. Else
+> route to v56_trips_hybrid (which routes trips → v44_dt; two_pair → v44
+> via v55; single-pair PBOT cells → v44 via v54; everything else through
+> v53/v52). Score: **$1,412.53/1000h full grid / $776.88 prefix** —
+> beats v14 by **+$2,251/1000h** on the full grid and **+$1,564/1000h**
 > on the prefix N=1000. Lives at
-> `analysis/scripts/strategy_v55_two_pair_hybrid.py`. v55 is a routing
-> wrapper — total project rule count remains 18 (no new rules in S68
-> or S69; both ships are architectural).
+> `analysis/scripts/strategy_v57_lo_pair_defensive.py`. **Total project
+> rule count: 20** (Rule 20 added in S83 — LOW pair defensive PMID-DS
+> swap). S83 is the first strategy-of-record change in 12 sessions
+> (previous: v56 in S70).
 >
 > **ML champion (not human-memorizable): v44_dt (end of Session 58,
 > UNCHANGED through S69)** —
@@ -2309,11 +2374,16 @@ print(result.summary())
 > diagnostic-driven feature engineering (S54+ playbook) and capacity
 > retrains (v31, v34, v36) are in the toolkit.
 >
-> The two production tracks now diverge by **$393/1000h** —
-> v44_dt at $1,081 beats the v55 rule chain at $1,473. **The S68+S69
-> Path-B hybrid arc closed $1,016/1000h (72%) of the original $1,409
-> divergence** by routing pair-PBOT and two_pair categories through v44
-> directly inside the rule chain.
+> The two production tracks now diverge by **$332/1000h** —
+> v44_dt at $1,081 beats the v57 rule chain at $1,412.53. **The S68+S69+
+> S70+S83 arc closed $1,077/1000h (76%) of the original $1,409
+> divergence:** S68 (+$382 via v54 pair-PBOT routing), S69 (+$634 via v55
+> two_pair routing), S70 (+$45 via v56 trips routing), S83 (+$16 via v57
+> Rule 20 LOW-pair defensive PMID-DS swap). The S68-S70 arc is
+> architectural routing (route categories through v44); S83 is the first
+> rule extraction in the under-rule-covered weak-hand zone, validating
+> the rule-layer track as still alive after the ML-cascade track NULLed
+> in S78 + S82.
 
 ---
 

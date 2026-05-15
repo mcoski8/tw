@@ -7234,3 +7234,160 @@ These options are surfaced for the user; **no choice is made in S82**.
 
 7. **Speed is not necessary — clarity and perfection is.** The S82 ship attempt is the cleanest NULL verdict in the cascade because S81 spent its compute window writing the harness, not waiting. The verdict landed in 40 seconds of grader runtime; everything else was decided before the data existed.
 
+## Decision 118 — Session 83 v57 SHIPS: Rule 20 (LOW pair defensive PMID-DS swap) clears both ship gates (+$16.47/1000h full / +$16.81/1000h prefix); user-redirected Option D-revised (under-rule-covered weak-hand zones) produces first production ship in 12 sessions; rule-layer track formally validated as alive while ML-cascade track remains exhausted
+
+### Session
+
+Session 83 — first production strategy-of-record change since v56 in S70.
+
+### Context
+
+End of S82 surfaced a user-owned strategic fork (A3 vs headline-goal recalibration vs Option D dormant lever). User picked **Option D with a refinement:** stop min-maxing well-covered categories; focus on **under-rule-covered weak-hand zones** broadly. The reframe shifted scope from "implement S77's specific LOW pair kicker_max-in-pair-suit discriminator" (narrow rule extraction on a known v44 mismatch) to "find the under-covered cells under PRODUCTION v56 and extract defensive rules there."
+
+This decision records the methodology, numbers, and outcomes of executing the refined Option D in one session.
+
+### What S83 ran (phases)
+
+**Phase A — Coverage diagnostic synthesis (no new compute).** Reused existing S76 cross-category summary + S77 PAIR cell-level summary + S71 HIGH_ONLY by-rank summary to build a coverage map: per (category, sub-cell), total leak vs rule-routing status. Findings:
+
+* PAIR carries $511/1000h total residual leak under v44 with only ONE rule covering it (Rule 19 on Q-pair PBOT_DS_JOINT, +$8.50/1000h ship from S67).
+* HIGH_ONLY carries $381/1000h total leak but THREE rules (A/K/Q high) plus Rule 17's comprehensive defensive handler.
+* Two_pair, trips, three_pair, trips_pair, quads, composite combined carry <$200 total leak with $1.5 STRUCTURE; saturated.
+* **The under-rule-covered weak-hand zone is concentrated in LOW PAIR (rank 2-7), $86.54/1000h STRUCTURE leak.** S77 already ranked the 5 cells; top hit is LOW × PMID_DS_NOMAXTOP at $31.00/1000h STRUCTURE.
+* HIGH_ONLY LOW (J-high and below) is the second under-covered zone but ~4× smaller ($19.98 STRUCTURE total).
+
+**Phase B — Drill the candidate cell under PRODUCTION v56.** Wrote `drill_v56_low_pmid_ds_nomaxtop_S83.py` to load S77's per-hand parquet, filter to LOW × PMID_DS_NOMAXTOP (228,096 hands), and run `strategy_v56_trips_hybrid` on each. Wall: 77s.
+
+* v56 cell-leak: **$59.42/1000h whole-grid** (vs v44_dt's $87.32 measured by S77; v56 leaks LESS, not more).
+* v56 placement on this cell: **100% PMID** (no SPLIT, no PBOT). v44's "SPLIT mistake" on LOW pair doesn't exist in production — v52 always picks PMID here.
+* Dominant mismatch: v56 picks `PMID_tmax_SS` (max kicker on top, single-suited bot) when oracle wants `PMID_tnomax_DS` (drop max into bot, take DS bot). 42,216 hands × $4 mean regret = $26.45/1000h on this single mismatch class. Plus PMID_tmax_31 → PMID_tnomax_DS: 21,565 hands × $4 = $13.76/1000h. Top 2 classes = $40.21/1000h, **68% of cell leak**.
+
+**Phase B+ — Discriminator drill.** Wrote `drill_v56_pmid_swap_discriminator_S83.py` to split the cell into KEEP (oracle agrees with v56's max-on-top pick) vs SWAP (oracle wants the DS-bot config) populations and find the per-hand feature that maximally separates them. Result:
+
+| feature | KEEP-mean | SWAP-mean | Δ |
+|---|---:|---:|---:|
+| **max_sing** | 13.60 | 12.62 | **−0.98** |
+| ds_bot_pair_high | 13.60 | 12.62 | −0.98 (identical to max_sing because cell forces max into bot DS) |
+| third_max_sing | 9.03 | 8.20 | −0.83 |
+| max_gap | 2.45 | 1.95 | −0.50 |
+| second_max_sing | 11.15 | 10.67 | −0.48 |
+| pair_rank | 4.49 | 4.78 | +0.29 |
+
+**Per-value `max_sing` histogram (the gate signal):**
+
+| max_sing | KEEP | SWAP | swap_pct |
+|---|---:|---:|---:|
+| 8 | 15 | 192 | 92.8% |
+| 9 | 54 | 566 | 91.3% |
+| T | 137 | 1,292 | 90.4% |
+| J | 322 | 2,552 | 88.8% |
+| **Q** | **7,028** | **23,353** | **76.9%** |
+| K | 23,200 | 27,422 | 54.2% |
+| **A** | **67,758** | **10,591** | **13.5%** |
+
+Razor-sharp discriminator: swap is right >88% at ≤J, drops to 77% at Q, 54% at K, and is WRONG 86% of the time at A.
+
+**Phase C — Multi-gate grade + pre-committed ship verdicts.** Wrote `strategy_v57_lo_pair_defensive.py` with a `max_sing_gate` parameter, and `grade_v57_lo_pair_defensive_S83.py` that iterates only the cell hands (sufficient because v57 is a no-op outside the cell) and grades 4 gates ∈ {J, Q, K, A}. Pre-committed thresholds locked in code: SHIP ≥ $5/1000h, NULL < $2/1000h.
+
+Full-grid grade (auto-fired verdicts):
+
+| Gate | n_fired | n_changed | swap-right rate | Δ EV | Lift $/1000h | Verdict |
+|---|---:|---:|---:|---:|---:|---|
+| J (≤11)  | 36,288 | 6,000 | 85.0% | +2,219 | +$3.69 | MIXED |
+| **Q (≤12)** | **72,576** | **42,288** | **72.8%** | **+9,899** | **+$16.47** | **SHIP** |
+| K (≤13)  | 133,056 | 102,768 | 56.9% | +7,779 | +$12.94 | SHIP (smaller) |
+| A (≤14)  | 228,096 | 197,808 | 33.6% | −53,454 | −$88.95 | NULL (catastrophic) |
+
+Q gate is the best ship-eligible candidate. Prefix-grid grade at Q gate via `grade_v57_prefix_S83.py` (500K hands × N=1000 labels, 84s wall):
+
+| Metric | v56 | v57 (Q gate) | Δ |
+|---|---:|---:|---:|
+| Match% on prefix | 66.07% | 66.49% | **+0.42pp** |
+| Mean regret $/1000h prefix | $793.69 | $776.88 | **−$16.81** |
+
+>>> VERDICT (auto-fired): SHIP
+
+Both grids agree closely ($16.47 full vs $16.81 prefix), suggesting robust signal not driven by N=200 noise.
+
+### The rule (Rule 20)
+
+```
+TRIGGER (all must be true):
+  1. Hand is a single pair (n_pairs == 1, no trips, no quads).
+  2. pair_rank ∈ {2, 3, 4, 5, 6, 7}.
+  3. max_sing (largest non-pair card rank) ≤ Q (12).
+  4. Cell is PMID_DS_NOMAXTOP:
+     a. PBOT_DS not achievable (neither pair-suit has any singleton).
+     b. PMID_DS achievable (some 4-subset of singletons has 2+2 suit pattern).
+     c. No PMID_DS-with-maxtop config exists (all DS configs require max_sing in bot).
+
+ACTION (when triggered):
+  - mid = both pair cards
+  - bot = the 4-singleton subset forming the best DS config (highest bot_pair_high)
+  - top = leftover singleton (NOT max_sing per cell definition)
+```
+
+Plain-language reading: "small pair with no flush draw, max kicker is Queen or lower, DS bot is achievable only with max in bot — drop max into bot, take the DS, put a smaller singleton on top. You're losing top anyway; the DS bot is worth it."
+
+### Verdict + production state change
+
+**SHIP.** Pre-committed grader on both full grid and prefix grid auto-fired SHIP. Strategy of record advances from v56 to **v57_lo_pair_defensive** at gate=Q.
+
+New production numbers:
+* v57 rule chain: **$1,412.53/1000h full grid** / **$776.88/1000h prefix**
+* v44_dt ML champion: UNCHANGED ($1,081 full / $686 prefix)
+* Two-track divergence: $332/1000h (was $348; closed −$16 this session)
+* Cumulative divergence closure since pre-S68: $1,077 of $1,409 = 76%
+* Total project rule count: **20** (Rule 20 added)
+
+### What this answers about the cascade
+
+1. **The rule-layer track is alive.** S82 confirmed both ends of the ML capacity lever (features S78 NULL, labels S82 NULL) are exhausted at v44 saturating regime. S83 confirms the rule-layer operates OUTSIDE that capacity — the first cell-level rule extraction in an under-covered zone produced a clean ship on the first attempt.
+
+2. **The under-rule-covered weak-hand zone is real.** PAIR carried 4× more residual leak than HIGH_ONLY but had 1/3 as many rules (Rule 19 only vs A/K/Q-high + Rule 17). The asymmetry was the lever.
+
+3. **Production v56 doesn't reproduce v44_dt's mistakes.** S77 measured leak under v44. v56 routes PAIR (non-PBOT-DS) hands through v52, not v44, and has a different leak profile. Always re-measure under production before designing rules.
+
+4. **`max_sing` is a project-novel discriminator.** None of the prior 19 rules use it as a gate. The S83 finding suggests it's a generally useful feature for LOW-pair defensive routing decisions; likely applies to adjacent cells (PMID_DS_MAXTOP, PMID_SS_MAXTOP, PMID_OTHER) with shifted gate values.
+
+### Methodology lessons
+
+1. **The user's strategic redirect was load-bearing.** Original Option D was a narrow extraction of S77's specific finding. User's reframe ("under-rule-covered weak-hand zones broadly, not the specific v44 finding") shifted scope to where the production leak actually was. Without the reframe, S83 would have rebuilt v44's SPLIT-mistake fix (which v56 doesn't have).
+
+2. **Pre-committed grader thresholds in code transfer cleanly across experiment types.** S81/S82's NULL pattern (SHIP/NULL/MIXED with hardcoded thresholds; grader prints verdict next to numbers) worked identically for an S83 SHIP. The pattern is now project-standard for ANY ship-or-null experiment.
+
+3. **Multi-gate grading is the right scoping resolution for parametric rules.** Single-gate grade would have shipped Q at +$16.47 but missed that the gate space has structure (J: +$3.69, K: +$12.94, A: −$88.95). Multi-gate gives the full lift surface in 4× the compute (still 16s total).
+
+4. **Reusing prior diagnostic infrastructure compresses time.** S77's per-hand parquet + S66's pair-cell classifier + S66's pick classifier let Phase B run in 77s without any taxonomy rebuild. Diagnostic outputs are project capital; treat them as reusable.
+
+5. **The "under-rule-covered" coverage map is the natural follow-on framing.** S77 ranked cells by leak; S83 added "rule-routed yes/no" as the secondary axis. The product (leak × under-coverage) is the priority for future Option D extractions.
+
+6. **First production ship in 12 sessions validates the pivot.** S71-S82 produced zero strategy-of-record changes across 12 sessions of ML cascade work. S83's rule-layer ship lands in one session. The bottleneck genuinely moved; the user's redirect was correct.
+
+### Files (Session 83)
+
+**New code (committed):**
+* `analysis/scripts/strategy_v57_lo_pair_defensive.py` — Rule 20 + chain composition with v56
+* `analysis/scripts/drill_v56_low_pmid_ds_nomaxtop_S83.py` — Phase B drill
+* `analysis/scripts/drill_v56_pmid_swap_discriminator_S83.py` — Phase B+ discriminator
+* `analysis/scripts/grade_v57_lo_pair_defensive_S83.py` — full-grid multi-gate grader
+* `analysis/scripts/grade_v57_prefix_S83.py` — prefix-grid grader
+
+**New artifacts (gitignored under `data/session83/`):**
+* `drill_v56_low_pmid_ds_nomaxtop_summary.json`
+* `drill_v56_pmid_swap_discriminator_summary.json`
+* `grade_v57_summary.json`
+* `grade_v57_prefix_summary.json`
+
+**Documentation:**
+* `SESSION_83_REPORT.md` — session report with plain-language TL;DR.
+* `DECISIONS_LOG.md` — this section (Decision 118).
+* `CURRENT_PHASE.md` — rewritten for S84.
+* `STRATEGY_GUIDE.md` — Part 1 entry appended; Part 6 production-rule-chain block + front matter updated.
+
+### Path forward (S84 candidates)
+
+Default: drill **LOW pair × PMID_DS_MAXTOP** using the S83 playbook. S77 measured $21.68 STRUCTURE leak on 128k hands in that cell. The cell is the structural sister of PMID_DS_NOMAXTOP (DS achievable WITH max on top, as opposed to ONLY without max on top). Expected mechanism: similar swap discriminator, different optimal gate (likely shifted toward higher max_sing because the cell already has max-on-top DS available).
+
+Other candidates surfaced in CURRENT_PHASE.md include LOW × PMID_SS_MAXTOP, LOW × PMID_OTHER, MID pair × PMID_DS_NOMAXTOP, and HIGH_ONLY × J-high-and-below.
+

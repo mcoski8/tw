@@ -1,202 +1,209 @@
-# Current: Sprint 8 — Session 82 NULL verdict on v49_a2 (held-out match% 63.74% < 72.0% NULL floor); A-path closes; Session 83 opens with the user-owned A3-vs-recalibration decision
+# Current: Sprint 8 — Session 83 SHIPS v57 (Rule 20: LOW pair defensive PMID-DS swap); first production change in 12 sessions; Option D-revised (user-redirected) playbook validated; S84 extends playbook to adjacent under-rule-covered cells
 
-S82 ran end-to-end: confirmed the S81 oracle finished cleanly (1,508,080 records, 611 MB, 15.5h wall time, within 0.83h of pilot estimate); trained v49_a2_dt (depth=36 ml=1, 2,177,375 leaves, 6.2 min fit, 1.31 GB); ran the pre-committed three-lens grader. **The grader auto-fired NULL** based on hardcoded thresholds locked in code in S81 — no interpretation arbitrage.
+S83 executed the user-redirected Option D (under-rule-covered weak-hand zones, not just S77's specific LOW pair finding). Phase A synthesized coverage from existing S76/S77/S71 drills (no new compute). Phase B drilled the top under-covered cell — LOW pair × PMID_DS_NOMAXTOP — under PRODUCTION v56 (not v44_dt) and found that v56's leak structure differs from v44's: v56 doesn't SPLIT low pair at all (100% PMID), but it picks the wrong PMID variant (max-on-top + SS bot instead of drop-max + DS bot). Phase B+ identified `max_sing` (rank of largest non-pair card) as a razor-sharp discriminator: swap is right 89-93% at max_sing ≤ J, right 77% at Q, right 54% at K, and WRONG 86% at A. Phase C wrote v57 with a max_sing gate parameter and ran a multi-gate grader with **pre-committed SHIP/NULL/MIXED thresholds in code**: Q gate auto-fired SHIP on both full grid (+$16.47/1000h) and prefix (+$16.81/1000h, 84s wall, 6,048 picks changed of 12,096 fires).
 
-The held-out test settled S80's open question definitively: **A1's 80.19% in-sample lift was largely memorization.** v49_a2 — with 3.4× the N=1000 training-label coverage of A1, concentrated entirely on the highest-overfit categories — scored 79.33% on the in-sample prefix lens (matching A1's signal) but only **63.74% on held-out hands** (well below v44's 65.86% baseline AND below the 72% NULL floor). The 15.59pp in-sample-vs-OOS gap on v49_a2 vs the 1.19pp gap on v44 is the memorization, quantified directly. trips_pair — the most-overfit category and the biggest A1 winner — regressed **−12.83pp on held-out and bled +$813/1000h MORE regret** than v44.
+**Production state CHANGED for the first time in 12 sessions.** Rule chain advances from v56 to v57_lo_pair_defensive. ML champion v44_dt UNCHANGED.
 
-**Production state UNCHANGED for the eleventh consecutive session.** v56_trips_hybrid + v44_dt as before. No code changes in S82.
+> **🎯 IMMEDIATE NEXT ACTION (Session 84): extend the S83 playbook to LOW pair × PMID_DS_MAXTOP**
+>
+> S83 demonstrated the playbook for Option D-revised on a single cell. The same playbook applies to adjacent under-rule-covered LOW pair cells. The next-highest under-covered cell is **LOW × PMID_DS_MAXTOP** (S77 measured $21.68/1000h STRUCTURE leak on 128,304 hands; structural sister of PMID_DS_NOMAXTOP where DS bot is achievable WITH max-on-top).
+>
+> ### What S84 should run (default — recipe established in S83)
+>
+> 1. **Phase B** — Adapt `drill_v56_low_pmid_ds_nomaxtop_S83.py` → `drill_v56_low_pmid_ds_maxtop_S84.py`. Filter parquet to `cell_idx == 2` (PMID_DS_MAXTOP) AND pair_rank ∈ {2-7}. Run v56 on the 128,304 cell hands. Aggregate (v56_class, oracle_class) mismatches.
+> 2. **Phase B+** — Identify the discriminator. Hypothesis: `max_sing` is again the signal, but with a different sign/cutoff because the cell already has DS-with-max-on-top available — so v56's tmax_DS pick may be CORRECT more often than in PMID_DS_NOMAXTOP. The swap target might instead be PBOT or a different within-PMID variant. Run the same KEEP/SWAP/OTHER population analysis.
+> 3. **Phase C** — Write `strategy_v58_*` with parametric gate; multi-gate grade with pre-committed SHIP/NULL/MIXED thresholds in code.
+> 4. **Phase D** — Session-end commit + push + decision + CURRENT_PHASE rewrite.
+>
+> ### Alternative S84 directions (lower priority)
+>
+> * **LOW × PMID_SS_MAXTOP** (S77: $9.71 STRUCTURE / 85,536 hands) — third-largest under-covered LOW cell. Smaller, but may have cleaner pattern.
+> * **LOW × PMID_OTHER** (S77: $11.81 STRUCTURE / 137,808 hands) — catchall cell; may need richer feature than `max_sing`.
+> * **MID pair (8-T) × PMID_DS_NOMAXTOP** (S77: ~$8/1000h STRUCTURE) — same cell type as S83 but different pair_rank tier. Test whether the rule transfers with shifted gate.
+> * **HIGH_ONLY × J-high and below** (S71: $14.47 STRUCTURE J-high + $4.31 T-high; v52 has defensive rules already for max ≤ T, J-high uses 2nd-high ≤ 8 gate). Investigate residual under-coverage if v52's gate misses cases.
+>
+> ### Why default to PMID_DS_MAXTOP rather than another option
+>
+> Of the 4 remaining LOW pair cells, PMID_DS_MAXTOP has:
+> * The next-largest STRUCTURE leak ($21.68 — second only to PMID_DS_NOMAXTOP's $31.00)
+> * The same fundamental structure (DS achievable, PMID dominant) so the playbook transfers cleanly
+> * Existing per-hand classification in S77's parquet (no taxonomy rebuild needed)
+>
+> Once PMID_DS_MAXTOP ships (or NULLs), the same playbook extends to PMID_SS_MAXTOP and PMID_OTHER. After all four LOW pair cells are processed, the natural next step is MID pair × PMID_DS_NOMAXTOP (extending the rule family one tier up) or HIGH_ONLY LOW (different category, same defensive archetype).
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 83): user-owned strategic decision; no compute work until the user picks a path**
+> **📓 METHODOLOGY (Session 84+):**
 >
-> The A-path (oracle-label-quality lever) closes here. Two doors remain on the cascade. **The user must choose** — both have honest expected-value reads attached:
+> 1. **Always grade the PRODUCTION strategy on the candidate cell first.** S82 measured leak under v44_dt; v56 routes most of PAIR through v52 and has a different leak profile. Phase B's first job is to characterize v56's behavior on the cell, NOT to trust prior v44-based drills.
 >
-> ### Option 1 — A3 (full 6M-hand N=1000 grid)
-> Generate fresh N=1000 labels for the entire canonical set (5× A2's compute, ~75-80h overnight runs). Retrain v49_a3_dt on uniformly-clean labels. The hypothesis is that label noise on *non-targeted* categories propagates second-order errors into targeted-category predictions.
-> * **Cost:** 5× A2 compute.
-> * **Expected outcome under today's NULL:** small-to-zero structural lift on held-out. The 1.19pp v44 in-sample-vs-OOS gap on the prefix lens suggests the noise-bound match rate is already very close to v44's saturating performance, and A2's failure on the most-targeted categories suggests adding clean labels on more categories extends the same memorization pattern to a wider surface.
-> * **Honest read:** expensive insurance against a hypothesis the data already disfavors. Hard to justify on its own.
+> 2. **Pre-committed grader thresholds in code are project-standard.** Both `grade_v57_lo_pair_defensive_S83.py` (full) and `grade_v57_prefix_S83.py` (prefix) auto-fire SHIP/NULL/MIXED based on thresholds hardcoded BEFORE the data lands. This pattern transferred cleanly from S81/S82's NULL pattern.
 >
-> ### Option 2 — Headline-goal recalibration
-> The original target — "human-memorizable rules that match the solver 95% of the time" — was set before we discovered (S79) that the underlying solver labels disagree with themselves 32% of the time at N=200. Today's NULL is the strongest evidence that **95% match-rate is not reachable** at the current label noise floor.
-> * Recalibrating means picking a new headline metric (e.g., "$/1000h regret < $X" instead of "match% > 95%") and reframing the cascade around it.
-> * **What this gets you:** a cascade you can actually finish.
-> * **What this costs:** giving up the original framing.
+> 3. **Multi-gate grading is the right resolution for parametric rules.** Phase C grades the rule at multiple gate values, not just one. The lift surface has structure (J: +$3.69, Q: +$16.47, K: +$12.94, A: −$88.95); single-gate would miss the structure.
 >
-> **My read:** A3 is expensive insurance against a hypothesis the data already disfavors; recalibration is the harder conversation but it points the cascade somewhere it can win. I'd lean toward recalibration but it's a strategic call the user owns. **No compute is launched in S83 until the user picks.**
+> 4. **The S83 playbook compresses to ~3-4 hours per cell.** Reuse S77's parquet + S66's pair_structural + S66's pick classifier + S83's pre-committed grader templates. New code per cell: ~2 short Python files (drill + grader). Wall: ~2 min compute (Phase B 77s + Phase C 17s + Phase C-prefix 84s).
 >
-> ### What S83 does (depending on user pick)
+> 5. **Rule-layer track is alive while ML-cascade track is exhausted.** S78 features NULL + S82 labels NULL at v44 capacity established the bottleneck. S83's first rule extraction in the under-covered zone shipped on first attempt. Future Option D extractions are the priority path.
 >
-> * **If user picks A3:** S83 launches the full N=1000 oracle (background, ~80h overnight + cross-day), writes the train/grade harness in parallel (same playbook as S81), and Decision 118 records the launch.
-> * **If user picks recalibration:** S83 is a planning session. Read `DECISIONS_LOG.md` Decision 114 (S79 noise-floor finding), Decision 117 (S82 NULL), and the current STRATEGY_GUIDE.md residual landscape. Propose 2-3 candidate headline metrics with worked-example targets, surface the trade-offs, and write Decision 118 capturing the recalibration choice.
-> * **If user picks something else** (e.g., "let's revisit Option D rule-chain extension on S77 LOW pair findings" — the dormant lever from Decision 113): S83 implements that path.
->
-> ### Why this is a fork, not a continuation
->
-> The cascade has now tested both ends of the lever — better features (S78 NULL) and better labels (S82 NULL) — at v44's saturating capacity. Both NULLed. The remaining doors are either (a) more compute on the same path with low expected yield (A3), or (b) a strategic re-framing. Continuing on momentum without choosing is what produced the eleven UNCHANGED sessions. The user should pick.
+> 6. **"Speed is not necessary — clarity and perfection is."** Multi-gate grade with pre-committed verdicts; reuse-of-prior-drill data over rebuild; cell-level focus over whole-grid sweeps. Every speed-vs-clarity trade in S83 chose clarity.
 
-> **📓 METHODOLOGY (Session 83+):**
->
-> 1. **Trust the grader's verdict — done.** S81/S82's pre-committed grader is the new template for any ship-or-null experiment. Lock thresholds in code before the data exists; the grader auto-fires; no interpretation arbitrage.
->
-> 2. **In-sample vs OOS gap is the memorization meter.** Always compute both. The 13× difference between v49_a2's gap (15.59pp) and v44's gap (1.19pp) is the entire story of S80→S82.
->
-> 3. **Two adjacent zero-signal levers means the bottleneck has moved.** S78 closed feature engineering at v44 saturation. S82 closes label quality at v44 capacity. The bottleneck is no longer "more levers to test" — it's "the noise floor itself or the headline target."
->
-> 4. **The v44 OOS match rate (65.86%) is the noise floor lower bound** for any v44-class model on the targeted categories. Any future candidate that doesn't beat this on Lens 3 is relabeling, not learning.
->
-> 5. **"Speed is not necessary — clarity and perfection is."** S82 produced the cleanest NULL in the cascade in 40 seconds of grader runtime because S81 spent the prior 15+ hours writing the harness. The pattern stands.
+> **✅ ARTIFACTS produced in S83:**
+> 1. `analysis/scripts/strategy_v57_lo_pair_defensive.py` — Rule 20 + chain composition (NEW PRODUCTION).
+> 2. `analysis/scripts/drill_v56_low_pmid_ds_nomaxtop_S83.py` — Phase B drill.
+> 3. `analysis/scripts/drill_v56_pmid_swap_discriminator_S83.py` — Phase B+ discriminator drill.
+> 4. `analysis/scripts/grade_v57_lo_pair_defensive_S83.py` — Phase C full-grid multi-gate grader with pre-committed verdicts.
+> 5. `analysis/scripts/grade_v57_prefix_S83.py` — Phase C prefix-grid grader with pre-committed verdicts.
+> 6. `data/session83/drill_v56_low_pmid_ds_nomaxtop_summary.json` (gitignored).
+> 7. `data/session83/drill_v56_pmid_swap_discriminator_summary.json` (gitignored).
+> 8. `data/session83/grade_v57_summary.json` (gitignored).
+> 9. `data/session83/grade_v57_prefix_summary.json` (gitignored).
+> 10. `SESSION_83_REPORT.md` — session report with plain-language TL;DR.
+> 11. `DECISIONS_LOG.md` — Decision 118 (SHIP verdict + methodology).
+> 12. `CURRENT_PHASE.md` — this file, rewritten for S84.
+> 13. `STRATEGY_GUIDE.md` — Part 1 S83 entry appended; Part 6 production-rule-chain block updated; front matter Last updated.
 
-> **✅ ARTIFACTS produced in S82:**
-> 1. `data/v49_a2_dt_model.npz` — 1.31 GB, 2,177,375 leaves (gitignored).
-> 2. `data/session82/train_v49_a2.log` — fit log.
-> 3. `data/session82/grade_v49_a2.log` — grader output incl. NULL verdict.
-> 4. `data/session81/grade_v49_a2_holdout_summary.json` — machine-readable verdict summary.
-> 5. `SESSION_82_REPORT.md` — session report with plain-language TL;DR.
-> 6. `DECISIONS_LOG.md` — Decision 117 (NULL verdict + memorization finding + path-forward fork).
-> 7. `CURRENT_PHASE.md` — this file, rewritten for S83.
->
-> **No new code in S82.** All scripts already shipped in S81; S82 ran them end-to-end against the completed oracle.
-
-> Updated: 2026-05-15 (Session 82 end — A2 verdict NULL: oracle finished cleanly overnight (15.53h wall, 1.51M records, 611 MB), trained v49_a2_dt (2.18M leaves, 6.2 min fit), pre-committed grader auto-fired NULL on Lens-3 held-out match% 63.74% < 72.0% floor; A1's 80.19% S80 in-sample lift confirmed empirically as memorization (v49_a2 in-sample-vs-OOS gap 15.59pp vs v44's 1.19pp gap — 13× larger); trips_pair regressed −12.83pp held-out and bled +$813/1000h MORE regret than v44; **production state UNCHANGED for the eleventh consecutive session — v56_trips_hybrid + v44_dt as before; no code changes; STRATEGY_GUIDE.md unchanged.** A-path closes here. S83 opens with user-owned strategic fork: A3 (full 6M N=1000 grid, 5× compute, low expected yield based on today's data) vs headline-goal recalibration (concede the 95% match-rate target as unreachable at the 32% noise floor and pick a new metric); my honest read is recalibration but the user owns the strategic call. No compute launched in S83 until user picks. Pre-committed grader pattern (S81+S82) is the new template for any ship-or-null experiment in the cascade going forward.)
+> Updated: 2026-05-15 (Session 83 end — v57_lo_pair_defensive SHIPS. Pre-committed grader auto-fired SHIP on both grids: +$16.47/1000h whole-grid (v56 $1,429 → v57 $1,412.53), +$16.81/1000h prefix (v56 $794 → v57 $776.88). Production strategy of record CHANGES for the first time in 12 sessions; previous change was v56 in S70. Rule 20 = "LOW pair (rank 2-7) + PMID_DS_NOMAXTOP cell + max_sing ≤ Q → force PMID with DS-bot (= max in bot) and non-max singleton on top." Mechanism: v56 (= v52 for this cell) over-routes to max-kicker-on-top + single-suited bot when oracle wants drop-max + double-suited bot; the LOW pair has no offensive top potential so the DS-bot trade is the real value. Discriminator `max_sing` is razor-sharp: ≤J swap-right 89-93%, =Q swap-right 77%, =K swap-right 54%, =A swap-WRONG 86%. Multi-gate grade showed Q is the lift maximum ($16.47 full); K still ships at $12.94 but smaller; A is catastrophic NULL (−$89). User's strategic redirect at end of S82 — "stop min-maxing well-covered areas, focus on under-rule-covered weak-hand zones" — was the load-bearing decision that made the ship possible. Rule count: 19 → 20. Two-track divergence: $348 → $332 (cumulative closure since pre-S68: 76% of original $1,409). The Option D rule-layer track is formally validated as alive while the ML-cascade track remains exhausted at v44 saturating regime per Decisions 113 + 117. S84 default plan: apply the S83 playbook to LOW pair × PMID_DS_MAXTOP (next-largest under-covered cell at $21.68/1000h STRUCTURE leak).)
 
 ---
 
-## Headline state at end of Session 82
+## Headline state at end of Session 83
 
-**Strategies of record (UNCHANGED for the ELEVENTH consecutive session):**
+**Strategies of record (CHANGED — rule chain advances, ML champion unchanged):**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
-| **v56_trips_hybrid** | PRODUCTION rule chain. **$1,429 full / $794 prefix**. | `analysis/scripts/strategy_v56_trips_hybrid.py` |
-| **v44_dt** | PRODUCTION ML champion. $1,081 full / $686 prefix. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
+| **v57_lo_pair_defensive** | **PRODUCTION rule chain (NEW).** $1,412.53/1000h full / **$776.88/1000h prefix**. Adds Rule 20 over v56. | `analysis/scripts/strategy_v57_lo_pair_defensive.py` |
+| **v44_dt** | PRODUCTION ML champion (UNCHANGED for 12 sessions, since v44 in S58). $1,081/1000h full / $686/1000h prefix. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
 
-Two-track divergence: **$348/1000h** (no change).
+Two-track divergence: **$332/1000h** (closed −$16 in S83; cumulative since pre-S68: $1,077 = 76% of original $1,409 divergence closed).
 
-**S82 candidate result (NULLED):**
+**Total project rule count: 20** (Rule 20 = LOW pair defensive PMID-DS swap, S83).
 
-| Candidate | Hyperparams | Training Y | Verdict |
-|---|---|---|---|
-| v49_a2_dt | depth=36, ml=1, 2.18M leaves | 3-zone hybrid, 27.80% N=1000 share | **NULL** — Lens-3 held-out 63.74% < 72.0% floor |
+**S83 candidate result (SHIPPED):**
+
+| Candidate | Hyperparams | Verdict |
+|---|---|---|
+| v57_lo_pair_defensive | max_sing gate = Q (12); fires on 12,096 prefix hands (changes 6,048) | **SHIP** — full +$16.47, prefix +$16.81, both > $5 ship threshold |
 
 ---
 
-## Hypothesis cascade status (updated after S82)
+## Hypothesis cascade status (updated after S83)
 
 | Hypothesis | Description | Status |
 |---|---|---|
 | H1 | high_only SS+ms route quality | NULL ship +$5 (S73). |
 | H2 | high_only route-tradeoff | CLEAN NULL +$0 (S74). |
 | Option B (S75) | Gradient boosting at depth=6 / n_est=200 | DECISIVE NULL −$1,392/1000h. |
-| S76 / S77 diagnostics | Cross-cat → pair drill | Shipped diagnostics; identified H6/H7/H8. |
+| S76 / S77 diagnostics | Cross-cat → pair drill | Shipped diagnostics; identified H6/H7/H8 + LOW pair under-coverage. |
 | H6 / H7 / H8 (S78) | Pair gated features | CLEAN NULL +$2 prefix. |
 | Single-model ML feature-engineering track | At v44 saturating regime | FORMALLY CLOSED (Decision 113). |
 | S79 label-noise measurement | Existing N=1000 prefix vs N=200 full | MIXED — 32% oracle disagreement reveals criterion blind spot (Decision 114). |
 | A1 (S80) | Retrain v44 DT on N=1000 prefix labels | LIFTS +13.15pp on N=1000 match rate; in-sample evaluation caveat (Decision 115). |
 | C2 (S80) | Regularize v44 DT (max_leaf_nodes=500K, ml=5) | NULL −2.13pp on N=1000, −12.24pp on N=200 (Decision 115). |
-| **A2 (S81/S82)** | Targeted N=1000 expansion on two_pair + trips_pair + held-out validation | **CLEAN NULL** — Lens-3 held-out 63.74% < 72.0% floor; A1's S80 lift confirmed as memorization (Decision 117). |
-| **A-path (oracle-label-quality lever)** | All variants tested at v44 capacity | **FORMALLY CLOSED** at v44 regime (Decision 117). |
-| A3 | Full 6M-hand N=1000 grid | **DEPRIORITIZED post-S82** — 5× A2 compute against a hypothesis today's data already disfavors. Surfaced as Option 1 in S83 fork; user-owned decision. |
-| C1 | High-capacity boosting (depth=10-12, n_est=1000-2000) | DEPRIORITIZED — S75 NULL + S80 C2 NULL together close the capacity lever. |
-| M1 | Hybrid: regularized DT trained on N=1000 prefix labels | DEPRIORITIZED — C2's NULL means hybrid C-side adds no value over pure A-side. |
-| Option D | Rule-chain extension on S77 LOW pair findings | DORMANT — operates at rule layer outside DT saturation; revivable if user picks during S83 fork. |
-| **Headline-goal recalibration** | Concede 95% match% as unreachable; pick new metric | **NEW CASCADE OPTION post-S82** — Surfaced as Option 2 in S83 fork; user-owned decision. |
+| A2 (S81/S82) | Targeted N=1000 expansion on two_pair + trips_pair + held-out validation | CLEAN NULL — Lens-3 held-out 63.74% < 72.0% floor; A1's S80 lift confirmed as memorization (Decision 117). |
+| A-path (oracle-label-quality lever) | All variants tested at v44 capacity | FORMALLY CLOSED at v44 regime (Decision 117). |
+| A3 | Full 6M-hand N=1000 grid | DEPRIORITIZED — surfaced in S83 fork; not picked by user. |
+| Headline-goal recalibration | Concede 95% match% as unreachable; pick new metric | DEFERRED — surfaced in S83 fork; not picked by user; still available as future option. |
+| **Option D-revised (S83)** | **Rule-chain extension on under-rule-covered weak-hand zones** | **SHIPPED — Rule 20 (LOW pair × PMID_DS_NOMAXTOP × max_sing ≤ Q) +$16.81 prefix (Decision 118).** |
+| Option D-revised continuation (S84+) | Apply S83 playbook to adjacent under-covered cells | ACTIVE — default S84 target is LOW × PMID_DS_MAXTOP ($21.68 STRUCTURE leak). |
 
-**Cascade verdict (updated post S82):** The cascade has now tested both ends of the lever — better features (S78 NULL) and better labels (S82 NULL) — at v44's saturating capacity. Both NULLed. The remaining doors are A3 (low expected yield), Option D (rule-layer, untested at the new diagnostic clarity), or headline-goal recalibration. **S83 opens with the strategic fork; no compute until user picks.**
+**Cascade verdict (updated post S83):** The cascade now has TWO active tracks. ML cascade is exhausted at v44 saturating regime per Decisions 113 + 117 (both ends — features S78 NULL, labels S82 NULL — produced zero signal). **Rule-layer cascade (Option D-revised) is alive** — first cell-level extraction in the under-covered zone shipped on first attempt at +$16.81 prefix. S84+ extends the playbook to adjacent cells.
 
 ---
 
-## Resume Prompt (Session 83 — A3 vs recalibration; user-owned fork)
+## Resume Prompt (Session 84 — extend Option D playbook to LOW pair × PMID_DS_MAXTOP)
 
 ```
-Resume Session 83 of the Taiwanese Poker Solver project at
+Resume Session 84 of the Taiwanese Poker Solver project at
 /Users/michaelchang/CODE/taiwanese.
 
 Read these files for context (in this order):
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of S82 — opens the A3-vs-
-  recalibration fork)
-- DECISIONS_LOG.md (latest: Decision 117 — S82 v49_a2 NULL +
-  A-path closure + path-forward fork surfaced)
-- SESSION_82_REPORT.md (S82 NULL verdict, plain-language TL;DR,
-  the two paths forward)
-- SESSION_81_LAUNCH_REPORT.md (S81 launch + harness session for
-  A2 — context for what A3 would scale)
-- SESSION_80_M2_REPORT.md (S80 A1+C2 results — the in-sample lift
-  S82's held-out test settled)
+- CURRENT_PHASE.md (rewritten end of S83 — opens with S84 default target)
+- DECISIONS_LOG.md (latest: Decision 118 — S83 v57 SHIP +$16.81/1000h prefix
+  on Rule 20 LOW pair defensive PMID-DS swap; first production change in
+  12 sessions)
+- SESSION_83_REPORT.md (S83 SHIP verdict, plain-language TL;DR, methodology,
+  the playbook to replicate)
 
-KEY DATA FILES (no new generation in S83 unless user picks A3):
+KEY DATA FILES (no new generation needed in S84):
 - data/oracle_grid_full_realistic_n200.bin — 6M × 105 at N=200
 - data/oracle_grid_prefix500k_n1000.bin — 500K × 105 at N=1000
-- data/session81/oracle_grid_s81_n1000.bin — 1.51M × 105 at N=1000
-  (NEW S81 grid; tp/3p subset)
-- data/v44_dt_model.npz — production ML champion (UNCHANGED for 11 sessions)
-- data/v49_a2_dt_model.npz — S82 NULLed candidate (kept for diagnostic use)
+- data/drill_pair_v44_per_hand_structural.parquet — S77 per-hand parquet
+  (canonical_id, pair_rank, cell_idx, v44_idx, oracle_idx, regret, etc.)
+- data/v44_dt_model.npz — production ML champion (UNCHANGED for 12 sessions)
 
-STATE (end of S82):
-- Production UNCHANGED for the ELEVENTH consecutive session:
-  v56_trips_hybrid ($1,429 full / $794 prefix) + v44_dt
-  ($1,081 full / $686 prefix). Two-track divergence $348/1000h.
-- v49_a2 NULLED by pre-committed grader: Lens-3 held-out match%
-  63.74% < 72.0% floor. A1's S80 80.19% in-sample lift confirmed
-  empirically as memorization (15.59pp in-sample-vs-OOS gap on
-  v49_a2 vs 1.19pp on v44, 13× larger).
-- A-path (oracle-label-quality lever) FORMALLY CLOSED at v44 capacity.
-- Two adjacent zero-signal levers (S78 features NULL, S82 labels NULL)
-  strongly suggest the bottleneck is the noise floor itself or the
-  95% headline target.
+STATE (end of S83):
+- Production rule chain ADVANCED to v57_lo_pair_defensive ($1,412.53 full /
+  $776.88 prefix). First strategy-of-record change in 12 sessions (since v56
+  in S70).
+- ML champion v44_dt UNCHANGED ($1,081 full / $686 prefix).
+- Two-track divergence: $332/1000h (cumulative 76% closure since pre-S68).
+- Rule count: 20 (Rule 20 = LOW pair × PMID_DS_NOMAXTOP × max_sing ≤ Q → force
+  PMID with DS-bot and non-max top).
+- Option D-revised (user-redirected rule-layer track) FORMALLY VALIDATED as
+  alive. ML-cascade track FORMALLY CLOSED at v44 capacity (Decisions 113 + 117).
+- Pre-committed grader pattern (verdicts hardcoded in code BEFORE data lands)
+  is now project standard for any ship-or-null experiment.
 
 USER DIRECTIVE:
 - "Speed is not necessary — clarity and perfection is."
-- User is non-technical; any strategic discussion must lead with
-  plain-language framing of trade-offs.
-- The S83 fork is a USER-OWNED strategic call — do not pick for the
-  user. Surface the options + the honest expected-value read; wait
-  for the user to choose.
-- No compute is launched in S83 until the user picks a path.
+- User is non-technical; any strategic discussion / session report must lead
+  with plain-language framing of trade-offs.
+- Session-end commit + push is pre-authorized for this project (see
+  feedback_taiwanese_commits memory).
 
-DIRECTION FOR SESSION 83 — surface the fork; do NOT pre-commit:
+DIRECTION FOR SESSION 84 — extend the S83 playbook to the next under-rule-
+covered cell:
 
-  PHASE 1 (~5 min) — Read the four context files above + any newer
-  context the user adds in their message.
+  DEFAULT TARGET: LOW pair × PMID_DS_MAXTOP (S77: $21.68/1000h STRUCTURE
+                  leak across 128,304 hands; structural sister cell where
+                  DS bot is achievable WITH max-on-top — opposite of S83's
+                  cell where DS requires max in bot).
 
-  PHASE 2 (~10-15 min) — Open with the fork:
-    Briefly summarize where we are (eleven UNCHANGED sessions; both
-    feature-engineering and label-quality levers NULLed at v44 capacity).
-    Restate the two doors:
-      Option 1: A3 — full 6M-hand N=1000 grid (5× compute, low
-                expected yield based on today's data).
-      Option 2: Headline-goal recalibration — concede 95% match-rate
-                as unreachable at the 32% noise floor; pick new metric.
-    Surface the dormant Option D (rule-chain extension on S77 LOW
-    pair findings) as a third alternative.
-    Give an honest "my read" but DO NOT pick. Wait for user.
+  PHASE A (~5 min) — Verify cell choice is correct. Sanity-check S77's
+  cell_stats for LOW × PMID_DS_MAXTOP; confirm cell is still under-rule-
+  covered after Rule 20 ship (Rule 20 should NOT fire on this cell by
+  construction — the cell has DS-with-maxtop available, so the
+  PMID_DS_NOMAXTOP trigger condition n_PMID_DS_w_maxtop == 0 fails).
 
-  PHASE 3 — depends on user choice:
-    A3 → launch the full N=1000 oracle in background (~80h),
-         write train/grade harness in parallel (same playbook as
-         S81), Decision 118 records the launch.
-    Recalibration → planning session. Read DECISIONS_LOG.md
-         Decision 114 (S79 noise-floor) + Decision 117 (S82 NULL),
-         propose 2-3 candidate headline metrics with worked-example
-         targets, write Decision 118 capturing the recalibration.
-    Option D → implement the rule-chain extension on S77 LOW pair
-         kicker_max-in-pair-suit discriminator; ship gate is +$5
-         prefix grid (the grader Δ that S78 also used).
-    Other → implement what the user picks.
+  PHASE B (~10 min, ~80s compute) — Drill the cell under PRODUCTION v57
+  (not v56 — important since v57 is now production). Write
+  `drill_v57_low_pmid_ds_maxtop_S84.py`. Filter parquet to cell_idx == 2
+  AND pair_rank ∈ {2-7}. Run v57 on each hand. Aggregate (v57_class,
+  oracle_class) mismatches and total leak $.
 
-  PHASE 4 — Session-end commit + push (pre-authorized).
+  PHASE B+ (~10 min, ~80s compute) — Discriminator drill. Hypothesis: the
+  swap target is different from PMID_DS_NOMAXTOP because the cell already
+  has DS-with-maxtop. May be PBOT-routing (oracle wants pair-to-bot) or a
+  different within-PMID variant. Use the same KEEP/SWAP/OTHER population
+  analysis from S83.
+
+  PHASE C (~5 min, ~few seconds compute) — Write strategy_v58_* with
+  parametric gate; multi-gate grade on full grid (cell hands only,
+  fast) + prefix grid. Pre-commit SHIP/NULL/MIXED thresholds in code
+  BEFORE running (SHIP ≥ $5 prefix, NULL < $2 prefix).
+
+  PHASE D — Session-end commit + push + DECISIONS_LOG + CURRENT_PHASE
+  rewrite. End with verbatim resume prompt.
 
 REMINDERS:
 - Use python3, not python.
 - cargo at ~/.cargo/bin/cargo.
 - v44_dt model + features remain unchanged.
-- The pre-committed-verdict pattern (S81 + S82) is the new template
-  for any ship-or-null experiment going forward.
+- v57_lo_pair_defensive is the new production rule chain (not v56).
+- The pre-committed-verdict pattern is project standard.
 - "Speed is not necessary — clarity and perfection is."
-- The user is non-technical; any session report opens with a
-  plain-language TL;DR before any numbers.
-- DO NOT pick the strategic path for the user. Surface options;
-  wait for direction.
+- The user is non-technical; session reports open with plain-language TL;DR
+  before numbers.
+- If S84's Phase B finds the leak structure is materially different from
+  S83's, adapt the discriminator search. Don't force the S83 pattern onto
+  a cell where it doesn't fit.
+
+ALTERNATIVE DIRECTIONS (if user redirects):
+- LOW × PMID_SS_MAXTOP (S77: $9.71 STRUCTURE / 85k hands) — smaller cell.
+- LOW × PMID_OTHER (S77: $11.81 STRUCTURE / 138k hands) — catchall.
+- MID pair (8-T) × PMID_DS_NOMAXTOP — extend Rule 20 to higher pair tier.
+- HIGH_ONLY × J-high (S71: $14.47 STRUCTURE / 14k hands) — different category.
+- Headline-goal recalibration (still available from S82 fork).
 ```
 
 ---
