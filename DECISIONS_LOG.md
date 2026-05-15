@@ -7109,3 +7109,128 @@ When the oracle completes (estimated ~2026-05-15 morning Pacific):
 7. **Stratification was free.** Held-out hands distribute 88.68% / 11.32% across two_pair / trips_pair, vs 88.64% / 11.36% in the full subset — within 0.04 percentage points of the population mean. Every 10th subset index gave us stratified sampling without explicit stratification logic.
 
 8. **The 27.8% vs 8.1% leverage.** A1 had 8.14% of training labels at N=1000 and produced a +13.15pp prefix match-rate lift (in-sample). A2 has 27.80% at N=1000, concentrated on the two highest-overfit categories. If the OOS Lens 3 match% on the held-out 151K beats ~72%, A2 has succeeded structurally; if it clears 75% with N=200 regret within $50 of v44, it ships. The cleanness of the experimental design — one knob, locked thresholds, a pre-committed grader — is what makes this a legitimate test rather than a fishing expedition.
+
+## Decision 117 — Session 82 v49_a2 CLEAN NULL ship; pre-committed grader fired NULL on Lens-3 held-out match% 63.74% (well below 72.0% NULL floor and 75.0% SHIP threshold); A1's S80 80.19% in-sample lift was largely memorization — confirmed empirically by the held-out OOS test the experiment was designed to settle; A-path closes here at v44 + N=1000 capacity; per-category trips_pair regression −12.83pp on held-out (worst hit); next-session decision surfaced to user — A3 (full N=1000 grid, 5× compute multiplier) vs headline-goal recalibration (the 95% match-rate question paused at S78)
+
+### Session
+
+Session 82 — A2 verdict (Decision 116 follow-up; closes the A-path opened in Decision 115).
+
+### Context
+
+Decision 115 selected A2 as S81's lever. Decision 116 launched it: built the 1.51M two_pair + trips_pair subset with 151,008 held-out hands, generated N=1000 RealisticHumanMixture labels for all 1.51M hands over a ~15.5h overnight run, and shipped a three-lens grader with **pre-committed SHIP/NULL/MIXED thresholds hardcoded in code**.
+
+S82's role was mechanical: wait for the oracle to finish, train v49_a2_dt on the three-zone hybrid label set, run the grader, and let it auto-fire the verdict.
+
+### What S82 ran
+
+**Phase 1 — Verify oracle finished.** Confirmed `oracle_grid_s81_n1000.bin` = 611 MB, all 1,508,080 records persisted, log line `Done in 55905.06s. Wrote 1508080 records.` Wall time: 15.53 hours from launch — within 0.83 h of the 14.7h pilot estimate.
+
+**Phase 2 — Train v49_a2_dt.** Ran `train_v49_a2_dt.py --max-depth 36 --min-samples-leaf 1`. Fit time 372.2s ≈ 6.2 min (faster than the 10-12 min A1 baseline; the smaller fit reflects training on a slightly smaller post-held-out set). Output `data/v49_a2_dt_model.npz`, 1.31 GB, **2,177,375 leaves** (vs v44's 2,248,173). Three-zone composition matched the smoke-test exactly: Zone 1 = 476,978 (8.14%), Zone 2 = 1,151,876 (19.66%), Zone 3 = 4,229,297 (72.20%); total N=1000 share of training labels = **27.80%**, exactly 3.4× A1's 8.14%, concentrated entirely on the highest-overfit categories.
+
+**Phase 3 — Grade three lenses.** Ran `grade_v49_a2_holdout.py` end-to-end. Wall time ~40s (X build 6.5s, two model loads ~10s, two predictions ~9s, lens computations <2s).
+
+### The numbers (the read of the experiment)
+
+|  | v44_dt | v49_a2_dt | Δ |
+|---|---:|---:|---:|
+| n_leaves | 2,248,173 | 2,177,375 | −70,798 |
+| Lens 1 (N=200, 6M full) match% | 64.43% | 59.02% | **−5.42pp** |
+| Lens 1 $/1000h regret | +$1,081 | +$1,245 | +$164 |
+| Lens 2 (N=1000, 500K prefix) match% | 67.05% | **79.33%** | **+12.28pp** |
+| Lens 2 $/1000h regret | +$686 | +$412 | −$274 |
+| **Lens 3 (N=1000, HELD-OUT 151K) match%** | **65.86%** | **63.74%** | **−2.12pp** |
+| Lens 3 $/1000h regret | +$708 | +$904 | +$196 |
+
+Per-category Lens-3 breakdown (the categories A2 specifically targeted):
+
+| Category | n | v44 match% | v49_a2 match% | Δ | v44 regret | v49_a2 regret | Δ |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| two_pair | 133,914 | 66.79% | 66.04% | −0.75pp | +$708 | +$825 | +$117 |
+| trips_pair | 17,094 | 58.59% | 45.76% | **−12.83pp** | +$707 | +$1,520 | **+$813** |
+
+### Pre-committed verdict (auto-fired by grader)
+
+```
+SHIP rule:  Lens 3 match% ≥ 75.0%  AND  |Lens 1 $/1000h(v49_a2) − Lens 1 $/1000h(v44)| ≤ $50
+NULL rule:  Lens 3 match% < 72.0%
+MIXED:      everything in between → reassess alongside A3
+
+>>> VERDICT: NULL
+    Lens 3 match% 63.74% < 72.0% — held-out lift insufficient;
+    S80's in-sample 80.19% was largely memorization.
+```
+
+### What this answers
+
+1. **A1's 80.19% prefix match% lift in S80 was largely memorization, not structural learning.** The held-out test was specifically designed to settle this. v49_a2 — which has 3.4× A1's N=1000 training-label coverage on the highest-overfit categories — achieves 79.33% on the in-sample prefix lens (matching A1's signal) but only 63.74% on the held-out lens. The 15.6-percentage-point gap between in-sample and out-of-sample is the memorization. (For comparison, v44_dt — which never saw any N=1000 labels — scores 67.05% on the prefix lens and 65.86% on the held-out lens, a gap of just 1.19pp. v44 is essentially calibrated; v49_a2 is overfit.)
+
+2. **Cleaner labels alone do not produce structural lift at v44's saturating capacity.** This complements Decision 113's finding (single-model ML feature engineering at v44 saturates) with a parallel finding on the data side: at depth=36 / ml=1, even significantly cleaner labels on the highest-overfit categories cannot push held-out generalization above the noise-bound match rate. The model has enough capacity to memorize whatever labels it sees.
+
+3. **The trips_pair regression is the sharpest signal.** trips_pair was the single most-overfit category (−19.43pp shift in S79; +20.78pp A1 lift in S80) and is the smallest population (17,094 held-out rows). On held-out, v49_a2 is **−12.83pp WORSE than v44** with **+$813/1000h MORE regret** — substantially worse than v44 on the very category the experiment targeted. The cleaner labels overfit harder there than anywhere else.
+
+4. **The pre-committed verdict design worked exactly as intended.** No interpretation arbitrage was possible: the grader prints SHIP/NULL/MIXED based on numbers locked in code before the data existed. The data landed, the verdict fired, and the path forward is mechanical from the verdict — A-path closes, surface A3 vs recalibration to the user. Methodologically this is the cleanest verdict in the cascade.
+
+### What S82 does NOT change
+
+* **Production state UNCHANGED for the eleventh consecutive session.**
+  * Rule chain: **v56_trips_hybrid** ($1,429 full / $794 prefix).
+  * ML champion: **v44_dt** ($1,081 full / $686 prefix).
+  * Two-track divergence: $348/1000h.
+  * Total project rule count: 18.
+* **STRATEGY_GUIDE.md Part 1 is NOT updated** — no strategy of record changed.
+* **STRATEGY_GUIDE.md Parts 2-6 are NOT updated** — no champion change.
+* **No code changes** beyond the v49_a2 model file (which is gitignored under `data/`).
+
+### Path-forward decision (surfaced to user)
+
+The A-path (oracle-label-quality lever) closes here. Two options remain on the cascade:
+
+1. **A3 — full 6M-hand N=1000 grid.** Generate fresh N=1000 labels on the entire canonical set (5× the compute of A2, ~75-80h wall time at the same throughput). Retrain a v49_a3_dt on uniformly-clean labels. The hypothesis is that label noise on the *non-targeted* categories may be propagating second-order errors into the targeted-category predictions; only a fully-clean grid can refute that. **Cost: 5×.** **Expected outcome under the v49_a2 NULL: small-to-zero structural lift on held-out** (the 1.19pp v44 in-sample-vs-OOS gap on the prefix lens suggests the noise-bound match rate is already close to v44's saturating performance).
+
+2. **Headline-goal recalibration.** The original Decision 114 question — "is the 95% match-rate target reachable given the 32% oracle self-disagreement floor?" — paused at S78 and was deferred through M2 + A1 + A2. The A2 NULL is the strongest evidence yet that **the answer is no at the 32% noise floor**: even on the most-targeted experimental setup with the cleanest labels we can afford, the held-out match rate plateaus near v44's 65.86%. Recalibrating means picking a new headline target (e.g. "$/1000h regret < $X" instead of "match% > 95%") and reframing the cascade around it.
+
+These options are surfaced for the user; **no choice is made in S82**.
+
+### Acceptance gates (all met for S82)
+
+* ✅ Oracle completion confirmed (1,508,080 records, 611 MB, log final line present).
+* ✅ `data/v49_a2_dt_model.npz` saved (1.31 GB, 2.18M leaves).
+* ✅ Three-lens grade run end-to-end; output in `data/session82/grade_v49_a2.log`.
+* ✅ Verdict declared mechanically by pre-committed grader thresholds — no interpretation arbitrage.
+* ✅ `data/session81/grade_v49_a2_holdout_summary.json` written for downstream consumers.
+* ✅ Decision 117 (this entry) records the NULL verdict.
+* ✅ `SESSION_82_REPORT.md` written with plain-language TL;DR.
+* ✅ `CURRENT_PHASE.md` rewritten for S83 (A3 vs recalibration as the next-session question).
+
+### Files (Session 82)
+
+**New artifacts (gitignored under `data/`):**
+* `data/v49_a2_dt_model.npz` — 1.31 GB, 2.18M leaves (gitignored).
+* `data/session82/train_v49_a2.log` — fit log.
+* `data/session82/grade_v49_a2.log` — grader output incl. verdict.
+* `data/session81/grade_v49_a2_holdout_summary.json` — machine-readable verdict summary.
+
+**Documentation:**
+* `SESSION_82_REPORT.md` — session report with plain-language TL;DR.
+* `DECISIONS_LOG.md` — this section (Decision 117).
+* `CURRENT_PHASE.md` — rewritten for S83.
+
+**No new code in S82.** All scripts already shipped in S81; S82 ran them end-to-end against the now-complete oracle output.
+
+### Methodology notes (Session 82)
+
+1. **Pre-committed verdict in code paid off twice.** First in design (S81): forcing the team to commit to thresholds before seeing the data. Second in execution (S82): the verdict fires automatically when the script runs; no opportunity to talk ourselves into SHIP after the fact. This is the cleanest methodological win since the prefix-tripwire pattern.
+
+2. **In-sample vs OOS gap quantifies memorization directly.** v49_a2 in-sample (Lens 2): 79.33%. v49_a2 OOS (Lens 3): 63.74%. Gap = 15.59pp. v44_dt in-sample (Lens 2): 67.05%. v44_dt OOS (Lens 3): 65.86%. Gap = 1.19pp. The 13× larger memorization gap on v49_a2 is the entire story — A2 trained the model to know its training rows, not the underlying signal.
+
+3. **Targeted compute amplifies the failure mode it was meant to fix.** A2 concentrated 3.4× more N=1000 labels on the categories most prone to memorization. The OOS regression on those exact categories (trips_pair −12.83pp) is the strongest signal that *targeting* is not the lever — the lever (if any) is *capacity reduction*, which Decision 115's C2 already showed has no signal at v44's regime either. Both ends of the lever have now been swept.
+
+4. **Two zero-signal levers in adjacent sessions strongly suggest the headline target is the bottleneck.** Decision 113 closed single-model feature engineering at v44 saturation. Decision 117 closes label-quality improvements at v44 capacity. The two doors that remain are A3 (5× compute, low expected yield) and recalibration. The pattern is the bottleneck moving from "cascade has more levers to test" to "cascade has tested all the obvious levers and the residual is the noise floor."
+
+5. **The v44 in-sample-vs-OOS gap of 1.19pp is the noise floor lower bound.** v44 was never told about N=1000 labels. Its OOS match rate of 65.86% is what the underlying data supports without any cleaner-label assistance; its in-sample match rate of 67.05% is barely higher because the model isn't memorizing labels it didn't see. This 65.86-67.05% band is the "natural" noise-bound performance of a v44-class model on this category set. Any candidate that doesn't beat 65.86% on Lens 3 is not finding new structural signal; it's relabeling.
+
+6. **The empirical pilot was right.** S81's 14.7h pilot estimate landed within 0.83h of actual wall time. Lesson reconfirmed: a brief pilot with the actual binary on the actual input always beats a wall-time model.
+
+7. **Speed is not necessary — clarity and perfection is.** The S82 ship attempt is the cleanest NULL verdict in the cascade because S81 spent its compute window writing the harness, not waiting. The verdict landed in 40 seconds of grader runtime; everything else was decided before the data existed.
+
