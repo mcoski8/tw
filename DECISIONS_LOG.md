@@ -8640,3 +8640,181 @@ Option C N=1000 oracle generator infrastructure remains DEFERRED. v60 from S86 s
 4. **REFINEMENT (DEFERRED): v52-defensive-low partial-effectiveness exploit.** S90 found that v52-defensive-low actively WINS on ~23% of S90 target hands. A future v65 could retain v52-defensive-low on the subset where it wins (per-hand picker rather than uniform gate). Engineering scope: identify the structural discriminator that separates "v52-DL wins" from "v44 wins" within the S90 target population. Speculative; depends on whether the discriminator is clean.
 
 Default S91 plan if user defers: pursue (1) on prefix-COVERED cells (LOW pair as the first stop) — uses the prefix grader for a real two-grid SHIP standard, which is methodologically stronger than the EFFECT-SIZE-DOMINANCE pattern.
+
+## Decision 126 — Session 91 NULL on LOW pair prefix-COVERED chain audit; three v65 candidates all FAIL two-grid SHIP standard; v44_RULE13 confirmed as project's largest hidden net-negative layer ($182.28/1000h bleed vs v44_dt on LOW pair) but v54+Rule 29 absorb $195.63; first non-ship session in chain-audit run; methodology lesson: POPULATION-DIVERGENCE NOISE between prefix and full grids dominates per-sub-cell bleeds < $5/1000h, so chain-audit applicability requires EITHER prefix-silent target OR ≥$5 bleed on both grids
+
+### Session
+
+Session 91 — planned execution of the S90-defined PRIMARY path: pivot to LOW pair prefix-COVERED cells with the chain-audit pattern. The session expected one of three outcomes per pre-drill data: (P1) clean ship if residual bleeds replicate cleanly across both grids, (P2) cleaner pattern-confirmation NULL if v54/v57 had already absorbed the bleed, (P3) prefix-only ship with full-grid disagreement (the most likely outcome given S91 was the first session to apply the TWO-GRID SHIP standard rather than EFFECT-SIZE-DOMINANCE). Outcome was (P3) → mechanical NULL.
+
+### Context
+
+S90 (Decision 125) shipped v64 closing the structurally-non-empty HIGH_ONLY × max ≥ 8 zone. Four consecutive chain-audit ships (S87/S88/S89/S90) all used EFFECT-SIZE-DOMINANCE on prefix-silent cells. The S90 resume prompt identified S91's PRIMARY candidate as a chain audit on prefix-COVERED LOW pair cells — "methodologically stronger than the prefix-silent S87-S90 ships." This was the first project session to test the chain-audit pattern under the two-grid SHIP standard with both grids active. The S91 directive locked SHIP thresholds at $5/1000h on both grids.
+
+### What S91 ran (phases)
+
+**Phase A — structural / prefix coverage check (5 min).** Queried `drill_pair_v44_per_hand_structural.parquet` (S66 drill). Findings:
+
+- LOW pair (rank 2-7) total: 1,292,544 hands across full grid; 215,162 within prefix subset.
+- All 6 pair cells (PBOT_DS_JOINT, PBOT_DS_PARTIAL, PMID_DS_MAXTOP, PMID_DS_NOMAXTOP, PMID_SS_MAXTOP, PMID_OTHER) are prefix-covered (cid_min 61,085-62,041; well below 500K prefix boundary).
+- v44_dt baseline leak vs oracle: $281.56/1000h aggregate on LOW pair full grid.
+
+**Phase B — addressability pre-drill (4 min compute, 1.29M hands).** `drill_v64_lo_pair_addressability_S91.py` evaluated v64 on every LOW pair hand. Per-cell headline:
+
+| cell | n | v44=v64 % | v44 leak $ | v64 leak $ | Δ (v64−v44) |
+|---|---:|---:|---:|---:|---:|
+| PBOT_DS_JOINT | 171,072 | 100.0% | $19.32 | $19.32 | $+0.00 |
+| PBOT_DS_PARTIAL | 541,728 | 100.0% | $83.58 | $83.58 | $+0.00 |
+| PMID_DS_MAXTOP | 128,304 | 82.7% | $33.16 | $7.24 | $-25.92 |
+| PMID_DS_NOMAXTOP | 228,096 | 58.6% | $87.32 | $42.95 | $-44.37 |
+| PMID_SS_MAXTOP | 85,536 | 74.6% | $25.16 | $15.33 | $-9.83 |
+| PMID_OTHER | 137,808 | 71.8% | $33.03 | $20.73 | $-12.30 |
+| **TOTAL** | **1,292,544** | | **$281.56** | **$189.15** | **$-92.41** |
+
+v64 LIFTS $92.41/1000h over v44_dt on full grid — production working as designed. PBOT cells byte-identical (v54 routes both to v44_dt).
+
+Prefix-grid breakdown (215,162 prefix hands):
+
+| cell | v44 prefix $ | v64 prefix $ | Δ prefix |
+|---|---:|---:|---:|
+| PBOT_DS_JOINT | $46.62 | $46.62 | $+0.00 |
+| PBOT_DS_PARTIAL | $125.51 | $125.51 | $+0.00 |
+| PMID_DS_MAXTOP | $3.79 | $8.09 | **+$4.30** |
+| PMID_DS_NOMAXTOP | $58.52 | $38.39 | -$20.13 |
+| PMID_SS_MAXTOP | $8.33 | $9.64 | **+$1.31** |
+| PMID_OTHER | $13.32 | $14.49 | **+$1.17** |
+
+Two-grid disagreement on PMID_DS_MAXTOP, PMID_SS_MAXTOP, PMID_OTHER (full says LIFT, prefix says BLEED). PMID_DS_NOMAXTOP agrees on direction (Rule 29's confirmed lift).
+
+**Phase B+ — chain audit / layer attribution (138s compute, 215,162 × 5 strategies).** `audit_v64_lo_pair_chain_S91.py` ran v44_dt, **v44_RULE13** (= strategy_v44_rule13_three_pair_DS, the rule-based chain fallthrough), v54, v57, v64 on every prefix LOW pair hand. Result:
+
+| layer | total leak ($/1000h prefix) | Δ vs prior layer |
+|---|---:|---:|
+| v44_dt | $+256.11 | — |
+| v44_RULE13 chain | $+438.38 | **+$182.28** (chain BLEEDS massively) |
+| v54 (PBOT_DS routing) | $+259.56 | **-$178.82** (recovers 98% of bleed) |
+| v57 (+ Rule 29) | $+242.75 | **-$16.81** (Rule 29's S83 lift confirmed) |
+| v64 (production) | $+242.75 | $+0.00 (HIGH_ONLY gates don't fire on pair — confirmed scoping) |
+
+**KEY ARCHITECTURAL FINDING.** The v44_RULE13 rule-based chain — the fallthrough at the bottom of every project chain layer — BLEEDS $182.28/1000h vs v44_dt on LOW pair PMID hands. This is the largest single-layer bleed identified in the project, ~30× the S90 chain bleed and 18× S87's. But v54's PBOT_DS→v44_dt hybrid routing absorbs $178.82, and v57's Rule 29 absorbs another $16.81. Net production is $13.36/1000h LIFT over v44_dt on prefix and $92.41 on full. **v54 + Rule 29 are LOAD-BEARING.**
+
+Per-sub-cell residual (where v44_RULE13 still bleeds vs v44_dt after v54's routing):
+
+| cell × max_sing | n_prefix | v44_dt $ | v44_RULE $ | Δ (chain bleed on prefix) | Δ full grid |
+|---|---:|---:|---:|---:|---:|
+| PMID_DS_NOMAXTOP × K | 10,080 | $15.32 | $20.14 | **+$4.82** | -$6.85 (LIFT) |
+| PMID_DS_MAXTOP × J | 1,890 | $1.22 | $5.16 | +$3.95 | -$1.14 (LIFT) |
+| PMID_OTHER × J | 2,030 | $2.29 | $5.53 | +$3.24 | +$0.25 (weak BLEED) |
+| PMID_SS_MAXTOP × J | 1,260 | $1.22 | $2.59 | +$1.37 | -$0.46 (LIFT) |
+| PMID_DS_MAXTOP × T | 945 | $0.99 | $1.85 | +$0.86 | -$0.84 (LIFT) |
+| **TOTAL residual** | **16,205** | | | **+$14.24** | ~-$10.00 |
+
+The TWO-GRID disagreement on direction for 4 of 5 sub-cells is the load-bearing methodology finding. Prefix-and-full are NOT measuring the same effect — they evaluate different canonical_id populations within the same nominal sub-cell.
+
+**Phase C — pre-committed grader (1s compute, no model evaluation needed since audit already computed all EVs).** `grade_v65_lo_pair_chain_candidates_S91.py` LOCKED thresholds in code before evaluation:
+
+- SHIP: prefix lift ≥ $5/1000h AND full lift ≥ $5/1000h (both grids clear AND same direction).
+- NULL: both grids |lift| ≤ $1/1000h.
+- MIXED: one grid clears, other doesn't.
+
+Three candidate v65 designs evaluated:
+
+| candidate | mechanism | predicted prefix lift | predicted full lift | mechanical verdict |
+|---|---|---:|---:|---|
+| A | route LOW × PMID_DS_NOMAXTOP × max_sing=K → v44_dt | +$4.82 | -$6.85 | **NULL (grid negative)** |
+| B | route LOW × {DS_MAXTOP, SS_MAXTOP, OTHER} × max_sing=J → v44_dt | +$8.56 | -$1.35 | **MIXED (grids disagree)** |
+| C | combined — all 5 sub-cell bleeds | +$14.24 | ~-$10.00 | **MIXED (grids disagree)** |
+
+**Aggregate S91 verdict: NULL. No new ship. Production v64 unchanged.**
+
+### Verdict + production state
+
+**VERDICT: NULL.** All three candidates failed the two-grid SHIP standard. Pre-committed mechanical thresholds enforced.
+
+**Production UNCHANGED at v64_high_only_chain_fix_zone.**
+* Full grid: $1,627.36/1000h (UNCHANGED).
+* Prefix grid: $776.88/1000h (UNCHANGED).
+* v44_dt ML champion: UNCHANGED ($1,081 full / $686 prefix).
+* Production vs v44_dt: $546.36/1000h (UNCHANGED).
+* Remaining gap to oracle ceiling: $117.84/1000h (UNCHANGED).
+* Cumulative closure since pre-S68: $1,291.16 of $1,409 = 91.6% (UNCHANGED).
+* Total project rule count: 24 (UNCHANGED).
+* Combined S87-S91 chain-audit recovery: $214.83/1000h (S91 contributes $0).
+
+### Why the grids disagreed — the methodology finding (POPULATION-DIVERGENCE NOISE)
+
+For prefix-COVERED LOW pair cells, the prefix grid (N=1000) and full grid (N=200) evaluate **different canonical_id populations within the same nominal sub-cell**. The prefix subset is the first 500K canonical hands — a non-random lower-cid slice of the structurally identical sub-cell.
+
+The v44_RULE13 chain's hand-level behavior varies across the canonical_id range (it triggers different rule branches depending on subtle hand features that correlate with canonical_id ordering — e.g., suit-permutation canonical form, kicker rank distributions, etc.). When per-hand effects are small ($0.04-$0.40/hand) and strategy picks correlate with canonical_id ordering, the per-sub-cell aggregate Δ on the two grids can legitimately diverge in DIRECTION.
+
+This is **NOT** winner's curse on the oracle (the "max of noisy estimates is biased upward" pitfall flagged in Decisions 114-117). The cause is **strategy-level**: the two strategies (v44_dt vs v64) interact with the prefix vs full canonical-id populations differently. The two grids are honest measurements on different populations.
+
+**Project-level lesson:** The chain-audit pattern (S87-S90) was most productive on HIGH_ONLY × {J-A,8-T} because (a) those cells are prefix-silent → EFFECT-SIZE-DOMINANCE exception applies, AND (b) per-sub-cell bleeds were $7-99/1000h, large enough to dominate any population-divergence noise. On prefix-COVERED LOW pair, neither condition holds: the prefix grid is real (so we can't claim EFFECT-SIZE-DOMINANCE), and the per-sub-cell bleeds are $1-5/1000h (small enough that population-divergence noise dominates).
+
+**CHAIN-AUDIT APPLICABILITY TEST (NEW S91):** The pattern is most productive when EITHER:
+1. Target cells are prefix-SILENT → EFFECT-SIZE-DOMINANCE exception applies (S87-S90), OR
+2. Per-sub-cell residual bleeds are ≥ $5/1000h on BOTH grids → population-divergence noise doesn't dominate.
+
+Without one of these conditions, the chain-audit will NULL under the two-grid SHIP standard. Worth knowing before committing 30+ min to a pre-drill.
+
+### What this answers about the cascade
+
+1. **v44_RULE13 is the project's largest hidden net-negative layer.** $182.28/1000h prefix bleed on LOW pair alone — bigger than every chain bleed S87-S90 found by 2-25×. This is now a project-level architectural snapshot, not just a session note.
+
+2. **v54's PBOT_DS hybrid routing + v57's Rule 29 are LOAD-BEARING.** Without them, production would be $182/1000h BELOW v44_dt on LOW pair. With them, production is $13.36 ABOVE v44_dt on prefix and $92.41 on full. The audit independently re-confirmed both as net-positive (Δ_v54_vs_v44_RULE = -$178.82; Δ_v57_vs_v54 = -$16.81, concentrated entirely in Rule 29's S83 design cell).
+
+3. **The chain-audit pattern transferred to a DIFFERENT chain architecture** (the v54/v55/v56 hybrid + v44_RULE13 fallthrough, vs S87-S90's v47→v48→v52 chain) but produced a NULL. The pattern is robust enough to apply cleanly across different chain architectures; the cells aren't ripe for new ships under the two-grid standard.
+
+4. **The HIGH_ONLY gate-outs (v61/v62/v63/v64) are correctly scoped.** Δ_v64_vs_v57 = exactly $0.00 across all LOW pair sub-cells — confirming the HIGH_ONLY gates don't fire on pair (no scope leakage).
+
+5. **First non-ship session in the chain-audit run.** S87/S88/S89/S90 shipped Rules 21/22/23/24; S91 NULLs cleanly. The streak of four consecutive ships ends, the methodology produced an honest answer.
+
+### Methodology lessons (Session 91)
+
+1. **TWO-GRID SHIP STANDARD applied to prefix-COVERED audits for the first time.** S87-S90 used EFFECT-SIZE-DOMINANCE on prefix-SILENT cells. S91 was the first session to apply the proper two-grid standard. The standard correctly NULLed three candidates that would have shipped on prefix alone — confirming the bar prevents false ships.
+
+2. **POPULATION-DIVERGENCE NOISE (NEW S91).** Prefix and full grids evaluate different canonical_id populations within the same nominal sub-cell. When per-hand effects are small and strategy picks correlate with canonical_id ordering, per-sub-cell aggregate Δ can legitimately diverge in DIRECTION. Distinct from oracle winner's curse — strategy-level effect.
+
+3. **CHAIN-AUDIT APPLICABILITY TEST (NEW S91).** Pattern is most productive when EITHER (a) target is prefix-SILENT OR (b) per-sub-cell residual ≥ $5/1000h on BOTH grids. Otherwise NULL is the expected outcome.
+
+4. **v44_RULE13 is the load-bearing architectural fallback for pair hands.** $182.28/1000h bleed vs v44_dt on LOW pair. v54 + Rule 29 absorb $195.63. Production architecture relies on this. Future audits should not undo v54's routing.
+
+5. **PRE-COMMITTED-THRESHOLD PATTERN is critical for honest verdicts.** Without locking $5 thresholds in code before evaluation, the temptation to ship the $4.82 prefix bleed (Candidate A) would have been real. Mechanical NULL is the right call.
+
+6. **A NULL audit session is a COMPLETE cycle.** S87/S88/S89/S90 each shipped; S91 doesn't. The methodology produced an honest answer — no candidate clears the SHIP bar. Worth the session.
+
+7. **The audit also serves as INDEPENDENT VERIFICATION of prior ships.** Rule 29 (S83's $16.81 ship) re-confirmed via S91 layer attribution. v54's PBOT_DS hybrid routing (S82's design) re-confirmed at $178.82 net-positive. Periodic re-verification keeps strategy-of-record honest.
+
+### Files (Session 91)
+
+**New code (committed):**
+* `analysis/scripts/drill_v64_lo_pair_addressability_S91.py` — Phase B pre-drill on all 1.29M LOW pair hands
+* `analysis/scripts/drill_v64_lo_pair_prefix_breakdown_S91.py` — Phase B+ per-sub-cell prefix breakdown
+* `analysis/scripts/audit_v64_lo_pair_chain_S91.py` — Phase B+ layer attribution (v44_dt → v44_RULE → v54 → v57 → v64)
+* `analysis/scripts/grade_v65_lo_pair_chain_candidates_S91.py` — Phase C pre-committed grader on 3 candidates
+
+**New artifacts (under `data/session91/`):**
+* `drill_v64_lo_pair_addressability.log`
+* `drill_v64_lo_pair_prefix_breakdown.log`
+* `audit_v64_lo_pair_chain.log`
+* `grade_v65_lo_pair_chain_candidates.log`
+
+**Documentation:**
+* `SESSION_91_REPORT.md` — this session's plain-language TL;DR + chain-audit applicability framing
+* `DECISIONS_LOG.md` — this section (Decision 126)
+* `CURRENT_PHASE.md` — rewritten for S92
+* `STRATEGY_GUIDE.md` — Part 1 SKIPPED (no strategy change); front-matter "Last updated" line updated only
+
+### Path forward (S92 candidates)
+
+1. **PRIMARY: audit two_pair cells with the chain-audit pattern.** Existing per-hand parquet `drill_two_pair_v44_per_hand_structural.parquet` (1.34M hands, 7-cell taxonomy). v55_two_pair_hybrid is the dedicated chain layer. Same audit setup as S91: compare v44_dt, v44_RULE13 (= v43_rule12_two_pair_DS_intact for two_pair), v55, v64 layer attributions on prefix grid. Same two-grid SHIP standard. Predictable outcome if S91 pattern holds: v55 hybrid absorbs most chain bleed, residual sub-cells fail two-grid standard. Worth running once to confirm and to extend the "chain-audit applicability" methodology pattern. ~5 min compute.
+
+2. **SECONDARY: audit trips cells with same pattern.** Smaller drill (2.97MB parquet vs 10.8MB for two_pair). v56_trips_hybrid is the chain layer. ~3 min compute.
+
+3. **TERTIARY: build Option C N=1000 oracle generator infrastructure.** Required for v60 (S86 MID-pair MIXED-by-methodology). Engineering scope: modify `engine/src/main.rs` to add `--id-list-file` option. ~30-60 min Rust mod.
+
+4. **REFINEMENT (DEFERRED): v52-defensive-low partial-effectiveness exploit (S90 finding).**
+
+5. **HYPOTHESIS (DEFERRED): extend Rule 29 gate from Q to K.** S91 data suggests this likely fails two-grid standard (PMID_DS_NOMAXTOP × K shows full-grid LIFT for chain, prefix-grid BLEED). Worth a single drill if PRIMARY/SECONDARY don't ship.
+
+6. **METHODOLOGY EXPANSION (NEW S91): consider whether population-divergence noise affects HIGH_ONLY zone ships retroactively.** Worth a follow-up audit using N=1000 oracle infrastructure once it's built (TERTIARY).

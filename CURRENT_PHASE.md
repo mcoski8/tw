@@ -1,168 +1,165 @@
-# Current: Sprint 8 — Session 90 v64 SHIPS Rule 24 (chain gate-out extension to HIGH_ONLY × max ∈ {8, 9, T}) — fourth consecutive chain-audit ship; structurally-non-empty HIGH_ONLY × max ≥ 8 audit COMPLETE; +$7.23/1000h full grid; production v63 → v64 ($1,620.13 → $1,627.36); cumulative closure since pre-S68 = 91.6% of original $1,409; first project-level audit of v52-defensive-low (CONFIRMED partially effective — recovers ~50% of v47 bleed but doesn't fully restore v44_dt levels); S91 default = pivot to prefix-COVERED cells (LOW pair / two_pair / trips) using the chain-audit pattern; v52-defensive-low refinement deferred
+# Current: Sprint 8 — Session 91 CHAIN AUDIT NULL on LOW pair prefix-COVERED cells; production v64 UNCHANGED; key finding: v44_RULE13 rule-based chain bleeds $182/1000h vs v44_dt on LOW pair but v54+Rule 29 absorb 97% — three candidate v65 designs all FAIL two-grid SHIP standard (population-divergence noise dominates residual sub-cell bleeds); first non-ship in chain-audit run (breaks S87-S90 streak of four); methodology lesson: chain-audit on prefix-COVERED cells is dominated by population-divergence noise when residual bleeds are $<$5/1000h
 
-S90 executed the S89-defined PRIMARY path verbatim. Pre-drill of 25,740 target hands (HIGH_ONLY × max ∈ {8, 9, T} × 5 non-empty cells) revealed v63 leaks **+$7.23/1000h MORE than v44_dt** on these cells. Chain audit attributed the bleed to v44→v47 (+$19.28 introduced) partially recovered by v48 (−$2.53) and v52-defensive-low (−$9.52), net residual **+$7.23**. Phase A structural feasibility check eliminated 4 (cell × rank) combinations for free (max=7 × any cell; max ∈ {8,9,T} × {JOINT_HIGH, NEITHER}; max=8 × JOINT_MED — all combinatorially impossible).
+S91 executed the S90-defined PRIMARY path verbatim. Pre-drill on all 1,292,544 LOW pair hands showed v64 LIFTS $92.41/1000h over v44_dt on full grid and $13.36/1000h on prefix — confirming production works as designed. Phase B+ chain audit revealed the architectural source: **v44_RULE13 (the rule-based chain) BLEEDS +$182.28/1000h vs v44_dt** — bigger than any chain bleed found in S87-S90. v54's PBOT_DS→v44_dt hybrid recovers $178.82; v57's Rule 29 recovers another $16.81; production v64 nets +$13.36 LIFT.
 
-Rule 24 (v64) is a strict superset of Rule 23's gate-out: for HIGH_ONLY ×
-max ∈ {8, 9, T, J, Q, K, A} × cell ∈ {DS_NO_JOINT, DS_NO_MAXTOP, MS_ONLY,
-JOINT_HIGH, JOINT_MED, JOINT_LOW} per the S71 cell taxonomy, return
-strategy_v44_dt directly, bypassing the v47→v48→v52 chain. Pre-committed
-grader auto-fired **SHIP at +$7.23/1000h whole-grid lift** (SHIP threshold
-$5, lift cleared by 1.45×). Per-cell breakdown matches pre-drill prediction
-to $0.01 (high stability). Per-hand effect: 21.6% same, 55.2% better, 23.2%
-worse. Swap-right rate on changed hands: **70.4%** — LOWER than S88/S89
-(76.8%/85.2%) but higher than S87 (62.3%). The elevated "worse" rate is the
-signature of v52-defensive-low's partial effectiveness. Out-of-gate sanity:
-**0 v64≠v63 disagreements** on 50K random sample.
+Five sub-cell residual bleeds were identified on the prefix grid (totaling +$14.24/1000h):
 
-**Production state: ADVANCED.** v64_high_only_chain_fix_zone is the new
-rule chain ($1,627.36/1000h full / $776.88 prefix unchanged). v44_dt
-remains ML champion. Rule count: 23 → 24. Two-track divergence (remaining
-gap to oracle ceiling): $117.84/1000h (was $125.07; −$7.23). Cumulative
-closure since pre-S68: **91.6% of original $1,409** (was 91.1%).
+| Cell × max_sing | n_pref | v44_dt $ | v44_RULE $ | Δ (prefix bleed) | Full grid Δ | Two-grid? |
+|---|---:|---:|---:|---:|---:|---|
+| PMID_DS_NOMAXTOP × K | 10,080 | $15.32 | $20.14 | +$4.82 | -$6.85 LIFT | DISAGREE |
+| PMID_DS_MAXTOP × J | 1,890 | $1.22 | $5.16 | +$3.95 | -$1.14 LIFT | DISAGREE |
+| PMID_OTHER × J | 2,030 | $2.29 | $5.53 | +$3.24 | +$0.25 BLEED (weak) | AGREE (sign) |
+| PMID_SS_MAXTOP × J | 1,260 | $1.22 | $2.59 | +$1.37 | -$0.46 LIFT | DISAGREE |
+| PMID_DS_MAXTOP × T | 945 | $0.99 | $1.85 | +$0.86 | -$0.84 LIFT | DISAGREE |
 
-**Structurally-non-empty HIGH_ONLY × max ≥ 8 audit zone is now COMPLETE.**
-24 non-empty (cell × rank) combinations all gated. HIGH_ONLY × max = 7 is
-structurally empty (only 6 ranks ≤ 7 exist). Combined S87+S88+S89+S90
-chain-audit recovery: **$214.83/1000h** across four consecutive sessions.
+Three candidate v65 designs were evaluated against pre-committed thresholds (SHIP requires prefix ≥ $5 AND full ≥ $5):
 
-**FIRST PROJECT-LEVEL AUDIT OF v52-defensive-low.** 100% of S90 target
-hands fire this mode (LOW_MAX_DEFENSIVE = {7, 8, 9, 10}). Verdict: it's
-PARTIALLY effective — the S53 design intent was correct (it recovers
-$9.52 of v47's $19.28 bleed) but the implementation leaves money on the
-table relative to v44_dt. v52-defensive-low actively WINS on ~23% of S90
-target hands; a future v65 could retain it on the winning subset.
-Deferred.
+| Candidate | Prefix lift | Full lift | Verdict |
+|---|---:|---:|---|
+| A: route PMID_DS_NOMAXTOP × K → v44_dt | +$4.82 | -$6.85 | **NULL (grid negative)** |
+| B: route {DS_MAXTOP, SS_MAXTOP, OTHER} × J → v44_dt | +$8.56 | -$1.35 | **MIXED (grids disagree)** |
+| C: combined all sub-cell bleeds | +$14.24 | ~-$10.00 | **MIXED (grids disagree)** |
 
-> **🎯 IMMEDIATE NEXT ACTION (Session 91): pivot to prefix-COVERED cells (PRIMARY), OR build Option C N=1000 oracle infra (SECONDARY), OR refine v52-defensive-low (REFINEMENT)**
+**Aggregate S91 verdict: NULL. No new ship.**
+
+The grids disagree because prefix and full evaluate DIFFERENT canonical_id populations within the same nominal sub-cell (prefix is the first 500K canonical IDs — a non-random lower-cid slice). When per-hand effects are small ($0.04-$0.40/hand) and strategy picks correlate with canonical_id ordering, the per-sub-cell aggregate Δ can legitimately diverge in direction. This is "population-divergence noise" — distinct from N=200 winner's curse on the oracle.
+
+**Production state: UNCHANGED.** v64_high_only_chain_fix_zone remains the rule chain ($1,627.36/1000h full / $776.88/1000h prefix). v44_dt remains ML champion (19 sessions unchanged). Rule count: 24. Two-track divergence: $117.84/1000h. Cumulative closure since pre-S68: 91.6%. **Combined S87+S88+S89+S90+S91 chain-audit recovery: $214.83/1000h** (S91 contributes $0).
+
+**FIRST PROJECT-LEVEL FRAMING OF v44_RULE13's role.** The rule-based chain (v44_rule13_three_pair_DS → v43_rule12_two_pair → v42_rule11_jpair_pbot_ds → …) is the fallthrough at the bottom of every project chain layer. It bleeds $182.28/1000h vs v44_dt on LOW pair PMID hands — the LARGEST single-layer bleed identified in the project. **v54 + Rule 29 are load-bearing: they recover $195.63/1000h of this bleed**. Without them, production would be $182 BELOW v44_dt on LOW pair.
+
+> **🎯 IMMEDIATE NEXT ACTION (Session 92): pivot to two_pair chain audit (PRIMARY), OR trips chain audit (SECONDARY), OR build Option C N=1000 oracle infra (TERTIARY)**
 >
-> The structurally-non-empty HIGH_ONLY zone is fully audited. S91 must
-> pivot to new territory. Default order:
+> The LOW pair chain-audit closed with a clean NULL. S92 should pivot to
+> two_pair or trips. Default order:
 >
-> 1. **PRIMARY** — audit prefix-COVERED cells with the chain-audit pattern.
->    LOW pair, two_pair, trips. These are categories OUTSIDE the HIGH_ONLY
->    taxonomy with DIFFERENT rule chains in production (v44_dt routing via
->    v54/v55/v56 hybrids). Existing per-hand parquets cover most. Low
->    compute cost (no new oracle eval). Different baseline architecture —
->    the audit setup is different but the principle (find layers
->    introducing net-negative regression) is transferable. **Key
->    methodological advantage: prefix-COVERED means the prefix grader is a
->    real two-grid check.** Potential ship sizes unknown; could be $0
->    (clean confirmation) or $5-50/1000h. LOW pair is the recommended
->    first stop given it's the smallest and most targeted.
+> 1. **PRIMARY** — audit two_pair cells with the chain-audit pattern.
+>    Existing per-hand parquet `data/drill_two_pair_v44_per_hand_structural.parquet`
+>    (1.34M hands, 7-cell taxonomy: LAYOUT_A_DS, LAYOUT_C_DS, LAYOUT_B_DS,
+>    LAYOUT_A_SS, LAYOUT_C_SS_ONLY, LAYOUT_B_SS_ONLY, LAYOUT_OTHER). v55_two_pair_hybrid
+>    is the dedicated chain layer (S82 era). Same audit setup as S91:
+>    compute v44_dt, v44_RULE13 (= v43_rule12_two_pair_DS_intact), v55, v64
+>    layer attributions on prefix grid; per-cell × hi_pair × max_sing
+>    breakdown; pre-committed two-grid SHIP grader. Predictable outcome
+>    if S91 pattern holds (v55 hybrid absorbs most of chain bleed):
+>    residuals likely fail two-grid standard. Worth running once to
+>    confirm and to extend the "chain-audit applicability" methodology
+>    pattern. Estimated compute: ~5 min total.
 >
-> 2. **SECONDARY** — build Option C N=1000 oracle generator
->    infrastructure. Required for v60 (S86 MID-pair candidate, MIXED-by-
->    methodology) and for any future smaller-effect rule on prefix-silent
->    cells. ~30-60 min Rust modification (add `--id-list-file` option to
->    `engine/src/main.rs`) + ~10 min test + launch background K-high run
->    for v60 retroactive validation. Deprioritized vs PRIMARY because
->    PRIMARY uses existing infrastructure.
+> 2. **SECONDARY** — audit trips cells with the same pattern. Smaller
+>    drill (2.97MB parquet vs 23.9MB for pair). v56_trips_hybrid is
+>    the chain layer. ~3 min compute.
 >
-> 3. **TERTIARY** — LOW × PMID_OTHER drill. Deferred from
->    S87+S88+S89+S90. The last LOW pair cell. Standard Option D-revised
->    playbook.
+> 3. **TERTIARY** — build Option C N=1000 oracle generator infrastructure.
+>    Required for v60 (S86 MID-pair candidate, MIXED-by-methodology).
+>    Engineering scope: modify `engine/src/main.rs` to add `--id-list-file`
+>    option (read canonical IDs from a file, only process those).
+>    ~30-60 min Rust mod + ~10 min test + launch background K-high run
+>    for v60 retroactive validation. Deferred since PRIMARY/SECONDARY
+>    use existing infrastructure.
 >
 > 4. **REFINEMENT (DEFERRED)** — v52-defensive-low partial-effectiveness
->    exploit. S90 found v52-DL actively wins on ~23% of S90 target hands.
->    A future v65 could retain v52-DL on the subset where it wins
->    (per-hand picker rather than uniform gate). Engineering scope:
->    identify the structural discriminator that separates "v52-DL wins"
->    from "v44 wins" within the S90 target population. Speculative;
->    depends on whether the discriminator is clean. Deprioritized vs
->    new-zone work because the discriminator may not be cleanly
->    extractable.
+>    exploit from S90 (per-hand picker between v52-DL and v44 on S90 target
+>    hands). Still speculative.
+>
+> 5. **HYPOTHESIS (DEFERRED)** — extend Rule 29 gate from Q to K. S83
+>    explicitly tested gate=K and chose Q. May be revisitable with the
+>    chain-audit lens but unlikely to clear two-grid standard given the
+>    S91 finding on PMID_DS_NOMAXTOP × K.
 
-> **📓 METHODOLOGY (Session 91+ — refined through S90):**
+> **📓 METHODOLOGY (Session 92+ — refined through S91):**
 >
-> 1. **CHAIN AUDIT pattern transferred 1:1 for a FOURTH consecutive
->    session (S87 → S88 → S89 → S90 proved).** Four S90 scripts directly
->    templated from S89's three scripts (with one extra Phase A log).
->    Pattern is fully reusable for prefix-COVERED cells too with minor
->    adjustments to the baseline strategy and grader.
+> 1. **TWO-GRID SHIP STANDARD applied to prefix-COVERED audits for the
+>    first time (S91).** S87-S90 used the EFFECT-SIZE-DOMINANCE exception
+>    on prefix-SILENT cells. S91 was the first session to apply the
+>    proper two-grid standard. The standard correctly NULLed three
+>    candidates that would have shipped on prefix-only — confirming the
+>    two-grid bar prevents false ships.
 >
-> 2. **EFFECT-SIZE-DOMINANCE rule generalizes across THREE orders of
->    magnitude.** S87 ($98.67), S88 ($98.84), S89 ($10.09), S90 ($7.23):
->    four ships across the criterion "effect ≫ noise floor by 20×+". The
->    SHIP threshold is a per-cell calibration; the noise-floor multiple
->    is what generalizes. For S91 prefix-COVERED audits, the EFFECT-SIZE-
->    DOMINANCE rule may not be the dominant verdict mechanism — the
->    two-grid SHIP standard kicks in instead.
+> 2. **POPULATION-DIVERGENCE NOISE (NEW S91).** Prefix and full grids
+>    evaluate DIFFERENT canonical_id populations within the same nominal
+>    sub-cell. Prefix is the first 500K canonical IDs — a non-random
+>    lower-cid slice. When per-hand effects are small ($0.04-$0.40/hand)
+>    and strategy picks correlate with canonical_id ordering, the per-
+>    sub-cell aggregate Δ on the two grids can legitimately diverge in
+>    DIRECTION. NOT winner's curse on the oracle — strategy-level
+>    population effect. The pre-drill ↔ grader match-to-2-decimals signal
+>    from S90 only worked because the effect size was large enough to
+>    dominate this noise.
 >
-> 3. **Pre-drill ↔ grader match-to-2-decimal-places is the load-bearing
->    signal (NEW S90).** When pre-drill predicts $7.23 and grader
->    confirms $7.23, the noise floor is genuinely well below the effect
->    size. Future audits should treat such match as the strongest
->    statistical confirmation available without N=1000 validation.
+> 3. **CHAIN-AUDIT APPLICABILITY TEST (NEW S91).** The chain-audit pattern
+>    is most productive when EITHER:
+>      (a) target cells are prefix-SILENT → EFFECT-SIZE-DOMINANCE
+>          exception applies (S87-S90 ships), OR
+>      (b) per-sub-cell residual bleeds are ≥ $5/1000h on BOTH grids →
+>          population-divergence noise doesn't dominate.
+>    On LOW pair PMID cells, neither condition holds, hence NULL.
 >
-> 4. **Per-hand swap-right rate < 65% is a flag (NEW S90).** S90's 70.4%
->    was a drop from S89's 85.2% — and accurately predicted that the
->    chain-layer being gated (v52-defensive-low) was doing real partial
->    work. Future audits should treat swap-right rate < 65% as a flag to
->    investigate the chain layer's design intent before defaulting to
->    full gate-out. (S90's 70.4% was borderline; aggregate verdict was
->    still SHIP.)
+> 4. **v44_RULE13 IS THE PROJECT'S LARGEST HIDDEN NET-NEGATIVE LAYER
+>    (NEW S91).** The rule-based chain at the bottom of every project
+>    fallthrough bleeds $182.28/1000h vs v44_dt on LOW pair alone.
+>    v54's PBOT_DS hybrid routing + v57's Rule 29 are LOAD-BEARING:
+>    they recover $195.63/1000h, more than fully compensating for the
+>    chain bleed. Future audits should not undo v54's routing.
 >
-> 5. **v52-defensive-low is PARTIALLY effective (NEW S90 finding).** First
->    project-level audit of this firing mode (S53 design). It recovers
->    ~50% of v47's bleed but doesn't fully restore v44_dt levels. The S53
->    design intent was correct but conservative. Future refinement
->    opportunity: per-hand picker between v52-DL and v44 within the S90
->    target population.
+> 5. **PRE-COMMITTED-THRESHOLD PATTERN IS CRITICAL for honest verdicts.**
+>    Without locking $5 thresholds in code BEFORE evaluation, the
+>    temptation to ship $4.82 prefix bleed (Candidate A) would have been
+>    real. The mechanical NULL is the right call.
 >
-> 6. **Pre-Phase A structural feasibility check is a transferable
->    pre-audit step.** Eliminated 4 (cell × rank) combinations in S90 +
->    NEITHER × {J-A} in S89. Worth applying before ANY chain-audit pivot
->    to a new cell type.
+> 6. **A NULL audit session is still a complete cycle.** S87/S88/S89/S90
+>    each shipped; S91 doesn't. The methodology produced an honest answer.
+>    Worth the session.
 >
-> 7. **"Speed is not necessary — clarity and perfection is" — S90
->    reaffirms.** Running the chain audit (7s compute) when the pre-drill
->    headline was already clear ($7.23) pinpointed v52-defensive-low's
->    partial-effectiveness story. Made Rule 24's design surgical (same
->    architecture as Rules 21+22+23) and made the v52-defensive-low
->    audit-finding a project-level methodology lesson.
+> 7. **The chain-audit pattern transferred to a DIFFERENT chain architecture
+>    (the v54/v55/v56 hybrid + v44_RULE13 fallthrough) but produced a
+>    NULL.** The pattern is robust enough to apply cleanly; the cells
+>    aren't ripe for new ships under the two-grid standard.
 
-> **✅ ARTIFACTS produced in S90:**
-> 1. `analysis/scripts/drill_v63_high_only_addressability_S90.py` — pre-drill (NEW)
-> 2. `analysis/scripts/audit_v63_chain_bleed_S90.py` — chain audit (NEW)
-> 3. `analysis/scripts/strategy_v64_high_only_chain_fix_zone.py` — Rule 24 SHIPPED (NEW)
-> 4. `analysis/scripts/grade_v64_full_grid_S90.py` — full-grid grader with pre-committed thresholds (NEW)
-> 5. `data/session90/phase_a_target_stats.log`
-> 6. `data/session90/drill_v63_high_only_addressability.log`
-> 7. `data/session90/audit_v63_chain_bleed.log`
-> 8. `data/session90/grade_v64_full_grid.log`
-> 9. `SESSION_90_REPORT.md` — session report with plain-language TL;DR (NEW)
-> 10. `DECISIONS_LOG.md` — Decision 125 (ship + methodology) appended
-> 11. `CURRENT_PHASE.md` — this file, rewritten for S91
-> 12. `STRATEGY_GUIDE.md` — Part 1 Session 90 entry added; Part 5 Rule 24 entry added; Part 6 current standard updated; front-matter rewritten
+> **✅ ARTIFACTS produced in S91:**
+> 1. `analysis/scripts/drill_v64_lo_pair_addressability_S91.py` — Phase A+B pre-drill on full grid (NEW)
+> 2. `analysis/scripts/drill_v64_lo_pair_prefix_breakdown_S91.py` — Phase B+ prefix per-sub-cell breakdown (NEW)
+> 3. `analysis/scripts/audit_v64_lo_pair_chain_S91.py` — Phase B+ layer attribution (v44_dt → v44_RULE → v54 → v57 → v64) (NEW)
+> 4. `analysis/scripts/grade_v65_lo_pair_chain_candidates_S91.py` — Phase C pre-committed grader on 3 candidates (NEW)
+> 5. `data/session91/drill_v64_lo_pair_addressability.log`
+> 6. `data/session91/drill_v64_lo_pair_prefix_breakdown.log`
+> 7. `data/session91/audit_v64_lo_pair_chain.log`
+> 8. `data/session91/grade_v65_lo_pair_chain_candidates.log`
+> 9. `SESSION_91_REPORT.md` — session report with plain-language TL;DR (NEW)
+> 10. `DECISIONS_LOG.md` — Decision 126 (NULL ship + methodology) appended
+> 11. `CURRENT_PHASE.md` — this file, rewritten for S92
+> 12. `STRATEGY_GUIDE.md` — Part 1 SKIPPED (no strategy change); front-matter "Last updated" line updated only
 
-> Updated: 2026-05-15 (Session 90 end — STRATEGY OF RECORD CHANGED: v63 → v64_high_only_chain_fix_zone. The S87/S88/S89 chain-audit pattern reapplied to HIGH_ONLY × max ∈ {8, 9, T} (different firing mode — v52-defensive-low rather than v52-fallthrough) uncovered another +$7.23/1000h v44→v52 chain regression on 25,740 prefix-silent hands. Phase A structural feasibility eliminated 4 (cell × rank) combinations for free (max=7 × any; max ∈ {8,9,T} × {JOINT_HIGH, NEITHER}; max=8 × JOINT_MED). Rule 24 (v64): strict superset of Rule 23's gate. For HIGH_ONLY × max ∈ {8-A} × cell ∈ all 6 non-empty cells, bypass v47→v48→v52 chain and return strategy_v44_dt directly. Effective coverage: 11 non-empty (cell × rank) combinations at max ≤ T + 6 at max ∈ {J-A}. Full-grid grader auto-fired SHIP at +$7.23/1000h (v63 $1,620.13 → v64 $1,627.36). Per cell: DS_NO_JOINT +$3.75 / JOINT_MED +$1.35 / DS_NO_MAXTOP +$0.92 / MS_ONLY +$0.90 / JOINT_LOW +$0.31. Per-hand: 22% same / 55% better / 23% worse. Swap-right 70.4% on changed hands. Out-of-gate sanity: 0 v64≠v63 disagreements on 50K random sample. Pre-drill ↔ grader match to $0.01 (high aggregate stability). Rule count: 23 → 24. Two-track divergence (remaining gap to oracle): $117.84/1000h (was $125.07; cumulative closure since pre-S68 now 91.6% of original $1,409). FIRST PROJECT-LEVEL AUDIT OF v52-defensive-low: 100% of S90 target hands fire this mode. Verdict: partially effective (recovers $9.52 of v47's $19.28 bleed; v44_dt still picks better in aggregate). S53 design intent was correct but conservative. Decision 125 records the ship + seven methodology refinements: (1) chain-audit pattern transferred 1:1 for fourth consecutive session, (2) EFFECT-SIZE-DOMINANCE rule generalizes across four ships and three orders of magnitude, (3) pre-drill ↔ grader match-to-2-decimal-places is load-bearing, (4) per-hand swap-right < 65% is a chain-layer-doing-real-work flag, (5) v52-defensive-low is partially effective (first project audit), (6) Phase A structural feasibility check is transferable, (7) future v65 refinement opportunity for v52-DL partial-effectiveness exploit. **Structurally-non-empty HIGH_ONLY × max ≥ 8 chain-audit zone is now COMPLETE.** Combined S87+S88+S89+S90 recovery: $214.83/1000h. v60 from S86 STILL UNSHIPPED, MIXED-by-methodology, pending Option C N=1000 oracle generator. S91 default plan: pivot to prefix-COVERED cells (LOW pair / two_pair / trips) using the chain-audit pattern; or build Option C N=1000 oracle infra; or refine v52-defensive-low.)
+> Updated: 2026-05-15 (Session 91 end — STRATEGY OF RECORD UNCHANGED: v64 remains production. S91 was the planned execution of the S90-defined PRIMARY path: pivot to LOW pair prefix-COVERED cells with the chain-audit pattern. Phase A confirmed all 6 LOW pair cells are prefix-covered (cid_min 61,085-62,041). Phase B pre-drill on all 1,292,544 LOW pair hands: v64 LIFTS $92.41/1000h over v44_dt on full grid and $13.36 on prefix — production works as designed. Phase B+ chain audit identified the architectural source: v44_RULE13 (the rule-based chain) BLEEDS $182.28/1000h vs v44_dt on LOW pair — biggest single-layer bleed in the project. v54's PBOT_DS hybrid routing + v57's Rule 29 absorb $195.63 of this. Residual sub-cell bleeds totaling $14.24/1000h on prefix DISAGREE with full grid on direction (population-divergence noise — prefix is a non-random lower-cid subset, not a uniform random sample). Three v65 candidates evaluated against pre-committed two-grid thresholds: all FAIL ($5 SHIP bar not cleared on full grid for any). Verdict: NULL — production v64 UNCHANGED. First non-ship in chain-audit run (S87/88/89/90 streak of four broken cleanly). Decision 126 records the NULL + seven methodology refinements: (1) two-grid SHIP standard applied to prefix-COVERED for first time, (2) population-divergence noise is the load-bearing failure mode (NEW), (3) chain-audit applicability test: needs prefix-silent OR ≥$5 per-cell bleed on both grids, (4) v44_RULE13 is project's largest hidden net-negative layer at $182/1000h on LOW pair, (5) v54+Rule 29 are load-bearing (recover $195.63), (6) pre-committed-threshold pattern critical for honest verdicts, (7) NULL audit is a complete cycle. S92 default plan: pivot to two_pair chain audit (PRIMARY), OR trips chain audit (SECONDARY), OR build Option C N=1000 oracle infra (TERTIARY).)
 
 ---
 
-## Headline state at end of Session 90 (CHANGED — STRATEGY OF RECORD ADVANCED)
+## Headline state at end of Session 91 (UNCHANGED from S90)
 
 **Strategies of record:**
 
 | Strategy | Use case | Where it lives |
 |---|---|---|
-| **v64_high_only_chain_fix_zone** | PRODUCTION rule chain (NEW S90). **$1,627.36/1000h full / $776.88/1000h prefix** (prefix unchanged). | `analysis/scripts/strategy_v64_high_only_chain_fix_zone.py` |
-| **v44_dt** | PRODUCTION ML champion (UNCHANGED for 18 sessions, since v44 in S58). $1,081/1000h full / $686/1000h prefix. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
+| **v64_high_only_chain_fix_zone** | PRODUCTION rule chain. **$1,627.36/1000h full / $776.88/1000h prefix**. | `analysis/scripts/strategy_v64_high_only_chain_fix_zone.py` |
+| **v44_dt** | PRODUCTION ML champion (UNCHANGED for 19 sessions, since v44 in S58). $1,081/1000h full / $686/1000h prefix. | `analysis/scripts/strategy_v44_dt.py` + `data/v44_dt_model.npz` |
 
-Two-track divergence (remaining gap to oracle ceiling): **$117.84/1000h (was $125.07; −$7.23 this session).** Cumulative closure since pre-S68: $1,291.16 = **91.6% of original $1,409** (was 91.1%).
+Two-track divergence (remaining gap to oracle ceiling): **$117.84/1000h (UNCHANGED).** Cumulative closure since pre-S68: $1,291.16 = **91.6% of original $1,409 (UNCHANGED).**
 
-Production vs v44_dt: production now outperforms ML by **$546/1000h** (v64 $1,627.36 vs v44_dt $1,081). Up from $539 last session.
+Production vs v44_dt: production outperforms ML by **$546/1000h** (UNCHANGED).
 
-**Total project rule count: 24** (Rule 24 added — v64 chain gate-out extension covering all 11 non-empty (cell × rank) combinations at HIGH_ONLY × max ∈ {8, 9, T} on top of Rule 23's 6 combinations at max ∈ {J-A}).
+**Total project rule count: 24** (UNCHANGED).
 
-**S90 candidate result (SHIP):**
+**S91 candidate result (NULL):**
 
-| Candidate | Mechanism | Whole-grid lift | Verdict |
-|---|---|---:|---|
-| v64_high_only_chain_fix_zone | Strict superset of v63's gate. For HIGH_ONLY × max ∈ {8-A} × cell ∈ all 6 non-empty cells, bypass v47→v48→v52 chain; return strategy_v44_dt | **+$7.23/1000h SHIP** | **SHIP** |
+| Candidate | Mechanism | Prefix lift | Full lift | Verdict |
+|---|---|---:|---:|---|
+| A: extend v54 routing to LOW × PMID_DS_NOMAXTOP × max_sing=K | gate-out sub-cell to v44_dt | +$4.82 | -$6.85 | **NULL** |
+| B: extend v54 routing to LOW × {DS_MAXTOP, SS_MAXTOP, OTHER} × max_sing=J | gate-out 3 sub-cells | +$8.56 | -$1.35 | **MIXED→NULL** |
+| C: combined — all sub-cell residuals | gate-out 5 sub-cells | +$14.24 | ~-$10.00 | **MIXED→NULL** |
 
 ---
 
-## Hypothesis cascade status (updated after S90)
+## Hypothesis cascade status (updated after S91)
 
 | Hypothesis | Description | Status |
 |---|---|---|
@@ -178,81 +175,82 @@ Production vs v44_dt: production now outperforms ML by **$546/1000h** (v64 $1,62
 | A2 (S81/S82) | Targeted N=1000 expansion on two_pair + trips_pair + held-out validation | CLEAN NULL — Lens-3 held-out 63.74% < 72.0% floor (Decision 117). |
 | A-path (oracle-label-quality lever) | All variants tested at v44 capacity | FORMALLY CLOSED at v44 regime (Decision 117). |
 | A3 | Full 6M-hand N=1000 grid | DEPRIORITIZED — not picked by user. |
-| Headline-goal recalibration | Concede 95% match% as unreachable | LESS URGENT post-S87/S88/S89/S90 (extraction track now demonstrably productive via chain-audit). |
-| Option D-revised cell #1 (S83) | LOW × PMID_DS_NOMAXTOP | SHIPPED — Rule 20 + $16.81 prefix (Decision 118). |
+| Headline-goal recalibration | Concede 95% match% as unreachable | LESS URGENT post-S87-S90 (extraction track demonstrably productive via chain-audit), reaffirmed by S91 (chain-audit applicability has limits on prefix-COVERED cells). |
+| Option D-revised cell #1 (S83) | LOW × PMID_DS_NOMAXTOP | SHIPPED — Rule 20 + $16.81 prefix (Decision 118). Re-confirmed via S91 layer attribution. |
 | Option D-revised cell #2 (S84) | LOW × PMID_DS_MAXTOP | MIXED — prefix +$5.59 vs full +$1.36 (Decision 119). |
 | Option D-revised cell #3 (S85) | LOW × PMID_SS_MAXTOP | CLEAN NULL — full -$0.09, prefix $0.00 (Decision 120). |
 | Option D-revised cell #4 (S86) | MID × PMID_DS_NOMAXTOP | MIXED-BY-METHODOLOGY — full +$6.43 SHIP, prefix silent; v60 still UNSHIPPED (Decision 121). |
 | DAMAGE-CONTROL chain audit cell #1 (S87) | HIGH_ONLY × DS_NO_JOINT × {J-A} v52-chain regression | SHIPPED — Rule 21 + $98.67 full-grid (Decision 122). |
 | DAMAGE-CONTROL chain audit cell #2 (S88) | HIGH_ONLY × {DS_NO_MAXTOP, MS_ONLY, JOINT_HIGH} × {J-A} v47-chain regression | SHIPPED — Rule 22 + $98.84 full-grid (Decision 123). |
-| DAMAGE-CONTROL chain audit cell #3 (S89) | HIGH_ONLY × {JOINT_MED, JOINT_LOW} × {J-A} v47-chain regression | SHIPPED — Rule 23 + $10.09 full-grid (Decision 124). HIGH_ONLY × {J-A} ZONE CLOSED. |
-| **DAMAGE-CONTROL chain audit cell #4 (S90)** | HIGH_ONLY × {5 cells} × {8, 9, T} v47-chain regression (FIRST v52-defensive-low audit) | **SHIPPED — Rule 24 + $7.23 full-grid (Decision 125). HIGH_ONLY × max ≥ 8 ZONE COMPLETE.** |
-| **Chain-audit expansion (S91+)** | Prefix-COVERED cells (LOW pair / two_pair / trips); Option C N=1000 oracle infra; v52-defensive-low refinement | OPEN — primary S91 direction |
-| Prefix-coverage methodology question (S86) | How to handle prefix-silent cells in two-grid SHIP standard | PARTIALLY RESOLVED — EFFECT-SIZE-DOMINANCE rule defined and applied four times across two orders of magnitude; Option C infra still needed for smaller candidates |
-| **v52-defensive-low refinement (S90 finding)** | Per-hand picker between v52-DL and v44 on S90 target hands | DEFERRED — speculative; depends on whether the win/lose discriminator is cleanly extractable |
+| DAMAGE-CONTROL chain audit cell #3 (S89) | HIGH_ONLY × {JOINT_MED, JOINT_LOW} × {J-A} v47-chain regression | SHIPPED — Rule 23 + $10.09 full-grid (Decision 124). |
+| DAMAGE-CONTROL chain audit cell #4 (S90) | HIGH_ONLY × {5 cells} × {8, 9, T} v47-chain regression (first v52-defensive-low audit) | SHIPPED — Rule 24 + $7.23 full-grid (Decision 125). HIGH_ONLY × max ≥ 8 ZONE COMPLETE. |
+| **DAMAGE-CONTROL chain audit cell #5 (S91)** | **LOW pair PMID prefix-COVERED cells (FIRST prefix-COVERED chain audit)** | **NULL — three candidates all FAIL two-grid SHIP standard (Decision 126). v44_RULE13 chain bleeds $182/1000h but v54+Rule 29 absorb $195. POPULATION-DIVERGENCE NOISE methodology lesson identified.** |
+| Chain-audit expansion (S92+) | two_pair / trips cells with the chain-audit pattern | OPEN — primary S92 direction |
+| Prefix-coverage methodology question (S86) | How to handle prefix-silent cells in two-grid SHIP standard | PARTIALLY RESOLVED — EFFECT-SIZE-DOMINANCE rule defined and applied four times (S87-S90); S91 extended the methodology to prefix-COVERED with POPULATION-DIVERGENCE NOISE finding. |
+| v52-defensive-low refinement (S90 finding) | Per-hand picker between v52-DL and v44 on S90 target hands | DEFERRED — speculative. |
 
-**Cascade verdict (post S90):** Two-track active. Structurally-non-empty HIGH_ONLY × max ≥ 8 audit zone COMPLETE.
+**Cascade verdict (post S91):** Two-track active. Chain-audit pattern transferred to a FIFTH session but NULLed cleanly. v44_RULE13 confirmed as the project's largest hidden net-negative layer.
 
 * **ML cascade:** EXHAUSTED at v44 saturating regime.
 * **Rule-layer cascade:** Two patterns active:
   - **Rule extraction (Option D-revised):** $16.81 prefix shipped across S83-S86 (1 SHIP, 2 MIXED, 1 MIXED-by-methodology). Diminishing returns.
-  - **Chain audit (S87/S88/S89/S90):** $214.83 full-grid shipped across four sessions. Dominant ship vector. HIGH_ONLY zone now closed. S91 candidates: prefix-COVERED cells (LOW pair / two_pair / trips); v52-defensive-low refinement.
+  - **Chain audit (S87-S91):** $214.83 full-grid shipped across S87-S90 (four consecutive ships); S91 NULL on first prefix-COVERED pivot. S92 candidates: two_pair / trips cells.
 
 ---
 
-## Resume Prompt (Session 91 — pivot to prefix-COVERED cells or build Option C infra)
+## Resume Prompt (Session 92 — pivot to two_pair / trips chain audit)
 
 ```
-Resume Session 91 of the Taiwanese Poker Solver project at
+Resume Session 92 of the Taiwanese Poker Solver project at
 /Users/michaelchang/CODE/taiwanese.
 
 Read these files for context (in this order):
 - CLAUDE.md
-- CURRENT_PHASE.md (rewritten end of S90 — opens with the S91 pivot plan
+- CURRENT_PHASE.md (rewritten end of S91 — opens with the S92 pivot plan
   + alternative-direction options)
-- DECISIONS_LOG.md (latest: Decision 125 — S90 v64 SHIPS Rule 24 at
-  +$7.23/1000h on the 25,740 prefix-silent hands in HIGH_ONLY × {8, 9, T};
-  structurally-non-empty HIGH_ONLY × max ≥ 8 audit COMPLETE; first
-  project-level audit of v52-defensive-low confirmed it PARTIALLY
-  effective; combined S87+S88+S89+S90 recovery = $214.83/1000h;
-  methodology refinements: pre-drill ↔ grader 2-decimal-place match is
-  load-bearing, swap-right < 65% is a chain-layer-doing-real-work flag)
-- SESSION_90_REPORT.md (S90 SHIP verdict, plain-language TL;DR,
-  v52-defensive-low audit framing, four-session chain-audit
-  retrospective)
+- DECISIONS_LOG.md (latest: Decision 126 — S91 NULL on LOW pair chain
+  audit; v44_RULE13 chain bleeds $182/1000h vs v44_dt on LOW pair but
+  v54+Rule 29 absorb $195.63; three v65 candidates failed two-grid SHIP
+  standard due to population-divergence noise on prefix vs full grids;
+  combined S87-S91 chain-audit recovery still $214.83/1000h; methodology
+  refinements: chain-audit applicability test, population-divergence
+  noise definition, two-grid SHIP standard reaffirmed)
+- SESSION_91_REPORT.md (S91 NULL verdict, plain-language TL;DR,
+  v44_RULE13 chain bleed framing, chain-audit applicability lesson)
 
 KEY DATA FILES:
 - data/oracle_grid_full_realistic_n200.bin — 6M × 105 at N=200
 - data/oracle_grid_prefix500k_n1000.bin — 500K × 105 at N=1000
-- data/drill_v44_high_only_S71_per_hand.parquet — HIGH_ONLY drill data
-  (now exhausted for chain-audit purposes — entire structurally-non-empty
-  HIGH_ONLY zone is gated under v64)
-- data/v44_dt_model.npz — production ML champion (UNCHANGED for 18 sessions)
-- data/session87/*.log — S87 drill + audit + grader logs
-- data/session88/*.log — S88 drill + audit + grader logs
-- data/session89/*.log — S89 drill + audit + grader logs
-- data/session90/*.log — S90 drill + audit + grader logs
+- data/drill_pair_v44_per_hand_structural.parquet — LOW pair per-hand
+  (now audited)
+- data/drill_two_pair_v44_per_hand_structural.parquet — two_pair per-hand
+  drill (1.34M rows, 7-cell taxonomy: LAYOUT_A_DS, LAYOUT_C_DS, LAYOUT_B_DS,
+  LAYOUT_A_SS, LAYOUT_C_SS_ONLY, LAYOUT_B_SS_ONLY, LAYOUT_OTHER) — S92
+  PRIMARY target
+- data/drill_trips_v44_per_hand_structural.parquet — trips per-hand
+  drill (smaller; S92 SECONDARY target)
+- data/v44_dt_model.npz — production ML champion (UNCHANGED for 19 sessions)
+- data/session87/*.log through data/session91/*.log — S87-S91 drill +
+  audit + grader logs
 
-STATE (end of S90):
-- Production rule chain ADVANCED to v64_high_only_chain_fix_zone
-  ($1,627.36 full / $776.88 prefix). FOURTH CONSECUTIVE session with a
-  strategy-of-record change (S87 v61, S88 v62, S89 v63, S90 v64).
-- ML champion v44_dt UNCHANGED (18 sessions).
-- Two-track divergence (remaining gap to oracle): $117.84/1000h (was
-  $125.07; −$7.23).
-- Rule count: 24 (Rule 24 added — chain gate-out extension covering
-  HIGH_ONLY × {8, 9, T} on top of Rule 23's {J-A}).
-- Cumulative closure since pre-S68: 91.6% of original $1,409 (was 91.1%).
-- Combined S87+S88+S89+S90 chain-audit recovery: $214.83/1000h.
+STATE (end of S91):
+- Production rule chain UNCHANGED at v64_high_only_chain_fix_zone
+  ($1,627.36 full / $776.88 prefix). First non-ship in chain-audit run.
+- ML champion v44_dt UNCHANGED (19 sessions).
+- Two-track divergence (remaining gap to oracle): $117.84/1000h (UNCHANGED).
+- Rule count: 24 (UNCHANGED).
+- Cumulative closure since pre-S68: 91.6% of original $1,409 (UNCHANGED).
+- Combined S87+S88+S89+S90+S91 chain-audit recovery: $214.83/1000h
+  (S91 contributes $0).
 - v60 from S86 STILL UNSHIPPED, MIXED-by-methodology; waits on Option C
   N=1000 oracle generator (still deferred).
-- Structurally-non-empty HIGH_ONLY × max ≥ 8 audit zone is COMPLETE
-  (24 non-empty (cell × rank) combinations gated; max=7 structurally empty).
-- v52-defensive-low (LOW_MAX_DEFENSIVE = {7, 8, 9, 10}) — FIRST audited.
-  Partially effective: recovers $9.52 of v47's $19.28 bleed on S90 target.
-  Still net-bleeds $7.23 vs v44_dt — gate-out is the right architectural call.
-  Refinement opportunity: per-hand picker between v52-DL and v44 (~23% of
-  S90 hands are v52-DL wins). Deferred.
+- KEY S91 ARCHITECTURAL FINDING: v44_RULE13 rule-based chain bleeds
+  $182.28/1000h vs v44_dt on LOW pair. v54's PBOT_DS hybrid routing
+  + v57's Rule 29 absorb $195.63 — they are load-bearing.
+- KEY S91 METHODOLOGY FINDING: POPULATION-DIVERGENCE NOISE between
+  prefix and full grids prevents two-grid SHIP standard from
+  triggering on small per-sub-cell bleeds ($1-5/1000h). Not winner's
+  curse; strategy-level effect.
 
 USER DIRECTIVES (persistent):
 - "Speed is not necessary — clarity and perfection is."
@@ -264,100 +262,79 @@ USER DIRECTIVES (persistent):
 - Session-end commit + push is pre-authorized for this project (see
   feedback_taiwanese_commits memory).
 
-DIRECTION FOR SESSION 91 — pivot to NEW territory (HIGH_ONLY exhausted):
+DIRECTION FOR SESSION 92 — pivot to two_pair / trips chain audit:
 
-  PRIMARY (S91 default plan):
-  Pivot to prefix-COVERED cells. LOW pair, two_pair, trips. These are
-  categories OUTSIDE the HIGH_ONLY taxonomy with DIFFERENT rule chains
-  in production (v44_dt routing via v54/v55/v56 hybrids).
+  PRIMARY (S92 default plan):
+  Audit two_pair cells with the chain-audit pattern.
 
-  KEY METHODOLOGICAL ADVANTAGE: prefix-COVERED means the prefix grader is
-  a real two-grid check. EFFECT-SIZE-DOMINANCE rule may not be the
-  dominant verdict mechanism — the two-grid SHIP standard kicks in
-  instead. This is methodologically stronger than the prefix-silent
-  S87-S90 ships.
+  Use S91 scripts as templates:
+    drill_v64_lo_pair_addressability_S91.py  → drill_v64_two_pair_addressability_S92.py
+    drill_v64_lo_pair_prefix_breakdown_S91.py → optional, mostly redundant
+    audit_v64_lo_pair_chain_S91.py           → audit_v64_two_pair_chain_S92.py
+    grade_v65_lo_pair_chain_candidates_S91.py → grade_v65_two_pair_chain_candidates_S92.py
 
-  Use S90 scripts as templates:
-    drill_v63_high_only_addressability_S90.py  (template for pre-drill, rebind
-                                                to v64 + new target cells)
-    audit_v63_chain_bleed_S90.py               (template for chain audit)
-    grade_v64_full_grid_S90.py                 (template for grader)
+  Phase A: load drill_two_pair_v44_per_hand_structural.parquet. Identify
+    7 cells. Apply structural feasibility check. Check prefix coverage
+    (cid_min per cell).
 
-  Recommended first stop: LOW pair (smallest, most targeted). Existing
-  per-hand parquets cover most LOW pair cells from prior sessions.
+  Phase B: pre-drill — re-evaluate v64 vs v44 on every two_pair hand on
+    full grid. Per-cell × hi_pair_rank × max_sing breakdown.
 
-  PHASE A (~5 min): identify target LOW pair cells. Check prefix
-    coverage (cid_min). Check what v44 baseline leak vs v54_pair_hybrid
-    (production for these cells) looks like. Apply structural feasibility
-    check.
-  PHASE B (~5-10 min): pre-drill — re-evaluate v64 vs v44 on each target
-    cell. (v64 == v57 == v54 == v53 == v52 inside the v54 routing gate.
-    So v64 on LOW pair routes through v44_dt already? Need to verify the
-    routing carefully — V54 routes PAIR PBOT cells to v44_dt; v55 routes
-    two_pair; v56 routes trips. Audit setup is different.)
-  PHASE B+ (~5 min): chain audit — layer-by-layer attribution.
-    Particularly interested in the v54/v55/v56 hybrid chain's behavior
-    on prefix-COVERED cells where the prefix grader can validate.
-  PHASE C: design v65 (or alt name) = v64 + extended gate-out on
-    confirmed regressions. Pre-committed thresholds: SHIP $5 on prefix
-    grid (standard prefix-grader threshold); SHIP $5-30 full grid.
-    Two-grid agreement required.
-  PHASE D: session-end commit + push + DECISIONS_LOG + CURRENT_PHASE
+  Phase B+: chain audit — layer attribution v44_dt → v44_RULE (= chain
+    fallthrough) → v55 (two_pair_hybrid) → v64. Identify sub-cells where
+    chain bleeds vs v44_dt after v55's routing.
+
+  Phase C: design v65 candidates if any sub-cell residual ≥ $5 on both
+    grids. Pre-committed thresholds: SHIP $5 prefix AND $5 full
+    (two-grid agreement required).
+
+  Phase D: session-end commit + push + DECISIONS_LOG + CURRENT_PHASE
     rewrite. End with verbatim resume prompt.
 
   ALTERNATIVE DIRECTIONS:
 
-  (a) Build Option C N=1000 oracle generator infrastructure.
+  (a) Audit trips cells with same pattern. Smaller drill (2.97MB parquet
+      vs 10.8MB for two_pair). v56_trips_hybrid is the chain layer.
+      ~3 min compute.
+
+  (b) Build Option C N=1000 oracle generator infrastructure.
       Engineering scope: modify engine/src/main.rs to add --id-list-file
-      option (read canonical IDs from a file, only process those).
-      ~30-60 min Rust mod + ~10 min test + launch background K-high
-      run for v60 retroactive validation. Required for any future
-      smaller-effect rule on prefix-silent cells.
+      option. ~30-60 min Rust mod + ~10 min test.
 
-  (b) LOW × PMID_OTHER drill (deferred from S87/S88/S89/S90). Last LOW
-      pair cell, methodology question is the standard Option D-revised
-      playbook.
+  (c) v52-defensive-low partial-effectiveness exploit (DEFERRED from S90).
 
-  (c) v52-defensive-low partial-effectiveness exploit. S90 found v52-DL
-      actively wins on ~23% of S90 target hands. A future v65 could
-      retain v52-DL on the subset where it wins (per-hand picker rather
-      than uniform gate). Speculative — depends on whether the
-      structural discriminator separating "v52-DL wins" from "v44 wins"
-      is cleanly extractable.
+  (d) v44_RULE13 net-negative finding (NEW S91) — investigate whether
+      a different rule-chain fallthrough could replace v44_RULE13 for
+      pair cells. Speculative engineering.
 
 REMINDERS:
 - Use python3, not python.
 - cargo at ~/.cargo/bin/cargo.
-- v44_dt model + features remain unchanged (18 sessions).
+- v44_dt model + features remain unchanged (19 sessions).
 - v64_high_only_chain_fix_zone is the production rule chain.
+- v44_RULE13 is the rule-based fallthrough (NOT v44_dt) — bleeds $182/1000h
+  on LOW pair PMID hands. v54 + Rule 29 absorb this. DO NOT undo v54's
+  routing.
 - The pre-committed-verdict pattern is project standard.
 - The EFFECT-SIZE-DOMINANCE exception for prefix-silent cells:
   effect ≫ noise floor by 20×+ AND rule is a gate-out → bypass two-grid
-  standard with documentation. S87 + S88 + S89 + S90 ALL shipped under
-  this exception (at $98, $98, $10, $7); criterion is well-calibrated
-  across magnitudes. For S91 prefix-COVERED audits, the two-grid
-  standard kicks in — EFFECT-SIZE-DOMINANCE is not the only verdict
-  mechanism available.
-- The CHAIN AUDIT pattern: layer-by-layer attribution against v44_dt
-  baseline; identify the regression-introducing transition. v47 has been
-  the culprit in S87/S88/S89/S90 within HIGH_ONLY. Whether v47 or other
-  layers introduce regressions in two_pair / trips / LOW pair is the
-  open question for S91.
+  standard with documentation. S87-S90 all shipped under this; S91 had
+  prefix-covered cells so the standard kicked in.
+- The CHAIN AUDIT pattern: layer-by-layer attribution. v44_dt vs the
+  rule-based v44_RULE13 chain is the key comparison for pair/two_pair/trips.
+- The CHAIN-AUDIT APPLICABILITY TEST (NEW S91): pattern is most productive
+  when EITHER (a) prefix-silent target (EFFECT-SIZE-DOMINANCE applies) OR
+  (b) per-sub-cell residual ≥ $5/1000h on BOTH grids.
+- The POPULATION-DIVERGENCE NOISE (NEW S91): prefix is a non-random
+  lower-cid subset of full grid; per-sub-cell Δ can legitimately diverge
+  in direction on small effects. NOT winner's curse — strategy-level
+  effect.
 - The PIVOT GATE pattern: cheap pre-drill (≤5 min) BEFORE committing to
   expensive infrastructure or pivots.
 - The STRUCTURAL FEASIBILITY CHECK: for any chain-audit pivot to a new
-  cell type, do a 5-minute combinatorial check on whether the cell is
-  achievable at all. NEITHER × {J-A}, max=7 × any, JOINT_HIGH ×
-  {8,9,T}, etc. all closed for free this way.
-- The PRE-DRILL ↔ GRADER 2-DECIMAL MATCH (NEW S90): when these agree to
-  $0.01, the noise floor is genuinely well below the effect size; this
-  is the strongest statistical confirmation available without N=1000.
-- The SWAP-RIGHT < 65% FLAG (NEW S90): a drop in swap-right rate from
-  prior sessions flags that the chain-layer being gated is doing real
-  partial work. Investigate the chain layer's design intent before
-  defaulting to full gate-out. S90's 70.4% was borderline; aggregate
-  verdict was still SHIP, but v52-defensive-low's partial-effectiveness
-  story became a project-level methodology lesson.
+  cell type, do a quick combinatorial check on whether the cell is
+  achievable at all.
+- A NULL audit session is a COMPLETE cycle. Worth the time.
 - "Speed is not necessary — clarity and perfection is."
 - User is non-technical; session reports open with plain-language TL;DR
   before numbers.
