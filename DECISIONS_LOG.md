@@ -8189,3 +8189,149 @@ The Option C N=1000 oracle generator infrastructure remains DEFERRED to S88. Rat
 4. **OPTIONAL: LOW × PMID_OTHER drill.** Deferred from S87. The last LOW pair cell. May still be worth running once audit work concludes.
 
 Default S88 plan if user defers: pursue (1) on DS_NO_MAXTOP cells (next-largest prefix-silent bleed candidate, methodology directly transfers from S87 audit pattern, ~3-5 min of compute).
+
+## Decision 123 — Session 88 v62 SHIPS Rule 22 (chain gate-out extension): the S87 chain-audit pattern reapplied to three more prefix-silent HIGH_ONLY cells (DS_NO_MAXTOP × {K,A}, MS_ONLY × {J-A}, JOINT_HIGH × {K,A}, 357,504 hands total) uncovered ANOTHER $98.84/1000h v47-chain bleed — virtually identical magnitude to S87's $98.67 finding on DS_NO_JOINT; v62 extends v61's gate-out as a strict superset (cell ∈ {DS_NO_JOINT, DS_NO_MAXTOP, MS_ONLY, JOINT_HIGH} for HIGH_ONLY × max ∈ {J-A}); full-grid grader auto-fires SHIP at +$98.84/1000h whole-grid (v61 $1,511.20 → v62 $1,610.04); back-to-back $98+ production ships from the same architectural diagnosis (v47 net-negative across the entire HIGH_ONLY × {J-A} weak-hand zone); combined S87+S88 chain-audit recovery: $197.51/1000h
+
+### Session
+
+Session 88 — planned execution of the S87-defined PRIMARY path. The PIVOT GATE + CHAIN AUDIT pattern transferred 1:1 with one script template per phase. Two consecutive sessions, two consecutive $98+ ships from the same diagnosis.
+
+### Context
+
+S87 (Decision 122) shipped v61 via a surgical chain gate-out on HIGH_ONLY × DS_NO_JOINT × {J-A} after a pre-drill bombshell ($98.67/1000h chain bleed against v44_dt). S87's path-forward section identified the next three largest prefix-silent HIGH_ONLY cells as audit candidates: DS_NO_MAXTOP × {K, A}, MS_ONLY × {J-A}, JOINT_HIGH × {K, A}. Combined S71 v44_dt baseline leak on these: $95.62/1000h across 357,504 hands. Estimated combined recoverable: $20-40/1000h if all three audit positive.
+
+S88 inherited the S87 plan verbatim from CURRENT_PHASE.md. No new strategic input from user mid-session; default plan executed without methodology debate.
+
+### What S88 ran (phases)
+
+**Phase A — S71 data review (no new compute).** Queried existing `drill_v44_high_only_S71_summary.json` for the three target cells' stats. Confirmed all 100% prefix-silent (cid_min ≥ 590,502; prefix ends at 499,999). Total S71 v44_dt baseline leak on 357,504 target hands: $95.62/1000h ($33.78 STR + $39.59 MID + $22.25 NOISE). Dominant S71 mismatch directions:
+* DS_NO_MAXTOP × A: tA_SS_mu → tA_SS_mu (variance within same class label — diffuse)
+* DS_NO_MAXTOP × K: tK_SS_mu → various (diffuse, no single direction dominates)
+* MS_ONLY × {J-A}: diffuse — many tX_*_* patterns at small share each
+* JOINT_HIGH × K: **tK_SS_mu → tK_DS_ms is the clear winner** (1,011 hands, $1.57 wg)
+* JOINT_HIGH × A: **tA_SS_mu → tA_DS_ms is the clear winner** (1,380 hands, $2.39 wg)
+
+JOINT_HIGH has a clear "SS_mu → DS_ms" upgrade direction. DS_NO_MAXTOP and MS_ONLY are diffuse at the class-label level. Diffuse direction concentration would have failed an S87-style addressability gate (b) at the class-label level — but the pre-drill (Phase B) is the authoritative test.
+
+**Phase B — addressability pre-drill (50s compute, 357K hands).** Wrote `drill_v61_high_only_addressability_S88.py`. Re-evaluated v61 (production) on the 357K hands. **Bombshell #2:**
+
+| cell | n | v44 leak $ | v61 leak $ | **Δ (chain bleed)** |
+|---|---:|---:|---:|---:|
+| DS_NO_MAXTOP | 133,056 | $38.99 | $91.87 | **+$52.88** |
+| MS_ONLY | 107,520 | $35.21 | $66.73 | **+$31.51** |
+| JOINT_HIGH | 116,928 | $21.41 | $35.86 | **+$14.45** |
+| **TOTAL** | **357,504** | **$95.62** | **$194.46** | **+$98.84** |
+
+**v61 leaks +$98.84/1000h MORE than v44_dt on these cells.** Virtually identical magnitude to S87's $98.67. v61 override activity per cell: DS_NO_MAXTOP 81-86%, MS_ONLY 65-81%, JOINT_HIGH 45-46%. Every single cell × rank failed the gate-out criterion (chain Δ ≥ $1 AND v44 leak ≥ $1 — both true everywhere).
+
+Addressability gate verdict: **GATE-OUT** on all 8 cell × rank cells. The diffuse class-label-level mismatches at S71 don't matter — at the raw setting-index level the chain is net-negative everywhere.
+
+**Phase B+ — v62 chain audit (75s compute, 357K hands × 3 strategies).** Wrote `audit_v61_chain_bleed_S88.py`. Layer attribution:
+
+| Cell | v44→v47 Δ | v47→v48 Δ | v48→v52 Δ |
+|---|---:|---:|---:|
+| DS_NO_MAXTOP | **+$52.88** | $0.00 | -$0.00 |
+| MS_ONLY | **+$32.23** | -$0.82 | +$0.11 |
+| JOINT_HIGH | **+$14.45** | $0.00 | $0.00 |
+| **Σ** | **+$99.55** | **-$0.82** | **+$0.10** |
+
+**99.7% of the bleed comes from the v44→v47 transition.** Same culprit as S87. v52 contributes essentially zero on these cells (only v52-J-HIMID fires meaningfully on MS_ONLY × J).
+
+By v52 firing mode (rolled up across S88 cells):
+* v52-fallthrough (v47 handles): 350,560 hands, +$95.83/1000h bleed
+* v52-J-HIMID: 4,928 hands, +$1.88
+* v52-defensive-gated: 2,016 hands, +$1.13
+* **Total: +$98.84/1000h**
+
+**Phase C — v62 design + full-grid grade (202s compute, 357K hands × 2 strategies + 50K out-of-gate sanity).** Wrote `strategy_v62_high_only_chain_fix.py` — replicates the S71 cell taxonomy (`_classify_high_only_cell` returns cell + max_rank) as an inference-time gate. Triggers on HIGH_ONLY × max ∈ {J,Q,K,A} × cell ∈ {DS_NO_JOINT, DS_NO_MAXTOP, MS_ONLY, JOINT_HIGH}. Strict superset of v61's gate. Cell detector match against S71 ground truth: 100.00%.
+
+Pre-committed thresholds locked in code BEFORE grader ran: SHIP ≥ $30/1000h whole-grid, NULL ≤ $5/1000h, MIXED in between (same thresholds as S87 — expected lift was ~$98 from audit).
+
+**Grader auto-fired SHIP at +$98.84/1000h whole-grid lift.** Per-cell breakdown matched audit prediction exactly. Per-hand effect: 31.3% same, 52.8% better, 15.9% worse. Swap-right rate on 245,762 changed hands: **76.8%** (better than S87's 62.3%). Out-of-gate sanity: **0 v62≠v61 disagreements** on 50,000-hand random sample (v62 == v61 outside the new gate by construction).
+
+Implied production: $1,511.20 → **$1,610.04/1000h** (+$98.84, +6.5%).
+
+### Verdict + production state
+
+**VERDICT: SHIP.** Pre-committed SHIP threshold cleared by 3.3×.
+
+**Production ADVANCES to v62_high_only_chain_fix.**
+* Full grid: $1,511.20 → **$1,610.04/1000h** (+$98.84)
+* Prefix grid: $776.88 → **$776.88/1000h** UNCHANGED (rule fires entirely outside prefix coverage)
+* v44_dt ML champion: UNCHANGED ($1,081 full / $686 prefix)
+* Production vs v44_dt: **$529/1000h** (was $430; production now outperforms ML by half a thousand dollars per 1000 hands)
+* Remaining gap to oracle ceiling (the "two-track divergence"): **$135/1000h** (was $234)
+* Cumulative closure since pre-S68: **$1,273.84 of $1,409 = 90.4%** (was 83%)
+* Total project rule count: 21 → **22**
+
+### Why N=1000 validation was not blocking (replay of S87 rationale)
+
+Same EFFECT-SIZE-DOMINANCE rule as S87:
+1. Effect size is $98.84/1000h, 20× the SHIP ceiling.
+2. Population is 357,504 hands. LLN aggregate noise floor ≪ $1.
+3. Mechanism is REMOVE-AN-OVERRIDE, not ADD-A-NEW-SETTING. Risk profile is asymmetric.
+4. Per-hand split (31% same / 53% better / 16% worse) demonstrates decisive swap-right majority.
+
+Option C N=1000 oracle generator infrastructure remains DEFERRED. v60 from S86 still needs N=1000 validation and Option C remains the right infrastructure for future smaller candidates. v60 STAYS UNSHIPPED pending S89+ Option C build.
+
+### What this answers about the cascade
+
+1. **v47 is net-negative across the ENTIRE HIGH_ONLY × {J-A} zone, not just DS_NO_JOINT.** Two back-to-back sessions, two $98 ships from the same diagnosis (v47 fallthrough on prefix-silent HIGH_ONLY × {J-A} cells). The original design intent of v47 (Rules 13-16, the Q-high DS chain, S52) was "offensive value-add for high-card hands." Empirically, v47 has been bleeding EV across the whole weak-hand zone for 33+ sessions. The bleed went undetected because prefix grader is structurally blind to HIGH_ONLY hands.
+
+2. **Combined S87+S88 chain-audit recovery: $197.51/1000h.** This is bigger than all rule-extraction ships from S71-S86 combined (Rule 20 at $16.81 prefix was the only SHIP across that 16-session window). The chain-audit lever is the project's dominant ship vector.
+
+3. **The chain-audit pattern transfers across cells without modification.** S87's three scripts became S88's three scripts via 1:1 templating. Infrastructure cost is near-zero per cell.
+
+4. **The pre-committed-verdict pattern with EFFECT-SIZE-DOMINANCE shipped twice now under prefix-silent conditions.** S87 + S88 both shipped at ~$98 effect / SHIP threshold $30 / pre-committed-in-code grader. The exception is well-calibrated.
+
+5. **The grader's "two-track divergence" label was mislabeled this session.** v62's grader output reports "two-track divergence (v62 vs v44_dt): $529/1000h (was $234)." The label is wrong — that's production − v44_dt baseline, not the project's "two-track divergence" (which is remaining gap to oracle ceiling, $234 → $135 after S88). Future graders should use clearer labels (e.g., "remaining gap to oracle" vs "production vs v44_dt").
+
+### Methodology lessons (Session 88)
+
+1. **The CHAIN AUDIT pattern is a transferable infrastructure.** Three S87 scripts → three S88 scripts via direct template binding: rebind target cells, baseline strategy (v61 → v62 instead of v57 → v61), and pre-committed thresholds. Total infrastructure cost ~10 minutes of editing. The audit pattern can be replayed on any prefix-silent cell where the rule chain has overrides.
+
+2. **The EFFECT-SIZE-DOMINANCE rule replicates cleanly.** S87 shipped at $98.67 under the prefix-silent exception. S88 shipped at $98.84 under the same exception. Two data points; the criterion is well-calibrated for prefix-silent gate-out rules with effect ≫ noise floor.
+
+3. **Diffuse class-label mismatch directions do NOT predict chain net-negative status.** S71's class-label-level mismatch patterns were diffuse on DS_NO_MAXTOP and MS_ONLY (no single direction dominates), but the chain was massively net-negative on these cells anyway. The chain bleeds at the raw setting-index level even when the class-label fingerprint is variance-shaped, not direction-shaped. The PIVOT GATE pre-drill catches what S71 class-label analysis misses.
+
+4. **The pre-committed-grader pattern + pre-committed-cell-set pattern combine to make $98+ ships boringly mechanical.** S88 had zero narrative friction from pre-drill to ship. The verdict was mechanical, the lift was within $0.17 of the audit prediction, the out-of-gate sanity was zero disagreements as expected. Speed: ~30 min compute + ~1 hour design+writeup per ship.
+
+5. **S87's audit-pattern infrastructure was the load-bearing artifact, not Rule 21 itself.** Rule 21 ships $98.67. Rule 22 ships $98.84 because the audit infrastructure existed to find it. The reusable diagnostic pattern is more valuable than any single rule it produces. Future infrastructure investments (e.g., Option C N=1000 oracle generator) should be evaluated under the same lens — what audit patterns does it unlock?
+
+### Files (Session 88)
+
+**New code (committed):**
+* `analysis/scripts/drill_v61_high_only_addressability_S88.py` — Phase B pre-drill on DS_NO_MAXTOP/MS_ONLY/JOINT_HIGH × {J-A} under v61
+* `analysis/scripts/audit_v61_chain_bleed_S88.py` — Phase B+ layer-by-layer audit of v44 vs v47 vs v48 vs v52
+* `analysis/scripts/strategy_v62_high_only_chain_fix.py` — Rule 22 SHIPPED
+* `analysis/scripts/grade_v62_full_grid_S88.py` — Phase C grader with pre-committed thresholds
+
+**New artifacts (under `data/session88/`):**
+* `drill_v61_high_only_addressability.log`
+* `audit_v61_chain_bleed.log`
+* `grade_v62_full_grid.log`
+
+**Documentation:**
+* `SESSION_88_REPORT.md` — this session's plain-language TL;DR + back-to-back-$98 framing
+* `DECISIONS_LOG.md` — this section (Decision 123)
+* `CURRENT_PHASE.md` — rewritten for S89
+* `STRATEGY_GUIDE.md` — Part 1 Session 88 entry added; Part 5 Rule 21 + Rule 22 entries added; Part 6 current standard updated; front-matter rewritten
+
+### Path forward (S89 candidates)
+
+1. **PRIMARY: Continue chain-audit expansion to remaining prefix-silent HIGH_ONLY cells.** Likely candidates (descending leak):
+   * **HIGH_ONLY × JOINT_MED × {J-A}**: best_ms_mid_high ∈ [8,10] — separate cell from JOINT_HIGH
+   * **HIGH_ONLY × JOINT_LOW × {J-A}**: best_ms_mid_high < 8
+   * **HIGH_ONLY × NEITHER × {J-A}**: no DS or ms-mid-with-max-top patterns
+   * Combined potential: ~$5-20/1000h based on S71 baseline (smaller cells)
+
+2. **SECONDARY: Audit HIGH_ONLY × max ∈ {7-T}.** Different firing mode (v52-defensive-low rather than v52-fallthrough). Unknown whether the v47 chain bleed extends here. Worth a pre-drill.
+
+3. **TERTIARY: Audit prefix-COVERED cells with the chain-audit pattern.** LOW pair, two_pair, trips. Existing per-hand parquets cover most. Low compute cost, potentially high information value if buried regressions exist outside HIGH_ONLY.
+
+4. **OPTIONAL: Build Option C N=1000 oracle generator infrastructure.** Required for v60 (S86 MID-pair candidate, MIXED-by-methodology) and for any future smaller-effect rule on prefix-silent cells. Engineering scope: ~30-60 min Rust modification + test + launch. Once built, validate v60 retroactively.
+
+5. **OPTIONAL: LOW × PMID_OTHER drill.** Deferred from S87+S88. The last LOW pair cell. May still be worth running once chain-audit work concludes.
+
+Default S89 plan if user defers: pursue (1) on JOINT_MED + JOINT_LOW × {J-A} cells together (similar methodology, transferable scripts, ~5-10 min compute). Then evaluate (2) as the next-largest unaudited zone.
+
