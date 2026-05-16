@@ -9,15 +9,17 @@
 
 **TW Poker Solver** is a computational engine that aims to find the Nash equilibrium (or near-optimal approximation) for Taiwanese Poker — a card-setting game derived from Open-Face Chinese Poker played with 7 cards, 3 tiers, and 2 community boards.
 
-**Primary Goal:** Solve (or near-solve) Taiwanese Poker by computing the optimal hand-setting strategy for every possible 7-card deal, then extract the patterns into a human-usable decision tree that matches the solver 95%+ of the time.
+**Primary Goal:** Solve (or near-solve) Taiwanese Poker by computing the optimal hand-setting strategy for every possible 7-card deal, then extract the patterns into a hybrid strategy stack (human-memorizable rule chain composed over an ML champion) that **maximizes $/1000h on the production grid** (RealisticHumanMixture opponent, N=200, full 6M canonical hands).
+
+> **Headline-goal note (Decisions 033 + 131):** The project's original headline target was "≥95% match-rate / shape-agreement with the solver." Decision 033 (Session 16, 2026-04-27) retired the *shape-agreement* form in favor of "directional EV-loss reduction + absolute EV per profile" after the 27-feature decision-tree ceiling capped at 61.74%. Decision 131 (Session 96, 2026-05-16) retires the *match%* form for the second time — empirically infeasible on the current ML architecture given oracle self-disagreement of 32% at N=200↔N=1000 (Session 79), and all four major lever cascades (ML capacity, A-path label quality, chain-audit, rule-extraction) characterized as saturated. **The headline metric is $/1000h on the production grid.** Match% is retained as a diagnostic only.
 
 **Secondary Goal:** Build a training tool where a user is dealt 7 cards, sets their hand, and receives immediate feedback on whether their setting matches the computed optimal.
 
 **Critical Output:** The solver itself is a means, not the end. The END PRODUCT is:
-1. A complete database of optimal settings for all 133M hands
+1. A complete database of optimal settings for all canonical 7-card hands (6,009,159 hands after suit canonicalization)
 2. Pattern analysis revealing WHY each setting is optimal (what features drive the decision)
-3. A condensed decision tree / hierarchy of rules that a human can memorize and apply in <30 seconds
-4. Validation proving the decision tree matches the solver for 95-99% of hands
+3. A condensed rule chain (currently 25 named rules) that a human can apply in <30 seconds, layered on top of an ML champion (v44_dt) that handles the long tail
+4. Validation reporting **$/1000h on the production grid**, remaining gap to the oracle ceiling, and two-track divergence between the rule chain and the ML champion alone
 5. The definitive GTO Taiwanese Poker strategy guide — backed by exhaustive computation, not heuristics
 
 **What This Is:**

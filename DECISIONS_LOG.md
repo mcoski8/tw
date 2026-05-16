@@ -9436,3 +9436,49 @@ The two-grid noise is small ($0.16 on NARROW, $0.42 on MEDIUM, $1.73 on WIDE —
 3. **TERTIARY — v52-defensive-low partial-effectiveness exploit (DEFERRED from S90).** Speculative.
 
 4. **DEFERRED — v44_RULE13 fallthrough replacement.** With v54/v55/v56 absorbing $731+/1000h of chain bleed across pair-family, replacement primarily matters for HIGH_ONLY (already gated by v64/v65).
+
+
+## Decision 131 — Session 96 headline-goal recalibration: 95% match% formally retired (second-stage closure); $/1000h on the production grid is the headline metric; CLAUDE.md + checklist.md updated to drop zombie 95% framing
+**Date:** 2026-05-16 (Session 96)
+**Question:** With all rule-shipping levers (chain-audit, bucket-level rule-extraction, intra-layout rule-extraction) characterized as saturated on the current ML architecture (Decisions 127, 129, 130) — and the ML cascade itself formally closed at v44 saturating capacity (Decision 113, S78) plus the A-path label-quality cascade closed (Decision 117, S82) — is the project's headline goal of "95% match-rate / agreement with the solver" still operationally meaningful, or has it become a zombie target that load-bearing docs (CLAUDE.md, checklist.md) still encode while every session's actual decisions ignore it?
+**Options:**
+  - (a) Keep "95% match%" as the headline; pursue A3 ML retrain and any future levers explicitly under that target.
+  - (b) Re-affirm Decision 033's directional reframe ("absolute EV per profile + EV-loss reduction") but leave the implicit 95% framing intact in CLAUDE.md and conversational vocabulary.
+  - (c) Explicit second-stage retirement: declare 95% match% unreachable on the current ML architecture; codify $/1000h on the full production grid as the headline; update CLAUDE.md / checklist.md / STRATEGY_GUIDE.md to match.
+  - (d) Defer indefinitely.
+**Choice:** (c) — explicit second-stage retirement.
+**Why:**
+  1. **Decision 033 (S16, 2026-04-27) only retired the *shape-agreement* form of the 95% target.** Its choice was (d) "directional EV-loss reduction (no hard %) + non-negative absolute EV against all 4 profiles". Consequence #1 explicitly stated *"CLAUDE.md headline section may need an update reflecting the new goal framing (deferred to Session 17 — not blocking)"* — never done. The *match%* form of the 95% target re-emerged after the project pivoted to ML champions in S27+ (v16_dt distillation), surfaced in S79's label-noise diagnostic, S81's A2 launch report, S82's A-path closure, S85's NULL report, and S95's resume framing. Today's audit found three load-bearing 95% match% references still alive in repo docs:
+     - `CLAUDE.md:12` — "Primary Goal: ... matches the solver 95%+ of the time."
+     - `CLAUDE.md:20` — "Critical Output #4: Validation proving the decision tree matches the solver for 95-99% of hands"
+     - `checklist.md:159` — "[ ] Push toward 95%+ agreement with conditional refinements"
+     All three updated by this decision.
+  2. **Match% under either lens (shape-agreement or argmax-equality) is empirically capped well below 95% on the current feature/ML architecture.** S79 showed oracle self-disagreement of 32% at N=200 vs N=1000 — the answer key itself isn't 95%-deterministic; any match% above ~68% on N=200 oracle is partially memorizing label noise. v44 sits at 67% on N=1000 (Lens-3 OOS), 1.19pp below in-sample at N=1000 (the noise floor lower bound). S81's A2 targeted retrain and S82's Lens-3 held-out validation both NULLed under the +$5/1000h pre-committed bar. 95% match% is physically not what the current architecture delivers.
+  3. **Four saturation closures stand on the books, fully characterizing every lever attempted in the past 18 sessions:**
+     - **ML cascade (Decision 113, S78):** single-model feature engineering closed at v44 saturating regime. Six consecutive sessions (S72/S73/S74/S75/S77/S78) failed to lift; redundancy ceiling at 2.25M leaves quantified.
+     - **A-path / label quality (Decision 117, S82):** A2 + variants all NULL on Lens-3 held-out; cascade closed at v44 capacity.
+     - **Chain-audit lever (Decisions 122/123/124/125 ships; 126/127 closures, S87-S92):** $214.83/1000h shipped across 4 cells (HIGH_ONLY × {J-A} + HIGH_ONLY × {8,9,T}), then characterized as exhausted at the methodology boundary (S91 POPULATION-DIVERGENCE NULL on LOW pair; S92 STRUCTURAL NULL on two_pair + trips due to v55/v56 blanket routing).
+     - **Rule extraction (Option D-revised) lever:** bucket-level closed (Decision 129, S94 — $5.08/1000h ceiling at 100% trigger across all 10 within-v44_dt residual cells); intra-layout closed (Decision 130, S95 — strongest remaining candidate trips B_DS_AVAIL_LKR landed MIXED at $+4.59/$+4.75, $0.25 short of $5 SHIP bar on both grids).
+  4. **$/1000h on the full production grid is the right headline metric** because it: (a) weights mistakes by economic impact, not by argmax equality; (b) survives oracle self-disagreement (averaging over 6M hands × 105 settings is robust to per-hand label noise); (c) is the metric the user's $10/EV-point framing from S16 already cared about; (d) is what the pre-committed two-grid SHIP standard already enforces ($5/1000h bar on both N=200 full grid AND N=1000 prefix/sparse grid).
+  5. **The original "human-memorizable rule chain" framing was always in tension with the project's actual architecture.** The current architecture is a 25-rule chain on top of a 107-feature DT with 2.25M leaves. The rule chain *is* human-memorizable; the v44_dt ML champion underneath is not. Calling the composite "human-memorizable" was always a stretch; the headline should be honest about that.
+  6. **The user's persistent directive — "easy hands are easy to play; bleeding lives on weak hands where damage control is hard" — points at $/1000h as the right metric.** Match% treats a 1¢ argmax flip identically to a $50 argmax flip. $/1000h weights by economic damage, which is what the user cares about.
+**Choice:** (c). Recalibrate.
+**Consequence:**
+  1. `CLAUDE.md` lines 12 + 20 updated: Primary Goal now "maximize $/1000h on the production grid (RealisticHumanMixture, N=200, 6M canonical hands)"; Critical Output #4 reworded to report $/1000h + remaining gap to oracle ceiling + two-track divergence. A pointer-paragraph to Decisions 033 + 131 added under Primary Goal.
+  2. `checklist.md` lines 158-159: 70%+ agreement task and 95%+ agreement task struck through with `[~]` marker + decision pointers. Agreement-analysis line marked deprioritized (still useful as diagnostic).
+  3. `STRATEGY_GUIDE.md` Part 1 appended with Session 96 entry; front-matter "Last updated" line refreshed to S96.
+  4. `CURRENT_PHASE.md` rewritten for S97 — open options become A3 ML retrain (PRIMARY for whoever wants to attempt it, with the honest expected-NULL prior given S78/S82 closures), v52-defensive-low partial-effectiveness exploit (SECONDARY), v44_RULE13 fallthrough replacement (TERTIARY, mostly absorbed already).
+  5. `MASTER_HANDOFF_01.md` + `sprints/SPRINT_INDEX.md` updated with S96 entries per session-end protocol.
+  6. **No new code, no engine runs, no grader runs.** This is a documentation-only session.
+**What this does NOT change:**
+  - v65_mid_pair_chain_extend remains production strategy. v44_dt remains ML champion (24th consecutive session).
+  - All existing rules, gates, and infrastructure intact. Rule count UNCHANGED at 25.
+  - The pre-committed two-grid SHIP standard ($5/1000h on both grids, |Δ| ≤ ~$1, sign-agree ≥ 70%) is unchanged — it is already the operational form of the new headline.
+**What this DOES change:**
+  - MIXED verdicts (like S95) no longer carry the implicit "we're behind the 95% target" subtext. They mean: "this candidate did not clear $5 on both grids; the architecture's saturation is what's holding back further extraction; the remaining gap to oracle ceiling ($111.41/1000h) is the maximum potential remaining lift across all future work on the current architecture."
+  - A3 retrain expected outcome is reframed: not "the path to 95% match%" but "the only remaining lever with potential to recover $50+/1000h, with credibility-low prior given Decision 113 + Decision 117 closures already established v44 capacity as the saturating regime for ML feature engineering and label quality respectively."
+  - "Project done" definition recast. Exit conditions for the current cascade:
+    1. Three consecutive sessions all MIXED-at-best on any tested lever → that lever is closed (already triggered for chain-audit and both rule-extraction sub-classes).
+    2. A3 retrain attempted and characterized: NULL closes the only remaining ML lever; SHIP opens a new sub-cascade with potentially higher ceiling.
+    3. No new lever identifiable that hasn't been characterized.
+

@@ -155,9 +155,9 @@
 - [x] Build decision tree (first cut): 7-rule chain in `analysis/scripts/encode_rules.py` (Session 12)
 - [x] Implement decision tree as code — `apply_rules(hand) → setting_index` in `encode_rules.py` (Session 12)
 - [x] Validate decision tree on 6M canonical hands vs multiway-robust — **53.58% shape-agreement** baseline; naive_104 baseline 21.77% (Session 12)
-- [ ] Iterate decision tree until 70%+ agreement (Phase B target — close `high_only` gap, the biggest miss category at 35% of all misses)
-- [ ] Push toward 95%+ agreement with conditional refinements
-- [ ] Agreement analysis: avg EV loss when tree disagrees
+- [~] ~~Iterate decision tree until 70%+ agreement (Phase B target — close `high_only` gap, the biggest miss category at 35% of all misses)~~ — *RETIRED by Decision 131 (S96). Match%/agreement is no longer the headline metric; $/1000h on the production grid is. Current production v65 = $1,633.79/1000h full grid / $776.88 prefix; v44_dt = $1,081 full / $686 prefix. Remaining gap to oracle ceiling = $111.41/1000h.*
+- [~] ~~Push toward 95%+ agreement with conditional refinements~~ — *RETIRED by Decisions 033 (S16, shape-agreement form) + 131 (S96, match% form). Empirically infeasible on current ML architecture given 32% oracle self-disagreement at N=200↔N=1000 (S79) + four-lever cascade saturation (Decisions 113, 117, 127, 129, 130).*
+- [ ] Agreement analysis: avg EV loss when tree disagrees — *(still useful as diagnostic; deprioritized)*
 - [ ] Comparison report: pre-solver heuristic vs solver
 - [ ] Catalog: top surprising solver decisions
 - [ ] Catalog: hands where simple rules fail (edge cases)
