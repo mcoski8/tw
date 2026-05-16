@@ -9295,3 +9295,144 @@ Two narrow sub-buckets reach ≥70% predictivity (Rule 20 anchor) totaling 8,160
 4. **DEFERRED: v52-defensive-low partial-effectiveness exploit (S90).** Speculative.
 
 5. **DEFERRED: v44_RULE13 fallthrough replacement.** With v54/v55/v56 absorbing $731/1000h of chain bleed across pair-family, replacement primarily matters for HIGH_ONLY (already gated by v64/v65).
+
+
+## Decision 130 — Session 95 MIXED on trips B_DS_AVAIL_LKR intra-Layout-A force-best-DS-bot candidate (Rule 26); production v65 UNCHANGED; picker-criterion sweep surfaces NEW S95 methodology lesson — picker alignment with oracle's specific pick is the SECOND necessary condition for rule extraction (alongside S94's trigger-predictivity boundary). Best gate: NARROW at N=200 +$4.59 / N=1000 +$4.75, |Δ|=$0.16 — borderline below $5 SHIP bar by ~$0.25.
+
+### Session
+
+Session 95 — executed the S94-defined PRIMARY path: design strategy_v66 with a Rule-20-analog "force-best-DS-bot-within-Layout-A" picker, multi-gate pre-drill on N=200, Option C N=1000 sparse-grid grading. Phase A re-confirmed the S94 sub-bucket numbers from per-hand parquet (resume prompt + SESSION_94_REPORT.md had transcription typos: NARROW was n=8,160 at 90.4% meanP / $5.89 wg, not n=580 at near-100% / $0.53 wg). Phase B built strategy_v66 with the naive `bot_pair_high` carry-over picker — all three gates strongly NEGATIVE at N=200 ($−3.22 / $−6.25 / $−8.84). A picker diagnostic showed the rule's exact-pick match with oracle was only 7.5-13.8% despite the high direction-predictivity. An 8-criterion picker sweep identified **TOP_HIGH_then_pair_tops** as the correct criterion, lifting NARROW to $+4.59 N=200 / 85.2% swap-right rate. Phase C two-grid grader: MIXED on all 3 gates (NARROW closest at N=200 +$4.59 / N=1000 +$4.75).
+
+### Context
+
+S94 (Decision 129) closed the bucket-level rule-extraction lever as STRUCTURALLY SATURATED (max sub-bucket trigger predictivity 57.5% across all 10 within-v44_dt residual cells). The Phase A.2 follow-up identified trips B_DS_AVAIL_LKR intra-Layout-A bot_suit as the only OPEN candidate showing Rule-20-style intra-layout signal: $19.49/1000h aggregate when v44 picks Layout A with non-DS bot but oracle picks DS, with sub-buckets at 88-100% trigger predictivity on 8,160 hands. S94 estimated 20-40% ship probability.
+
+S95 confirms the candidate cannot ship cleanly at the current architecture, but for a NEW reason: even high trigger predictivity is necessary-but-not-sufficient for clean ship. The rule's deterministic picker must also align with oracle's specific pick within the predicted direction.
+
+### What S95 ran
+
+**Phase A — re-confirm sub-bucket numbers + lock trigger gates.** `phaseA_trips_b_ds_avail_lkr_intra_layout_a_S95.py`.
+
+Cell B_DS_AVAIL_LKR (cell_idx=1): 163,170 hands, $42.61/1000h. v44 picks Layout A non-DS: 65,811 hands. Sub-bucket pivot on (kickers_max_suit_count, n_kickers_in_trip_suits, n_b_ds_routings) for v44 non-DS Layout-A population:
+
+| ksc | nkts | nbds |       n |  or_ds |     P |      wg |
+|----:|-----:|-----:|--------:|-------:|------:|--------:|
+|   2 |    4 |    1 |   1,618 |  1,618 | 100.0%| $ 1.12 |
+|   3 |    4 |    1 |   6,542 |  5,757 |  88.0%| $ 4.77 |
+|   2 |    4 |    3 |   6,912 |  4,337 |  62.7%| $ 4.18 |
+|   2 |    3 |    1 |  29,465 | 13,588 |  46.1%| $12.58 |
+|   2 |    2 |    1 |   5,791 |    605 |  10.4%| $ 0.55 |
+|   1 |    3 |    3 |   6,705 |      0 |   0.0%| $ 0.74 |
+
+Locked gates:
+- **NARROW** [(2,4,1)+(3,4,1)]: 8,160 hands, mean P=90.4%, $5.89 wg ceiling
+- **MEDIUM** [+ (2,4,3)]: 15,072 hands, mean P=77.7%, $10.07 wg ceiling
+- **WIDE** [+ (2,3,1)]: 44,537 hands, mean P=56.8%, $22.64 wg ceiling
+
+(Note: resume prompt's n=210/n=370/n=4,911/n=17,838 lines were transcription typos from an earlier draft. The S94 JSON `audit_rule_extraction_structural_summary.json` shows the correct numbers used above.)
+
+**Phase B — strategy_v66 design + N=200 pre-drill.** `strategy_v66_trips_layout_a_force_ds_bot.py` + `prepare_v66_id_list_S95.py`.
+
+Rule 26 candidate: fires when (trips × cell B_DS_AVAIL_LKR × sub-bucket ∈ gate × v44_dt picks Layout A non-DS bot). Forced pick: enumerate (mid_pair_of_trips × top_kicker) settings yielding DS bot, pick the best by deterministic criterion. Initial criterion: **bot_pair_high desc, bot_pair_2nd desc, top_rank desc** (analog of Rule 20's "best DS configuration").
+
+**N=200 pre-drill — initial picker — ALL THREE GATES STRONGLY NEGATIVE:**
+
+| Gate | n_changed | swap-right | N=200 lift |
+|---|---:|---:|---:|
+| NARROW | 8,751 | 36.6% | **$−3.22** |
+| MEDIUM | 18,734 | 39.3% | **$−6.25** |
+| WIDE | 51,531 | 47.6% | **$−8.84** |
+
+**Diagnostic** (`diagnose_v66_picker_S95.py`): among NARROW-gate fired+oracle-picks-DS hands (n=7,765 = 88.7% of fired), the rule's specific setting matches oracle exactly only **7.5%** of the time. In MEDIUM: 13.8%. In WIDE: 51.6%. Per-sub-bucket: (2,3,1) at 89.1% (single mostly-forced config), but (2,4,1) at 3.5% and (3,4,1) at 8.7%. Mean EV(v66 − oracle) on NARROW fired+oracle-DS: **−656 ev units** — the rule's "best DS" pick is 656 ev-units worse on average than oracle's DS pick. The picker criterion was wrong.
+
+**Picker-criterion sweep** (`picker_sweep_v66_S95.py`): 8 deterministic Layout-A DS-bot picker criteria across 3 gates. Winner: **TOP_HIGH_then_pair_tops** (highest kicker on top, then bot pair-tops desc).
+
+| Criterion | NARROW | MEDIUM | WIDE |
+|---|---:|---:|---:|
+| BOT_PAIR_HI then 2 then TOP_DESC (initial) | $−3.22 (36.6%) | $−6.25 (39.3%) | $−8.84 (47.6%) |
+| BOT_PAIR_HI then 2 then TOP_ASC | $−4.56 (31.9%) | $−6.71 (39.4%) | $−9.30 (47.6%) |
+| **TOP_HIGH then pair_tops** | **$+4.59 (85.2%)** | **$+2.95 (65.9%)** | **$+0.36 (57.2%)** |
+| TOP_LOW then pair_tops | $−4.41 (32.6%) | $−6.55 (39.7%) | $−9.14 (47.7%) |
+| BOT_SUM_HI then TOP_DESC | $−4.41 | $−6.55 | $−9.14 |
+| BOT_MIN_HI then PAIR_TOP_DESC | $−4.41 | $−6.57 | $−9.16 |
+| PAIR_TOP_2_HI then PAIR_TOP_1_HI | $−3.22 | $−6.25 | $−8.84 |
+| TOP_NOT_IN_TRIP_SUIT then pair_tops | $−4.56 | $−7.59 | $−10.18 |
+
+Per-sub-bucket and cumulative-slice analysis under TOP_HIGH (`picker_sweep_subbucket_v66_S95.py`) confirms **no slice clears the $5 SHIP bar at N=200**. Best individual slice: (3,4,1) at +$3.50 / 82.0%. Best cumulative slice: NARROW at +$4.59 / 85.2% (NARROW = (2,4,1)+(3,4,1)).
+
+**Phase C — Option C N=1000 sparse-grid grading.** `prepare_v66_id_list_S95.py` (re-run with corrected picker) emitted id list of 51,531 ids (WIDE superset). Engine ran in 1,901 s wall at 27.1 hands/s. Grader (`grade_v66_id_list_n1000_S95.py`) applied pre-committed two-grid thresholds:
+
+| Gate | n_changed | N=200 lift | N=1000 lift | \|Δ\| | sign-agree | Verdict |
+|---|---:|---:|---:|---:|---:|---|
+| NARROW | 8,751 | $+4.59 | **$+4.75** | $0.16 | 93.9% | **MIXED** |
+| MEDIUM | 18,734 | $+2.95 | $+3.37 | $0.42 | 88.3% | MIXED |
+| WIDE | 51,531 | $+0.36 | $+2.09 | $1.73 | 87.0% | MIXED |
+
+The two-grid noise is small ($0.16 on NARROW, $0.42 on MEDIUM, $1.73 on WIDE — the N=1000 estimate is higher on every gate but still below the $5 bar). NARROW at N=1000 $+4.75 is $0.25 short of the SHIP bar; an "honest miss" rather than noise-driven MIXED.
+
+### Verdict + production state
+
+**VERDICT: MIXED.** Production v65 UNCHANGED.
+
+| metric | pre-S95 (v65) | post-S95 (v65) | Δ |
+|---|---:|---:|---:|
+| Full grid (N=200) | $1,633.79 | $1,633.79 | $0.00 |
+| Prefix grid (N=1000) | $776.88 | $776.88 | $0.00 |
+| Production vs v44_dt | $552.79 | $552.79 | $0.00 |
+| Remaining gap to oracle | $111.41 | $111.41 | $0.00 |
+| Cumulative closure since pre-S68 | 92.09% | 92.09% | 0.00pp |
+| Rule count | 25 | 25 | 0 |
+
+* v44_dt ML champion: UNCHANGED ($1,081 full / $686 prefix) — **23 consecutive sessions** running, since v44 in S58.
+* Combined S87-S93 production-chain recovery: $221.26/1000h (S94 + S95 contribute $0).
+
+### Methodology lessons (Session 95)
+
+1. **PICKER ALIGNMENT IS THE SECOND NECESSARY CONDITION FOR RULE EXTRACTION (NEW S95).** S94 established trigger predictivity ≥ 62-70% as the operational definition of "rule extractable" — necessary for clean ship. S95 adds the second necessary condition: the rule's deterministic picker must align with oracle's specific pick within the predicted direction. **High direction predictivity (90%) is useless if the rule picks a different config 90% of the time.** Rules 20 and 25 had ≥89% picker alignment by happy accident — their `bot_pair_high` criterion = oracle's. The trips analog under that same criterion got 3-8% alignment in the highest-P sub-buckets. Both conditions (trigger predictivity ≥ 62%, picker alignment ≥ ~70%) must be verified empirically for each new cell.
+
+2. **PICKER CRITERIA ARE CELL-SPECIFIC, NOT TRANSFERABLE (NEW S95).** Rule 20 / 25 use `bot_pair_high` because the bot's pair value dominates top's single-card value for hands with a pair. Trips invert this — bot's strength is mostly the trip card itself, top wants the highest kicker. **Never assume a successful rule's picker criterion will carry over to a new cell;** validate empirically. The 8-criterion picker sweep takes ~3 min on this cell with the `picker_sweep_v66_S95.py` template; a 0-min cost diagnostic that swung the lift by $7.81/1000h on NARROW ($−3.22 → $+4.59).
+
+3. **RESUME-PROMPT TRANSCRIPTION TYPO (operational lesson).** The S94 resume prompt and SESSION_94_REPORT.md listed the NARROW sub-buckets as n=210 + n=370 totaling 580 hands at near-100% predictivity / $0.53 wg (a transcription typo from an earlier draft); the S94 audit JSON shows the true numbers n=1,618 + n=6,542 totaling 8,160 at 90.4% mean predictivity / $5.89 wg. Always cross-check resume-prompt numbers against the JSON of record at session start; if numbers look anomalously small or large, run the JSON.
+
+4. **OPTION D-REVISED RULE-EXTRACTION LEVER IS NOW EXHAUSTED ACROSS BOTH SUB-CLASSES (carried + extended).** S94 closed bucket-level layout-flip rules ($5.08/1000h ceiling across all 10 within-v44_dt cells). S95 closes intra-layout structural-feature rules on the largest remaining candidate (trips B_DS_AVAIL_LKR — the only cell with Rule-20-style intra-layout signal). With both sub-classes exhausted on the current ML architecture, the headline-goal recalibration option promotes from S94/S95 SECONDARY → S96 PRIMARY: this is the moment to make explicit that 95% match% is unreachable on current architecture and reset the success criterion to maximize $/1000h subject to the current cascade.
+
+5. **MIXED VERDICTS ARE INFORMATIVE EVEN WHEN THEY DON'T SHIP (carried).** This session produced no production change but characterized a genuinely-borderline candidate at $4.59/$4.75 — within $0.25 of the SHIP bar on both grids. The candidate is honestly close to the bar but cleanly fails it; no methodological adjustment recovers it without lowering the two-grid SHIP standard.
+
+### Files (Session 95)
+
+**New strategy file:**
+* `analysis/scripts/strategy_v66_trips_layout_a_force_ds_bot.py` — Rule 26 candidate with the corrected TOP_HIGH-then-pair_tops picker.
+
+**New analysis scripts:**
+* `analysis/scripts/phaseA_trips_b_ds_avail_lkr_intra_layout_a_S95.py`
+* `analysis/scripts/sanity_v66_on_parquet_S95.py`
+* `analysis/scripts/prepare_v66_id_list_S95.py`
+* `analysis/scripts/diagnose_v66_picker_S95.py`
+* `analysis/scripts/picker_sweep_v66_S95.py`
+* `analysis/scripts/picker_sweep_subbucket_v66_S95.py`
+* `analysis/scripts/grade_v66_id_list_n1000_S95.py`
+
+**New data artifacts (`data/session95/`):**
+* `phaseA_summary.{json,log}`, `phaseA_cids_gate_{NARROW,MEDIUM,WIDE}.txt`
+* `phaseB_prepare.{log,summary.json}`, `diagnose_v66_picker.log`
+* `picker_sweep.log`, `picker_sweep_subbucket.log`
+* `v66_per_hand_picks.npz`, `v66_id_list_wide.txt`
+* `v66_n1000_sparse.bin` (21.8 MB Option C grid), `engine_n1000_sparse.log`
+* `grade_v66_n1000_summary.json`, `grade_v66_n1000.log`
+
+**Documentation:**
+* `SESSION_95_REPORT.md` — this session's plain-language report.
+* `DECISIONS_LOG.md` — this section (Decision 130).
+* `CURRENT_PHASE.md` — rewritten for S96.
+* `STRATEGY_GUIDE.md` — Part 1 appended with Session 95 entry.
+* `sprints/SPRINT_INDEX.md` — S95 entry appended.
+
+### Path forward (S96 candidates)
+
+1. **PRIMARY (PROMOTED from S95 SECONDARY) — headline-goal recalibration.** With chain-audit + both rule-extraction sub-classes characterized as saturated on the current ML architecture, this is the moment to make explicit that the 95% match% goal is unreachable from the current architecture. Reset the success criterion to maximize $/1000h. Doc-only session; sharpens S97+ planning.
+
+2. **SECONDARY — A3 ML retrain (full 6M × 105 × N=1000 grid).** Formally closed at v44 in S78 (Decision 113). Option C infrastructure now provides the foundation; ~70 hours wall on current hardware. Reopening requires either a new feature family or explicit operator authorization. The structural saturation findings from S91-S95 raise the question of whether a richer ML champion would shift the saturation boundary — but the path requires substantial compute investment.
+
+3. **TERTIARY — v52-defensive-low partial-effectiveness exploit (DEFERRED from S90).** Speculative.
+
+4. **DEFERRED — v44_RULE13 fallthrough replacement.** With v54/v55/v56 absorbing $731+/1000h of chain bleed across pair-family, replacement primarily matters for HIGH_ONLY (already gated by v64/v65).
