@@ -2844,3 +2844,40 @@ Standalone session report: `SESSION_92_REPORT.md`.
 3. **TERTIARY:** Headline-goal recalibration.
 
 Standalone session report: `SESSION_93_REPORT.md`. Decision 128 records the SHIP + 5 methodology refinements in `DECISIONS_LOG.md`.
+
+## Session 94 — STRUCTURAL NULL on within-v44_dt rule-extraction (Option D-revised) applied to two_pair LAYOUT_A_SS + 9 adjacent residual cells; production v65 UNCHANGED
+
+Full details in `DECISIONS_LOG.md` (Decision 129) + `SESSION_94_REPORT.md`. Headline:
+
+**S94 — Two_pair LAYOUT_A_SS rule extraction (STRUCTURAL NULL).** S94 executed the S93-defined PRIMARY path verbatim: rule-extraction on the largest unaddressed within-v44_dt residual cell, two_pair LAYOUT_A_SS at $35.22/1000h on 437,580 hands. Phase A characterization found v44_dt is structurally saturated at the (hi_pair, lo_pair) bucket level: 75 of 78 buckets have matching v44/oracle modal layouts. Sub-bucket trigger search across 691 (hi, lo, max_sing) sub-buckets within v44_layout=B found ZERO sub-buckets with P(oracle=Layout C | v44=Layout B) ≥ 70% (Rule 20 anchor). Cross-cell audit (`audit_rule_extraction_structural_S94.py`) across all 10 within-v44_dt residual cells (6 two_pair + 4 trips): aggregate bucket-level layout-flip ceiling **$5.08/1000h** under the $5 SHIP bar even at 100% trigger accuracy; max sub-bucket predictivity across all cells = 57.5% (below 62% Rule 25 anchor). Intra-Layout-A bot_suit follow-up on trips B_DS_AVAIL_LKR (the only cell × structure-layer showing Rule-20-style intra-layout signal): $19.49/1000h aggregate signal; two narrow sub-buckets reach 98-100% predictivity but together carry only $0.53/1000h; ≥70% sub-buckets total 8,160 hands at $5.89/1000h — borderline S95 ship candidate requiring Rule-20-style picking-logic engineering.
+
+**Verdict: STRUCTURAL NULL on PRIMARY direction.** Production v65 UNCHANGED at $1,633.79/1000h full / $776.88 prefix. v44_dt UNCHANGED for 22nd consecutive session.
+
+**Production state at end of S94 (UNCHANGED from S93):**
+- Rule chain: `v65_mid_pair_chain_extend` ($1,633.79 full / $776.88 prefix).
+- ML champion: `v44_dt` ($1,081 full / $686 prefix; UNCHANGED 22 sessions).
+- Two-track divergence: $111.41/1000h.
+- Cumulative closure since pre-S68: 92.09% of original $1,409.
+- Project rule count: 25.
+- Combined S87-S93 production-chain recovery: $221.26/1000h (S94 contributes $0).
+
+**S94 artifacts:**
+- `analysis/scripts/audit_rule_extraction_structural_S94.py`
+- `data/session94/audit_summary.log` (gitignored)
+- `data/session94/audit_rule_extraction_structural_summary.json` (gitignored)
+- `SESSION_94_REPORT.md`
+
+**Methodology refinements (NEW S94):**
+1. **Option D-revised has a structural saturation boundary.** Analogous to S91/S92's chain-audit boundary closure. At the (cell × structural feature) level, no within-v44_dt residual sub-bucket on the 10 cells reaches Rule 25's 62% predictivity threshold.
+2. **Trigger predictivity is the operational definition of "rule extractable."** Rule 20: ≥89%. Rule 25: 62%. Below ~62%, false-positive cost dominates true-positive gain. **Leak magnitude alone is insufficient** — two_pair LAYOUT_A_SS has $35.22/1000h leak but max trigger 29.3%.
+3. **Intra-layout improvements are a distinct lever sub-class within Option D-revised.** Bucket-level layout-flip rules capture only $5.08/1000h across all 10 cells. Intra-LAYOUT mechanisms (Rule 20-style) require Rule-20-style picking-logic engineering. Trips B_DS_AVAIL_LKR intra-Layout-A bot_suit is the first identified candidate.
+4. **Hand-specific residual dominates structural residual on these cells.** Two_pair LAYOUT_A_SS's leak distributes across 702 sub-buckets with no concentration (top-30 sum $3.82). Capturing it requires either oracle-quality picks (richer ML champion) or a different lever entirely.
+
+**Both chain-audit + bucket-level rule-extraction levers are now characterized as saturated on the current ML architecture.**
+
+**What S95 will run:**
+1. **PRIMARY (NEW S94 finding, BORDERLINE 20-40% ship probability):** Trips B_DS_AVAIL_LKR intra-Layout-A bot_suit candidate. Design "force-best-DS-bot-within-Layout-A" picking logic (Rule 20 analog for trips), pre-drill on N=200, Option C sparse N=1000 if ≥$5, two-grid grader.
+2. **SECONDARY:** Headline-goal recalibration (well-motivated now by S91 + S92 + S94 saturation findings).
+3. **TERTIARY:** A3 ML retrain (full 6M-hand N=1000 grid, ~70h wall on current hardware via Option C infrastructure). Formally closed at v44 in S78; requires new feature family or operator authorization to reopen.
+
+Standalone session report: `SESSION_94_REPORT.md`. Decision 129 records the STRUCTURAL NULL + 4 methodology refinements in `DECISIONS_LOG.md`.
