@@ -2751,3 +2751,47 @@ Standalone session report: `SESSION_81_LAUNCH_REPORT.md`.
 3. OR refine v52-defensive-low (per-hand picker between v52-DL and v44 on the ~23% of S90 hands where v52-DL wins). Speculative.
 
 Standalone session report: `SESSION_90_REPORT.md`.
+
+## Sessions 91–92 (2026-05-15) — Chain-audit methodology arc COMPLETE; 2 consecutive NULLs at well-characterized boundaries
+
+Full details in `DECISIONS_LOG.md` (Decisions 126, 127) + `SESSION_91_REPORT.md` + `SESSION_92_REPORT.md`. Headline:
+
+**S91 — LOW pair PMID prefix-COVERED chain audit (POPULATION-DIVERGENCE NULL).** Three v65 candidates from per-sub-cell residual bleeds ($1-5/1000h) all FAIL the two-grid SHIP standard because prefix and full grids disagree on direction. Key architectural finding: v44_RULE13 chain bleeds **+$182.28/1000h vs v44_dt on LOW pair prefix** but v54 + Rule 29 absorb $195.63 (load-bearing). Methodology lesson: POPULATION-DIVERGENCE NOISE — prefix is a non-random lower-cid slice, so per-sub-cell aggregate Δ can legitimately diverge in DIRECTION when per-hand effects are small.
+
+**S92 — two_pair + trips chain audit (STRUCTURAL NULL).** Pre-flight code trace revealed v55_two_pair_hybrid and v56_trips_hybrid BLANKET-route 100% of target hands → v44_dt unconditionally. Production v64 ≡ v44_dt by construction on every two_pair and trips hand. Chain-audit candidate set is EMPTY. Key architectural snapshot: **v44_RULE13 chain bleeds +$515.80/1000h on two_pair prefix (3× LOW pair, largest single-layer bleed in project) and +$33.21 on trips; v55 + v56 absorb 100% of both**. Cumulative chain bleed absorbed by v54+v55+v56+Rule 29 across pair-family: **$731/1000h** — most load-bearing infrastructure in the project.
+
+**Chain-audit arc (S87-S92) COMPLETE across all 4 major hand-categories:**
+- HIGH_ONLY (S87-S90): 4 SHIPS, $214.83/1000h.
+- LOW single-pair (S91): NULL (population-divergence noise).
+- two_pair (S92): STRUCTURAL NULL (v55 blanket absorbed chain).
+- trips (S92): STRUCTURAL NULL (v56 blanket absorbed chain).
+
+5 sessions, 4 ships, 2 NULLs at well-characterized boundaries. The lever is bounded.
+
+**Production state at end of S92 (UNCHANGED from S90):**
+- Rule chain: `v64_high_only_chain_fix_zone` ($1,627.36 full / $776.88 prefix).
+- ML champion: `v44_dt` ($1,081 full / $686 prefix; UNCHANGED 20 sessions).
+- Two-track divergence: $117.84/1000h.
+- Project rule count: 24.
+
+**S92 artifacts:**
+- `analysis/scripts/drill_v64_two_pair_addressability_S92.py`
+- `analysis/scripts/audit_v64_two_pair_chain_S92.py`
+- `analysis/scripts/audit_v64_trips_chain_S92.py`
+- `analysis/scripts/grade_v65_two_pair_trips_chain_candidates_S92.py`
+- `data/session92/{drill_v64_two_pair_addressability,audit_v64_two_pair_chain,audit_v64_trips_chain,grade_v65_two_pair_trips_chain_candidates}.log`
+- `SESSION_92_REPORT.md`
+
+**Methodology refinements (NEW S92):**
+1. CHAIN-AUDIT APPLICABILITY TEST refined to 3-pronged: (a) prefix-silent OR (b) ≥$5 both-grid residual, AND (c) production picks must differ from v44_dt on at least some audit cells.
+2. PRE-FLIGHT CODE TRACE AS PIVOT-GATE: read strategy code before drilling (cheaper falsifier than pre-drill).
+3. STRUCTURAL NULL vs POPULATION-DIVERGENCE NULL distinct verdict patterns with different paths forward.
+4. TWO-CONSECUTIVE-NULL = lever-saturation signal; default next-session plan should pivot.
+5. CHAIN-AUDIT METHODOLOGY ARC COMPLETE across all 4 major hand-categories.
+
+**What S93 will run:**
+1. **PRIMARY (PROMOTED from TERTIARY):** Build Option C N=1000 oracle generator infrastructure. Modify engine/src/main.rs to add --id-list-file option. ~30-60 min Rust mod. Unlocks retroactive v60 validation (S86 MIXED, still unshipped) and broader two-grid checking on smaller-effect rules.
+2. **SECONDARY:** Rule-extraction on two_pair LAYOUT_A_SS residual ($35.22/1000h on 437K hands).
+3. **TERTIARY:** Headline-goal recalibration.
+
+Standalone session report: `SESSION_92_REPORT.md`.

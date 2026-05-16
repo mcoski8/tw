@@ -8818,3 +8818,188 @@ Without one of these conditions, the chain-audit will NULL under the two-grid SH
 5. **HYPOTHESIS (DEFERRED): extend Rule 29 gate from Q to K.** S91 data suggests this likely fails two-grid standard (PMID_DS_NOMAXTOP × K shows full-grid LIFT for chain, prefix-grid BLEED). Worth a single drill if PRIMARY/SECONDARY don't ship.
 
 6. **METHODOLOGY EXPANSION (NEW S91): consider whether population-divergence noise affects HIGH_ONLY zone ships retroactively.** Worth a follow-up audit using N=1000 oracle infrastructure once it's built (TERTIARY).
+
+---
+
+## Decision 127 — Session 92 STRUCTURAL NULL on two_pair + trips chain audit; v55 + v56 blanket routing has already collapsed both chains to v44_dt by construction, so chain-audit produces zero candidates; key architectural finding: v44_RULE13 chain bleeds $515.80/1000h on two_pair prefix (3× the LOW pair bleed, largest single-layer bleed identified in project) and $33.21/1000h on trips prefix, with v55 + v56 absorbing 100% of both; chain-audit methodology arc on the four major hand-categories (HIGH_ONLY, single-pair, two_pair, trips) is COMPLETE — 5 sessions, 4 ships ($214.83/1000h), 2 NULLs at well-characterized boundaries; new chain-audit applicability prerequisite (NEW S92): production picks must differ from v44_dt on at least some audit cells, pre-flight code trace verifies in <5 min
+
+### Session
+
+Session 92 — planned execution of the S91-defined PRIMARY path: pivot to two_pair chain audit, with trips as SECONDARY. Pre-flight code trace of `strategy_v55_two_pair_hybrid` and `strategy_v56_trips_hybrid` revealed both contain a single binary gate routing 100% of their target hands to `strategy_v44_dt` unconditionally. Predicted outcome: STRUCTURAL NULL on both targets — Δ(v64 − v44_dt) = $0.00 on every cell by construction. Audit proceeded anyway to (a) empirically confirm the prediction on all 1.34M two_pair hands, and (b) produce the architectural snapshot of v44_RULE13 chain bleed magnitude on two_pair + trips.
+
+### Context
+
+S91 (Decision 126) NULLed on LOW pair PMID prefix-COVERED cells via POPULATION-DIVERGENCE NOISE. The S91 resume prompt identified S92's PRIMARY candidate as two_pair chain audit and SECONDARY as trips. Both were predicted under the framing "if S91 pattern holds (v55 hybrid absorbs most chain bleed), residual sub-cells likely fail two-grid standard."
+
+The S92 finding upgraded that prediction: not only do v55/v56 absorb most of the chain bleed, they absorb 100% by construction — both strategies blanket-route to v44_dt unconditionally for their target categories. Therefore the chain-audit pattern cannot find any per-sub-cell residual, regardless of grid choice or threshold. The outcome is STRUCTURAL NULL (distinct from S91's POPULATION-DIVERGENCE NULL).
+
+### What S92 ran (phases)
+
+**Phase 0 — pre-flight code trace (5 min, no compute).**
+* Read `strategy_v55_two_pair_hybrid.py`: single binary gate — `if _is_two_pair(hand): return strategy_v44_dt(hand); else: return strategy_v54_pair_hybrid(hand)`.
+* Read `strategy_v56_trips_hybrid.py`: identical pattern for trips.
+* Confirmed v57 (LOW single-pair gate) and v64 (HIGH_ONLY gate) do not fire on two_pair or trips (their gates exclude these categories).
+* Therefore production v64 ≡ v44_dt by construction on every two_pair and trips hand.
+* Sample-verified on 50-hand random samples: 50/50 v64 == v44_dt matches on both two_pair and trips.
+
+**Phase A — structural / prefix coverage (two_pair).** From `drill_two_pair_v44_per_hand_structural.parquet`:
+
+| cell_idx | name | n_full | n_prefix | cid_min | v44 leak (full) |
+|---:|---|---:|---:|---:|---:|
+| 0 | LAYOUT_A_DS | 257,400 | 39,318 | 41,701 | $+12.13 |
+| 1 | LAYOUT_C_DS | 308,880 | 47,135 | 46,561 | $+5.66 |
+| 2 | LAYOUT_B_DS | 231,660 | 35,345 | 46,560 | $+15.28 |
+| 3 | LAYOUT_A_SS | 437,580 | 66,796 | 46,559 | $+35.22 |
+| 4 | LAYOUT_C_SS_ONLY | 90,090 | 13,721 | 61,134 | $+12.38 |
+| 5 | LAYOUT_B_SS_ONLY | 12,870 | 1,960 | 133,121 | $+0.13 |
+| (6) | LAYOUT_OTHER | 0 | — | — | — (structurally empty) |
+| **TOTAL** | | **1,338,480** | **204,275** | | **$+80.82** |
+
+All 6 non-empty cells prefix-covered. Within-two_pair v44_dt ceiling = $80.82/1000h.
+
+**Phase B — addressability pre-drill (two_pair, 3.7 min compute).** `drill_v64_two_pair_addressability_S92.py` evaluated v64 on all 1,338,480 two_pair hands.
+
+**Result: 0 mismatches between v64 and v44_dt across all 1,338,480 hands.** Δ(v64 − v44_dt) = $0.00 on every (cell × max_sing) sub-cell. Full grid: $80.82 (v44) = $80.82 (v64). Prefix grid: $186.75 (v44) = $186.75 (v64).
+
+Empirical confirmation: v55's blanket routing has collapsed the chain to v44_dt for every two_pair hand.
+
+**Phase B+ — chain audit / layer attribution (two_pair, 3.3 min compute).** `audit_v64_two_pair_chain_S92.py` ran v44_dt, v44_RULE13, v54, v55, v56, v57, v64 on every prefix two_pair hand (204,275 × 7 strategies).
+
+| layer | total prefix leak ($/1000h) | Δ vs prior layer |
+|---|---:|---:|
+| v44_dt | $+270.70 | — |
+| v44_RULE13 chain | $+786.50 | **+$515.80** (chain BLEEDS massively) |
+| v54 (pair_hybrid) | $+786.50 | $+0.00 (inert — single-pair-only gate) |
+| **v55 (two_pair_hybrid)** | **$+270.70** | **-$515.80** (blanket routing ABSORBS 100%) |
+| v56 (trips_hybrid) | $+270.70 | $+0.00 (trips-only gate inert) |
+| v57 (+ Rule 29) | $+270.70 | $+0.00 (LOW single-pair gate inert) |
+| v64 (production) | $+270.70 | $+0.00 (HIGH_ONLY gate inert) |
+
+**KEY ARCHITECTURAL FINDING.** The v44_RULE13 chain bleeds **+$515.80/1000h prefix vs v44_dt on two_pair** — **2.83× the LOW pair bleed** S91 quantified ($182.28) and the **largest single-layer bleed identified in the project to date**. v55's blanket routing absorbs 100%, producing exactly v44_dt leak at production.
+
+**Phase A+B+B+ — addressability + chain audit (trips, ~12s compute).** `audit_v64_trips_chain_S92.py` on 25,245 prefix trips hands × 7 strategies. Same architectural pattern:
+
+| layer | total prefix leak | Δ vs prior |
+|---|---:|---:|
+| v44_dt | $+54.85 | — |
+| v44_RULE13 chain | $+88.06 | **+$33.21** (chain bleeds) |
+| v54 / v55 | $+88.06 | $+0.00 (inert on trips) |
+| **v56 (trips_hybrid)** | **$+54.85** | **-$33.21** (blanket routing absorbs 100%) |
+| v57 / v64 | $+54.85 | $+0.00 (inert on trips) |
+
+Smaller chain bleed than two_pair (trips is a smaller category) but identical structural pattern.
+
+**Phase C — pre-committed grader.** `grade_v65_two_pair_trips_chain_candidates_S92.py` LOCKED thresholds (identical to S91: SHIP ≥ $5 prefix AND ≥ $5 full, NULL ≤ $1 both grids, MIXED in between).
+
+**Candidate set: 0 candidates** — because Δ(v64 − v44_dt) is structurally $0.00 on every sub-cell, no candidate v65 design can be generated from the chain-audit pattern. STRUCTURAL NULL.
+
+### Verdict + production state
+
+**VERDICT: STRUCTURAL NULL on both two_pair and trips chain audit.**
+
+**Production UNCHANGED at v64_high_only_chain_fix_zone.**
+* Full grid: $1,627.36/1000h (UNCHANGED).
+* Prefix grid: $776.88/1000h (UNCHANGED).
+* v44_dt ML champion: UNCHANGED ($1,081 full / $686 prefix) — 20 sessions running.
+* Production vs v44_dt: $546.36/1000h (UNCHANGED).
+* Remaining gap to oracle ceiling: $117.84/1000h (UNCHANGED).
+* Cumulative closure since pre-S68: $1,291.16 of $1,409 = 91.6% (UNCHANGED).
+* Total project rule count: 24 (UNCHANGED).
+* Combined S87-S92 chain-audit ship recovery: $214.83/1000h (S91 + S92 contribute $0).
+
+### Architectural snapshot (NEW S92)
+
+The combined v44_RULE13 chain bleed across pair-family categories, all absorbed by hybrid-routing infrastructure:
+
+| category | chain bleed vs v44_dt (prefix) | absorbed by | residual at production |
+|---|---:|---|---:|
+| LOW pair (S91) | $+182.28 | v54 + Rule 29 ($-195.63) | -$13.36 (LIFT) |
+| two_pair (S92) | $+515.80 | v55 ($-515.80) | $+0.00 |
+| trips (S92) | $+33.21 | v56 ($-33.21) | $+0.00 |
+| **TOTAL** | **$+731.29** | v54 + v55 + v56 + Rule 29 | **$-13.36** |
+
+**Without v54/v55/v56/Rule 29, production would bleed $731/1000h vs v44_dt on the pair-family categories alone.** These are the most load-bearing pieces of infrastructure in the project.
+
+### Why this is a STRUCTURAL NULL (distinct from S91's POPULATION-DIVERGENCE NULL)
+
+**S91 NULL:** chain-audit produced candidates (5 sub-cells with $1-5/1000h prefix bleed). The two-grid SHIP standard NULLed them because POPULATION-DIVERGENCE NOISE made the prefix and full grids disagree on direction. The mechanism was real per-cell effect + grid sensitivity.
+
+**S92 NULL:** chain-audit produced zero candidates because production picks are byte-identical to v44_dt on every two_pair and trips hand. The mechanism is at the strategy-layer: a prior router (v55, v56) has unconditionally collapsed the chain to v44_dt, so there is no per-cell Δ to evaluate. The two-grid standard is never invoked because the candidate set is empty.
+
+**Both NULLs are honest. They map different shapes of the chain-audit applicability boundary.**
+
+### CHAIN-AUDIT APPLICABILITY TEST — refined to 3-pronged (NEW S92)
+
+The chain-audit pattern is most productive when ALL of:
+
+1. **(a)** target cells are prefix-SILENT → EFFECT-SIZE-DOMINANCE applies (S87-S90 ships), OR
+2. **(b)** per-sub-cell residual ≥ $5/1000h on BOTH grids → population-divergence noise doesn't dominate (S91 finding), AND
+3. **(c)** [NEW S92 PREREQUISITE] production picks must DIFFER from v44_dt on at least some audit cells — otherwise the chain has been collapsed and there is nothing to gate out.
+
+Condition (c) is checkable in ~5 min via pre-flight code trace of the chain layers. When (c) fails (as on two_pair via v55, on trips via v56), audit produces structural NULL regardless of (a)/(b). Pre-flight trace should be standard before any future chain-audit drill.
+
+### What this answers about the cascade
+
+1. **CHAIN-AUDIT METHODOLOGY ARC IS COMPLETE.** Five sessions (S87-S92) have applied the pattern to all four major hand-categories:
+   - HIGH_ONLY (S87-S90): 4 SHIPS, $214.83/1000h.
+   - LOW single-pair (S91): NULL (population-divergence noise).
+   - Two_pair (S92): structural NULL (v55 blanket absorbed chain).
+   - Trips (S92): structural NULL (v56 blanket absorbed chain).
+   New ships from this pattern are not expected on current architecture. Future ships would require a richer ML champion that exposes new chain bleeds, or a new chain layer to audit.
+
+2. **v54 + v55 + v56 + Rule 29 ARE THE MOST LOAD-BEARING INFRASTRUCTURE.** They absorb a cumulative $731/1000h of v44_RULE13 chain bleed across pair + two_pair + trips. They are NOT optional — undoing any of them would cause >$30-516/1000h regression in the affected category. Future work should treat these as protected infrastructure.
+
+3. **A SECOND CONSECUTIVE NULL session in chain-audit is decision-relevant.** S91 + S92 together signal the pattern is at saturation. The natural pivot for S93 is Option C N=1000 oracle generator (promoted from TERTIARY to PRIMARY) — it unlocks two-grid SHIP standard on arbitrary cell subsets at N=1000 quality, enabling retroactive v60 validation and broader two-grid checking on smaller-effect rules.
+
+4. **The chain-audit work also serves as INDEPENDENT VERIFICATION of v55 + v56 + v54 design rationales.** v55's S69 ship rationale ("blanket two_pair → v44_dt because every cell favors v44") is re-confirmed by quantifying the absorbed bleed ($515.80). Same for v56's S70 ship ($33.21) and v54's S68 ship (also absorbed in the LOW pair audit via v54 + Rule 29 = $195.63 vs v44_RULE13).
+
+### Methodology lessons (Session 92)
+
+1. **CHAIN-AUDIT APPLICABILITY MAP IS COMPLETE.** Five sessions have mapped the lever's productive zone. Future audit work on chain-audit pattern should be skipped unless a new chain layer is introduced (e.g., post-ML-retrain).
+
+2. **PRE-FLIGHT CODE TRACE AS PIVOT-GATE (NEW S92).** When the audit target's production chain can be read in <100 lines of strategy code, read it first. If the chain has been collapsed to v44_dt by a prior router (v55/v56 pattern), audit is moot and STRUCTURAL NULL is expected. Save the 5-30 min drill.
+
+3. **STRUCTURAL NULL is a distinct verdict from POPULATION-DIVERGENCE NULL.** S91 NULL came from grid disagreement on real per-cell effects (real candidates failed bar). S92 NULL came from the candidate set being empty by construction. Both honest; the path forward differs (S91 → tighter bars; S92 → pivot lever).
+
+4. **v44_RULE13 chain bleed QUANTIFIED ACROSS pair-family.** Architectural snapshot: $731/1000h cumulative bleed absorbed by v54+v55+v56+Rule 29. This snapshot replaces sundry session-level observations with a single project-level number.
+
+5. **A two-consecutive-NULL signal is decision-relevant.** S91 alone is noise; S91+S92 is signal. S93 default plan should pivot, not default to "more chain audit." This pattern of "two consecutive NULLs at the boundary = lever saturation" is now a project-level methodology heuristic.
+
+6. **The pivot-gate methodology compounds.** S87 introduced pre-drill before infrastructure (cheap measurement gate). S92 extends it: pre-flight code-trace before pre-drill itself (cheaper static-analysis gate). Each layer of pivot-gate gives a cheaper way to falsify the premise before committing more compute.
+
+7. **NULL audits are still complete cycles.** Both S91 (real candidates failed bar) and S92 (no candidates exist) produced honest verdicts + methodology refinements + architectural snapshots. The chain-audit arc shipped 4 rules + 2 NULLs across 5 sessions; the NULLs were not failures, they were the pattern revealing its own boundaries.
+
+### Files (Session 92)
+
+**New code (committed):**
+* `analysis/scripts/drill_v64_two_pair_addressability_S92.py` — Phase B pre-drill on all 1.34M two_pair hands
+* `analysis/scripts/audit_v64_two_pair_chain_S92.py` — Phase B+ layer attribution (v44_dt → v44_RULE → v54 → v55 → v56 → v57 → v64)
+* `analysis/scripts/audit_v64_trips_chain_S92.py` — SECONDARY: same audit pattern on trips
+* `analysis/scripts/grade_v65_two_pair_trips_chain_candidates_S92.py` — Phase C structural-NULL grader
+
+**New artifacts (under `data/session92/`):**
+* `drill_v64_two_pair_addressability.log`
+* `audit_v64_two_pair_chain.log`
+* `audit_v64_trips_chain.log`
+* `grade_v65_two_pair_trips_chain_candidates.log`
+
+**Documentation:**
+* `SESSION_92_REPORT.md` — this session's plain-language TL;DR + complete chain-audit applicability map
+* `DECISIONS_LOG.md` — this section (Decision 127)
+* `CURRENT_PHASE.md` — rewritten for S93
+* `STRATEGY_GUIDE.md` — Part 1 SKIPPED (no strategy change); front-matter "Last updated" line updated only
+
+### Path forward (S93 candidates)
+
+1. **PRIMARY (PROMOTED): Option C N=1000 oracle generator infrastructure.** Modify `engine/src/main.rs` to add `--id-list-file` option. ~30-60 min Rust mod + ~10 min test. Unlocks: (i) retroactive validation of v60 (S86 MIXED-by-methodology), (ii) two-grid SHIP standard on arbitrary cell subsets at N=1000 quality, (iii) future smaller-effect rule validation. With chain-audit exhausted, this is the natural next lever.
+
+2. **SECONDARY: rule-extraction (Option D-revised) on within-v44_dt residual leak.** Current v44_dt leak vs oracle by category: LOW pair $281, two_pair $80.82, trips $65.18, HIGH_ONLY (already chain-audit-treated). S83-S86 explored MID-pair extraction with diminishing returns. Could re-attempt on two_pair LAYOUT_A_SS (largest unaddressed cell: $35.22/1000h on 437K hands).
+
+3. **TERTIARY: headline-goal recalibration.** Make explicit that 95% match% is unreachable from current architecture; reset target to maximize $/1000h subject to current cascade.
+
+4. **DEFERRED: ML retrain (A3 full 6M-hand N=1000 grid).** Formally closed at v44 in S78 (Decision 113). Reopening requires either a new feature family or A3 infrastructure (not yet built).
+
+5. **DEFERRED: v52-defensive-low partial-effectiveness exploit (S90).**
+
+6. **DEFERRED: v44_RULE13 fallthrough replacement.** With v54/v55/v56 absorbing the chain bleed, v44_RULE13 replacement primarily matters for HIGH_ONLY (already gated). Large engineering scope, unclear payoff.
+
