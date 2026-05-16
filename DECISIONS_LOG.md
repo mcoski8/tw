@@ -9482,3 +9482,37 @@ The two-grid noise is small ($0.16 on NARROW, $0.42 on MEDIUM, $1.73 on WIDE —
     2. A3 retrain attempted and characterized: NULL closes the only remaining ML lever; SHIP opens a new sub-cascade with potentially higher ceiling.
     3. No new lever identifiable that hasn't been characterized.
 
+## Decision 132 — Session 97 maintenance lever closure: v60-gate11 empirically absorbed by v65 (Rule 25 = v60-gate12), composite hypothesis collapses to v66-NARROW alone (MIXED, $0.25 short of $5 SHIP bar on each grid)
+**Date:** 2026-05-16 (Session 97)
+**Question:** The S96 MAINTENANCE option proposed composing the two parked MIXED candidates — v60-gate11 ($+4.85 N=200 / $+4.77 N=1000 from S93) and v66-NARROW ($+4.59 N=200 / $+4.75 N=1000 from S95) — into a joint composite ship to clear the $5 SHIP bar on a non-overlapping pair of cells (MID pair × PMID_DS_NOMAXTOP and trips × B_DS_AVAIL_LKR). Does the composite actually clear the two-grid bar against current production v65, or is the framing stale?
+**Options:**
+  - (a) Build composite strategy v67 = v65 + v60-gate11-picker + v66-NARROW-picker, grade vs v65 on N=200 full grid + sparse N=1000 grid, accept the verdict.
+  - (b) Audit the structural relationship between v60-gate11 and v65 BEFORE running the composite — gate=11's firing zone (max_sing ≤ J) is a strict subset of v65's gate-12 firing zone (max_sing ≤ Q) with identical picker logic, so the incremental lift over v65 may be $0.
+  - (c) Defer the maintenance lever indefinitely.
+**Choice:** (b), executed empirically via the per-hand picks NPZ that already existed from S93.
+**Why:**
+  1. **v60-gate11's firing predicate is `max_sing_rank > max_sing_gate → return None`. With `max_sing_gate = 11` (J), the rule fires on hands with `max_sing ≤ J`.** v65's Rule 25 layer calls the same picker function (`_detect_mid_pair_defensive_pmid_swap`) with `V65_MID_PAIR_GATE = 12` (Q), so it fires on hands with `max_sing ≤ Q` — a strictly broader set. The picker's output (the forced PMID_tnomax_DS setting) depends only on the hand, not on the gate parameter (the gate is just an early-exit filter). So every hand at which gate=11 fires is also handled by gate=12, with the same forced setting.
+  2. **The S93 grading JSON (`data/session93/grade_v60_n1000_summary.json`) confirms gate=11 ⊂ gate=12 at the changed-hand-mask level:**
+     - gate=10: 4,080 changed hands; gate=11: 14,160 changed hands; gate=12: 32,304 changed hands.
+     - All three grades used **v57 as the baseline**, not v65 (Rule 25 hadn't shipped yet at S93 Phase C).
+     - Gate=11's $+4.85/$+4.77 lift was a measure of "v60-gate11 vs v57" on 14,160 hands. The moment Rule 25 (= gate=12) shipped as v65, those 14,160 hands moved to being v65-handled with the **same** PMID_tnomax_DS pick.
+  3. **Empirical confirmation (`spot_check_v60g11_subset_v65_S97.py`).** Loaded the 14,160 g11-fired hands, decoded each via `canonical_hands.bin`, computed `strategy_v65_mid_pair_chain_extend(hand)`. Result: **14,160 / 14,160 = 100.0000%** v65_pick == v60_gate11_pick. Zero hands fell through to v57. The structural claim is exact.
+  4. **The composite hypothesis collapses.** With v60-gate11's incremental lift over v65 = $0, the joint composite reduces to v66-NARROW alone, which is locked MIXED at $+4.59/$+4.75 per S95 grading (`data/session95/grade_v66_n1000_summary.json`). The two-grid SHIP bar requires ≥$5 on BOTH grids; v66-NARROW is $0.25 short on each. The composite cannot ship without a methodology change (e.g., relaxed bar), which is not in scope for the maintenance option.
+  5. **CURRENT_PHASE.md (S96) line 127 carried v60-gate11 as "currently MIXED at +$4.85/+$4.77; eligible for relaxed-bar or composite-rule re-evaluation" without noting that the framing was baseline-relative to v57.** The fix is a methodology lesson: parked-candidate annotations must record the strategy-of-record the lift was measured against, plus a re-grade-against-current-production check before any composite hypothesis. Decision 131's doc-drift lesson was about zombie *headline* framing; this is about zombie *candidate* framing.
+  6. **All other cascade levers are characterized as closed.** Chain-audit (Decisions 122/123/124/125/126/127), rule-extraction bucket-level (Decision 129), rule-extraction intra-layout (Decision 130), and now maintenance composite (this decision). The remaining open levers — A3 ML retrain (operator-gated, ~70h wall, honest NULL prior), v52-DL exploit (speculative), v44_RULE13 replacement (modest at best) — are well-characterized.
+**Choice:** (b). Close the maintenance lever as STRUCTURAL NULL.
+**Consequence:**
+  1. `CURRENT_PHASE.md` line 127 (S96 form) replaced — v60-gate11 status updated from "MIXED at +$4.85/+$4.77; eligible for relaxed-bar or composite-rule re-evaluation" to "STRUCTURALLY ABSORBED by v65 (Rule 25 = v60-gate12) — Decision 132". File rewritten in place for S98.
+  2. CURRENT_PHASE hypothesis-cascade table appended with Decision 132 row.
+  3. New script `analysis/scripts/spot_check_v60g11_subset_v65_S97.py` + summary JSON `data/session97/spot_check_v60g11_subset_v65.json` for the empirical proof.
+  4. `SESSION_97_REPORT.md`, `MASTER_HANDOFF_01.md`, `sprints/SPRINT_INDEX.md` updated per session-end protocol.
+  5. No code change to any strategy script or engine. No grader run. v65 + v44_dt UNCHANGED.
+**What this does NOT change:**
+  - v65_mid_pair_chain_extend remains production strategy. v44_dt remains ML champion (25th consecutive session).
+  - The pre-committed two-grid $5 SHIP standard is unchanged.
+  - v66-NARROW characterization (MIXED at $+4.59/$+4.75) is unchanged — S95 verdict stands.
+**What this DOES change:**
+  - The "open candidates" list shrinks by one: v60-gate11 removed (structurally absorbed).
+  - The MAINTENANCE option from S96 is CLOSED. The remaining open levers are A3, v52-DL exploit, v44_RULE13 replacement.
+  - Project-wide methodology: parked-candidate book-keeping must record both the baseline strategy and a current-production re-grade before composite hypotheses.
+
