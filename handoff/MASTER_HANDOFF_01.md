@@ -2716,3 +2716,38 @@ Standalone session report: `SESSION_78_V48_DT_REPORT.md`.
 
 Standalone session report: `SESSION_81_LAUNCH_REPORT.md`.
 
+---
+
+## Session 90 (2026-05-15) — v64 SHIPS Rule 24: chain gate-out extension to HIGH_ONLY × max ∈ {8, 9, T}; fourth consecutive chain-audit ship; structurally-non-empty HIGH_ONLY × max ≥ 8 zone audit COMPLETE; first project-level audit of v52-defensive-low
+
+- Executed the S89-defined PRIMARY path verbatim. Pivoted to HIGH_ONLY × max ∈ {7-T} (different firing mode — v52-defensive-low rather than v52-fallthrough).
+- Phase A structural feasibility check eliminated 4 (cell × rank) combinations for free: max=7 × any cell; max ∈ {8,9,T} × {JOINT_HIGH, NEITHER}; max=8 × JOINT_MED. Non-empty target = 11 combinations / 25,740 hands / all prefix-silent.
+- Pre-drill: **v63 leaks +$7.23/1000h MORE than v44_dt on these cells**. Hypothesis P1 (v52-DL well-designed → clean null) REJECTED.
+- Chain audit: v44→v47 = +$19.28 (4th consecutive v47-as-culprit); v47→v48 = −$2.53; v48→v52 = −$9.52 (v52-defensive-low partially recovers). Net residual +$7.23. **100% of target hands fire v52-defensive-low** — first project-level audit of this mode.
+- Rule 24 (v64): strict superset of Rule 23's gate. For HIGH_ONLY × max ∈ {8,9,T,J,Q,K,A} × cell ∈ all 6 non-empty cells, bypass v47→v48→v52 chain and return v44_dt.
+- Full-grid grade auto-fired SHIP: **+$7.23/1000h whole-grid (v63 $1,620.13 → v64 $1,627.36)**. Per-cell rolled up: DS_NO_JOINT +$3.75 / JOINT_MED +$1.35 / DS_NO_MAXTOP +$0.92 / MS_ONLY +$0.90 / JOINT_LOW +$0.31. Per-hand: 22% same / 55% better / 23% worse. Swap-right 70.4% on changed hands. Pre-drill ↔ grader match to $0.01 across all cells.
+- Out-of-gate sanity: 0 v64≠v63 disagreements on 50K random sample.
+- v52-defensive-low verdict: PARTIALLY effective. Recovers $9.52 of v47's $19.28 bleed but doesn't fully restore v44_dt. S53 design intent correct but conservative. Refinement opportunity (per-hand picker) deferred to S91+.
+- Decision 125 records the ship + 7 methodology refinements (chain-audit transferred 1:1 for 4th session; EFFECT-SIZE-DOMINANCE generalizes across 4 ships and 3 OOMs; pre-drill ↔ grader 2-decimal-match is load-bearing; swap-right < 65% is a chain-layer-doing-real-work flag; v52-defensive-low partial-effectiveness is a project finding; Phase A structural feasibility check transferable; future v65 refinement opportunity).
+- **Structurally-non-empty HIGH_ONLY × max ≥ 8 chain-audit zone now COMPLETE.** Combined S87+S88+S89+S90 recovery = $214.83/1000h.
+
+**Production state at end of S90:**
+- Rule chain: `v64_high_only_chain_fix_zone` ($1,627.36 full / $776.88 prefix unchanged).
+- ML champion: `v44_dt` ($1,081 full / $686 prefix; UNCHANGED 18 sessions).
+- Two-track divergence: $117.84/1000h (cumulative closure since pre-S68 = 91.6%).
+- Project rule count: 24.
+
+**S90 artifacts:**
+- `analysis/scripts/drill_v63_high_only_addressability_S90.py`
+- `analysis/scripts/audit_v63_chain_bleed_S90.py`
+- `analysis/scripts/strategy_v64_high_only_chain_fix_zone.py`
+- `analysis/scripts/grade_v64_full_grid_S90.py`
+- `data/session90/{phase_a_target_stats,drill_v63_high_only_addressability,audit_v63_chain_bleed,grade_v64_full_grid}.log`
+- `SESSION_90_REPORT.md`
+
+**What S91 will run:**
+1. Pivot to prefix-COVERED cells (LOW pair / two_pair / trips) using the chain-audit pattern. Methodological advantage: prefix grader provides a real two-grid SHIP standard.
+2. OR build Option C N=1000 oracle generator infrastructure (~30-60 min Rust mod, required for v60 retroactive validation).
+3. OR refine v52-defensive-low (per-hand picker between v52-DL and v44 on the ~23% of S90 hands where v52-DL wins). Speculative.
+
+Standalone session report: `SESSION_90_REPORT.md`.

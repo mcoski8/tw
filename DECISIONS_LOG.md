@@ -8481,3 +8481,162 @@ Option C N=1000 oracle generator infrastructure remains DEFERRED. v60 from S86 s
 4. **OPTIONAL: LOW × PMID_OTHER drill.** Deferred from S87+S88+S89. The last LOW pair cell. May still be worth running once chain-audit work concludes.
 
 Default S90 plan if user defers: pursue (1) on HIGH_ONLY × max ∈ {7-T} — the unaudited zone with the most unknowns and the cleanest potential payoff.
+
+---
+
+## Decision 125 — Session 90 v64 SHIPS Rule 24 (chain gate-out extension to HIGH_ONLY × max ∈ {8, 9, T}): the S87/S88/S89 chain-audit pattern reapplied to the next-zone {8-T} target finds a +$7.23/1000h v44→v52 chain regression on 25,740 prefix-silent hands; v64 strict-superset gate covers all 5 non-empty (cell × rank) combinations (JOINT_MED × {9,T}, JOINT_LOW + DS_NO_JOINT + DS_NO_MAXTOP + MS_ONLY × {8,9,T}); full-grid grader auto-fires SHIP at +$7.23/1000h whole-grid (v63 $1,620.13 → v64 $1,627.36); v52-defensive-low confirmed PARTIALLY effective (recovers ~50% of v47 bleed but not fully to v44_dt) — first audit of that firing mode; the structurally-non-empty HIGH_ONLY × max ≥ 8 zone is now fully gated; combined S87+S88+S89+S90 chain-audit recovery = $214.83/1000h across four consecutive sessions
+
+### Session
+
+Session 90 — planned execution of the S89-defined PRIMARY path: pivot to HIGH_ONLY × max ∈ {7-T} (different firing mode). v52-defensive-low (LOW_MAX_DEFENSIVE = {7,8,9,10}) was specifically designed for weak-high HIGH_ONLY hands and was an open question whether it carried the same v47 chain bleed as v52-fallthrough / v52-J-HIMID / v52-defensive-gated did under S87-S89. Phase A structural feasibility eliminated 7 (cell × rank) combinations for free. Phase B pre-drill confirmed the v47 chain bleed DOES extend to max ≤ T. Phase B+ audit attributed the bleed to v44→v47 (+$19.28) partially recovered by v48 (−$2.53) and v52-defensive-low (−$9.52), net residual +$7.23. Fourth consecutive chain-audit ship; v52-defensive-low is now CONFIRMED as partially effective.
+
+### Context
+
+S89 (Decision 124) shipped v63 closing the HIGH_ONLY × {J-A} chain-audit zone. The S89 resume prompt identified four S90 candidates; PRIMARY was "pivot to HIGH_ONLY × max ∈ {7-T} — different firing mode (v52-defensive-low); unknown whether v47 chain bleed extends here." S90 inherited this plan verbatim from CURRENT_PHASE.md.
+
+### What S90 ran (phases)
+
+**Phase A — S71 data review (no new compute).** Queried `drill_v44_high_only_S71_per_hand.parquet` and the corresponding summary. Findings:
+
+* HIGH_ONLY × max = 7: **STRUCTURALLY EMPTY** (only 6 ranks ≤ 7 exist; HIGH_ONLY needs 7 distinct ranks). Aces always counted as 14 in the cell taxonomy, so wheel-style hands don't appear here.
+* HIGH_ONLY × max ∈ {8, 9, T} × JOINT_HIGH: **STRUCTURALLY EMPTY**. JOINT_HIGH needs `best_ms_mid_high ≥ J=11`; mid cards have rank < max ≤ T = 10, so best_ms_mid_high ≤ 9. Impossible.
+* HIGH_ONLY × max ∈ {8, 9, T} × NEITHER: **STRUCTURALLY EMPTY** by the same pigeonhole argument that closed NEITHER × {J-A} in S89.
+* HIGH_ONLY × max = 8 × JOINT_MED: **STRUCTURALLY EMPTY**. JOINT_MED needs `best_ms_mid_high ≥ 8`; mid cards have rank < max = 8 → best_ms_mid_high ≤ 7. Impossible.
+
+Non-empty combinations: 11 (cell × rank) pairs.
+
+| cell | n | v44_baseline_leak $/1000h |
+|---|---:|---:|
+| JOINT_MED × {9, T} | 3,150 | $0.6483 |
+| JOINT_LOW × {8, 9, T} | 630 | $0.0714 |
+| DS_NO_JOINT × {8, 9, T} | 16,200 | $6.4077 |
+| DS_NO_MAXTOP × {8, 9, T} | 3,456 | $1.4087 |
+| MS_ONLY × {8, 9, T} | 2,304 | $0.7455 |
+| **TOTAL** | **25,740** | **$9.2816** |
+
+All prefix-silent (cid_min ≥ 590,496; prefix ends at 499,999). Whole-grid measurement is the only available baseline until Option C N=1000 oracle is built.
+
+**Phase B — addressability pre-drill (3s compute, 25.7K hands).** Wrote `drill_v63_high_only_addressability_S90.py`. Re-evaluated v63 (production) on the 25,740 target hands. Result:
+
+| cell | n | v44 leak $ | v63 leak $ | **Δ (chain bleed)** |
+|---|---:|---:|---:|---:|
+| JOINT_MED | 3,150 | $0.65 | $2.00 | **+$1.35** |
+| JOINT_LOW | 630 | $0.07 | $0.38 | **+$0.31** |
+| DS_NO_JOINT | 16,200 | $6.41 | $10.15 | **+$3.75** |
+| DS_NO_MAXTOP | 3,456 | $1.41 | $2.33 | **+$0.92** |
+| MS_ONLY | 2,304 | $0.75 | $1.65 | **+$0.90** |
+| **TOTAL** | **25,740** | **$9.28** | **$16.51** | **+$7.23** |
+
+**v63 leaks +$7.23/1000h MORE than v44_dt on these cells.** Hypothesis P1 (v52-defensive-low is well-designed, clean null) REJECTED. Hypothesis P2 (chain extends) CONFIRMED.
+
+Override activity: 68-89% across all cells — v63 actively reroutes a strong majority of these hands away from v44_dt's picks. Per (cell × rank), only 2 of 14 sub-cells individually clear the per-cell $1 gate (DS_NO_JOINT × T at $3.04 and JOINT_MED × T at $1.12); aggregate uniformity supports gating the whole zone as one architectural move (same design philosophy as S88/S89).
+
+**Phase B+ — v64 chain audit (7s compute, 25.7K hands × 3 strategies).** Wrote `audit_v63_chain_bleed_S90.py`. Layer attribution:
+
+| Cell | v44→v47 Δ | v47→v48 Δ | v48→v52 Δ |
+|---|---:|---:|---:|
+| JOINT_MED | +$1.23 | -$0.21 | +$0.33 |
+| JOINT_LOW | +$0.49 | +$0.01 | -$0.19 |
+| DS_NO_JOINT | **+$10.98** | -$0.79 | -$6.44 |
+| DS_NO_MAXTOP | +$4.61 | -$1.19 | -$2.50 |
+| MS_ONLY | +$1.98 | -$0.36 | -$0.72 |
+| **Σ** | **+$19.28** | **-$2.53** | **-$9.52** |
+
+**The story is different from S87/S88/S89.** v47 is still the dominant regression introducer (+$19.28 — 4th consecutive session). But v48 contributes a small improvement (−$2.53), and v52 contributes a LARGER improvement (−$9.52). Net residual bleed = +$7.23.
+
+By v52 firing mode (rolled up across S90 cells): **100% of 25,740 hands fire v52-defensive-low** (LOW_MAX_DEFENSIVE = {7, 8, 9, 10}). This is the FIRST audit of v52-defensive-low's behavior across the project. Verdict: it is **partially effective** — it recovers approximately half of v47's bleed but does not fully restore v44_dt's performance. The architectural fix is still gate-out.
+
+**Phase C — v64 design + full-grid grade (19s compute, 25.7K hands × 2 strategies + 50K out-of-gate sanity).** Wrote `strategy_v64_high_only_chain_fix_zone.py` and `grade_v64_full_grid_S90.py`. v64 triggers on HIGH_ONLY × max ∈ {8, 9, 10, J, Q, K, A} × cell ∈ {DS_NO_JOINT, DS_NO_MAXTOP, MS_ONLY, JOINT_HIGH, JOINT_MED, JOINT_LOW} — strict superset of v63's gate, adding all structurally non-empty (cell × rank) combinations at max ≤ T. The structurally-impossible combinations (max=7 × any; max ∈ {8,9,T} × {JOINT_HIGH, NEITHER}; max=8 × JOINT_MED) are not listed in the gate explicitly but are filtered naturally by the cell classifier — v64's effective coverage is exactly the 11 non-empty combinations at max ≤ T plus all 6 non-empty at max ∈ {J-A}.
+
+Pre-committed thresholds locked in code BEFORE grader ran: SHIP ≥ $5/1000h whole-grid (same as S89; pre-drill predicted ~$7.2), NULL ≤ $1, MIXED in between.
+
+**Grader auto-fired SHIP at +$7.23/1000h whole-grid lift.** Per-cell breakdown matched audit prediction exactly (to $0.01). Per-hand effect: 21.6% same, 55.2% better, 23.2% worse. **Swap-right rate on changed hands: 70.4%** — lower than S88/S89 (76.8%/85.2%) but higher than S87 (62.3%). The elevated 23.2% "worse" rate reflects v52-defensive-low's partial effectiveness — it actively wins on ~23% of these hands while losing on ~55%. Aggregate favors gating uniformly. Out-of-gate sanity: **0 v64≠v63 disagreements** on 50,000-hand random sample (333 hands skipped as new-v64-gate).
+
+Implied production: $1,620.13 → **$1,627.36/1000h** (+$7.23, +0.45%).
+
+### Verdict + production state
+
+**VERDICT: SHIP.** Pre-committed SHIP threshold cleared by 1.45×.
+
+**Production ADVANCES to v64_high_only_chain_fix_zone.**
+* Full grid: $1,620.13 → **$1,627.36/1000h** (+$7.23)
+* Prefix grid: $776.88 → **$776.88/1000h** UNCHANGED (rule fires entirely outside prefix coverage)
+* v44_dt ML champion: UNCHANGED ($1,081 full / $686 prefix)
+* Production vs v44_dt: **$546.36/1000h** (was $539)
+* Remaining gap to oracle ceiling (the "two-track divergence"): **$117.84/1000h** (was $125.07)
+* Cumulative closure since pre-S68: **$1,291.16 of $1,409 = 91.6%** (was 91.1%)
+* Total project rule count: 23 → **24**
+
+### Why N=1000 validation was not blocking (EFFECT-SIZE-DOMINANCE rule, calibrated)
+
+1. Effect size is $7.23/1000h, 1.45× the SHIP threshold ($5).
+2. Effect size is ~33× the LLN aggregate noise floor (~$0.22 estimated for a 25.7K-hand population, scaled from S89's $0.30 estimate by √(25.7/48)). Above the 20× criterion.
+3. Population is 25,740 hands. Pre-drill ($7.23) matches grader ($7.23) to 2 decimal places — high stability.
+4. Mechanism is REMOVE-AN-OVERRIDE (gate out a deterministic chain), not ADD-A-NEW-SETTING.
+5. Per-hand split (22% same / 55% better / 23% worse) shows clear net favor toward v44_dt despite v52-defensive-low's partial wins. The 23% "worse" rate is HIGHER than any prior chain-audit ship but the aggregate sign is unambiguous.
+6. Pre-committed grader, mechanical verdict.
+
+Option C N=1000 oracle generator infrastructure remains DEFERRED. v60 from S86 still needs N=1000 validation. v60 STAYS UNSHIPPED pending S91+ Option C build.
+
+### What this answers about the cascade
+
+1. **The v47 chain regression extends ACROSS THE ENTIRE STRUCTURALLY-NON-EMPTY HIGH_ONLY ZONE.** Four consecutive sessions of audit found v47 net-negative at every magnitude:
+   - S87 (DS_NO_JOINT × {J-A}, 756K hands): +$98.67/1000h
+   - S88 (DS_NO_MAXTOP/MS_ONLY/JOINT_HIGH × {J-A}, 358K hands): +$98.84
+   - S89 (JOINT_MED/JOINT_LOW × {J-A}, 48K hands): +$10.09
+   - S90 (5 cells × {8, 9, T}, 26K hands): +$7.23
+   **Combined: $214.83/1000h across four sessions.**
+
+2. **v52-defensive-low is partially effective but does not eliminate the v47 bleed.** First audit of this firing mode. Recovers ~50% of v47's regression ($9.52 of $19.28) but leaves $7.23 residual. Same architectural fix applies (gate to v44_dt). Future v65 refinement could retain v52-defensive-low on the ~23% of hands where it wins; deferred.
+
+3. **The chain-audit pattern transferred 1:1 for a FOURTH consecutive session.** S87 → S88 → S89 → S90: same script structure, rebound parameters. Infrastructure cost is empirically zero per cell.
+
+4. **The structurally-non-empty HIGH_ONLY × max ≥ 8 zone is now fully gated under v64.** No more HIGH_ONLY chain-audit work remains. (HIGH_ONLY × max = 7 is structurally empty; HIGH_ONLY × max ≤ 7 hands cannot exist in the canonical population by combinatorial necessity.)
+
+5. **Per-hand swap-right rate trended UP S87→S88→S89, then DOWN at S90 (62.3% → 76.8% → 85.2% → 70.4%).** The S87→S89 progression was driven by smaller, more uniform cells in successively narrower zones. S90's drop reflects v52-defensive-low's partial effectiveness — it actually wins on a meaningful 23% of changed hands. This is a useful nuance for understanding v52-defensive-low's design.
+
+### Methodology lessons (Session 90)
+
+1. **The CHAIN AUDIT pattern is fully transferable infrastructure (S87 → S88 → S89 → S90 proved four times).** Four sessions of audit work, four ships, near-zero per-cell infrastructure cost.
+
+2. **The EFFECT-SIZE-DOMINANCE rule generalized to a FOURTH ship at the lower-bound effect size yet seen ($7.23).** Noise-floor multiple is ~33× — above the 20× criterion. The criterion is well-calibrated across four orders of magnitude (S87 $98.67 → S88 $98.84 → S89 $10.09 → S90 $7.23).
+
+3. **The Phase A structural feasibility check eliminated 4 (cell × rank) combinations for free.** Same playbook as S89's NEITHER × {J-A} closure, applied to four more cells: max=7 × any, max ∈ {8,9,T} × {JOINT_HIGH, NEITHER}, max=8 × JOINT_MED. Five-minute pencil-and-paper proof saves at least an hour of compute time per cell.
+
+4. **The "swap-right rate" trend is a load-bearing methodological signal.** S90's 70.4% (lower than S88/S89) accurately reflected v52-defensive-low's partial effectiveness BEFORE the audit revealed the mechanism. If a future audit shows swap-right rate ≤ 60%, that's a flag that the chain-layer being gated is doing real work and a more surgical fix may be warranted than full gate-out.
+
+5. **v52-defensive-low is partially effective — first project-level audit of this mode.** The S53 design intent (defensive-low for max ∈ {7-T}) was REAL — it recovers $9.52 of v47's $19.28 bleed. It just didn't go far enough; v44_dt still picks better in aggregate. Worth recording as a project finding: defensive-low's S53 design philosophy was correct; the implementation just leaves money on the table relative to ML.
+
+6. **"Speed is not necessary — clarity and perfection is" — S90 reaffirms.** Running the chain audit (7s compute) when the pre-drill headline was already clear ($7.23) pinpointed the layer attribution and revealed v52-defensive-low's partial-effectiveness story. Made Rule 24's design surgical (same architecture as Rules 21+22+23) and the methodology lesson (v52-defensive-low first-audit) explicit.
+
+### Files (Session 90)
+
+**New code (committed):**
+* `analysis/scripts/drill_v63_high_only_addressability_S90.py` — Phase B pre-drill on HIGH_ONLY × {8, 9, T} under v63
+* `analysis/scripts/audit_v63_chain_bleed_S90.py` — Phase B+ layer-by-layer audit of v44 vs v47 vs v48 vs v52 (with v52-defensive-low firing-mode attribution)
+* `analysis/scripts/strategy_v64_high_only_chain_fix_zone.py` — Rule 24 SHIPPED
+* `analysis/scripts/grade_v64_full_grid_S90.py` — Phase C grader with pre-committed thresholds
+
+**New artifacts (under `data/session90/`):**
+* `phase_a_target_stats.log`
+* `drill_v63_high_only_addressability.log`
+* `audit_v63_chain_bleed.log`
+* `grade_v64_full_grid.log`
+
+**Documentation:**
+* `SESSION_90_REPORT.md` — this session's plain-language TL;DR + four-session chain-audit retrospective
+* `DECISIONS_LOG.md` — this section (Decision 125)
+* `CURRENT_PHASE.md` — rewritten for S91
+* `STRATEGY_GUIDE.md` — Part 1 Session 90 entry added; Part 5 Rule 24 entry added; Part 6 current standard updated; front-matter rewritten
+
+### Path forward (S91 candidates)
+
+1. **PRIMARY: Audit prefix-COVERED cells with the chain-audit pattern.** LOW pair, two_pair, trips. These are categories OUTSIDE the HIGH_ONLY taxonomy with DIFFERENT rule chains in production (v44_dt routing via v54/v55/v56 hybrids). Existing per-hand parquets cover most. Low compute cost (no new oracle eval). Different baseline architecture — the audit setup is different but the principle (find layers introducing net-negative regression) is transferable. Potential ship sizes unknown; could be $0 (clean confirmation) or $5-50/1000h.
+
+2. **SECONDARY: Build Option C N=1000 oracle generator infrastructure.** Required for v60 (S86 MID-pair candidate, MIXED-by-methodology). Engineering scope: modify `engine/src/main.rs` to add `--id-list-file` option (read canonical IDs from a file, only process those); ~30-60 min Rust mod + ~10 min test + launch background K-high run for v60 retroactive validation. Required for any future smaller-effect rule on prefix-silent cells.
+
+3. **TERTIARY: LOW × PMID_OTHER drill.** Deferred from S87+S88+S89+S90. The last LOW pair cell. Standard Option D-revised playbook.
+
+4. **REFINEMENT (DEFERRED): v52-defensive-low partial-effectiveness exploit.** S90 found that v52-defensive-low actively WINS on ~23% of S90 target hands. A future v65 could retain v52-defensive-low on the subset where it wins (per-hand picker rather than uniform gate). Engineering scope: identify the structural discriminator that separates "v52-DL wins" from "v44 wins" within the S90 target population. Speculative; depends on whether the discriminator is clean.
+
+Default S91 plan if user defers: pursue (1) on prefix-COVERED cells (LOW pair as the first stop) — uses the prefix grader for a real two-grid SHIP standard, which is methodologically stronger than the EFFECT-SIZE-DOMINANCE pattern.

@@ -20,6 +20,8 @@
 
 > Active sprint at end of Session 55 (2026-05-10): **Sprint 8 — Methodology refinement + rule chain extension + diagnostic-driven feature engineering**. v41_dt is the current ML champion ($1,270 full / $686 prefix; 95 features, 2.02M leaves at depth=36 ml=1). v52_full_high_only_handler is the current production human strategy ($2,498 full / $1,522 prefix; 17 rules; UNCHANGED since S53). The two production tracks diverge by $1,228/1000h. Next-session target: **high_only zone** ($2,796/1000h within-cat × 40.4% share = $1,131 whole-grid = ~63% of v41's total regret). See CURRENT_PHASE.md for the Session 56 resume prompt.
 
+> **End of Session 90 (2026-05-15) — Sprint 8 ACTIVE.** v44_dt is the current ML champion ($1,081 full / $686 prefix; 107 features, 2.25M leaves at depth=36 ml=1; UNCHANGED for 18 sessions, since S58). v64_high_only_chain_fix_zone is the current production rule chain ($1,627.36 full / $776.88 prefix; 24 rules). Production now beats v44_dt by $546/1000h (two tracks converged via v54/v55/v56 hybrid + Rules 21-24 chain gate-outs). Two-track divergence (gap to oracle): $117.84/1000h, cumulative closure since pre-S68 = 91.6% of original $1,409. Rule count: 24 (Rules 21-24 are chain gate-outs of the HIGH_ONLY × max ≥ 8 zone across S87-S90, combined recovery $214.83/1000h). Structurally-non-empty HIGH_ONLY × max ≥ 8 chain-audit zone COMPLETE. Next-session target: pivot to prefix-COVERED cells (LOW pair / two_pair / trips) — methodologically stronger with two-grid SHIP standard. See CURRENT_PHASE.md for the Session 91 resume prompt.
+
 ---
 
 ## Phase Overview
