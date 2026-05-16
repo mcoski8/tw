@@ -9003,3 +9003,176 @@ Condition (c) is checkable in ~5 min via pre-flight code trace of the chain laye
 
 6. **DEFERRED: v44_RULE13 fallthrough replacement.** With v54/v55/v56 absorbing the chain bleed, v44_RULE13 replacement primarily matters for HIGH_ONLY (already gated). Large engineering scope, unclear payoff.
 
+
+---
+
+## Decision 128 — Session 93 v65 SHIPS Rule 25 (MID pair × PMID_DS_NOMAXTOP × max_sing ≤ Q chain extension) at +$6.43/1000h N=200 + +$6.34/1000h N=1000 — FIRST SHIP via two-grid bar on a prefix-uncovered cell, unblocking the v60 candidate parked since S86 (MIXED-by-methodology) via NEW Option C N=1000 sparse-grid infrastructure (engine `--id-list-file` mode); production v64 → v65 ($1,627.36 → $1,633.79/1000h full grid); cumulative closure 91.6% → 92.09%; rule count 24 → 25; chain-audit methodology arc remains COMPLETE — S93 is a rule-extraction ship (Option D-revised), NOT a chain-audit ship.
+
+### Session
+
+Session 93 — executed the S92-defined PRIMARY path verbatim: build Option C N=1000 oracle generator infrastructure (engine `--id-list-file` mode) and retroactively validate v60. v60 had been parked since S86 as MIXED-by-methodology because the rule's target cell (MID pair × PMID_DS_NOMAXTOP) sits at cid_min 593,072 — entirely outside the prefix N=1000 grid's [0, 500K) coverage. The full-grid N=200 grader had auto-fired SHIP at +$6.43/1000h in S86, but the prefix grader was structurally silent (zero coverage = zero signal), so the two-grid SHIP standard (S84+) could not be evaluated. **Option C infrastructure unlocks the second-grid number on arbitrary cell subsets at N=1000 quality.**
+
+### Context
+
+S91 (Decision 126) NULLed on LOW pair prefix-COVERED chain audit. S92 (Decision 127) STRUCTURAL-NULLed on two_pair + trips chain audit and declared the **CHAIN-AUDIT METHODOLOGY ARC COMPLETE** across all 4 major hand-categories (4 ships totaling $214.83/1000h + 2 NULLs at well-characterized boundaries). S92's resume prompt promoted Option C from TERTIARY to PRIMARY for S93, with the explicit goal of unblocking v60.
+
+S93 made that ship.
+
+### What S93 ran (phases)
+
+**Phase A — engine modification (~30 min).**
+* Added `solve_grid_ids` to `engine/src/oracle_grid.rs` — sibling of `solve_grid_range` but each item carries its own canonical_id. Inner MC is identical (`solve_grid_one` with the same `base_seed + canonical_id × φ` per-hand seed), outer rayon parallelism is identical, only the dispatch shape changes.
+* Added `--id-list-file <PATH>` to the `OracleGrid` subcommand in `engine/src/main.rs`. Plain text file (one decimal canonical_id per line; blank/comment lines ignored); engine sorts + dedupes the ids, validates `id < canonical_total`, dispatches to `solve_grid_ids`.
+* Output file: standard TWOG format unchanged (each record carries its own canonical_id). Header `canonical_total` = id-list length so resume + header-mismatch guards still work. **A downstream reader can detect "this is a sparse id-list-mode TWOG file" by comparing `canonical_total` to canonical_hands.bin row count.**
+* `cargo build --release` clean; 141 tests pass.
+
+**Phase B — correctness test (~5 min, 100 hands).**
+* `test_id_list_correctness_S93.py`: sampled 100 ids from [0, 500K) (stride 5000), wrote them to an id-list file, ran the engine at default samples=1000 / seed=0xC0FFEE / opp=Realistic.
+* Compared per-hand 105-EV vectors against `data/oracle_grid_prefix500k_n1000.bin` at the same ids.
+* **Result: 100/100 rows bit-identical. Max abs EV diff = 0.0.** Confirms per-hand seed deterministic across sequential and id-list modes.
+* Engine throughput: ~25 hands/s parallel at N=1000 on this Mac (8 cores).
+
+**Phase C-1 — id list prep + N=200 baseline reproduce (~30 s compute).** `prepare_v60_id_list_S93.py`:
+* Iterated MID × PMID_DS_NOMAXTOP cell from `drill_pair_v44_per_hand_structural.parquet` (114,048 hands).
+* For each hand, computed v57 pick and v60 picks at gates 10/11/12 via `_detect_mid_pair_defensive_pmid_swap`.
+* Identified 32,304 changed-hand ids (gate=12). Cid range: [594,805, 5,917,111] — confirms ALL outside prefix [0, 500K).
+* Recomputed S86 N=200 baselines on the same hands: **exact match** to S86's published numbers (gate 10 +$1.63 / gate 11 +$4.85 / gate 12 **+$6.43**).
+* Wrote `data/session93/v60_gate12_changed_ids.txt` (32,304 sorted ids).
+
+**Phase C-2 — engine sparse run (21:17 wall).**
+
+```
+engine/target/release/tw-engine oracle-grid \
+  --canonical data/canonical_hands.bin \
+  --out data/session93/v60_n1000_sparse.bin \
+  --lookup data/lookup_table.bin \
+  --samples 1000 --seed 12648430 --opponent realistic \
+  --block-size 200 \
+  --id-list-file data/session93/v60_gate12_changed_ids.txt
+```
+
+* Wall: **1,277.23 s (21:17) at 25.3 hands/s steady-state.** Block flush cadence ~8 s per 200 hands.
+* Output: 13.7 MB sparse TWOG file, 32,304 records.
+
+**Phase C-3 — two-grid grade (pre-committed thresholds, 1.1 s).** `grade_v60_id_list_n1000_S93.py` LOCKED thresholds in code BEFORE reading the sparse grid:
+* `SHIP_LIFT_DOL_PER_1000H = 5.0`
+* `NULL_LIFT_DOL_PER_1000H = 1.0`
+* **Two-grid SHIP standard: BOTH N=200 and N=1000 ≥ $5 → SHIP; BOTH ≤ $1 → NULL; otherwise MIXED.**
+
+Per-gate results on the same changed-hand subsets:
+
+| gate | n_changed | N=200 lift | N=1000 lift | |Δ| | sign-agree | verdict |
+|---:|---:|---:|---:|---:|---:|---|
+| 10 | 4,080 | +$1.63 | +$1.65 | $0.02 | 79.3% | MIXED |
+| 11 | 14,160 | +$4.85 | +$4.77 | $0.09 | 79.0% | MIXED |
+| **12** | **32,304** | **+$6.43** | **+$6.34** | **$0.09** | **77.8%** | **SHIP** |
+
+**Gate 12 SHIPS by two-grid standard.** Per-hand sign-agreement is only 77.8% (i.e., 22% of changed hands have OPPOSITE-sign deltas between N=200 and N=1000 — standard MC noise at the per-hand level), but aggregate variance collapses cleanly over 32K hands and the two grids land within $0.09/1000h.
+
+**Phase C+ — v65 build + grade.**
+* Built `strategy_v65_mid_pair_chain_extend.py`: composes v64's HIGH_ONLY chain-audit gate with v60-gate12's MID pair rule. Firing zones are DISJOINT by construction (v64 requires HIGH_ONLY = no pair; v60 requires exactly one MID pair, rank 8-T).
+* `grade_v65_full_grid_S93.py` (15.2 s in-cell + 27.3 s out-of-cell sanity):
+  - **v65 whole-grid N=200 lift over v64 = +$6.43/1000h** (matches Phase C-1 baseline EXACTLY).
+  - v64==v57 on 32,304/32,304 changed hands (100% — composition assumption holds).
+  - v65==v64 on 50,000/50,000 out-of-cell random sample (0 disagreements — composition is safe outside cell).
+  - swap-right rate on changed hands: 62.0% (matches S86 gate-12).
+* Mechanical verdict: SHIP under N=200 standalone; SHIP under two-grid standard.
+
+### Verdict + production state
+
+**VERDICT: SHIP. Production v64 → v65_mid_pair_chain_extend.**
+
+| metric | pre-S93 (v64) | post-S93 (v65) | Δ |
+|---|---:|---:|---:|
+| Full grid (N=200) | $1,627.36 | **$1,633.79** | **+$6.43** |
+| Prefix grid (N=1000) | $776.88 | $776.88 | $0.00 (rule fires outside prefix coverage) |
+| Production vs v44_dt | $546.36 | **$552.79** | **+$6.43** |
+| Remaining gap to oracle | $117.84 | **$111.41** | **−$6.43** |
+| Cumulative closure since pre-S68 | 91.6% | **92.09%** | +0.49pp |
+| Rule count | 24 | **25** | +1 |
+
+* v44_dt ML champion: UNCHANGED ($1,081 full / $686 prefix) — **21 consecutive sessions** running, since v44 in S58.
+* Combined S87-S93 production-chain recovery: **$221.26/1000h** = $214.83 (chain-audit S87-S90) + $6.43 (Rule 25 S93).
+
+### Rule 25 design (locked)
+
+**Trigger** (all must be true):
+* hand is exactly a single pair (no quads, trips, two pair)
+* pair_rank ∈ {8, 9, 10} (MID pair)
+* cell is PMID_DS_NOMAXTOP — `n_PBOT_DS == 0` AND `n_PMID_DS > 0` AND `n_PMID_DS_w_maxtop == 0`
+* max_sing (max non-pair singleton rank) ≤ Q (12)
+* v57's current pick is PMID_tmax-style — top = max_sing position AND mid = pair positions
+
+**Setting** (when triggered):
+* mid = the pair (preserves PMID base)
+* bot = 4 singletons forming the best DS configuration (max_sing goes in bot, not top, since cell guarantees PMID_DS exists with max NOT on top)
+* top = leftover singleton (highest non-max-suited)
+
+**The "best DS configuration"** is the one whose bot_pair_high (max-of-suited-pair-tops in bot) is highest; ties broken by stable enumeration order in `_detect_mid_pair_defensive_pmid_swap`.
+
+### Architectural note — composition with v64
+
+v64 fires on HIGH_ONLY (no pair) × max ∈ {8..A} × 6 audited cells (chain-audit zone). v65's Rule 25 fires on MID pair (one pair, rank 8-T) × PMID_DS_NOMAXTOP × max_sing ≤ Q. The two firing zones are MUTUALLY EXCLUSIVE by hand structure — HIGH_ONLY requires zero pairs; MID pair requires exactly one pair. Therefore:
+
+* Outside both gates: v65 == v64 == v57.
+* In v64's gate: v65 == v64 == v44_dt.
+* In Rule 25's gate: v65 forces PMID_tnomax_DS, v64 == v57 == PMID_tmax-style.
+
+Empirical confirmation (S93 final grader): out-of-cell v65 != v64 disagreements = 0 / 50,000 random sample. v64 == v57 on 32,304 / 32,304 changed hands.
+
+**This is the first project ship where firing-zone disjointness was used as a load-bearing argument for composition safety.** Previously composition was always "supersets and strict gates"; here we use "disjoint zones combine additively."
+
+### Methodology lessons (Session 93)
+
+1. **Option C N=1000 sparse infrastructure works at production quality (NEW S93).** Engine `--id-list-file` mode produces bit-identical EVs to the corresponding rows of the prefix N=1000 grid at the same `--samples` / `--seed` / `--opponent`. Throughput ~25 hands/s parallel — manageable for cell-scale validations (32K hands ≈ 22 min). The infrastructure is now available for ALL future "rule cell entirely outside prefix" candidates and unlocks the two-grid SHIP standard on arbitrary cell subsets.
+
+2. **MIXED-by-methodology candidates are recoverable if the only blocker was prefix coverage (NEW S93).** v60 was parked for 7 sessions (S86 → S92) carrying a +$6.43 N=200 SHIP-signal that couldn't be confirmed. With the right infrastructure, the SHIP was a single engine run away. **Future candidates with the same shape (full-grid SHIP signal + cell outside prefix range + no obvious mechanism flaw) should be queued for Option C validation rather than written off.**
+
+3. **Pre-committed two-grid thresholds are robust at low effect sizes (NEW S93).** Per-hand MC noise at N=200 vs N=1000 produced only 77.8% sign-agreement on the 32,304 changed hands (high disagreement!), but aggregate lifts agreed to $0.09/1000h. **Lesson: per-hand noise matters for per-hand picker design; cell-level rule SHIP verdicts survive high per-hand variance cleanly. The two-grid bar at $5/$1 is well-calibrated for cell-scale candidate validation.**
+
+4. **Disjoint firing zones make production composition trivially safe (NEW S93).** v64 (HIGH_ONLY only) and Rule 25 (MID pair only) fire on DEMONSTRABLY DISJOINT hand sets. Empirical confirmation: v64==v57 on 100% of v60's changed hands, and v65==v64 on 50K out-of-cell random samples. When zones are demonstrably disjoint, a composed strategy can ship with confidence from cell-level grading alone, without a separate full whole-grid regrade. **This pattern can apply to any future rule that fires on a structurally orthogonal hand set vs. the current production.**
+
+5. **Chain-audit-arc-complete (S92) does NOT mean rule-arc-complete (NEW S93).** S92 closed the chain-audit lever after 4 ships + 2 NULLs. S93's ship is NOT a chain-audit ship — it's a rule-EXTRACTION ship (Option D-revised pattern) on a within-v44_dt residual leak. The infrastructure track (Option C) unlocked the ship by making the parked candidate gradeable. **Project still has live levers — they're just different ones than the chain-audit track that dominated S87-S92.** The natural next levers are rule extraction on within-v44_dt residuals (e.g., two_pair LAYOUT_A_SS at $35.22 on 437K hands), validation of other parked MIXED candidates via Option C, and possibly headline-goal recalibration.
+
+### Files (Session 93)
+
+**New engine code (committed):**
+* `engine/src/oracle_grid.rs` — added `solve_grid_ids` function (sibling of `solve_grid_range`)
+* `engine/src/lib.rs` — re-exported `solve_grid_ids`
+* `engine/src/main.rs` — added `--id-list-file` option to `OracleGrid` subcommand + `run_oracle_grid_id_list` helper + `read_id_list` parser
+
+**New scripts (committed):**
+* `analysis/scripts/test_id_list_correctness_S93.py` — Phase B bit-exact correctness test (100 ids)
+* `analysis/scripts/prepare_v60_id_list_S93.py` — Phase C-1 changed-hand id list + N=200 baseline reproduce
+* `analysis/scripts/grade_v60_id_list_n1000_S93.py` — Phase C-3 two-grid grade with pre-committed thresholds
+* `analysis/scripts/strategy_v65_mid_pair_chain_extend.py` — production v65 (v64 + Rule 25)
+* `analysis/scripts/grade_v65_full_grid_S93.py` — final whole-grid grade + out-of-cell sanity
+
+**New artifacts (under `data/session93/`):**
+* `v60_gate12_changed_ids.txt` — 32,304 sorted ids
+* `v60_per_hand_picks.npz` — v57 + v60-gate10/11/12 picks per cell hand
+* `v60_n200_baseline.json` — N=200 baselines per gate (S86 reproduce)
+* `v60_n1000_sparse.bin` — sparse N=1000 grid, 13.7 MB
+* `engine_n1000_sparse.log` — engine run log
+* `grade_v60_n1000.log` + `grade_v60_n1000_summary.json` — Phase C-3 grader output
+* `grade_v65_full_grid.log` + `grade_v65_full_grid_summary.json` — final grader output
+
+**Documentation:**
+* `SESSION_93_REPORT.md` — plain-language session report + complete validation chain
+* `DECISIONS_LOG.md` — this section (Decision 128)
+* `CURRENT_PHASE.md` — rewritten for S94
+* `STRATEGY_GUIDE.md` — Part 1 APPENDED with Session 93 entry (Rule 25 + v65); Parts 5+6 UPDATED with v65 as production
+
+### Path forward (S94 candidates)
+
+1. **PRIMARY (was S93 SECONDARY): rule-extraction (Option D-revised) on two_pair LAYOUT_A_SS.** Largest unaddressed within-v44_dt cell: **$35.22/1000h on 437,580 hands**. S69 tested catalog candidates and confirmed v44_dt dominates the AGGREGATE; individual sub-cells were not exhaustively probed. Could be amenable to a "drop max kicker into bot for DS-like SS structure" rule similar to Rule 20's mechanism. Now testable under the two-grid bar via Option C if cell extends outside prefix coverage.
+
+2. **SECONDARY: validate other parked MIXED candidates via Option C.** v60 gate=11 is currently MIXED at +$4.85 (N=200) / +$4.77 (N=1000) on 14,160 hands. Doesn't clear $5 SHIP bar but is robustly POSITIVE in both grids. Could be revisited with a relaxed bar OR combined with other near-miss rules. S86's MIXED LOW-pair × PMID_DS_MAXTOP candidate ($21.68 STRUCTURE leak) is also amenable to Option C re-validation.
+
+3. **TERTIARY: headline-goal recalibration.** Still open from S92's framing. Make explicit that 95% match% is unreachable from current architecture; reset target to maximize $/1000h subject to current cascade.
+
+4. **DEFERRED: ML retrain (A3 full 6M-hand N=1000 grid).** Formally closed at v44 in S78 (Decision 113). Reopening requires either a new feature family or full A3 infrastructure (Option C is the foundation; the full 6M-hand sweep at N=1000 would take ~6M / 25 ≈ 70 hours wall on this hardware — non-trivial but no longer impossible).
+
+5. **DEFERRED: v52-defensive-low partial-effectiveness exploit (S90).** Speculative.
+
+6. **DEFERRED: v44_RULE13 fallthrough replacement.** With v54/v55/v56 absorbing $731/1000h of chain bleed across pair-family, replacement primarily matters for HIGH_ONLY (already gated by v64/v65).

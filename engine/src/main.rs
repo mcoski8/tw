@@ -19,8 +19,9 @@ use tw_engine::{
     bytes_to_hand, category_name, count_canonical_hands, enumerate_canonical_hands, eval_middle,
     eval_omaha, eval_top, mc_evaluate_all_settings, mc_evaluate_all_settings_par,
     oracle_grid::{OgHeader, OgWriter, OG_VERSION},
-    parse_hand, read_best_response_file, read_canonical_hands, solve_grid_range, solve_one,
-    solve_range, write_canonical_hands, Card, Evaluator, HandSetting, McSummary, MixedBase,
+    parse_hand, read_best_response_file, read_canonical_hands, solve_grid_ids, solve_grid_range,
+    solve_one, solve_range, write_canonical_hands, Card, Evaluator, HandSetting, McSummary,
+    MixedBase,
     OpponentModel,
 };
 
@@ -287,6 +288,19 @@ enum Command {
         /// --samples 200 for the Session 24 sanity check).
         #[arg(long)]
         limit: Option<usize>,
+
+        /// Optional path to a text file containing canonical_ids to process
+        /// (one decimal id per line; blank lines and `#` comments ignored).
+        /// In id-list mode the engine processes ONLY those ids (sorted +
+        /// deduped) instead of the contiguous canonical-hand range. The
+        /// output file's `canonical_total` header field is set to the id-list
+        /// length so resume + header-mismatch guards still work; the file
+        /// remains a valid `TWOG` oracle-grid file but is SPARSE — each
+        /// record carries its own canonical_id and ids are not contiguous.
+        /// EVs are bit-identical to the corresponding rows of the full grid
+        /// at the same `--samples` / `--seed` / `--opponent`.
+        #[arg(long)]
+        id_list_file: Option<PathBuf>,
     },
 
     /// Print a summary + the first `--show` records from a best-response
@@ -479,6 +493,7 @@ fn main() -> ExitCode {
             mix_p,
             block_size,
             limit,
+            id_list_file,
         } => run_oracle_grid(
             &canonical,
             &out,
@@ -488,6 +503,7 @@ fn main() -> ExitCode {
             resolve_opp(opponent, mix_p, mix_base),
             block_size,
             limit,
+            id_list_file.as_deref(),
         ),
         Command::SpotCheck {
             canonical,
@@ -828,6 +844,7 @@ fn run_oracle_grid(
     model: OpponentModel,
     block_size: usize,
     limit: Option<usize>,
+    id_list_file: Option<&std::path::Path>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if samples == 0 {
         return Err("--samples must be > 0".into());
@@ -842,6 +859,12 @@ fn run_oracle_grid(
     println!("Loading canonical hands from {} ...", canonical_path.display());
     let canonical = read_canonical_hands(canonical_path)?;
     println!("  {} canonical hands.", canonical.len());
+
+    if let Some(path) = id_list_file {
+        return run_oracle_grid_id_list(
+            &ev, &canonical, out, samples, seed, model, block_size, limit, path,
+        );
+    }
 
     let header = OgHeader {
         version: OG_VERSION,
@@ -922,6 +945,177 @@ fn run_oracle_grid(
     let elapsed = t0.elapsed();
     println!(
         "Done in {:.2?}. Wrote {} records to {}.",
+        elapsed,
+        target,
+        out.display()
+    );
+    Ok(())
+}
+
+/// Parse the id-list file: one decimal canonical_id per line; blank lines and
+/// lines whose first non-whitespace character is `#` are ignored. Returns ids
+/// sorted ascending + deduplicated.
+fn read_id_list(
+    path: &std::path::Path,
+    canonical_len: usize,
+) -> Result<Vec<u32>, Box<dyn std::error::Error>> {
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| format!("reading id-list-file {}: {e}", path.display()))?;
+    let mut ids: Vec<u32> = Vec::new();
+    for (lineno, raw) in content.lines().enumerate() {
+        let line = raw.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let id: u32 = line.parse().map_err(|e| {
+            format!(
+                "id-list-file {}: line {}: cannot parse {:?} as u32: {e}",
+                path.display(),
+                lineno + 1,
+                line
+            )
+        })?;
+        if (id as usize) >= canonical_len {
+            return Err(format!(
+                "id-list-file {}: line {}: id {} >= canonical_total {}",
+                path.display(),
+                lineno + 1,
+                id,
+                canonical_len
+            )
+            .into());
+        }
+        ids.push(id);
+    }
+    ids.sort_unstable();
+    ids.dedup();
+    Ok(ids)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn run_oracle_grid_id_list(
+    ev: &Evaluator,
+    canonical: &[[u8; tw_engine::HAND_SIZE]],
+    out: &std::path::Path,
+    samples: u32,
+    seed: u64,
+    model: OpponentModel,
+    block_size: usize,
+    limit: Option<usize>,
+    id_list_path: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Loading id-list from {} ...", id_list_path.display());
+    let ids = read_id_list(id_list_path, canonical.len())?;
+    if ids.is_empty() {
+        return Err(format!(
+            "id-list-file {} parsed to 0 ids (after dedup/blanks)",
+            id_list_path.display()
+        )
+        .into());
+    }
+    println!(
+        "  {} ids (sorted + deduped). First={}, last={}.",
+        ids.len(),
+        ids[0],
+        ids[ids.len() - 1]
+    );
+
+    // Header.canonical_total = id-list length, so resume + header-mismatch
+    // guards still work and a downstream tool can detect "this is a sparse
+    // id-list-mode TWOG file" by comparing canonical_total to the canonical
+    // hands file size.
+    let header = OgHeader {
+        version: OG_VERSION,
+        samples,
+        base_seed: seed,
+        canonical_total: ids.len() as u64,
+        opp_model_tag: opp_tag_from_model(model),
+        reserved: 0,
+    };
+
+    let mut writer = OgWriter::open_or_create(out, header)?;
+    let resume_from = writer.resume_from as usize;
+    if resume_from > ids.len() {
+        return Err(format!(
+            "existing output has {} records but id-list has only {} ids — \
+             id-list may have shrunk between runs (or output file is from a \
+             different list). Delete {} to start over.",
+            resume_from,
+            ids.len(),
+            out.display()
+        )
+        .into());
+    }
+    if resume_from > 0 {
+        println!(
+            "Resuming at id-list offset {} (file already has that many records).",
+            resume_from
+        );
+    }
+
+    let remaining = ids.len() - resume_from;
+    let target = match limit {
+        Some(l) => l.min(remaining),
+        None => remaining,
+    };
+    if target == 0 {
+        println!("Nothing to do — file is complete (or --limit 0).");
+        return Ok(());
+    }
+
+    // Build (id, canonical_bytes) items for the slice we're going to process.
+    let id_slice = &ids[resume_from..resume_from + target];
+    let items: Vec<(u32, [u8; tw_engine::HAND_SIZE])> = id_slice
+        .iter()
+        .map(|&id| (id, canonical[id as usize]))
+        .collect();
+
+    println!(
+        "Computing oracle grid (id-list mode): {} hands (id-list offsets {}..{}, \
+         canonical ids {}..{}), samples={}, opp={:?}, block_size={}.",
+        target,
+        resume_from,
+        resume_from + target,
+        id_slice[0],
+        id_slice[id_slice.len() - 1],
+        samples,
+        model,
+        block_size
+    );
+
+    let t0 = Instant::now();
+    let total_target = target as u64;
+    solve_grid_ids(
+        ev,
+        &items,
+        samples as usize,
+        seed,
+        model,
+        block_size,
+        &mut writer,
+        |next_id, written_so_far, block_elapsed| {
+            let progress = written_so_far as f64 / total_target as f64;
+            let eta_secs = if written_so_far > 0 {
+                let elapsed = t0.elapsed().as_secs_f64();
+                elapsed / progress - elapsed
+            } else {
+                f64::INFINITY
+            };
+            let throughput = if t0.elapsed().as_secs_f64() > 0.0 {
+                written_so_far as f64 / t0.elapsed().as_secs_f64()
+            } else {
+                0.0
+            };
+            println!(
+                "  id={next_id:>10}  wrote={written_so_far}/{total_target}  \
+                 block={block_elapsed:>7.2?}  rate={throughput:>6.1} hands/s  ETA={:>7.1}s",
+                eta_secs
+            );
+        },
+    )?;
+    let elapsed = t0.elapsed();
+    println!(
+        "Done in {:.2?}. Wrote {} sparse records to {}.",
         elapsed,
         target,
         out.display()

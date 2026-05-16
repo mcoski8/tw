@@ -304,6 +304,56 @@ pub fn solve_grid_one(
     }
 }
 
+/// Solve an explicit list of (canonical_id, canonical_bytes) pairs. Identical
+/// to `solve_grid_range` except the ids do not need to be contiguous — each
+/// item carries its own id, which is fed into `solve_grid_one`'s per-hand
+/// seed. EVs produced for any given canonical_id are bit-identical to what
+/// `solve_grid_range` would have produced for the same id (same base_seed,
+/// samples, model), so id-list-mode output rows are a sparse subset of the
+/// full-grid file in the cells they cover.
+///
+/// Used by the `--id-list-file` path in `main.rs`: feed an arbitrary sample
+/// of canonical hands (e.g. one cell of the oracle grid) and get N=1000 EVs
+/// for those rows only, without sweeping the whole 6M-row grid.
+pub fn solve_grid_ids<F>(
+    ev: &Evaluator,
+    items: &[(u32, [u8; HAND_SIZE])],
+    samples: usize,
+    base_seed: u64,
+    model: OpponentModel,
+    block_size: usize,
+    writer: &mut OgWriter,
+    mut on_block: F,
+) -> Result<u64, OgError>
+where
+    F: FnMut(u32, u64, std::time::Duration),
+{
+    assert!(block_size > 0);
+    let total = items.len();
+    let mut written: u64 = 0;
+    let mut i = 0;
+    while i < total {
+        let end = (i + block_size).min(total);
+        let t0 = std::time::Instant::now();
+        let records: Vec<OracleGridRecord> = items[i..end]
+            .par_iter()
+            .map(|(id, h)| solve_grid_one(ev, h, *id, samples, base_seed, model))
+            .collect();
+        writer.append(&records)?;
+        writer.flush()?;
+        let elapsed = t0.elapsed();
+        let block_written = (end - i) as u64;
+        written += block_written;
+        let next_id = items
+            .get(end)
+            .map(|(id, _)| *id)
+            .unwrap_or_else(|| items[end - 1].0);
+        on_block(next_id, written, elapsed);
+        i = end;
+    }
+    Ok(written)
+}
+
 /// Solve a contiguous slice of canonical hands, write blocks of `block_size`
 /// records to disk through `writer`, and call `on_block` after each block
 /// flush so the caller can render progress.

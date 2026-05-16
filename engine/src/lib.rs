@@ -41,8 +41,8 @@ pub use monte_carlo::{
 };
 pub use omaha_eval::eval_omaha;
 pub use oracle_grid::{
-    read_all as read_oracle_grid_file, solve_grid_one, solve_grid_range, OgError, OgHeader,
-    OgWriter, OracleGridRecord, OG_HEADER_SIZE, OG_MAGIC, OG_RECORD_SIZE, OG_VERSION,
+    read_all as read_oracle_grid_file, solve_grid_ids, solve_grid_one, solve_grid_range, OgError,
+    OgHeader, OgWriter, OracleGridRecord, OG_HEADER_SIZE, OG_MAGIC, OG_RECORD_SIZE, OG_VERSION,
 };
 pub use scoring::{matchup_breakdown, score_matchup, MatchupBreakdown, Outcome};
 pub use setting::{all_settings, HandSetting, NUM_SETTINGS};
