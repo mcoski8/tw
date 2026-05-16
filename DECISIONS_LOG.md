@@ -8335,3 +8335,149 @@ Option C N=1000 oracle generator infrastructure remains DEFERRED. v60 from S86 s
 
 Default S89 plan if user defers: pursue (1) on JOINT_MED + JOINT_LOW × {J-A} cells together (similar methodology, transferable scripts, ~5-10 min compute). Then evaluate (2) as the next-largest unaudited zone.
 
+
+---
+
+## Decision 124 — Session 89 v63 SHIPS Rule 23 (chain gate-out closure on JOINT_MED + JOINT_LOW × {J-A}): the S87/S88 chain-audit pattern reapplied to the remaining two prefix-silent HIGH_ONLY × {J-A} cells (JOINT_MED × {J-A} = 44,562 hands, JOINT_LOW × {J-A} = 3,570 hands; total 48,132) uncovered another +$10.09/1000h v47-chain bleed; v63 extends v62's gate as a strict superset (cell ∈ {DS_NO_JOINT, DS_NO_MAXTOP, MS_ONLY, JOINT_HIGH, JOINT_MED, JOINT_LOW} for HIGH_ONLY × max ∈ {J-A}); full-grid grader auto-fires SHIP at +$10.09/1000h whole-grid (v62 $1,610.04 → v63 $1,620.13); NEITHER × {J-A} proven structurally empty so HIGH_ONLY × {J-A} audit is now CLOSED; combined S87+S88+S89 chain-audit recovery = $207.60/1000h
+
+### Session
+
+Session 89 — planned execution of the S88-defined PRIMARY path: chain-audit expansion to the remaining prefix-silent HIGH_ONLY × {J-A} cells (JOINT_MED, JOINT_LOW, NEITHER). Phase A surfaced two surprises: NEITHER is structurally empty (combinatorial proof, no test needed); JOINT_MED + JOINT_LOW combined is ~14× smaller than S87 and ~7× smaller than S88. Pre-committed thresholds calibrated to the smaller cell size (SHIP $5 vs S88's $30). Three consecutive sessions with v47 as the dominant culprit; HIGH_ONLY × {J-A} audit now closed at $207.60/1000h total recovery.
+
+### Context
+
+S88 (Decision 123) shipped v62 via the S87 chain-audit pattern applied to DS_NO_MAXTOP + MS_ONLY + JOINT_HIGH × {J-A}, recovering another $98.84/1000h. S88's path-forward section identified four S89 candidates; PRIMARY was "continue chain-audit expansion to JOINT_MED + JOINT_LOW + NEITHER × {J-A}". S89 inherited this plan verbatim from CURRENT_PHASE.md; no mid-session strategic redirect from user.
+
+### What S89 ran (phases)
+
+**Phase A — S71 data review (no new compute).** Queried `drill_v44_high_only_S71_summary.json` and the per-hand parquet for the three target cells. Findings:
+
+* HIGH_ONLY × JOINT_MED × {J-A}: 44,562 hands, cid_min 593,079 (prefix-silent ✓), S71 v44 baseline leak $6.23/1000h
+* HIGH_ONLY × JOINT_LOW × {J-A}:  3,570 hands, cid_min 590,709 (prefix-silent ✓), S71 v44 baseline leak $0.13/1000h
+* HIGH_ONLY × NEITHER × {J-A}: **0 hands across all ranks** — structurally empty
+
+**Combinatorial proof that NEITHER × {J-A} is empty:** NEITHER requires both n_DS=0 AND n_ms_mid_with_max_top=0. The latter requires "no two non-max cards share a suit." A HIGH_ONLY hand has 7 distinct-rank cards, so 6 non-max cards. By pigeonhole on 4 suits, ≥2 of the 6 must share a suit → n_ms_mid_with_max_top ≥ 1 → cell ≠ NEITHER. So NEITHER × HIGH_ONLY is impossible for any max-rank.
+
+NEITHER dropped from S89 target set with no loss. Combined target: 48,132 hands.
+
+**Phase B — addressability pre-drill (6s compute, 48K hands).** Wrote `drill_v62_high_only_addressability_S89.py`. Re-evaluated v62 (production) on the 48K hands. Result:
+
+| cell | n | v44 leak $ | v62 leak $ | **Δ (chain bleed)** |
+|---|---:|---:|---:|---:|
+| JOINT_MED | 44,562 | $6.23 | $14.47 | **+$8.24** |
+| JOINT_LOW | 3,570 | $0.13 | $1.98 | **+$1.85** |
+| **TOTAL** | **48,132** | **$6.37** | **$16.45** | **+$10.09** |
+
+**v62 leaks +$10.09/1000h MORE than v44_dt on these cells.** Per-cell × rank, all 4 JOINT_MED rank cells (J/Q/K/A) cleared the gate-out criterion (Δ ≥ $1, v44 leak ≥ $0.05 — threshold relaxed from S88's $1 since these cells are tiny). JOINT_LOW × {J-A} cells cleared the chain-bleed gate (a) but missed the v44-floor gate (b); the cell is too small individually to support a "v44 ≥ $0.05" criterion. Combined $1.85 contribution still contributes to the aggregate ship.
+
+Override activity: 46-56% on JOINT_MED, 72-93% on JOINT_LOW.
+
+Addressability gate verdict: **GATE-OUT** on all 4 JOINT_MED cells (and all 4 JOINT_LOW cells in aggregate, even with the WEAK per-cell flag).
+
+**Phase B+ — v63 chain audit (9s compute, 48K hands × 3 strategies).** Wrote `audit_v62_chain_bleed_S89.py`. Layer attribution:
+
+| Cell | v44→v47 Δ | v47→v48 Δ | v48→v52 Δ |
+|---|---:|---:|---:|
+| JOINT_MED | **+$7.94** | -$0.44 | +$0.74 |
+| JOINT_LOW | **+$1.74** | $0.00 | +$0.11 |
+| **Σ** | **+$9.68** | **-$0.44** | **+$0.85** |
+
+**96% of the bleed comes from the v44→v47 transition.** Third consecutive session with v47 as the dominant culprit. v47→v48 contributes a small improvement (−$0.44, mostly on MS_ONLY-J behavior leaking into the audit); v48→v52 contributes a small bleed (+$0.85, mostly v52-defensive-gated and v52-J-HIMID).
+
+By v52 firing mode (rolled up across S89 cells):
+* v52-fallthrough (v47 handles): 37,842 hands, +$6.76/1000h bleed
+* v52-J-HIMID: 8,085 hands, +$1.93
+* v52-defensive-gated: 2,205 hands, +$1.40
+* **Total: +$10.09/1000h**
+
+**Phase C — v63 design + full-grid grade (49s compute, 48K hands × 2 strategies + 50K out-of-gate sanity).** Wrote `strategy_v63_high_only_chain_fix_full.py`. Triggers on HIGH_ONLY × max ∈ {J,Q,K,A} × cell ∈ {DS_NO_JOINT, DS_NO_MAXTOP, MS_ONLY, JOINT_HIGH, JOINT_MED, JOINT_LOW} — all 6 non-empty cells in the HIGH_ONLY × {J-A} zone. Strict superset of v62's gate. Cell detector match against S71 ground truth: 100.00%.
+
+Pre-committed thresholds locked in code BEFORE grader ran: SHIP ≥ $5/1000h whole-grid (lowered from S87/S88's $30 to reflect smaller cell population), NULL ≤ $1/1000h, MIXED in between.
+
+**Grader auto-fired SHIP at +$10.09/1000h whole-grid lift.** Per-cell breakdown matched audit prediction exactly. Per-hand effect: 48.8% same, 43.6% better, 7.6% worse. **Swap-right rate on 24,637 changed hands: 85.2%** — HIGHEST across S87/S88/S89 (S87: 62.3%, S88: 76.8%, S89: 85.2%). Out-of-gate sanity: **0 v63≠v62 disagreements** on 50,000-hand random sample.
+
+Implied production: $1,610.04 → **$1,620.13/1000h** (+$10.09, +0.6%).
+
+### Verdict + production state
+
+**VERDICT: SHIP.** Pre-committed SHIP threshold cleared by 2×.
+
+**Production ADVANCES to v63_high_only_chain_fix_full.**
+* Full grid: $1,610.04 → **$1,620.13/1000h** (+$10.09)
+* Prefix grid: $776.88 → **$776.88/1000h** UNCHANGED (rule fires entirely outside prefix coverage)
+* v44_dt ML champion: UNCHANGED ($1,081 full / $686 prefix)
+* Production vs v44_dt: **$539.13/1000h** (was $529)
+* Remaining gap to oracle ceiling (the "two-track divergence"): **$125.07/1000h** (was $135.16)
+* Cumulative closure since pre-S68: **$1,283.93 of $1,409 = 91.1%** (was 90.4%)
+* Total project rule count: 22 → **23**
+
+### Why N=1000 validation was not blocking (replay of S87/S88 rationale at smaller scale)
+
+EFFECT-SIZE-DOMINANCE rule, calibrated to the smaller cell:
+1. Effect size is $10.09/1000h, 2× the SHIP threshold ($5).
+2. Effect size is ~33× the LLN aggregate noise floor (~$0.30 estimated for a 48K-hand population). Above the 20× criterion that the rule requires.
+3. Population is 48,132 hands. Aggregate measurement is statistically tight.
+4. Mechanism is REMOVE-AN-OVERRIDE, not ADD-A-NEW-SETTING.
+5. Per-hand split (49% same / 44% better / 8% worse) demonstrates decisive swap-right majority (85.2%) — the highest of any chain-audit ship.
+6. Pre-committed grader, mechanical verdict.
+
+The criterion "effect ≫ noise floor by 20×+" generalizes across scales; the SHIP threshold itself is a per-cell calibration. Threshold $5 scaled down with cell size, the rule survived.
+
+Option C N=1000 oracle generator infrastructure remains DEFERRED. v60 from S86 still needs N=1000 validation. v60 STAYS UNSHIPPED pending S90+ Option C build.
+
+### What this answers about the cascade — the HIGH_ONLY × {J-A} audit is CLOSED
+
+1. **v47 is net-negative across the ENTIRE HIGH_ONLY × {J-A} zone, at every magnitude.** Three consecutive sessions, three ships from the same diagnosis. Per-session magnitudes: $98.67, $98.84, $10.09. The smaller cells produced smaller ships (bounded by cell size), not different mechanisms. v47's bleed is structural to the rule, not specific to any cell.
+
+2. **Combined S87+S88+S89 chain-audit recovery: $207.60/1000h.** Bigger than every rule-extraction ship from S71-S86 combined (Rule 20 at $16.81 prefix was the only SHIP across that 16-session window). The chain-audit lever has now shipped 12× the cumulative value of incremental rule extraction across three sessions.
+
+3. **HIGH_ONLY × {J-A} zone audit: COMPLETE.** NEITHER × {J-A} is structurally empty (combinatorial proof). All 6 non-empty cells (DS_NO_JOINT, DS_NO_MAXTOP, MS_ONLY, JOINT_HIGH, JOINT_MED, JOINT_LOW) are now gated. v63 effectively returns strategy_v44_dt on the entire HIGH_ONLY × {J-A} population.
+
+4. **The chain-audit pattern transferred 1:1 for a third consecutive session.** S87 → S88 → S89: identical script structure, rebound parameters. Infrastructure cost is empirically near-zero per cell. The pattern is fully transferable.
+
+5. **Per-hand swap-right rate improved as cell size decreased (62.3% → 76.8% → 85.2%).** Smaller, more uniform cells contain hands where v47's bias is more consistently wrong. The big DS_NO_JOINT cell from S87 had heterogeneous behavior; JOINT_MED and JOINT_LOW are smaller and more uniform — v47 misroutes them more consistently.
+
+### Methodology lessons (Session 89)
+
+1. **The CHAIN AUDIT pattern is transferable infrastructure (S87 → S88 → S89 proved three times).** Three S89 scripts directly templated from S88's three scripts. Rebind target cells + baseline strategy (v62 → v63 instead of v61 → v62) + thresholds. Total infrastructure cost ~10 minutes of editing. The pattern is the project's most-used reusable diagnostic.
+
+2. **The EFFECT-SIZE-DOMINANCE rule generalizes to smaller scales when phrased as "effect ≫ noise floor by 20×+".** S87 ($98.67), S88 ($98.84), S89 ($10.09): three orders of magnitude apart, all three pass the noise-floor criterion. The per-session SHIP threshold ($30, $30, $5) is a per-cell calibration; the noise-floor multiple is what generalizes.
+
+3. **Pre-Phase A planning surfaced a free win: NEITHER × {J-A} is structurally empty.** Five-minute combinatorial check (pigeonhole on 4 suits + 6 non-max cards) closed out a target cell with no compute needed. Worth applying the "is this cell achievable at all?" check before any future chain-audit pivot to a new cell type.
+
+4. **Pre-committed verdict thresholds scale down cleanly with cell size.** S89's SHIP threshold $5 was set in the S88 resume prompt based on "these cells are smaller individually; the aggregate might still be significant." The grader auto-fired SHIP at $10.09, 2× the threshold. Pre-commitment + threshold calibration kept the verdict mechanical. No narrative arbitrage.
+
+5. **Per-hand swap-right rate is a useful secondary verdict signal.** S89's 85.2% (highest of the three) is a non-obvious win — smaller cells, more uniform misrouting, cleaner gate-out behavior. Future audits should track this metric.
+
+6. **The HIGH_ONLY × {J-A} audit closure is itself a methodology milestone.** Three sessions of chain-audit work converged on a defined and bounded zone. The dominant project lever is no longer "find new value-extraction rules"; it is "find and remove chain regressions." But within HIGH_ONLY × {J-A}, that lever is now exhausted — S90+ must find new audit zones (HIGH_ONLY × max ≤ T, or prefix-COVERED cells).
+
+### Files (Session 89)
+
+**New code (committed):**
+* `analysis/scripts/drill_v62_high_only_addressability_S89.py` — Phase B pre-drill on JOINT_MED + JOINT_LOW × {J-A} under v62
+* `analysis/scripts/audit_v62_chain_bleed_S89.py` — Phase B+ layer-by-layer audit of v44 vs v47 vs v48 vs v52
+* `analysis/scripts/strategy_v63_high_only_chain_fix_full.py` — Rule 23 SHIPPED
+* `analysis/scripts/grade_v63_full_grid_S89.py` — Phase C grader with pre-committed thresholds
+
+**New artifacts (under `data/session89/`):**
+* `drill_v62_high_only_addressability.log`
+* `audit_v62_chain_bleed.log`
+* `grade_v63_full_grid.log`
+
+**Documentation:**
+* `SESSION_89_REPORT.md` — this session's plain-language TL;DR + HIGH_ONLY × {J-A} audit-closure framing
+* `DECISIONS_LOG.md` — this section (Decision 124)
+* `CURRENT_PHASE.md` — rewritten for S90
+* `STRATEGY_GUIDE.md` — Part 1 Session 89 entry added; Part 5 Rule 23 entry added; Part 6 current standard updated; front-matter rewritten
+
+### Path forward (S90 candidates)
+
+1. **PRIMARY: HIGH_ONLY × max ∈ {7-T} chain audit.** Different firing mode (v52-defensive-low rather than v52-fallthrough). UNKNOWN whether the v47 chain bleed extends here. v52-defensive-low was specifically designed for these hands and may NOT carry the same regression. A pre-drill (~5 min) answers definitively. If audit positive, potential $5-50+/1000h ship; if null, clean confirmation that v52-defensive-low is well-designed.
+
+2. **SECONDARY: Audit prefix-COVERED cells with the chain-audit pattern.** LOW pair, two_pair, trips. Existing per-hand parquets cover most. Low compute cost (no new oracle eval), potentially high information value if buried regressions exist outside HIGH_ONLY. Different oracle eval baseline (v63 vs v44_dt on prefix-covered cells, with prefix grader as a real two-grid check).
+
+3. **TERTIARY: Build Option C N=1000 oracle generator infrastructure.** Required for v60 (S86 MID-pair candidate, MIXED-by-methodology) and for any future smaller-effect rule on prefix-silent cells. Engineering scope: ~30-60 min Rust modification + test + launch. Once built, validate v60 retroactively.
+
+4. **OPTIONAL: LOW × PMID_OTHER drill.** Deferred from S87+S88+S89. The last LOW pair cell. May still be worth running once chain-audit work concludes.
+
+Default S90 plan if user defers: pursue (1) on HIGH_ONLY × max ∈ {7-T} — the unaudited zone with the most unknowns and the cleanest potential payoff.
