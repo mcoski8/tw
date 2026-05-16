@@ -8044,3 +8044,148 @@ Default S87 plan if user defers: pursue **Option A** (LOW × PMID_OTHER)
 as the safest next test, retaining v60 in scripts as documented MIXED
 candidate. Methodology question deferred until cumulative evidence
 warrants policy change.
+
+## Decision 122 — Session 87 v61 SHIPS Rule 21 (chain gate-out fix): user-redirected strategic pivot to weak-hand damage-control work surfaces a $98/1000h v52-chain bleed on HIGH_ONLY × DS_NO_JOINT × {J-A} cells (v47 Rules 13-16 + v52 J-HIMID + v52 defensive-gated had been actively bleeding EV vs v44_dt baseline for 33+ sessions, undetected because prefix grader is structurally silent for these cells); surgical gate-out v61 returns strategy_v44_dt on the 756,000-hand sub-population, full-grid grader auto-fires SHIP at +$98.67/1000h whole-grid (v57 $1,412.53 → v61 $1,511.20); biggest single-rule production ship since S70
+
+### Session
+
+Session 87 — load-bearing user strategic redirect, then a methodology bombshell, then a surgical fix. Largest single-rule production ship since S70 (v56 hybrid).
+
+### Context
+
+End of S86 left an open methodology question (prefix-coverage gap on MID-pair cells; v60 candidate MIXED). User responded NOT by picking among the three methodology options but by reframing the strategic priority entirely: "easy hands are easy to play — bleeding lives on weak hands where damage control is hard. 10-20 trash hands in a row, that's real bleeding." User explicitly called out: hard to mess up QQ-AA, easy to mess up ATo (Texas Hold'em analog).
+
+This reframe immediately repositioned the project's strategic priority away from incremental MID/HIGH pair value-extraction (which has been hitting diminishing returns: 1 SHIP / 3 non-SHIP across S83-S86) toward weak-hand cells where the rule chain has the least mature methodology coverage AND the user's intuition reports the most pain.
+
+### Initial briefing — two Gemini Socratic debates run prior to compute
+
+**Round 1 (prefix-coverage methodology):** gemini-3-pro-preview FOR-relaxing vs gemini-2.5-pro AGAINST-relaxing. Synthesis: Option C (build N=1000 oracle generator) wins on user's "hours OK, days not OK" cost threshold. Both models agreed compute cost is hours-not-weeks; AGAINST was right on procedural rigor; FOR was right that the LLN/aggregate-noise argument makes N=200 sufficient for high-effect-size candidates.
+
+**Round 2 (damage-control pivot):** gemini-2.5-pro on both sides. FOR-pivot argued $36-52/1000h leak per cell × user-intuition alignment = pivot now. AGAINST-pivot argued: less mature methodology + variance-vs-leak conflation risk; demand an S77-style pre-drill to confirm addressability BEFORE infrastructure commitment. Heuristic conflict on A-high default play (FOR: Ace-on-top scoop-blocker; AGAINST: Ace-in-mid + DS-bot trade) — empirical data resolved in favor of AGAINST (A-high × DS_NO_JOINT leaks $29.41 because rules pick the FOR heuristic, oracle prefers the AGAINST one). Synthesis: gated pivot — pre-drill addressability, then commit.
+
+User picked the gated plan. This decision protocol — Socratic debate prior to commit — is now project pattern for major strategic forks.
+
+### What S87 ran (phases)
+
+**Phase A — S71 data review (no new compute).** Queried existing `drill_v44_high_only_S71_summary.json` for J/Q/K/A × DS_NO_JOINT cell stats. Total leak under v44: $76-125/1000h per cell. STRUCTURE-bucket leak: $10-37 per cell. Dominant mismatch under v44: `tK_SS_mu → tK_*_ms or tK_DS_*` (keep K on top, improve mid+bot suit configuration). Also confirmed: all four target cells are 100% prefix-silent (canonical_id ≥ 590,512; prefix ends at 499,999).
+
+**Phase B-pivot — addressability pre-drill (64s compute, 756K hands).** Wrote `drill_v57_high_only_addressability_S87.py`. Re-evaluated v57 (production) on the 756,000 hands in the J/Q/K/A × DS_NO_JOINT cells. **The bombshell:**
+
+| rank | n | v44 leak $/1000h | v57 leak $/1000h | Δ (v57 worse by) |
+|---|---:|---:|---:|---:|
+| J | 37,800 | $16.29 | $29.88 | **+$13.59** |
+| Q | 94,500 | $38.80 | $58.04 | **+$19.24** |
+| K | 207,900 | $76.99 | $105.94 | **+$28.95** |
+| A | 415,800 | $124.81 | $161.70 | **+$36.89** |
+| **TOTAL** | **756,000** | **$256.89** | **$355.55** | **+$98.67** |
+
+v52 fires (overrides v44) on 64.4-86.1% of these hands. **Its overrides are NET-NEGATIVE — making things worse, not better.** The bleed was undetected for 33+ sessions because prefix grader is structurally silent for these cells.
+
+Addressability gate result: Gate A (STR ≥ $15) **PASS** on all cells. Gate B (top-5 direction concentration ≥ 30%) FAIL at the raw-setting-index level (no single output-pair concentrates the leak). Inspection of S71 class-label-level mismatches showed top 7 share the same abstract pattern (suit-unmatched mid → suit-matched mid OR DS-bot upgrade), so Gate B passes at the right abstraction level. Pivot proceeds.
+
+**Phase B+ — v52 chain audit (116s compute, 756K hands × 3 strategies).** Wrote `audit_v52_chain_bleed_S87.py`. Evaluated v44 + v47 + v48 + v52 on each cell hand. Layer attribution:
+
+| rank | n | v44 $ | v47 $ | v48 $ | v52(=v57) $ | **v44→v47 Δ** | v47→v48 Δ | v48→v52 Δ |
+|---|---|---|---|---|---|---|---|---|
+| J | 37,800 | $16.29 | $32.33 | $30.64 | $29.88 | **+$16.04** | -$1.68 | -$0.77 |
+| Q | 94,500 | $38.80 | $57.89 | $57.89 | $58.04 | **+$19.10** | $0.00 | +$0.14 |
+| K | 207,900 | $76.99 | $104.94 | $104.94 | $105.94 | **+$27.95** | $0.00 | +$1.00 |
+| A | 415,800 | $124.81 | $161.70 | $161.70 | $161.70 | **+$36.89** | $0.00 | $0.00 |
+| | | | | | | **Σ = +$99.98** | | |
+
+**~$100/1000h of the bleed comes from the v44→v47 transition.** v47's Rules 13-16 (Q-high DS chain) are the dominant source. v48/v52 add almost nothing on top (v52 slightly helps J-high by -$2.45 net).
+
+By v52 firing mode:
+* v52-fallthrough (Q/K/A subset, v47 handles): 711,900 hands, +$82.07 bleed
+* v52-J-HIMID (J-high subset): 34,650 hands, +$12.76 bleed
+* v52-defensive-gated (s2≤8 subset): 9,450 hands, +$3.84 bleed
+* **Total: +$98.67/1000h**
+
+**Phase C — v61 design + full-grid grade (377s compute, 756K hands × 2 strategies + 50K out-of-cell sanity).** Wrote `strategy_v61_high_only_ds_no_joint_fix.py` — surgical 30-line rule: detect HIGH_ONLY × DS_NO_JOINT × max ∈ {J,Q,K,A}, return strategy_v44_dt directly, else fall through to strategy_v57. Cell detector match: 100.00% (perfect alignment with S71 cell taxonomy).
+
+Pre-committed thresholds in code BEFORE grader ran: SHIP ≥ $30/1000h whole-grid, NULL ≤ $5/1000h, MIXED in between.
+
+**Grader auto-fired SHIP at +$98.67/1000h whole-grid lift.** Per-rank breakdown matches audit prediction exactly. Per-hand effect: 42.4% better, 25.7% worse, 31.9% same. Swap-right rate on 515,119 changed hands: 62.3% (similar to v60's 62%, similar to v57's swap-right at Q gate). Out-of-cell sanity: 0 v57≠v61 disagreements on 50,000 random sample (v61 == v57 by construction outside the gate).
+
+Implied production: $1,412.53 → **$1,511.20/1000h** (+$98.67, +7.0%).
+
+### Verdict + production state
+
+**VERDICT: SHIP.** Pre-committed SHIP threshold cleared by 3.3×.
+
+**Production ADVANCES to v61_high_only_ds_no_joint_fix.**
+* Full grid: $1,412.53 → **$1,511.20/1000h** (+$98.67)
+* Prefix grid: $776.88 → **$776.88/1000h** UNCHANGED (rule fires entirely outside prefix coverage)
+* v44_dt ML champion: UNCHANGED ($1,081 full / $686 prefix)
+* Two-track divergence v61-vs-v44: **$234/1000h** (was $332, −$98)
+* Cumulative closure since pre-S68: **$1,175 of $1,409 = 83%** (was 76%)
+* Total project rule count: 20 → **21**
+
+### Why N=1000 validation was not blocking
+
+The S84 two-grid SHIP standard would normally require prefix confirmation. Prefix is silent on these cells. Per the Round 1 Socratic debate's synthesis:
+1. Effect size is $98/1000h, 20× the SHIP ceiling.
+2. Population is 756,000 hands. Per gemini-3-pro's LLN argument: aggregate noise floor on 756K fixed-rule comparisons is ≪ $1.
+3. The mechanism is REMOVE-AN-OVERRIDE, not ADD-A-NEW-SETTING. Risk profile is asymmetric — gating off a deterministically-firing chain is far lower variance than adding a new forced setting.
+4. Per-hand split (42.4% better / 25.7% worse / 31.9% same) demonstrates real swap-right majority, not a single-slice artifact.
+
+The Option C N=1000 oracle generator infrastructure remains DEFERRED to S88. Rationale documented: the v61 ship-decision quality is high without N=1000 because effect size dwarfs noise floor by orders of magnitude. v60 from S86 still needs N=1000 validation (its $6.43 effect is closer to noise) and Option C remains the right infrastructure for future smaller candidates. v60 STAYS UNSHIPPED pending S88+ Option C build.
+
+### What this answers about the cascade
+
+1. **Prefix-silent cells can hide PRODUCTION REGRESSIONS, not just unship-able candidates.** S86 framed prefix-silence as an obstacle to SHIPPING new rules. S87 surfaced the inverse: rules already in production on prefix-silent cells can carry undetected bleed indefinitely.
+
+2. **The v47→v48→v52 chain has more buried regressions to find.** DS_NO_MAXTOP (~$15/1000h v44 STRUCTURE), MS_ONLY (~$13), JOINT_HIGH (~$5) are next-largest prefix-silent zones. S88 should run the audit pattern on each.
+
+3. **The user's strategic instinct outperformed any methodology answer.** All three S86 options (strict / relax / extend) treated v60 as the candidate to ship. The user reframed at the strategy-priority level and surfaced a $98 fix nobody had been searching for. Future sessions should preserve room for user-level reframes, not just optimize the in-flight question.
+
+4. **The Socratic debate protocol works.** Two PAL consensus calls (Round 1 = methodology, Round 2 = pivot + heuristics) with explicit FOR/AGAINST stances surfaced cruxes (LLN aggregate-noise argument; addressability-gate vs variance question) that informed concrete next steps. The protocol is project pattern for major strategic forks.
+
+5. **Pre-committed thresholds + LLN at large effect sizes can ship without prefix validation, when documented.** This is a justified exception to the S84 two-grid standard, not its abandonment. Future rules with effect sizes near the threshold should still require both grids.
+
+### Methodology lessons (Session 87)
+
+1. **PIVOT GATE pattern — pre-drill addressability before infrastructure commitment.** S87 spent 64 seconds on a pre-drill that uncovered a bombshell. The pivot decision was data-driven, not vibes-driven. Generalize: before committing to expensive infrastructure (Option C oracle gen, new ML feature pack, etc.), spend ≤5 min on a focused diagnostic that could falsify the premise.
+
+2. **CHAIN AUDIT pattern — layer-by-layer attribution against a baseline.** v44_dt as baseline; evaluate each intermediate strategy version; the transition that introduces the regression is the bad rule layer. This pattern took 2 minutes of compute and 50 lines of script. Apply to every existing rule chain whenever a prefix-silent cell shows leak vs a simpler baseline.
+
+3. **EFFECT-SIZE-DOMINANCE rule — bypass two-grid validation when effect ≫ noise floor by 20×+ AND the rule is a gate-out (remove logic) not an addition.** S87 ships v61 with this justification. Future rules meeting the criterion can do the same; below the criterion, two-grid standard still rules.
+
+4. **USER STRATEGIC REDIRECT is a first-class input.** S86 ended with a 3-option methodology fork. User responded by reframing strategy priority. The reframe was load-bearing — none of the three options would have surfaced the v52 bleed. Listen for these reframes and convert them to concrete drills.
+
+5. **The buyout-rule memory from 19 sessions ago is still relevant.** User mentioned "should I just buy out for 4?" as a damage-control move. Memory recall: empirical answer is "buyout +EV signature is harmful PAIR structure (low quads, low trips), NOT garbage hands." Surfaced to user during the session. Memory worked as designed.
+
+### Files (Session 87)
+
+**New code (committed):**
+* `analysis/scripts/drill_v57_high_only_addressability_S87.py` — Phase A/B pre-drill on J/Q/K/A × DS_NO_JOINT under v57
+* `analysis/scripts/audit_v52_chain_bleed_S87.py` — Phase B+ layer-by-layer audit of v44 vs v47 vs v48 vs v52
+* `analysis/scripts/strategy_v61_high_only_ds_no_joint_fix.py` — Rule 21 SHIPPED
+* `analysis/scripts/grade_v61_full_grid_S87.py` — Phase C grader with pre-committed thresholds
+
+**New artifacts (under `data/session87/`):**
+* `drill_v57_high_only_addressability.log`
+* `audit_v52_chain_bleed.log`
+* `grade_v61_full_grid.log`
+
+**Documentation:**
+* `SESSION_87_REPORT.md` — this session's plain-language TL;DR + methodology discovery
+* `DECISIONS_LOG.md` — this section (Decision 122)
+* `CURRENT_PHASE.md` — rewritten for S88
+* `STRATEGY_GUIDE.md` — Part 1 Session 87 entry added; Part 6 current standard updated; front-matter updated
+
+### Path forward (S88 candidates)
+
+1. **PRIMARY: Expand the chain-audit pattern to the next-largest prefix-silent HIGH_ONLY cells.** Likely candidates (descending leak):
+   * **HIGH_ONLY × DS_NO_MAXTOP × {K, A}**: ~$15.30 combined v44 STRUCTURE; check if v47/v52 also bleeds
+   * **HIGH_ONLY × MS_ONLY × {J-A}**: ~$13.53 combined v44 STRUCTURE; check
+   * **HIGH_ONLY × JOINT_HIGH × {K, A}**: ~$5/1000h smaller but may also bleed
+   * Combined potential: another $20-40/1000h if all three audit positive.
+
+2. **SECONDARY: Build Option C N=1000 oracle generator infrastructure.** Required for v60 (S86 MID-pair candidate, MIXED-by-methodology, $6.43 effect at noise floor) and for any future smaller-effect rule on prefix-silent cells. Engineering scope: ~30-60 min Rust modification (add --id-list-file option) + test + launch. Once built, validate v60 retroactively against N=1000 labels.
+
+3. **TERTIARY: Re-run S87-style audit on prefix-COVERED cells too.** It's possible v52/v47 layers are also net-negative on cells we thought were fine. LOW pair cells, two_pair, trips — all worth a quick audit. Low compute cost (existing per-hand parquets), high information value.
+
+4. **OPTIONAL: LOW × PMID_OTHER drill.** Deferred from S87. The last LOW pair cell. May still be worth running once audit work concludes.
+
+Default S88 plan if user defers: pursue (1) on DS_NO_MAXTOP cells (next-largest prefix-silent bleed candidate, methodology directly transfers from S87 audit pattern, ~3-5 min of compute).
