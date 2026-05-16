@@ -2795,3 +2795,52 @@ Full details in `DECISIONS_LOG.md` (Decisions 126, 127) + `SESSION_91_REPORT.md`
 3. **TERTIARY:** Headline-goal recalibration.
 
 Standalone session report: `SESSION_92_REPORT.md`.
+
+---
+
+## Session 93 — v65 SHIPS Rule 25 (MID pair × PMID_DS_NOMAXTOP × max_sing ≤ Q chain extension); first project SHIP via two-grid bar on a prefix-uncovered cell; unblocks v60 candidate parked since S86 via NEW Option C N=1000 sparse-grid infrastructure (engine `--id-list-file` mode)
+
+**Date:** 2026-05-16. **Verdict: SHIP, production v64 → v65 at +$6.43/1000h N=200 / +$6.34/1000h N=1000.**
+
+**TL;DR.** S93 executed the S92-defined PRIMARY path verbatim. Phase A added `solve_grid_ids` to `engine/src/oracle_grid.rs` (sibling of `solve_grid_range`, each item carries its own canonical_id; per-hand seed identical to sequential mode) and a `--id-list-file` CLI option to the `OracleGrid` subcommand. Phase B correctness test: 100/100 rows bit-identical to the existing prefix N=1000 grid. Phase C-1 prepared 32,304 v60-gate12 changed-hand canonical_ids and reproduced S86's N=200 baselines to the penny. Phase C-2 ran the engine on the 32,304-id list in 21:17 wall at 25.3 hands/s. Phase C-3 two-grid grader (pre-committed thresholds LOCKED before reading the sparse grid): gate=12 cleared SHIP at N=200 +$6.43 / N=1000 +$6.34, |Δ| $0.09. Built `strategy_v65_mid_pair_chain_extend.py` composing v64's HIGH_ONLY chain-audit gate with v60-gate12's MID pair rule (firing zones disjoint by construction). Final whole-grid grader confirmed v65 whole-grid N=200 lift over v64 = +$6.43/1000h; v64==v57 on 32,304/32,304 changed hands (100%); v65==v64 on 50,000/50,000 out-of-cell random sample (0 disagreements).
+
+**Production state at end of S93 (UPDATED from S90):**
+- Rule chain: `v65_mid_pair_chain_extend` (**$1,633.79 full / $776.88 prefix**) — up from v64 by +$6.43/1000h.
+- ML champion: `v44_dt` ($1,081 full / $686 prefix; UNCHANGED for 21st consecutive session since v44 in S58).
+- Two-track divergence: **$111.41/1000h** (was $117.84).
+- Production vs v44_dt: **$552.79/1000h** (was $546.36).
+- Cumulative closure since pre-S68: **$1,297.59 of $1,409 = 92.09%** (was 91.6%).
+- Project rule count: **25** (was 24). Rule 25 = MID pair × PMID_DS_NOMAXTOP × max_sing ≤ Q × v57-pick-tmax-style → force PMID_tnomax_DS.
+- Combined S87-S93 production-chain recovery: **$221.26/1000h** = $214.83 (chain-audit S87-S90) + $6.43 (rule extraction S93).
+- v60 candidate parked since S86: **RESOLVED — SHIPPED as Rule 25.**
+
+**S93 artifacts (NEW):**
+- `engine/src/oracle_grid.rs` — added `solve_grid_ids`
+- `engine/src/lib.rs` — re-exported `solve_grid_ids`
+- `engine/src/main.rs` — added `--id-list-file` CLI option + `run_oracle_grid_id_list` helper + `read_id_list` parser
+- `analysis/scripts/test_id_list_correctness_S93.py` — Phase B bit-exact correctness test (100 ids)
+- `analysis/scripts/prepare_v60_id_list_S93.py` — Phase C-1 id list prep + N=200 baseline reproduce
+- `analysis/scripts/grade_v60_id_list_n1000_S93.py` — Phase C-3 two-grid grader (pre-committed thresholds)
+- `analysis/scripts/strategy_v65_mid_pair_chain_extend.py` — production v65 (v64 + Rule 25)
+- `analysis/scripts/grade_v65_full_grid_S93.py` — final whole-grid v65 grader
+- `data/session93/v60_gate12_changed_ids.txt` (32,304 sorted ids)
+- `data/session93/v60_per_hand_picks.npz` (v57 + v60-gate10/11/12 picks)
+- `data/session93/v60_n1000_sparse.bin` (13.7 MB sparse N=1000 grid)
+- `data/session93/{engine_n1000_sparse,grade_v60_n1000,grade_v65_full_grid,prepare_v60_id_list}.log` (locally only — gitignored)
+- `SESSION_93_REPORT.md`
+
+**Methodology refinements (NEW S93 — Decision 128):**
+1. **Option C N=1000 sparse infrastructure works at production quality.** Engine `--id-list-file` mode produces bit-identical EVs to the prefix N=1000 grid at the same `--samples` / `--seed` / `--opponent`. Throughput ~25 hands/s parallel — manageable for cell-scale validations (~22 min for 32K hands). Available for ALL future cell-scale validations.
+2. **MIXED-by-methodology candidates are recoverable if the only blocker was prefix coverage.** v60 was parked for 7 sessions (S86 → S92) carrying a +$6.43 N=200 SHIP signal that couldn't be confirmed. With infrastructure in place, the SHIP was a single 22-minute engine run away.
+3. **Pre-committed two-grid thresholds are robust at low effect sizes despite high per-hand MC variance.** 77.8% per-hand sign-agreement on the 32,304 changed hands but $0.09 aggregate agreement. Per-hand noise matters for per-hand picker design; cell-level rule SHIP verdicts survive high per-hand variance cleanly.
+4. **Disjoint firing zones make production composition trivially safe.** When zones are demonstrably disjoint (v64 needs no pair; v60 needs exactly one MID pair), cell-level grader is sufficient (no whole-grid regrade needed). Confirmed empirically by 0 out-of-cell disagreements on 50K sample.
+5. **Chain-audit-arc-complete (S92) does NOT mean rule-arc-complete.** S93's ship is a rule-extraction ship (Option D-revised) on a within-v44_dt residual leak, unblocked by infrastructure (Option C). The project still has live levers — they're just different ones than what dominated S87-S92.
+
+**Parked-candidate pipeline (NEW S93 via combined S86 → S93 arc):** a) full-grid grader auto-fires SHIP signal → b) prefix grader silent (cell outside prefix coverage) → c) status = MIXED-by-methodology → d) wait for Option C infrastructure → e) Option C generates sparse N=1000 grid on changed-hand ids → f) two-grid grader applies pre-committed thresholds → g) SHIP / NULL / MIXED — verdict definitive. **This is the canonical recovery pipeline for future MIXED-by-methodology candidates.**
+
+**What S94 will run:**
+1. **PRIMARY (was S93 SECONDARY):** Rule-extraction (Option D-revised) on two_pair LAYOUT_A_SS — largest unaddressed within-v44_dt cell at $35.22/1000h on 437,580 hands. Now testable under the two-grid bar via Option C.
+2. **SECONDARY:** Validate other parked MIXED candidates via Option C. v60 gate=11 currently MIXED at +$4.85 (N=200) / +$4.77 (N=1000). S86 LOW × PMID_DS_MAXTOP also eligible.
+3. **TERTIARY:** Headline-goal recalibration.
+
+Standalone session report: `SESSION_93_REPORT.md`. Decision 128 records the SHIP + 5 methodology refinements in `DECISIONS_LOG.md`.
