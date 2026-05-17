@@ -9516,3 +9516,58 @@ The two-grid noise is small ($0.16 on NARROW, $0.42 on MEDIUM, $1.73 on WIDE —
   - The MAINTENANCE option from S96 is CLOSED. The remaining open levers are A3, v52-DL exploit, v44_RULE13 replacement.
   - Project-wide methodology: parked-candidate book-keeping must record both the baseline strategy and a current-production re-grade before composite hypotheses.
 
+
+## Decision 133 — Session 98 PROJECT CLOSURE. The Taiwanese Poker Solver is shipped. Strategy of record UNCHANGED (v65). ML champion UNCHANGED (v44_dt, 26 sessions). V4 + V5 Lean play guides shipped to operator. True hand-by-hand MC simulator built. 8 archetypes tested. Per-archetype edges quantified. Bankroll economics documented. Unanimous SHIP verdict from 3-way Socratic discussion (Claude + Gemini 3.0 + Gemini 2.5, two rounds). Project formally closes at end of S98 with one acknowledged caveat (human execution variance under live-play pressure — out of scope for this closure, addressable in a future trainer-app project).
+
+**Trigger / context:**
+Operator requested closure of the project after 98 sessions. Production v65 unchanged since S93; previous 4 sessions (S94/S95/S96/S97) all shipped $0. Remaining 6.4% gap to oracle ($111.41/1000h) lives in three NULL-likely levers (A3 ML retrain at ~70h compute cost, v52-DL exploit, v44_RULE13 replacement) all explicitly punted by Decision 131 (S96).
+
+**What S98 produced (the closure artifact set):**
+- `TEMP_PLAY_GUIDE_BY_SHAPE_V4.md` (692 lines) — canonical V4 play guide after two-round Gemini review
+- `TEMP_PLAY_GUIDE_BY_SHAPE_V5_LEAN.md` (416 lines) — cognitive-load optimized V5; 25 sub-rules → 10 named rules; ~40% shorter
+- True hand-by-hand MC simulator suite (`analysis/scripts/mc_simulate_v4_*.py`, 5 scripts) using project's own 5-card lookup table
+- 8 opponent archetype implementations: operator's described Pair-First Standardist + Top-Greedy Defender (with J-low Omaha pivot); ports of Rust mfsuitaware/omaha/topdef profiles; 3 NEW archetypes (Reasonable Naïveté, Defensive Inversion Player, Hold'em-Mid Optimizer); composite Grid Oracle representing the heuristic ceiling
+- ~400K total hands of MC across 8 scenarios (5K hands × 10 sims each)
+- `MC_SIMULATION_V4_ALL_ARCHETYPES.html` (6 MB) — multi-panel interactive chart with hover descriptions on the summary bar
+- `BANKROLL_AND_HOURLY_DISCUSSION.md` (223 lines) — hourly EV tables, variance reality, bankroll guidance, open hands-per-hour question
+- `ARCHETYPE_STRATEGIES.md` (343 lines) — per-archetype mental model + algorithm + worked example + MC result + what v65 exploits
+- `SOCRATIC_DISCUSSION_PROJECT_CLOSURE.md` (216 lines) — formal 3-way SHIP verdict
+- Memory: `project_taiwanese_stake.md`, `project_taiwanese_bankroll_hourly.md`
+
+**Empirical results from S98 MC:**
+
+| Archetype | $/hand vs v65 |
+|---|---:|
+| Top-Greedy Defender | +$33.56 |
+| Pair-First Standardist | +$20.13 |
+| Hold'em-Mid Optimizer | +$4.74 |
+| Reasonable Naïveté | +$3.04 |
+| Defensive Inversion Player | +$2.84 |
+| Balanced Pro (mfsuitaware port) | +$2.43 |
+| **Grid Oracle (composite heuristic ceiling)** | **+$0.41** |
+| Symmetry (v65 vs 3× v65) | −$0.81 (within noise) |
+
+**The Grid Oracle finding:** v65 is statistically indistinguishable from $0 (4/10 sims negative) against a composite-heuristic strong opponent that combines all of v65's strategic priorities. This is the empirical heuristic ceiling. Any further EV gain lives in 2.25M-leaf ML decision-tree territory that no human-codifiable rule can capture (per Gemini's analysis: "Split Two Pair ONLY IF your kickers actively block the top 15% of opponent's perceived Omaha wrap range based on your own suit density" — multi-clause conditionals impractical for human application).
+
+**The 3-way Socratic discussion verdict:**
+Two parallel rounds of independent review converging on SHIP. Gemini 3.0: *"Ship it and close the book. You have squeezed the heuristic lemon dry."* Gemini 2.5: *"Sufficiently solved. The Grid Oracle is the platonic ideal of the project's chosen approach."* Both raised the same caveat (human execution variance under pressure) — out of scope for this closure.
+
+**What this DOES change:**
+- Sprint 8 is COMPLETE.
+- Project is CLOSED. No further sessions planned on Taiwanese Poker Solver.
+- The "open lever set" (A3, v52-DL, v44_RULE13) is now formally DEFERRED rather than ACTIVE. Available for reopening if operator changes priorities.
+
+**What this DOES NOT change:**
+- Production strategy v65 remains the strategy of record.
+- v44_dt ML champion unchanged.
+- All 25 production rules remain in `STRATEGY_GUIDE.md` Part 6.
+- All MC infrastructure + archetype implementations are reusable for future work.
+
+**Out-of-scope addressed by Decision 133:**
+The human execution variance caveat (real-world performance below the simulated 85-89% during the cognitive-fluency ramp) is acknowledged as the only remaining honest concern. This is properly addressed by the project's stated SECONDARY GOAL (CLAUDE.md): a trainer application that gives the user real-time feedback on their settings. This is a SEPARATE future project — not a blocker for this closure.
+
+**Next-project direction (operator-stated):**
+A phone camera app that captures 7 cards via image recognition and outputs the optimal setting in near-real-time. Educational / strategy-validation purpose, NOT a cheating tool. Kickoff documentation at `CAMERA_APP_PROJECT_KICKOFF.md`. The Taiwanese Poker Solver project artifacts are all reusable for that work (strategy v65, archetype simulator, V5 Lean guide as the rule chain to operationalize).
+
+**Methodology lesson — close projects deliberately:** A project that ships incrementally over 98 sessions accumulates artifact debt (multiple "current strategy of record" references, methodology rules layered across DECISIONS_LOG, stale review-doc framings). Decision 131 (S96) demonstrated this for the "95% match%" zombie framing. The project-closure decision (D-133) does the analogous work at the project level: consolidates the shipping artifacts into a deliverable set, formally records the SHIP verdict from external reviewers, and unblocks the operator's next direction. **Project-closure discipline = artifact discipline.**
+
